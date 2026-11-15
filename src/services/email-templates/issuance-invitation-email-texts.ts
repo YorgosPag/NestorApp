@@ -102,7 +102,8 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       subject: (document, property) => `Η απόφασή σας: ${document} — ${property}`,
       heading: 'Χρειάζεται η απόφασή σας',
       intro: (office, professional, document, property) =>
-        `${office} προτείνει τον/την ${professional} για το έγγραφο «${document}» του ακινήτου ${property}. Η απόφαση είναι δική σας.`,
+        `${office} σας στέλνει την προσφορά του/της ${professional} για το έγγραφο «${document}» του ακινήτου ${property}. `
+        + 'Η απόφαση — πρόσωπο και τιμή — είναι δική σας.',
       professionalLabel: 'Επαγγελματίας',
       credentialLabel: 'Προσόν (όπως το δήλωσε το γραφείο)',
       registryNumber: (credential, number) => `${credential} · αρ. μητρώου ${number}`,
@@ -117,12 +118,13 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
         + 'Τίποτα δεν ανατίθεται χωρίς τη δική σας απόφαση· αν δεν σας αφορά, αγνοήστε το ή ενημερώστε το γραφείο.',
     },
     professional: {
-      subject: (document, property) => `Αίτημα έκδοσης: ${document} — ${property}`,
-      heading: 'Σας ζητούν να εκδώσετε ένα έγγραφο',
+      subject: (document, property) => `Αίτημα προσφοράς: ${document} — ${property}`,
+      heading: 'Σας ζητούν προσφορά για την έκδοση ενός εγγράφου',
       intro: (office, document, property) =>
-        `${office} σας αναθέτει, με την έγκριση του ιδιοκτήτη, την έκδοση του εγγράφου «${document}» για το ακίνητο ${property}.`,
+        `${office} σας ζητά προσφορά για την έκδοση του εγγράφου «${document}» για το ακίνητο ${property}. `
+        + 'Η ανάθεση γίνεται μόνο αν ο ιδιοκτήτης εγκρίνει την τιμή σας.',
       expiresLabel: 'Ο σύνδεσμος λήγει στις',
-      cta: 'Αποδοχή ή άρνηση',
+      cta: 'Δείτε το ακίνητο και δώστε προσφορά',
       onlyWord: 'μόνο',
       boundToAddress: (onlyHtml) =>
         `Ο σύνδεσμος είναι προσωπικός και ισχύει ${onlyHtml} για αυτή την ανάθεση — μην τον προωθήσετε: όποιος τον έχει μπορεί να απαντήσει.`,
@@ -151,11 +153,12 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       heading: 'Καταγράψαμε την απάντησή σας',
       intro: {
         approve: (document, property, professional) =>
-          `Εγκρίνατε την ανάθεση του εγγράφου «${document}» για το ακίνητο ${property}. Επαγγελματίας: ${professional}.`,
+          `Εγκρίνατε την προσφορά και την ανάθεση του εγγράφου «${document}» για το ακίνητο ${property}. Επαγγελματίας: ${professional}.`,
         reject: (document, property, professional) =>
           `Δεν εγκρίνατε την ανάθεση του εγγράφου «${document}» για το ακίνητο ${property}. Επαγγελματίας: ${professional}.`,
         accept: (document, property) => `Αναλάβατε την έκδοση του εγγράφου «${document}» για το ακίνητο ${property}.`,
         decline: (document, property) => `Αρνηθήκατε την έκδοση του εγγράφου «${document}» για το ακίνητο ${property}.`,
+        quote: (document, property) => `Στείλατε προσφορά για την έκδοση του εγγράφου «${document}» για το ακίνητο ${property}.`,
       },
       recordedAtLabel: 'Καταγράφηκε στις',
       verifiedLabel: 'Ταυτοποίηση',
@@ -204,7 +207,8 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       subject: (document, property) => `Your decision: ${document} — ${property}`,
       heading: 'Your decision is needed',
       intro: (office, professional, document, property) =>
-        `${office} proposes ${professional} for the document “${document}” of the property ${property}. The decision is yours.`,
+        `${office} sends you the quote of ${professional} for the document “${document}” of the property ${property}. `
+        + 'The decision — person and price — is yours.',
       professionalLabel: 'Professional',
       credentialLabel: 'Qualification (as declared by the office)',
       registryNumber: (credential, number) => `${credential} · registry no. ${number}`,
@@ -219,12 +223,13 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
         + 'Nothing is assigned without your decision; if this is not for you, ignore it or tell the office.',
     },
     professional: {
-      subject: (document, property) => `Issuance request: ${document} — ${property}`,
-      heading: 'You are asked to issue a document',
+      subject: (document, property) => `Request for quote: ${document} — ${property}`,
+      heading: 'You are asked for a quote to issue a document',
       intro: (office, document, property) =>
-        `${office}, with the owner’s approval, asks you to issue the document “${document}” for the property ${property}.`,
+        `${office} asks you for a quote to issue the document “${document}” for the property ${property}. `
+        + 'The assignment is made only if the owner approves your price.',
       expiresLabel: 'The link expires on',
-      cta: 'Accept or decline',
+      cta: 'See the property and give a quote',
       onlyWord: 'only',
       boundToAddress: (onlyHtml) =>
         `This link is personal and works ${onlyHtml} for this assignment — do not forward it: whoever has it can answer.`,
@@ -253,11 +258,12 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       heading: 'We recorded your answer',
       intro: {
         approve: (document, property, professional) =>
-          `You approved the assignment of the document “${document}” for the property ${property}. Professional: ${professional}.`,
+          `You approved the quote and the assignment of the document “${document}” for the property ${property}. Professional: ${professional}.`,
         reject: (document, property, professional) =>
           `You did not approve the assignment of the document “${document}” for the property ${property}. Professional: ${professional}.`,
         accept: (document, property) => `You accepted to issue the document “${document}” for the property ${property}.`,
         decline: (document, property) => `You declined to issue the document “${document}” for the property ${property}.`,
+        quote: (document, property) => `You sent a quote to issue the document “${document}” for the property ${property}.`,
       },
       recordedAtLabel: 'Recorded on',
       verifiedLabel: 'Identity check',

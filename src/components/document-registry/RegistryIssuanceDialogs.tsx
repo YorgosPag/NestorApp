@@ -35,14 +35,19 @@ import {
   ISSUANCE_KEYS,
   NOTICE_KEYS,
   PROPOSE_KEYS,
+  QUOTE_KEYS,
+  RECEIPT_KEYS,
   SEND_KEYS,
 } from '@/components/document-registry/issuance-labels';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
+import { formatMinor } from '@/lib/money/money';
 
 const DecisionForm = dynamic(() => import('./RegistryIssuanceDecisionForms').then((mod) => mod.DecisionForm), { ssr: false });
 const NoticeForm = dynamic(() => import('./RegistryIssuanceDecisionForms').then((mod) => mod.NoticeForm), { ssr: false });
 const ProposeForm = dynamic(() => import('./RegistryIssuanceProposeForm').then((mod) => mod.ProposeForm), { ssr: false });
 const SendForm = dynamic(() => import('./RegistryIssuanceSendForm').then((mod) => mod.SendForm), { ssr: false });
+const QuoteRecordForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.QuoteRecordForm), { ssr: false });
+const ReceiptForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.ReceiptForm), { ssr: false });
 
 export interface IssuanceDialogShellProps {
   readonly trigger: string;
@@ -98,14 +103,42 @@ export interface DecisionDialogProps {
   readonly professionalName: string;
   /** Ο υπεύθυνος (§26) — όνομα για τη φράση και ταυτότητα για τη CAS· `null` ⇒ δεν υπάρχει υπεύθυνος. */
   readonly lead: { readonly contactId: string; readonly name: string } | null;
+  /** §42 — η αναθεώρηση της προσφοράς που κρίνεται. */
+  readonly quoteRevision: number;
 }
 
-export function IssuanceDecisionDialog({ view, professionalName, lead }: DecisionDialogProps): React.ReactElement {
+export function IssuanceDecisionDialog({ view, professionalName, lead, quoteRevision }: DecisionDialogProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const description = lead === null ? t(DECISION_KEYS.needsLead) : t(DECISION_KEYS.description, { name: lead.name });
   return (
     <IssuanceDialogShell trigger={t(ISSUANCE_KEYS.recordDecision)} title={t(DECISION_KEYS.title)} description={description}>
-      {(close) => (lead === null ? null : <DecisionForm view={view} close={close} professionalName={professionalName} leadId={lead.contactId} />)}
+      {(close) => (lead === null ? null : (
+        <DecisionForm view={view} close={close} professionalName={professionalName} leadId={lead.contactId} quoteRevision={quoteRevision} />
+      ))}
+    </IssuanceDialogShell>
+  );
+}
+
+/** §42 — καταγραφή προσφοράς (ή της μίας αναθεώρησης μετά την αυτοψία) που ήρθε στο γραφείο εκτός συνδέσμου. */
+export function IssuanceQuoteDialog({ view, professionalName, revision }: { readonly view: RegistryIssuanceView; readonly professionalName: string; readonly revision: boolean }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  return (
+    <IssuanceDialogShell
+      trigger={t(revision ? QUOTE_KEYS.recordRevision : QUOTE_KEYS.recordQuote)}
+      title={t(QUOTE_KEYS.title)}
+      description={t(QUOTE_KEYS.description, { name: professionalName })}
+    >
+      {(close) => <QuoteRecordForm view={view} close={close} />}
+    </IssuanceDialogShell>
+  );
+}
+
+/** §42 — το παραστατικό της εγκεκριμένης τιμής: ο διάλογος **λέει** το σύνολο· η φόρμα δεν ζητά ποσό. */
+export function IssuanceReceiptDialog({ view, totalMinor }: { readonly view: RegistryIssuanceView; readonly totalMinor: number }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  return (
+    <IssuanceDialogShell trigger={t(QUOTE_KEYS.recordReceipt)} title={t(RECEIPT_KEYS.title)} description={t(RECEIPT_KEYS.description, { total: formatMinor(totalMinor) })}>
+      {(close) => <ReceiptForm view={view} close={close} totalMinor={totalMinor} />}
     </IssuanceDialogShell>
   );
 }

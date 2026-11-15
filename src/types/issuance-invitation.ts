@@ -12,6 +12,8 @@
 
 import type { IssuerQualification } from '@/config/document-validity/document-issuers';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
+import type { EnergyClass } from '@/constants/energy-classes';
+import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
 import type { InvitationRecordCore, StoredAccessCode } from '@/types/invitation-core';
 
@@ -49,6 +51,36 @@ export interface IssuanceLinkView {
   } | null;
   readonly note: string | null;
   readonly expiresAt: string;
+  /**
+   * §42 — **τι ζητά η σελίδα**: `give-quote` (επαγγελματίας, αίτημα προσφοράς) · `approve-quote` (υπεύθυνος, κρίνει
+   * πρόσωπο **και** τιμή) · `legacy-accept` (παλιά ανάθεση §27: «Αναλαμβάνω/Αρνούμαι» χωρίς τιμή).
+   */
+  readonly step: IssuanceLinkStep;
+  /** §42 — ο φάκελος προσφοράς· **μόνο** για τον επαγγελματία. */
+  readonly brief: IssuanceQuoteBrief | null;
+  /** §42 — η προσφορά προς έγκριση· **μόνο** για τον υπεύθυνο. */
+  readonly quote: IssuanceQuoteView | null;
+}
+
+export type IssuanceLinkStep = 'give-quote' | 'approve-quote' | 'legacy-accept';
+
+/**
+ * §42 — **ο φάκελος προσφοράς**: κλειστή λίστα, ό,τι χρειάζεται η τιμή — ποτέ ιδιοκτήτης, επαφές ή ακριβής διεύθυνση.
+ * Κάθε πεδίο `null` = δεν δηλώθηκε.
+ */
+export interface IssuanceQuoteBrief {
+  readonly grossAreaSqm: number | null;
+  readonly floor: number | null;
+  readonly constructionYear: number | null;
+  readonly energyClass: EnergyClass | null;
+  /** Ως πότε ισχύει το τρέχον ΠΕΑ (`YYYY-MM-DD`). */
+  readonly energyValidUntil: string | null;
+}
+
+/** §42 — η προσφορά όπως τη βλέπει ο υπεύθυνος: οι όροι, η αναθεώρηση, και το σύνολο της αρχικής (αν αναθεωρήθηκε). */
+export interface IssuanceQuoteView extends QuoteTerms {
+  readonly revision: number;
+  readonly previousTotalMinor: number | null;
 }
 
 /**

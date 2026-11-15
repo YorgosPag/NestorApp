@@ -21,7 +21,16 @@ const VIEW = {
   documentKind: 'energy-certificate',
   professional: { name: 'Επιθεωρητής Συνθετικός', qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
   note: null, expiresAt: '2026-10-24T09:00:00.000Z',
+  // §42 — ο υπεύθυνος κρίνει την ΠΡΟΣΦΟΡΑ (πρόσωπο και τιμή μαζί) και στέλνει την αναθεώρηση που είδε.
+  step: 'approve-quote', brief: null,
+  quote: {
+    basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31',
+    scope: ['issuance'], note: null, revision: 1, previousTotalMinor: null,
+  },
 };
+/** Ο φάκελος προσφοράς του επαγγελματία — κλειστή λίστα, ποτέ ιδιοκτήτης ή ακριβής διεύθυνση. */
+const BRIEF = { grossAreaSqm: 82, floor: 2, constructionYear: null, energyClass: 'B', energyValidUntil: '2026-11-01' };
+const PROFESSIONAL_VIEW = { ...VIEW, audience: 'professional', professional: null, step: 'give-quote', brief: BRIEF, quote: null };
 
 type Call = { readonly url: string; readonly init: RequestInit };
 let calls: Call[];
@@ -35,7 +44,8 @@ const OPEN = { access: 'open', view: VIEW };
 
 function mockNetwork(
   view: Response,
-  answer: Response = respond(200, { success: true, data: { answer: 'approve' } }),
+  // Ο server επιστρέφει ΠΑΝΤΑ `space` (§39) — το fixture χωρίς αυτό έριχνε τη σελίδα «done».
+  answer: Response = respond(200, { success: true, data: { answer: 'approve', space: { kind: 'none' } } }),
   unlock: (body: { accessCode: string }) => Response = () => respond(500, { success: false, error: 'server-error' }),
 ): void {
   global.fetch = jest.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
@@ -67,21 +77,62 @@ describe('ADR-915 §28 — /document-request', () => {
   it('«Εγκρίνω» ⇒ ΜΙΑ απάντηση, με κλειδί ιδεμποτίας και την απάντηση του ακροατηρίου του συνδέσμου', async () => {
     mockNetwork(respond(200, { success: true, data: OPEN }));
     render(<DocumentRequestGate />);
-    await userEvent.setup().click(await screen.findByRole('button', { name: 'document-request:owner.approve' }));
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'document-request:owner.approveQuote' }));
     expect(await screen.findByText('document-request:done.approved')).toBeTruthy();
     const answers = calls.filter((call) => call.url.endsWith('/answer'));
     expect(answers).toHaveLength(1);
     const headers = answers[0]?.init.headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer tok.secret-1');
     expect(headers['Idempotency-Key']).toEqual(expect.any(String));
-    expect(JSON.parse(String(answers[0]?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: null });
+    expect(JSON.parse(String(answers[0]?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: null, quoteRevision: 1 });
   });
 
-  it('ο επαγγελματίας βλέπει «Αναλαμβάνω / Δεν αναλαμβάνω» — και ΟΧΙ τα κουμπιά του ιδιοκτήτη', async () => {
-    mockNetwork(respond(200, { success: true, data: { access: 'open', view: { ...VIEW, audience: 'professional', professional: null } } }));
+  it('ο υπεύθυνος βλέπει την ΠΡΟΣΦΟΡΑ (σύνολο, ισχύ, τι περιλαμβάνει) πριν από το κουμπί — και «Δεν εγκρίνω» στέλνει την ίδια αναθεώρηση', async () => {
+    mockNetwork(respond(200, { success: true, data: OPEN }), respond(200, { success: true, data: { answer: 'reject', space: { kind: 'none' } } }));
+    render(<DocumentRequestGate />);
+    expect(await screen.findByText('document-request:facts.quoteScope')).toBeTruthy();
+    expect(screen.getByText('document-request:facts.quoteValid')).toBeTruthy();
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'document-request:owner.rejectQuote' }));
+    expect(await screen.findByText('document-request:done.rejected')).toBeTruthy();
+    const answer = calls.find((call) => call.url.endsWith('/answer'));
+    expect(JSON.parse(String(answer?.init.body))).toEqual({ answer: 'reject', note: null, accessCode: null, quoteRevision: 1 });
+  });
+
+  it('ο επαγγελματίας βλέπει τον φάκελο προσφοράς και «Στείλτε προσφορά» — και ΟΧΙ τα κουμπιά του ιδιοκτήτη', async () => {
+    mockNetwork(respond(200, { success: true, data: { access: 'open', view: PROFESSIONAL_VIEW } }));
+    render(<DocumentRequestGate />);
+    expect(await screen.findByRole('button', { name: 'document-request:professional.submitQuote' })).toBeTruthy();
+    expect(screen.getByText('document-request:brief.heading')).toBeTruthy();
+    expect(screen.getByText('document-request:brief.privacy')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'document-request:owner.approveQuote' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'document-request:professional.accept' })).toBeNull();
+  });
+
+  it('🔴 η προσφορά ανοίγει ΜΟΝΟ όταν είναι πλήρης (ποσό + είδος τιμής)· στέλνει όρους σε λεπτά — μία απάντηση, `quote`', async () => {
+    mockNetwork(respond(200, { success: true, data: { access: 'open', view: PROFESSIONAL_VIEW } }), respond(200, { success: true, data: { answer: 'quote', space: { kind: 'none' } } }));
+    const user = userEvent.setup();
+    render(<DocumentRequestGate />);
+    const submit = await screen.findByRole('button', { name: 'document-request:professional.submitQuote' });
+    expect(submit.hasAttribute('disabled')).toBe(true);
+    await user.type(screen.getByLabelText('document-registry:issuance.quoteForm.amountLabel'), '100,50');
+    await user.click(screen.getByRole('radio', { name: 'document-registry:issuance.quoteForm.basis.firm' }));
+    expect(submit.hasAttribute('disabled')).toBe(false);
+    await user.click(submit);
+    expect(await screen.findByText('document-request:done.quoted')).toBeTruthy();
+    const answers = calls.filter((call) => call.url.endsWith('/answer'));
+    expect(answers).toHaveLength(1);
+    expect(JSON.parse(String(answers[0]?.init.body))).toEqual({
+      answer: 'quote', note: null, accessCode: null,
+      terms: { basis: 'firm', amountMinor: 10_050, vatRatePercent: 24, vatIncluded: false, validUntil: expect.any(String), scope: ['site-visit', 'issuance', 'registration'] },
+    });
+  });
+
+  it('παλιά ανάθεση (§27) ⇒ «Αναλαμβάνω / Δεν αναλαμβάνω», χωρίς πεδία τιμής', async () => {
+    mockNetwork(respond(200, { success: true, data: { access: 'open', view: { ...PROFESSIONAL_VIEW, step: 'legacy-accept', brief: null } } }));
     render(<DocumentRequestGate />);
     expect(await screen.findByRole('button', { name: 'document-request:professional.accept' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'document-request:owner.approve' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'document-request:professional.decline' })).toBeTruthy();
+    expect(screen.queryByLabelText('document-registry:issuance.quoteForm.amountLabel')).toBeNull();
   });
 
   it('κάθε άρνηση με όνομα: «αντικαταστάθηκε» ≠ «έληξε» ≠ «απαντήθηκε ήδη»', async () => {
@@ -122,7 +173,7 @@ describe('ADR-915 §29 — /document-request με κωδικό πρόσβαση�
     expect(screen.getByText(`document-request:code.intro ${JSON.stringify({ office: 'Γραφείο Άλφα' })}`)).toBeTruthy();
     expect(screen.queryByText('Διαμέρισμα Α1')).toBeNull();
     expect(screen.queryByText('Επιθεωρητής Συνθετικός')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'document-request:owner.approve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'document-request:owner.approveQuote' })).toBeNull();
     const input = screen.getByLabelText('document-request:code.label');
     expect(input.getAttribute('autocomplete')).toBe('one-time-code');
     expect(input.getAttribute('inputmode')).toBe('numeric');
@@ -138,10 +189,10 @@ describe('ADR-915 §29 — /document-request με κωδικό πρόσβαση�
     expect((await screen.findByRole('alert')).textContent).toBe(`document-request:code.wrong ${JSON.stringify({ remaining: 4 })}`);
     await user.type(screen.getByLabelText('document-request:code.label'), '042 917');
     await user.click(screen.getByRole('button', { name: 'document-request:code.submit' }));
-    await user.click(await screen.findByRole('button', { name: 'document-request:owner.approve' }));
+    await user.click(await screen.findByRole('button', { name: 'document-request:owner.approveQuote' }));
     expect(await screen.findByText('document-request:done.approved')).toBeTruthy();
     const answer = calls.find((call) => call.url.endsWith('/answer'));
-    expect(JSON.parse(String(answer?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: '042917' });
+    expect(JSON.parse(String(answer?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: '042917', quoteRevision: 1 });
     expect(window.location.href).not.toContain('042917');
     expect(JSON.stringify({ ...window.sessionStorage })).not.toContain('042917');
     expect(JSON.stringify({ ...window.localStorage })).not.toContain('042917');

@@ -11,13 +11,20 @@
     "heading": "Your decision is needed",
     "intro": "The office proposes a professional to issue the document. The decision is yours, as the owner responsible for the property’s documents.",
     "approve": "I approve",
-    "reject": "I do not approve"
+    "reject": "I do not approve",
+    "quoteIntro": "The professional has given a quote for the issuance. Your approval makes the assignment at this price.",
+    "approveQuote": "Approve the quote",
+    "rejectQuote": "Do not approve"
   },
   "professional": {
     "heading": "Document issuance request",
     "intro": "The office, with the owner’s approval, asks you to issue the document. Tell us whether you take it on.",
     "accept": "I accept",
-    "decline": "I decline"
+    "decline": "I decline",
+    "quoteHeading": "Request for quote",
+    "quoteIntro": "The office requests a quote for issuing the document. The assignment is made only if the owner approves your price.",
+    "submitQuote": "Send quote",
+    "noQuote": "I will not take it on"
   },
   "facts": {
     "office": "Office",
@@ -29,14 +36,20 @@
     "verifyRegistry": "Check the registry",
     "note": "Note from the office",
     "expires": "The link expires on",
-    "unnamed": "—"
+    "unnamed": "—",
+    "quote": "Quote",
+    "quoteRevised": "Revised after the site visit — originally {previous}",
+    "quoteValid": "Valid until",
+    "quoteScope": "Includes",
+    "quoteNote": "Note from the professional"
   },
   "done": {
     "approved": "We recorded your approval.",
     "rejected": "We recorded that you do not approve.",
     "accepted": "We recorded that you accept.",
     "declined": "We recorded that you decline.",
-    "officeTold": "The office has been informed. You can close this page."
+    "officeTold": "The office has been informed. You can close this page.",
+    "quoted": "Your quote was sent. You will be notified when the owner decides."
   },
   "space": {
     "heading": "Next step: the assignment space",
@@ -90,5 +103,17 @@
     "wrong": "That code is not correct. {remaining} attempts left.",
     "wrongLast": "That code is not correct. 1 attempt left — after that the link locks.",
     "noCode": "No code? Call the office — it is never sent by email."
+  },
+  "brief": {
+    "heading": "Property details for the quote",
+    "area": "Area",
+    "areaValue": "{area} m²",
+    "floor": "Floor",
+    "year": "Year built",
+    "energy": "Current EPC",
+    "energyValue": "Class {grade} · valid until {date}",
+    "energyClassOnly": "Class {grade}",
+    "unknown": "Not declared",
+    "privacy": "The owner's details and the exact address are given after the quote is approved."
   }
 }

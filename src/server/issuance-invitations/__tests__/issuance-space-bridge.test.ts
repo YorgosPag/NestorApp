@@ -40,7 +40,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { engagementInvitationFromDocument, engagementInvitationToDocument } from '@/lib/auth/engagement-invitation-schema';
 import { caseInvitationHref } from '@/lib/conveyance/conveyance-routes';
-import type { IssuanceSendBody } from '@/lib/document-validity/issuance-request';
+import type { IssuanceSendBody, QuoteTermsBody } from '@/lib/document-validity/issuance-request';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { composeEngagementInvitationEmail } from '@/server/engagement-invitations/engagement-invitation-mail';
 import { respondToEngagementInvitation } from '@/server/engagement-invitations/engagement-invitation-redeem';
@@ -98,30 +98,54 @@ function spaceTokenOf(href: string): string {
   return decodeURIComponent(href.slice(href.lastIndexOf('/') + 1));
 }
 
-function professionalBody(): IssuanceSendBody {
+/** §42 — ο σύνδεσμος φεύγει στον επαγγελματία από την ΠΡΟΤΑΣΗ (αίτημα προσφοράς)· `expectedStage` = ό,τι βλέπει η οθόνη. */
+function professionalBody(expectedStage: IssuanceSendBody['expectedStage'] = 'proposed'): IssuanceSendBody {
   return {
-    ...TARGET, expectedStage: 'ownerApproved', audience: 'professional', note: null, expectedOwnerContactId: null,
+    ...TARGET, expectedStage, audience: 'professional', note: null, expectedOwnerContactId: null,
     informContactIds: [], requireAccessCode: false, sendReminders: false,
   };
 }
 
-/** Ο ιδιοκτήτης ενέκρινε (τηλεφωνικά) → ο σύνδεσμος φεύγει στον επαγγελματία → το token του. */
-async function professionalLinkToken(): Promise<string> {
-  await actOnIssuanceAssignment(db(), OFFICE, {
-    action: 'decide', ...TARGET, expectedStage: 'proposed', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a',
-  }, NOW);
-  const result = await sendIssuanceMessage(db(), OFFICE, professionalBody(), NOW);
+const QUOTE_TERMS: QuoteTermsBody = {
+  basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2099-12-31', scope: ['issuance'],
+};
+
+/** Το αίτημα προσφοράς φεύγει στον επαγγελματία → το token του συνδέσμου του. */
+async function professionalLinkToken(expectedStage: IssuanceSendBody['expectedStage'] = 'proposed'): Promise<string> {
+  const result = await sendIssuanceMessage(db(), OFFICE, professionalBody(expectedStage), NOW);
   if (!result.ok) throw new Error(result.refusal);
   const message = sent.find((candidate) => candidate.to === PRO_EMAIL && candidate.kind === 'document-issuance');
   if (message === undefined) throw new Error('not sent');
   return linkTokenIn(message);
 }
 
-/** «Αναλαμβάνω» στον σύνδεσμο ⇒ το token του χώρου (από την όψη της σελίδας). */
-async function acceptAndSpaceToken(): Promise<string> {
-  const answer = await answerIssuanceLink(db(), await professionalLinkToken(), { answer: 'accept', note: null, accessCode: null }, LATER);
-  if (answer.kind !== 'answered' || answer.space.kind !== 'invited') throw new Error(`no space: ${JSON.stringify(answer)}`);
-  return spaceTokenOf(answer.space.href);
+/** Ο επαγγελματίας δίνει προσφορά με τον σύνδεσμό του ⇒ στάδιο `quoted`. */
+async function quoteWithProfessionalLink(): Promise<void> {
+  const answer = await answerIssuanceLink(db(), await professionalLinkToken(), { answer: 'quote', note: null, accessCode: null, terms: QUOTE_TERMS }, NOW);
+  if (answer.kind !== 'answered') throw new Error(`no quote: ${JSON.stringify(answer)}`);
+}
+
+/** Ο υπεύθυνος εγκρίνει την προσφορά (καταγραφή του γραφείου) — η έγκριση ΕΙΝΑΙ η ανάθεση και ανοίγει τον χώρο (§42). */
+async function approveQuoteByOffice(): Promise<void> {
+  const result = await actOnIssuanceAssignment(db(), OFFICE, {
+    action: 'decide', ...TARGET, expectedStage: 'quoted', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a', quoteRevision: 1,
+  }, LATER);
+  if (!result.ok) throw new Error(result.refusal);
+}
+
+/** Το token του χώρου, όπως θα το έβρισκε ο επαγγελματίας — από το **email** της πρόσκλησης στον χώρο. */
+function spaceTokenFromMail(): string {
+  const mail = sent.filter((message) => message.kind === 'engagement').at(-1);
+  const href = mail?.text.split(/\s+/).find((word) => word.startsWith(ORIGIN));
+  if (href === undefined) throw new Error('no space email');
+  return spaceTokenOf(href);
+}
+
+/** Προσφορά (σύνδεσμος) → έγκριση (γραφείο) ⇒ το token του χώρου. */
+async function approvedSpaceToken(): Promise<string> {
+  await quoteWithProfessionalLink();
+  await approveQuoteByOffice();
+  return spaceTokenFromMail();
 }
 
 const professional = { uid: 'u_pro', email: PRO_EMAIL, emailVerified: true, secondFactorEnrolled: false };
@@ -149,34 +173,85 @@ beforeEach(async () => {
   }, NOW);
 });
 
-describe('Γ — «Αναλαμβάνω» ⇒ πρόσκληση στον χώρο της ανάθεσης', () => {
-  it('Γ1 — ακριβώς ΜΙΑ πρόσκληση, δεμένη στη διεύθυνση της ανάθεσης· δεύτερο κλικ ⇒ `already-used`, καμία δεύτερη', async () => {
-    const linkToken = await professionalLinkToken();
+const SPACE_INVITATION = {
+  state: 'pending', hostCompanyId: COMPANY, projectId: 'proj_1', propertyId: 'prop_1', inviteeEmail: PRO_EMAIL, contactId: 'cont_pro',
+  subject: { kind: 'document_issuance', assignmentId: ASSIGNMENT_ID }, role: 'document_issuer',
+  documentKind: 'energy-certificate', qualification: 'energy-inspector-registered', consents: [],
+  credentialHint: { number: 'ΥΠΕΝ-7', chapter: null }, invitedByUid: OFFICE.uid,
+} as const;
+
+/** Το αίτημα προς τον υπεύθυνο (§42): ο σύνδεσμος έγκρισης της προσφοράς → το token του. */
+async function ownerLinkToken(): Promise<string> {
+  const result = await sendIssuanceMessage(db(), OFFICE, {
+    ...TARGET, expectedStage: 'quoted', audience: 'owner', note: null, expectedOwnerContactId: 'cont_a',
+    informContactIds: [], requireAccessCode: false, sendReminders: false,
+  }, NOW);
+  if (!result.ok) throw new Error(result.refusal);
+  const message = sent.find((candidate) => candidate.to === 'alfa@example.test' && candidate.kind === 'document-issuance');
+  if (message === undefined) throw new Error('owner not sent');
+  return linkTokenIn(message);
+}
+
+describe('Γ — η έγκριση της προσφοράς ⇒ πρόσκληση στον χώρο της ανάθεσης (§42)', () => {
+  it('Γ1 — έγκριση με σύνδεσμο ⇒ ακριβώς ΜΙΑ πρόσκληση, δεμένη στη διεύθυνση της προσφοράς· δεύτερο κλικ ⇒ `already-used`, καμία δεύτερη', async () => {
+    await quoteWithProfessionalLink();
+    const ownerToken = await ownerLinkToken();
+    const answer = await answerIssuanceLink(db(), ownerToken, { answer: 'approve', note: null, accessCode: null, quoteRevision: 1 }, LATER);
+    expect(answer).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
+    expect(assignment()).toMatchObject({ decision: { basis: 'owner-link-approval', outcome: 'approved', quoteRevision: 1 } });
+    const [invitation, ...rest] = spaceInvitations();
+    expect(rest).toEqual([]);
+    expect(invitation?.data).toMatchObject(SPACE_INVITATION);
+    expect(sent.filter((message) => message.kind === 'engagement').map((message) => message.to)).toEqual([PRO_EMAIL]);
+    expect(await answerIssuanceLink(db(), ownerToken, { answer: 'approve', note: null, accessCode: null, quoteRevision: 1 }, LATER)).toMatchObject({ kind: 'refused', reason: 'already-used' });
+    expect(spaceInvitations()).toHaveLength(1);
+  });
+
+  it('Γ1β — ΚΑΤΑΓΕΓΡΑΜΜΕΝΗ έγκριση του γραφείου ⇒ η ΙΔΙΑ πρόσκληση, από την ίδια πόρτα', async () => {
+    await quoteWithProfessionalLink();
+    await approveQuoteByOffice();
+    const [invitation, ...rest] = spaceInvitations();
+    expect(rest).toEqual([]);
+    expect(invitation?.data).toMatchObject(SPACE_INVITATION);
+    expect(assignment()).toMatchObject({ decision: { basis: 'recorded-instruction', outcome: 'approved', quoteRevision: 1 } });
+  });
+
+  it('Γ1γ — απόρριψη της προσφοράς ⇒ ΚΑΜΙΑ πρόσκληση στον χώρο', async () => {
+    await quoteWithProfessionalLink();
+    await actOnIssuanceAssignment(db(), OFFICE, {
+      action: 'decide', ...TARGET, expectedStage: 'quoted', outcome: 'rejected', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a', quoteRevision: 1,
+    }, LATER);
+    expect(spaceInvitations()).toEqual([]);
+  });
+
+  it('Γ2 — ακίνητο ΧΩΡΙΣ έργο ⇒ η ανάθεση γράφεται, καμία πρόσκληση (`no-project`) — η κάρτα το λέει και δίνει το κουμπί', async () => {
+    seedProperty(null);
+    await quoteWithProfessionalLink();
+    await approveQuoteByOffice();
+    expect(assignment()).toMatchObject({ decision: { outcome: 'approved', quoteRevision: 1 } });
+    expect(spaceInvitations()).toEqual([]);
+    expect(await inviteIssuanceProfessionalToSpace(db(), OFFICE, TARGET, LATER)).toEqual({ ok: false, refusal: 'no-project' });
+  });
+
+  it('Γ6 — ΠΑΛΙΑ ανάθεση (§27): «Αναλαμβάνω» ⇒ ακριβώς ΜΙΑ πρόσκληση, στην ίδια συναλλαγή με την απάντηση', async () => {
+    // Απόφαση για το πρόσωπο, χωρίς αναθεώρηση προσφοράς — όπως γράφονταν πριν από τον §42.
+    fake.seed(COLLECTIONS.DOCUMENT_ISSUANCE_ASSIGNMENTS, ASSIGNMENT_ID, {
+      ...assignment(),
+      decision: { basis: 'recorded-instruction', channel: 'phone', recordedByUid: OFFICE.uid, outcome: 'approved', quoteRevision: null, ownerContactId: 'cont_a', note: null, at: NOW.toISOString() },
+    });
+    const linkToken = await professionalLinkToken('ownerApproved');
     const answer = await answerIssuanceLink(db(), linkToken, { answer: 'accept', note: null, accessCode: null }, LATER);
     expect(answer).toMatchObject({ kind: 'answered', answer: 'accept', space: { kind: 'invited' } });
     expect(assignment()).toMatchObject({ response: { basis: 'professional-link', outcome: 'accepted' } });
     const [invitation, ...rest] = spaceInvitations();
     expect(rest).toEqual([]);
-    expect(invitation?.data).toMatchObject({
-      state: 'pending', hostCompanyId: COMPANY, projectId: 'proj_1', propertyId: 'prop_1', inviteeEmail: PRO_EMAIL, contactId: 'cont_pro',
-      subject: { kind: 'document_issuance', assignmentId: ASSIGNMENT_ID }, role: 'document_issuer',
-      documentKind: 'energy-certificate', qualification: 'energy-inspector-registered', consents: [],
-      credentialHint: { number: 'ΥΠΕΝ-7', chapter: null }, invitedByUid: OFFICE.uid,
-    });
+    expect(invitation?.data).toMatchObject(SPACE_INVITATION);
     expect(await answerIssuanceLink(db(), linkToken, { answer: 'accept', note: null, accessCode: null }, LATER)).toMatchObject({ kind: 'refused', reason: 'already-used' });
     expect(spaceInvitations()).toHaveLength(1);
   });
 
-  it('Γ2 — ακίνητο ΧΩΡΙΣ έργο ⇒ η ανάληψη γράφεται, καμία πρόσκληση (`no-project`)', async () => {
-    seedProperty(null);
-    const answer = await answerIssuanceLink(db(), await professionalLinkToken(), { answer: 'accept', note: null, accessCode: null }, LATER);
-    expect(answer).toEqual({ kind: 'answered', answer: 'accept', space: { kind: 'no-project' } });
-    expect(assignment()).toMatchObject({ response: { outcome: 'accepted' } });
-    expect(spaceInvitations()).toEqual([]);
-  });
-
   it('Γ3 — επαναποστολή ⇒ ο παλιός σύνδεσμος `revoked`, ο νέος `pending`, και το email φέρει τον ΝΕΟ', async () => {
-    const oldToken = await acceptAndSpaceToken();
+    const oldToken = await approvedSpaceToken();
     const outcome = await inviteIssuanceProfessionalToSpace(db(), OFFICE, TARGET, new Date(LATER.getTime() + 1000));
     expect(outcome).toMatchObject({ ok: true, delivery: 'accepted' });
     const states = spaceInvitations().map((doc) => doc.data.state).sort();
@@ -190,7 +265,7 @@ describe('Γ — «Αναλαμβάνω» ⇒ πρόσκληση στον χώρ
   });
 
   it('Γ4 — εξαργύρωση ⇒ ενεργή συμμετοχή `document_issuer`, μητρώο ΥΠΕΝ, χωρίς σύλλογο· μετά, επαναποστολή ⇒ `entered`', async () => {
-    const outcome = await redeem(await acceptAndSpaceToken());
+    const outcome = await redeem(await approvedSpaceToken());
     expect(outcome).toMatchObject({ kind: 'accepted', effect: { state: 'active', uid: 'u_pro', role: 'document_issuer' } });
     if (outcome.kind !== 'accepted') throw new Error('unreachable');
     expect(outcome.effect.subject).toEqual({ kind: 'document_issuance', assignmentId: ASSIGNMENT_ID });
@@ -199,7 +274,7 @@ describe('Γ — «Αναλαμβάνω» ⇒ πρόσκληση στον χώρ
   });
 
   it('Γ5 — η συμμετοχή ανάθεσης στις πόρτες ΜΕΤΑΒΙΒΑΣΗΣ ⇒ `not-found` (ξένη ≡ ανύπαρκτη)', async () => {
-    const outcome = await redeem(await acceptAndSpaceToken());
+    const outcome = await redeem(await approvedSpaceToken());
     if (outcome.kind !== 'accepted') throw new Error(`not accepted: ${outcome.kind}`);
     const engagementId = outcome.effect.id;
     expect(await resolveEngagedCase(db(), 'u_pro', engagementId, Date.now())).toEqual({ ok: false, rejection: 'not-found' });
@@ -216,7 +291,7 @@ function legacyConveyanceDocOf(stored: Record<string, unknown>): Record<string, 
 
 describe('Σ — το σχήμα της πρόσκλησης: η μεταβίβαση όπως ήταν πάντα', () => {
   it('έγγραφο μεταβίβασης ΠΑΛΙΟΥ σχήματος ⇒ διαβάζεται με παραγόμενο `subject`, και ξαναγράφεται ΑΜΕΤΑΒΛΗΤΟ', async () => {
-    await acceptAndSpaceToken();
+    await approvedSpaceToken();
     const [stored] = spaceInvitations();
     if (stored === undefined) throw new Error('no invitation');
     const legacy = legacyConveyanceDocOf(stored.data);
@@ -229,7 +304,7 @@ describe('Σ — το σχήμα της πρόσκλησης: η μεταβίβ�
   });
 
   it('`subject` ξένου είδους, ή ούτε `subject` ούτε `caseId` ⇒ `null` (ποτέ «περίπου»)', async () => {
-    await acceptAndSpaceToken();
+    await approvedSpaceToken();
     const [stored] = spaceInvitations();
     if (stored === undefined) throw new Error('no invitation');
     const legacy = legacyConveyanceDocOf(stored.data);
@@ -242,7 +317,7 @@ describe('Σ — το σχήμα της πρόσκλησης: η μεταβίβ�
 
 describe('Μ — ο συνθέτης του email, ανά είδος', () => {
   it('ανάθεση και μεταβίβαση: ΙΔΙΟΣ απόλυτος σύνδεσμος χώρου, ΑΛΛΑ λόγια', async () => {
-    await acceptAndSpaceToken();
+    await approvedSpaceToken();
     const [stored] = spaceInvitations();
     if (stored === undefined) throw new Error('no invitation');
     const issuance = engagementInvitationFromDocument(stored.data, stored.id);
@@ -259,7 +334,7 @@ describe('Μ — ο συνθέτης του email, ανά είδος', () => {
   });
 
   it('ανάθεση χωρίς δημόσια διεύθυνση ⇒ `null` (ποτέ σύνδεσμος που δεν οδηγεί πουθενά)', async () => {
-    await acceptAndSpaceToken();
+    await approvedSpaceToken();
     const [stored] = spaceInvitations();
     const issuance = stored === undefined ? null : engagementInvitationFromDocument(stored.data, stored.id);
     if (issuance === null) throw new Error('unparsable');

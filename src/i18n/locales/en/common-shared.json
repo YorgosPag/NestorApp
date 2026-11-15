@@ -999,6 +999,7 @@
     "rejected": "Assignment not approved — «{title}»",
     "accepted": "The professional accepted — «{title}»",
     "declined": "The professional declined — «{title}»",
+    "quoted": "A quote arrived — «{title}»",
     "body": "Answer from {name} through the link. Open «Document expiry» for the next step.",
     "bodyUnnamed": "Answer through the link. Open «Document expiry» for the next step.",
     "locked": "Link locked — “{title}”",

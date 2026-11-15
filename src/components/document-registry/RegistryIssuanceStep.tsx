@@ -7,7 +7,7 @@
  *   RegistryNextStep.tsx (ο γονέας)
  * @module components/document-registry/RegistryIssuanceStep
  *
- * 🔑 **«Ανατέθηκε» ΜΟΝΟ με απόφαση ιδιοκτήτη**: το στάδιο `proposed` λέει «αναμένει απόφαση ιδιοκτήτη», ποτέ «ανατέθηκε».
+ * 🔑 **«Ανατέθηκε» ΜΟΝΟ με απόφαση ιδιοκτήτη** — και (§42) πάνω σε **προσφορά**: πρόσωπο και τιμή κρίνονται μαζί.
  * 🔑 **Ball in court** (Procore) ως **λέξη**, όχι χρώμα: «Σειρά έχει: ο ιδιοκτήτης <όνομα>».
  * 🔑 **Το προσόν λέγεται «δηλωμένο»**, και για άδεια μητρώου δίνεται ο σύνδεσμος ελέγχου (buildingcert.gr) — ποτέ
  *    υπαινιγμός ότι η εφαρμογή το επαλήθευσε.
@@ -46,8 +46,13 @@ import {
   IssuanceDecisionDialog,
   IssuanceNoticeDialog,
   IssuanceProposeDialog,
+  IssuanceQuoteDialog,
+  IssuanceReceiptDialog,
   IssuanceSendDialog,
 } from '@/components/document-registry/RegistryIssuanceDialogs';
+import { quoteLines } from '@/components/document-registry/registry-issuance-quote-lines';
+import { canReviseQuote, quoteTotalsOf } from '@/lib/document-validity/issuance-quote';
+import { isLegacyIssuance } from '@/lib/document-validity/issuance-stage';
 import { ISSUER_KEYS, NEXT_STEP_KEYS, PROPERTY_MARKET_NS, qualificationText, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import {
   BALL_IN_COURT_KEYS,
@@ -58,6 +63,7 @@ import {
   ISSUANCE_KEYS,
   ISSUANCE_STAGE_KEYS,
   LINK_HISTORY_KEYS,
+  QUOTE_KEYS,
 } from '@/components/document-registry/issuance-labels';
 
 type Names = Pick<DocumentRegistryResponse, 'people'>;
@@ -222,7 +228,8 @@ function HistoryLines({ record, registry }: { readonly record: IssuanceAssignmen
       <li>{t(ISSUANCE_KEYS.proposedOn, { date: formatDate(record.proposedAt) })}</li>
       {approvalRequest === null ? null : requestLines(t, approvalRequest, registry, open && decision === null)}
       {decision === null ? null : decisionLines(t, decision, registry)}
-      {notice === null ? null : noticeLines(t, notice, open && response === null)}
+      {notice === null ? null : noticeLines(t, notice, open && response === null && record.quote === null)}
+      {quoteLines(t, record)}
       {response === null ? null : responseLines(t, response)}
     </ul>
   );
@@ -235,29 +242,65 @@ interface ActionsProps {
   readonly registry: Names;
 }
 
-/** Η **μία** επόμενη ενέργεια κάθε σταδίου (+ ακύρωση). Κανένα κουμπί για πράξη που ο μειωτής θα αρνιόταν. */
-function StageActions({ view, stage, record, registry }: ActionsProps): React.ReactElement {
+/** Πριν από την προσφορά (§42) ή σε παλιά ανάθεση (§27): αίτημα με σύνδεσμο · καταγραφή ενημέρωσης · καταγραφή απάντησης. */
+function RequestActions({ view, stage, record, registry }: ActionsProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
   const professionalName = nameOf(t, record.professionalContactId, registry);
-  const lead = view.lead?.kind === 'designated' ? { contactId: view.lead.contactId, name: nameOf(t, view.lead.contactId, registry) } : null;
+  const legacy = isLegacyIssuance(record);
   const respond = (outcome: 'accepted' | 'declined') => actions?.act({ action: 'respond', ...issuanceTargetOf(view), outcome });
+  const awaitingNotice = stage === 'proposed' || stage === 'ownerApproved';
   return (
-    <div className="flex flex-wrap gap-2">
-      {stage === 'proposed' && lead !== null ? (
-        <IssuanceSendDialog view={view} audience="owner" recipientName={lead.name} leadId={lead.contactId} resend={record.approvalRequest !== null} />
-      ) : null}
-      {stage === 'proposed' ? <IssuanceDecisionDialog view={view} professionalName={professionalName} lead={lead} /> : null}
-      {stage === 'ownerApproved' || (stage === 'sent' && (record.notice?.invitationId ?? null) !== null) ? (
+    <>
+      {awaitingNotice || (stage === 'sent' && (record.notice?.invitationId ?? null) !== null) ? (
         <IssuanceSendDialog view={view} audience="professional" recipientName={professionalName} leadId={null} resend={stage === 'sent'} />
       ) : null}
-      {stage === 'ownerApproved' ? <IssuanceNoticeDialog view={view} professionalName={professionalName} /> : null}
-      {stage === 'sent' ? (
-        <>
-          <Button type="button" size="sm" variant="outline" onClick={() => respond('accepted')}>{t(ISSUANCE_KEYS.accepted)}</Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => respond('declined')}>{t(ISSUANCE_KEYS.declined)}</Button>
-        </>
+      {awaitingNotice ? <IssuanceNoticeDialog view={view} professionalName={professionalName} /> : null}
+      {stage === 'sent' && !legacy ? <IssuanceQuoteDialog view={view} professionalName={professionalName} revision={false} /> : null}
+      {stage === 'sent' && legacy ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => respond('accepted')}>{t(ISSUANCE_KEYS.accepted)}</Button>
       ) : null}
+      {stage === 'sent' ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => respond('declined')}>{t(legacy ? ISSUANCE_KEYS.declined : QUOTE_KEYS.noQuote)}</Button>
+      ) : null}
+    </>
+  );
+}
+
+/** §42 — με προσφορά: έγκριση από τον υπεύθυνο · αναθεώρηση μετά την αυτοψία · παραστατικό · απόσυρση. */
+function QuoteActions({ view, stage, record, registry }: ActionsProps): React.ReactElement | null {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const actions = useIssuanceAssignmentActions();
+  const { quote } = record;
+  if (quote === null || isLegacyIssuance(record)) return null;
+  const professionalName = nameOf(t, record.professionalContactId, registry);
+  const lead = view.lead?.kind === 'designated' ? { contactId: view.lead.contactId, name: nameOf(t, view.lead.contactId, registry) } : null;
+  const unreceipted = stage === 'accepted' && record.receipt === null;
+  return (
+    <>
+      {stage === 'quoted' && lead !== null ? (
+        <IssuanceSendDialog view={view} audience="owner" recipientName={lead.name} leadId={lead.contactId} resend={record.approvalRequest !== null} />
+      ) : null}
+      {stage === 'quoted' ? <IssuanceDecisionDialog view={view} professionalName={professionalName} lead={lead} quoteRevision={quote.revision} /> : null}
+      {unreceipted && canReviseQuote(quote) ? <IssuanceQuoteDialog view={view} professionalName={professionalName} revision /> : null}
+      {unreceipted ? <IssuanceReceiptDialog view={view} totalMinor={quoteTotalsOf(quote).totalMinor} /> : null}
+      {stage === 'quoted' || stage === 'accepted' ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => actions?.act({ action: 'respond', ...issuanceTargetOf(view), outcome: 'declined' })}>
+          {t(QUOTE_KEYS.withdrawn)}
+        </Button>
+      ) : null}
+    </>
+  );
+}
+
+/** Οι επόμενες ενέργειες κάθε σταδίου (+ ακύρωση). Κανένα κουμπί για πράξη που ο μειωτής θα αρνιόταν. */
+function StageActions(props: ActionsProps): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const { view, stage, registry } = props;
+  return (
+    <div className="flex flex-wrap gap-2">
+      <RequestActions {...props} />
+      <QuoteActions {...props} />
       {stage === 'proposed' || stage === 'declined' ? (
         <IssuanceProposeDialog view={view} names={candidateNames(t, view, registry)} trigger="proposeOther" />
       ) : null}

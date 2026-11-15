@@ -27,6 +27,8 @@ jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { reco
 jest.mock('@/lib/workspace/workspace-catalog', () => ({ readWorkspaceName: jest.fn(async () => 'Γραφείο Άλφα') }));
 jest.mock('@/server/notifications/notification-orchestrator', () => ({ dispatchNotification: jest.fn(async () => ({ skipped: false })) }));
 jest.mock('@/server/invitations/invitation-notice', () => ({ deliverInvitationEmail: jest.fn() }));
+/** §42 — η έγκριση ανοίγει τον χώρο (§39)· η ΜΙΑ πόρτα έχει δική της σουίτα (`issuance-space-bridge.test.ts`). */
+jest.mock('@/server/issuance-invitations/issuance-space-invite', () => ({ engageApprovedProfessional: jest.fn(async () => undefined) }));
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { deliverInvitationEmail } = require('@/server/invitations/invitation-notice') as { deliverInvitationEmail: jest.Mock };
@@ -63,7 +65,7 @@ function tokenIn(message: Sent): string {
 
 function body(overrides: Partial<IssuanceSendBody> = {}): IssuanceSendBody {
   return {
-    ...TARGET, expectedStage: 'proposed', audience: 'owner', note: 'Παρακαλούμε μέχρι την Παρασκευή.',
+    ...TARGET, expectedStage: 'quoted', audience: 'owner', note: 'Παρακαλούμε μέχρι την Παρασκευή.',
     expectedOwnerContactId: 'cont_a', informContactIds: [], requireAccessCode: true, sendReminders: true, ...overrides,
   };
 }
@@ -97,6 +99,12 @@ beforeEach(async () => {
   }
   await actOnIssuanceAssignment(db(), OFFICE, {
     action: 'propose', ...TARGET, expectedStage: null, professionalContactId: 'cont_pro', qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7',
+  }, SENT_AT);
+  // §42 — ο υπεύθυνος κρίνει προσφορά: αίτημα προσφοράς (καταγεγραμμένο) → προσφορά ⇒ `quoted`, εκεί φεύγει ο σύνδεσμος έγκρισης.
+  await actOnIssuanceAssignment(db(), OFFICE, { action: 'notify', ...TARGET, expectedStage: 'proposed', channel: 'phone' }, SENT_AT);
+  await actOnIssuanceAssignment(db(), OFFICE, {
+    action: 'record-quote', ...TARGET, expectedStage: 'sent', note: null,
+    terms: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'] },
   }, SENT_AT);
 });
 
@@ -147,13 +155,13 @@ describe('ADR-915 §31 — η σάρωση', () => {
     expect(fresh).not.toBe(original);
     expect(await viewIssuanceLink(db(), original, FIRST_DUE)).toMatchObject({ kind: 'view' });
     expect(await viewIssuanceLink(db(), fresh, FIRST_DUE)).toMatchObject({ kind: 'view' });
-    expect(await answerIssuanceLink(db(), fresh, { answer: 'approve', note: null, accessCode: code }, FIRST_DUE)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
-    expect(await answerIssuanceLink(db(), original, { answer: 'reject', note: null, accessCode: code }, FIRST_DUE)).toMatchObject({ kind: 'refused', reason: 'already-used' });
+    expect(await answerIssuanceLink(db(), fresh, { answer: 'approve', note: null, accessCode: code, quoteRevision: 1 }, FIRST_DUE)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
+    expect(await answerIssuanceLink(db(), original, { answer: 'reject', note: null, accessCode: code, quoteRevision: 1 }, FIRST_DUE)).toMatchObject({ kind: 'refused', reason: 'already-used' });
   });
 
   it('απάντησε ⇒ η επόμενη αποσύρεται, κανένα email', async () => {
     const { token, code } = await send();
-    await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, SENT_AT);
+    await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code, quoteRevision: 1 }, SENT_AT);
     expect(await sweepIssuanceInvitationReminders(db(), FIRST_DUE)).toMatchObject({ considered: 1, retired: 1, reminded: 0 });
     expect(reminders()?.dueAt).toBeNull();
     expect(reminderEmails()).toEqual([]);
@@ -172,7 +180,7 @@ describe('ADR-915 §31 — η σάρωση', () => {
 
   it('ακύρωση ανάθεσης ⇒ αποσύρεται, κανένα email', async () => {
     await send();
-    await actOnIssuanceAssignment(db(), OFFICE, { action: 'cancel', ...TARGET, expectedStage: 'proposed' }, SENT_AT);
+    await actOnIssuanceAssignment(db(), OFFICE, { action: 'cancel', ...TARGET, expectedStage: 'quoted' }, SENT_AT);
     expect(await sweepIssuanceInvitationReminders(db(), FIRST_DUE)).toMatchObject({ retired: 1, reminded: 0 });
     expect(reminderEmails()).toEqual([]);
   });
@@ -211,7 +219,7 @@ describe('ADR-915 §31 — η σάρωση', () => {
 
   it('νέα αποστολή ⇒ το νέο μήνυμα έχει ΔΙΚΟ του πρόγραμμα· ο παλιός σύνδεσμος δεν υπενθυμίζεται', async () => {
     await send();
-    await send({ expectedStage: 'proposed' });
+    await send({ expectedStage: 'quoted' });
     expect(invitations()).toHaveLength(2);
     expect(await sweepIssuanceInvitationReminders(db(), FIRST_DUE)).toMatchObject({ reminded: 1 });
     const [reminder] = reminderEmails();

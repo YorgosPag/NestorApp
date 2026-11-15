@@ -440,12 +440,13 @@
         "owner": "the owner's"
       },
       "stage": {
-        "proposed": "Proposed to the owner — awaiting their decision",
+        "proposed": "Selected by the office — a quote will be requested",
         "ownerApproved": "Approved by the owner — the office will notify you",
         "ownerRejected": "The owner did not approve the assignment",
         "sent": "Sent to you — awaiting your answer",
-        "accepted": "You took it on — the new document is expected from you",
-        "declined": "You did not take it on",
+        "quoted": "You gave a quote — awaiting the owner's decision",
+        "accepted": "Assigned to you — the new document is expected from you",
+        "declined": "You did not take it on or withdrew",
         "cancelled": "The assignment was cancelled"
       },
       "open": "Open space",

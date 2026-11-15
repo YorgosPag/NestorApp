@@ -38,6 +38,10 @@ const ISSUANCE_REFUSAL_STATUS: Readonly<Record<IssuanceRefusal, readonly [number
   'transition-refused': [409, 'TRANSITION_REFUSED'],
   // §28 — π.χ. καταγραφή απόφασης χωρίς κανάλι· δομικά ανέφικτο από τη φόρμα, άρα σφάλμα του πελάτη.
   'actor-refused': [422, 'ACTOR_REFUSED'],
+  // §42 — άκυροι όροι, αναθεώρηση που δεν επιτρέπεται, ή απόφαση για αναθεώρηση που άλλαξε στο μεταξύ.
+  'terms-refused': [409, 'TERMS_REFUSED'],
+  // §42 — το παραστατικό δεν ταιριάζει με την εγκεκριμένη τιμή: πρώτα αναθεώρηση, ποτέ δεύτερο ποσό.
+  'receipt-mismatch': [422, 'RECEIPT_MISMATCH'],
 };
 
 async function issuanceHandler(request: NextRequest, ctx: AuthContext) {

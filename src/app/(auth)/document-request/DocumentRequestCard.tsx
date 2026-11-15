@@ -1,8 +1,10 @@
 'use client';
 
 /**
- * @fileoverview ADR-915 §28 — **η απάντηση με τον σύνδεσμο**: ο υπεύθυνος εγκρίνει/αρνείται, ο επαγγελματίας αποδέχεται/αρνείται.
- * @related DocumentRequestGate.tsx (η είσοδος) · document-request-api.ts · server/issuance-invitations/issuance-invitation-answer.ts
+ * @fileoverview ADR-915 §28 · §42 — **η απάντηση με τον σύνδεσμο**: ο επαγγελματίας δίνει **προσφορά** (ή αρνείται), ο
+ *   υπεύθυνος **εγκρίνει την προσφορά** (πρόσωπο και τιμή μαζί) ή όχι. Παλιές αναθέσεις (§27): «Αναλαμβάνω/Αρνούμαι».
+ * @related DocumentRequestGate.tsx (η είσοδος) · DocumentRequestQuote.tsx · document-request-api.ts ·
+ *   server/issuance-invitations/issuance-invitation-answer.ts
  * @module app/(auth)/document-request/DocumentRequestCard
  *
  * 🔑 **Πρώτα ποιος και τι, μετά το κουμπί** (anti-phishing, ίδια σειρά με το email): γραφείο · ακίνητο · έγγραφο ·
@@ -10,12 +12,15 @@
  * 🔑 **«Για: <όνομα>»** — η σελίδα λέει σε ποιον απευθύνεται και ζητά από όποιον δεν είναι αυτός να **μην** απαντήσει
  *    (αντιστάθμιση προώθησης, §28 Η-Β6).
  * 🔑 Η πράξη φεύγει **μόνο** από κουμπί (POST)· το άνοιγμα της σελίδας δεν αλλάζει τίποτα.
+ * 🔑 §42 — ο υπεύθυνος στέλνει **την αναθεώρηση που είδε**: αν η τιμή άλλαξε στο μεταξύ, ο μειωτής αρνείται.
  */
 
 import React, { useId, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 
 import { DOCUMENT_KIND_LABEL_KEYS, qualificationText } from '@/components/document-registry/document-registry-labels';
+import { IssuanceQuoteFields } from '@/components/document-registry/IssuanceQuoteFields';
+import { emptyQuoteDraft, quoteTermsFromDraft, type QuoteDraft } from '@/components/document-registry/issuance-quote-draft';
 import { AuthCardSection } from '@/components/ui/auth-card-section';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -24,35 +29,36 @@ import { qualificationLookupUrl } from '@/config/document-validity/document-issu
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ISSUANCE_NOTE_MAX } from '@/lib/document-validity/issuance-assignment';
-import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
+import type { IssuanceLinkAnswer, IssuanceLinkAnswerBody } from '@/lib/document-validity/issuance-request';
 import { formatDate } from '@/lib/intl-formatting';
 import { Link } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
 import type { IssuanceLinkView, IssuanceSpaceView } from '@/types/issuance-invitation';
 
 import { DocumentRequestFailureState } from './DocumentRequestFailureState';
+import { Fact } from './DocumentRequestFact';
+import { QuoteBriefFacts, QuoteFacts } from './DocumentRequestQuote';
 import { answerDocumentRequest, type DocumentRequestFailure } from './document-request-api';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-/** Τα λόγια ανά ακροατήριο — κάθε κλειδί κυριολεκτικό (CHECK 3.34 τα λύνει στατικά). */
-function audienceTexts(t: Translate, view: IssuanceLinkView) {
-  if (view.audience === 'owner') {
-    return {
-      heading: t('document-request:owner.heading'),
-      intro: t('document-request:owner.intro'),
-      yes: t('document-request:owner.approve'),
-      no: t('document-request:owner.reject'),
-      answers: ['approve', 'reject'] as const,
+
+/** Τα λόγια ανά βήμα — κάθε κλειδί κυριολεκτικό (CHECK 3.34 τα λύνει στατικά). */
+function stepTexts(t: Translate, view: IssuanceLinkView) {
+  switch (view.step) {
+    case 'approve-quote': return {
+      heading: t('document-request:owner.heading'), intro: t('document-request:owner.quoteIntro'),
+      yes: t('document-request:owner.approveQuote'), no: t('document-request:owner.rejectQuote'),
+    };
+    case 'give-quote': return {
+      heading: t('document-request:professional.quoteHeading'), intro: t('document-request:professional.quoteIntro'),
+      yes: t('document-request:professional.submitQuote'), no: t('document-request:professional.noQuote'),
+    };
+    case 'legacy-accept': return {
+      heading: t('document-request:professional.heading'), intro: t('document-request:professional.intro'),
+      yes: t('document-request:professional.accept'), no: t('document-request:professional.decline'),
     };
   }
-  return {
-    heading: t('document-request:professional.heading'),
-    intro: t('document-request:professional.intro'),
-    yes: t('document-request:professional.accept'),
-    no: t('document-request:professional.decline'),
-    answers: ['accept', 'decline'] as const,
-  };
 }
 
 function doneText(t: Translate, answer: IssuanceLinkAnswer): string {
@@ -61,16 +67,8 @@ function doneText(t: Translate, answer: IssuanceLinkAnswer): string {
     case 'reject': return t('document-request:done.rejected');
     case 'accept': return t('document-request:done.accepted');
     case 'decline': return t('document-request:done.declined');
+    case 'quote': return t('document-request:done.quoted');
   }
-}
-
-function Fact({ term, children }: { readonly term: string; readonly children: React.ReactNode }) {
-  return (
-    <>
-      <dt className="text-xs text-muted-foreground">{term}</dt>
-      <dd className="m-0 text-sm text-card-foreground">{children}</dd>
-    </>
-  );
 }
 
 function ProfessionalFacts({ professional }: { readonly professional: NonNullable<IssuanceLinkView['professional']> }) {
@@ -100,6 +98,7 @@ function RequestFacts({ view }: { readonly view: IssuanceLinkView }) {
       <Fact term={t('document-request:facts.property')}>{view.propertyLabel ?? t('document-request:facts.unnamed')}</Fact>
       <Fact term={t('document-request:facts.document')}>{t(DOCUMENT_KIND_LABEL_KEYS[view.documentKind])}</Fact>
       {view.professional === null ? null : <ProfessionalFacts professional={view.professional} />}
+      {view.quote === null ? null : <QuoteFacts quote={view.quote} />}
       {view.note === null ? null : <Fact term={t('document-request:facts.note')}>{view.note}</Fact>}
       <Fact term={t('document-request:facts.expires')}>{formatDate(view.expiresAt)}</Fact>
     </dl>
@@ -113,8 +112,8 @@ type Phase =
   | { readonly kind: 'failed'; readonly failure: DocumentRequestFailure };
 
 /**
- * §39 — **το επόμενο βήμα μετά το «Αναλαμβάνω»**: ο χώρος της ανάθεσης, με λογαριασμό στη διεύθυνση του συνδέσμου. Ο
- * σύνδεσμος ήρθε **και** με email (η απόδειξη) — αν ο άνθρωπος κλείσει τη σελίδα, δεν χάνεται.
+ * §39 — **το επόμενο βήμα μετά την ανάθεση**: ο χώρος της, με λογαριασμό στη διεύθυνση του συνδέσμου. Ο σύνδεσμος ήρθε
+ * **και** με email (η απόδειξη) — αν ο άνθρωπος κλείσει τη σελίδα, δεν χάνεται.
  */
 function SpaceNextStep({ space }: { readonly space: IssuanceSpaceView }) {
   const { t } = useTranslation(['document-request']);
@@ -134,17 +133,38 @@ function SpaceNextStep({ space }: { readonly space: IssuanceSpaceView }) {
   );
 }
 
-/** Γιατί δεν άνοιξε χώρος — ονομασμένο, ποτέ σιωπή. */
+/**
+ * Το σώμα του «ναι» για κάθε βήμα — `null` όσο η προσφορά δεν είναι πλήρης (το κουμπί μένει ανενεργό). Ο υπεύθυνος
+ * στέλνει την αναθεώρηση που **βλέπει**.
+ */
+function yesBodyOf(view: IssuanceLinkView, draft: QuoteDraft, note: string | null, accessCode: string | null): IssuanceLinkAnswerBody | null {
+  switch (view.step) {
+    case 'approve-quote': return view.quote === null ? null : { answer: 'approve', note, accessCode, quoteRevision: view.quote.revision };
+    case 'legacy-accept': return { answer: 'accept', note, accessCode };
+    case 'give-quote': {
+      const terms = quoteTermsFromDraft(draft);
+      return terms === null ? null : { answer: 'quote', note, accessCode, terms };
+    }
+  }
+}
+
+function noBodyOf(view: IssuanceLinkView, note: string | null, accessCode: string | null): IssuanceLinkAnswerBody | null {
+  if (view.step !== 'approve-quote') return { answer: 'decline', note, accessCode };
+  return view.quote === null ? null : { answer: 'reject', note, accessCode, quoteRevision: view.quote.revision };
+}
+
 /** `accessCode` (§29): ο κωδικός που ξεκλείδωσε την όψη — ξανακρίνεται με την απάντηση· `null` = ο σύνδεσμος αρκεί. */
 export function DocumentRequestCard({ token, view, accessCode }: { readonly token: string; readonly view: IssuanceLinkView; readonly accessCode: string | null }) {
   const { t } = useTranslation(['document-request']);
   const [note, setNote] = useState('');
+  const [draft, setDraft] = useState<QuoteDraft>(() => emptyQuoteDraft());
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const noteId = useId();
-  const texts = audienceTexts(t, view);
-  const answer = async (choice: IssuanceLinkAnswer) => {
+  const texts = stepTexts(t, view);
+  const answer = async (body: IssuanceLinkAnswerBody | null) => {
+    if (body === null) return;
     setPhase({ kind: 'sending' });
-    const outcome = await answerDocumentRequest(token, { answer: choice, note: note.trim() || null, accessCode });
+    const outcome = await answerDocumentRequest(token, body);
     setPhase(outcome.ok ? { kind: 'done', answer: outcome.data.answer, space: outcome.data.space } : { kind: 'failed', failure: outcome.failure });
   };
   if (phase.kind === 'failed') return <DocumentRequestFailureState failure={phase.failure} />;
@@ -158,6 +178,8 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
     );
   }
   const sending = phase.kind === 'sending';
+  const trimmed = note.trim() || null;
+  const yesBody = yesBodyOf(view, draft, trimmed, accessCode);
   return (
     <AuthCardSection gap={4}>
       <header className="flex flex-col gap-1">
@@ -167,13 +189,15 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
       </header>
       <p className="m-0 text-sm text-card-foreground">{texts.intro}</p>
       <RequestFacts view={view} />
+      {view.brief === null ? null : <QuoteBriefFacts brief={view.brief} />}
+      {view.step === 'give-quote' ? <IssuanceQuoteFields draft={draft} onChange={setDraft} disabled={sending} /> : null}
       <Label htmlFor={noteId} className="text-sm font-medium">{t('document-request:page.noteLabel')}</Label>
       <Textarea id={noteId} value={note} maxLength={ISSUANCE_NOTE_MAX} onChange={(event) => setNote(event.target.value)} disabled={sending} />
       <p className="m-0 text-xs text-muted-foreground">{t('document-request:page.recordedOnly')}</p>
       <footer className="flex flex-wrap gap-2">
         {/* ADR-770 §18.6: `variant="default"` = `bg-primary` ≡ `--card` στο σκοτεινό ⇒ το «ναι» δεν ξεχώριζε (ADR-915 §29.1). */}
-        <Button type="button" variant="outline" className={COLOR_BRIDGE.action.primary} onClick={() => { void answer(texts.answers[0]); }} disabled={sending}>{texts.yes}</Button>
-        <Button type="button" variant="outline" onClick={() => { void answer(texts.answers[1]); }} disabled={sending}>{texts.no}</Button>
+        <Button type="button" variant="outline" className={COLOR_BRIDGE.action.primary} onClick={() => { void answer(yesBody); }} disabled={sending || yesBody === null}>{texts.yes}</Button>
+        <Button type="button" variant="outline" onClick={() => { void answer(noBodyOf(view, trimmed, accessCode)); }} disabled={sending}>{texts.no}</Button>
       </footer>
       {sending ? <p role="status" className="m-0 text-xs text-muted-foreground">{t('document-request:page.sending')}</p> : null}
     </AuthCardSection>

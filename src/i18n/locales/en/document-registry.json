@@ -242,16 +242,22 @@
       "markNotified": "Professional notified",
       "accepted": "Accepted",
       "declined": "Declined",
-      "cancel": "Cancel assignment"
+      "cancel": "Cancel assignment",
+      "recordQuote": "Record quote",
+      "recordRevision": "Record revision after the site visit",
+      "noQuote": "No quote given",
+      "withdrawn": "Withdrew",
+      "recordReceipt": "Record receipt (MARK)"
     },
     "stage": {
-      "proposed": "Proposed — awaiting the owner's decision",
+      "proposed": "Selected — request a quote from the professional",
       "ownerApproved": "Approved by the owner — notify the professional",
       "ownerRejected": "The owner did not approve",
-      "sent": "Professional notified — awaiting reply",
+      "sent": "Quote requested — awaiting the professional's answer",
       "accepted": "Assigned — awaiting the new document",
-      "declined": "The professional declined — propose someone else",
-      "cancelled": "Cancelled"
+      "declined": "The professional declined or withdrew — propose someone else",
+      "cancelled": "Cancelled",
+      "quoted": "Quote received — awaiting the owner's approval"
     },
     "party": {
       "owner": "the owner",
@@ -277,7 +283,7 @@
     },
     "propose": {
       "title": "Issuance assignment: {document}",
-      "description": "The owner appoints the professional. The office proposes — nothing is sent to anyone before the owner's decision is recorded.",
+      "description": "The owner appoints the professional. The office selects and requests a quote; the assignment is made only when the owner approves both the person and the price.",
       "knownLegend": "Known professionals",
       "noKnown": "No known professional for this document yet — pick a contact or find a professional.",
       "sameProperty": "Also assigned {document} for this property",
@@ -293,10 +299,10 @@
     },
     "decision": {
       "title": "Owner decision",
-      "description": "You are recording the decision of the responsible owner ({name}). The app sends no message to anyone.",
+      "description": "You are recording the decision of the responsible owner ({name}) on the quote. Approval makes the assignment and invites the professional to its space.",
       "needsLead": "Designate a responsible owner first: the decision for a whole-property document belongs to one person.",
       "outcomeLegend": "The decision",
-      "approved": "Approves {name}",
+      "approved": "Approves the quote of {name}",
       "rejected": "Does not approve",
       "channelLegend": "How the instruction was given",
       "noteLabel": "Note (optional)",
@@ -327,7 +333,9 @@
       "actorRefused": "The action was not accepted — please start again.",
       "noEmail": "The recipient has no email in their contact. Add one, or record the answer manually.",
       "coOwnerUnknown": "One of the selected co-owners can no longer be informed. Reopen the dialog.",
-      "linksUnavailable": "Links are unavailable right now — nothing was sent."
+      "linksUnavailable": "Links are unavailable right now — nothing was sent.",
+      "termsRefused": "The quote was not accepted: check amount, VAT, validity and scope — or the quote changed in the meantime.",
+      "receiptMismatch": "The receipt does not match the approved price (or the MARK is not 15 digits). If the price changed, record a revision first."
     },
     "send": {
       "ownerTrigger": "Send for approval",
@@ -376,6 +384,48 @@
       "complained": "The recipient marked it as spam — contact them by phone.",
       "reminderSent": "Reminder sent on {date}",
       "reminderNext": "Next reminder: {date}"
+    },
+    "quote": {
+      "line": "Quote: {total} · {basis} · valid until {date}",
+      "revisedLine": "Revised after the site visit: {total} (originally {previous})",
+      "receiptLine": "Receipt: MARK {mark} · {date}",
+      "title": "Record quote",
+      "description": "You are recording the quote that {name} gave outside the app. One price — the one the receipt will show.",
+      "noteLabel": "Note (optional)",
+      "submit": "Record"
+    },
+    "receipt": {
+      "title": "Record receipt",
+      "description": "The MARK of the receipt in myDATA. It binds only to the approved price: {total}.",
+      "markLabel": "MARK (15 digits)",
+      "issuedOnLabel": "Receipt date",
+      "submit": "Record"
+    },
+    "quoteForm": {
+      "amountLabel": "Amount (€)",
+      "vatLegend": "VAT",
+      "vatRate": "{rate}%",
+      "vatNone": "No VAT",
+      "vatIncluded": "The amount includes VAT",
+      "basisLegend": "Kind of price",
+      "basis": {
+        "indicative": "Indicative — finalised after the site visit (one revision)",
+        "firm": "Firm"
+      },
+      "basisShort": {
+        "indicative": "indicative",
+        "firm": "firm"
+      },
+      "validUntilLabel": "Valid until",
+      "scopeLegend": "Includes",
+      "scope": {
+        "site-visit": "Site visit",
+        "issuance": "Issuing the document",
+        "registration": "Registration in the registry"
+      },
+      "totals": "Net {net} · VAT {vat} · Total {total}",
+      "electronicPayment": "For a total of €500 or more, payment by a private individual must be made by card or another electronic payment method.",
+      "oneTruth": "The price you enter is the only agreement for this job, and it is the one shown on the receipt."
     }
   },
   "factsDeclaration": {

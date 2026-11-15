@@ -57,6 +57,8 @@ import { announceIssuanceAnswer, type IssuanceLinkEvent } from './issuance-answe
 import { sendIssuanceAnswerReceipt } from './issuance-answer-receipt';
 import { ISSUANCE_INVITATION_LOCATOR, isIssuanceLinkLocked, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
 import { checkIssuanceAccessCode, issuanceGateViewOf, type IssuanceAccessCheck } from './issuance-link-access';
+import { quoteFacetsOf } from './issuance-link-view';
+import { engageApprovedProfessional } from './issuance-space-invite';
 import {
   issuanceSpaceLinkOf,
   issuanceSpaceViewOf,
@@ -68,8 +70,12 @@ import {
 
 const logger = createModuleLogger('issuance-invitation-answer');
 
-/** Σε ποιο στάδιο απαντά κάθε ακροατήριο — ο ιδιοκτήτης πριν την απόφαση, ο επαγγελματίας αφού ενημερωθεί. */
-const ANSWERABLE_FROM: Readonly<Record<IssuanceAudience, IssuanceStage>> = { owner: 'proposed', professional: 'sent' };
+/**
+ * Σε ποιο στάδιο απαντά κάθε ακροατήριο (§42): ο επαγγελματίας στο αίτημα προσφοράς (ή, σε παλιά ανάθεση, στην ενημέρωση)·
+ * ο υπεύθυνος **στην προσφορά** — ποτέ πριν υπάρξει τιμή. Σύνδεσμος έγκρισης παλιάς ανάθεσης (§27, από `proposed`) δεν
+ * απαντά πια: «superseded», και το γραφείο ζητά προσφορά.
+ */
+const ANSWERABLE_FROM: Readonly<Record<IssuanceAudience, IssuanceStage>> = { owner: 'quoted', professional: 'sent' };
 
 export type LinkRefusal = InvitationCoreRefusal | IssuanceLinkRefusal;
 type LinkUnavailable = 'secret-missing' | 'invitation-corrupt';
@@ -129,11 +135,12 @@ function recipientNameOf(link: ResolvedLink): string | null {
   return link.registry.people[link.invitation.contactId]?.name ?? null;
 }
 
-async function viewOf(link: ResolvedLink): Promise<IssuanceLinkView> {
+async function viewOf(db: Firestore, link: ResolvedLink): Promise<IssuanceLinkView> {
   const { invitation, registry, record } = link;
-  const officeName = await officeNameOf(link);
+  const [officeName, facets] = await Promise.all([officeNameOf(link), quoteFacetsOf(db, link)]);
   const request = invitation.audience === 'owner' ? record.approvalRequest : record.notice;
   return {
+    ...facets,
     audience: invitation.audience,
     recipientName: recipientNameOf(link),
     officeName,
@@ -163,7 +170,7 @@ export async function viewIssuanceLink(db: Firestore, token: string, now: Date):
   if (isIssuanceLinkLocked(link.invitation)) return { kind: 'refused', reason: 'code-locked', remaining: 0 };
   const ref = issuanceInvitationsCollection(db).doc(link.invitation.id);
   const landing: IssuanceLinkLanding = link.invitation.accessCode === null
-    ? { access: 'open', view: await viewOf(link) }
+    ? { access: 'open', view: await viewOf(db, link) }
     : { access: 'code-required', gate: issuanceGateViewOf(link.invitation, recipientNameOf(link), await officeNameOf(link)) };
   return { kind: 'view', landing, markOpened: () => markInvitationOpenedAt(db, ref, nowISO()) };
 }
@@ -243,7 +250,7 @@ export async function unlockIssuanceLink(db: Firestore, token: string, accessCod
   if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
   const check = await guardAccess(db, resolved.link, accessCode, now.toISOString());
   if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
-  return { kind: 'view', view: await viewOf(resolved.link) };
+  return { kind: 'view', view: await viewOf(db, resolved.link) };
 }
 
 /** Το είδος για την κλειδαριά: η απάντηση γράφεται με τον **ίδιο** γραφέα, μέσα στη **ίδια** συναλλαγή με τη σφράγιση. */
@@ -282,6 +289,18 @@ function linkKind(
   };
 }
 
+/** §42 — η έγκριση της προσφοράς από τον ίδιο τον υπεύθυνο ⇒ πρόσκληση στον χώρο, στο όνομα του αποστολέα του συνδέσμου. */
+async function engageOnApproval(db: Firestore, link: ResolvedLink, staged: StagedIssuanceWrite, now: Date): Promise<void> {
+  if (!staged.outcome.ok || staged.outcome.stage !== 'accepted' || link.invitation.audience !== 'owner') return;
+  const { invitation } = link;
+  await engageApprovedProfessional(
+    db,
+    { companyId: invitation.companyId, uid: invitation.invitedByUid, name: null },
+    { propertyId: invitation.propertyId, documentKind: invitation.documentKind },
+    now,
+  );
+}
+
 export type LinkAnswerOutcome =
   | { readonly kind: 'answered'; readonly answer: IssuanceLinkAnswerBody['answer']; readonly space: IssuanceSpaceView }
   | LinkRefused
@@ -295,7 +314,7 @@ export async function answerIssuanceLink(db: Firestore, token: string, answer: I
   if (LINK_ANSWER_AUDIENCE[answer.answer] !== link.invitation.audience) return { kind: 'refused', reason: 'answer-mismatch' };
   const check = await guardAccess(db, link, answer.accessCode, now.toISOString());
   if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
-  const target = answer.answer === 'approve' || answer.answer === 'accept' ? 'accepted' : 'declined';
+  const target = answer.answer === 'reject' || answer.answer === 'decline' ? 'declined' : 'accepted';
   const space = await spacePlanOf(db, link, answer, now);
   const kind = linkKind(db, link, answer, { verifiedBy: check.verifiedBy, nowIso: now.toISOString(), space });
   const outcome = await redeemInvitationByLink(db, kind, { token, target, nowValue: now.toISOString() });
@@ -305,6 +324,7 @@ export async function answerIssuanceLink(db: Firestore, token: string, answer: I
   }
   if (outcome.kind === 'refused') return outcome;
   await outcome.effect.staged.audit();
+  await engageOnApproval(db, link, outcome.effect.staged, now);
   // Δύο αποδέκτες, μία πράξη: το γραφείο μαθαίνει την απάντηση· η διεύθυνση του συνδέσμου παίρνει την απόδειξη (§30)
   // — με τον σύνδεσμο εισόδου στον χώρο όταν το «Αναλαμβάνω» τον άνοιξε (§39).
   await Promise.all([

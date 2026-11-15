@@ -95,5 +95,8 @@ describe('Π6 — οι κωδικοί της αποστολής είναι ΙΔ�
     const { ISSUANCE_SEND_REFUSAL_CODES } = await import('@/components/document-registry/issuance-labels');
     const routeCodes = new Set(Object.values(ISSUANCE_SEND_REFUSAL_STATUS).map(([, code]) => code));
     expect([...routeCodes].every((code) => (ISSUANCE_SEND_REFUSAL_CODES as readonly string[]).includes(code))).toBe(true);
+    // §42 — οι δύο νέες αρνήσεις του μειωτή ταξιδεύουν και από την πόρτα αποστολής.
+    expect(routeCodes.has('TERMS_REFUSED')).toBe(true);
+    expect(routeCodes.has('RECEIPT_MISMATCH')).toBe(true);
   });
 });

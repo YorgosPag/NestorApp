@@ -19,4 +19,6 @@ export const ISSUANCE_SEND_REFUSAL_STATUS: Readonly<Record<SendRefusal, readonly
   stale: [409, 'STALE'],
   unqualified: [422, 'UNQUALIFIED'],
   'actor-refused': [422, 'ACTOR_REFUSED'],
+  'terms-refused': [409, 'TERMS_REFUSED'],
+  'receipt-mismatch': [422, 'RECEIPT_MISMATCH'],
 };

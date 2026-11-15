@@ -19,11 +19,14 @@ import {
   DELIVERY_HISTORY_KEYS,
   ISSUANCE_ERROR_KEYS,
   ISSUANCE_KEYS,
+  ISSUANCE_REFUSAL_CODES,
   ISSUANCE_STAGE_KEYS,
   LINK_HISTORY_KEYS,
   PROPOSE_KEYS,
+  QUOTE_KEYS,
   SEND_KEYS,
 } from '../issuance-labels';
+import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
 import { reduceIssuance, type IssuanceAction, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { withIssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import { planIssuanceReminders, withIssuanceReminderSent } from '@/lib/document-validity/issuance-reminder';
@@ -89,8 +92,15 @@ function recordOf(actions: readonly IssuanceAction[]): IssuanceAssignmentRecord 
 }
 
 const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_client', credential: INSPECTOR };
-const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha' };
-const ACCEPTED = [PROPOSE, APPROVE, { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null }, { kind: 'respond', outcome: 'accepted', note: null }] as IssuanceAction[];
+const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha', quoteRevision: 1 };
+const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null };
+const FIRM_TERMS: QuoteTerms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null };
+const QUOTE: IssuanceAction = { kind: 'quote', terms: FIRM_TERMS };
+const INDICATIVE_QUOTE: IssuanceAction = { kind: 'quote', terms: { ...FIRM_TERMS, basis: 'indicative' } };
+/** §42 — πρόταση → αίτημα προσφοράς → προσφορά ⇒ `quoted` (η μπάλα στον υπεύθυνο). */
+const QUOTED: IssuanceAction[] = [PROPOSE, NOTIFY, QUOTE];
+/** Η έγκριση της προσφοράς ΕΙΝΑΙ η ανάθεση. */
+const ACCEPTED: IssuanceAction[] = [...QUOTED, APPROVE];
 
 /** Το p6 (κενό ΠΕΑ) με υπεύθυνο, και ο κατάλογος του γραφείου. */
 function withRoster(roster: readonly IssuanceRosterEntry[], lead: ObligorLead = MAJORITY): DocumentRegistryResponse {
@@ -119,15 +129,28 @@ describe('ADR-915 §27 — η ανάθεση πάνω στη γραμμή', () =
     expect(within(article()).queryByText(ISSUANCE_STAGE_KEYS.proposed)).toBeNull();
   });
 
-  it('🔴 πρόταση χωρίς απόφαση ⇒ «αναμένει απόφαση» — ΠΟΤΕ «Ανατέθηκε» — και η μπάλα στον υπεύθυνο, με όνομα', () => {
+  it('🔴 πρόταση χωρίς προσφορά ⇒ ΠΟΤΕ «Ανατέθηκε», η μπάλα στο γραφείο, ΚΑΜΙΑ απόφαση — μόνο αίτημα προσφοράς / καταγραφή ενημέρωσης', () => {
     registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
     render(<DocumentRegistryContent />);
     expect(within(article()).getByText(ISSUANCE_STAGE_KEYS.proposed)).toBeTruthy();
     expect(within(article()).queryByText(ISSUANCE_STAGE_KEYS.accepted)).toBeNull();
+    expect(within(article()).getByText(`${ISSUANCE_KEYS.ballInCourt} ${JSON.stringify({ party: BALL_IN_COURT_KEYS.office })}`)).toBeTruthy();
+    expect(within(article()).queryByRole('button', { name: ISSUANCE_KEYS.recordDecision })).toBeNull();
+    expect(within(article()).getByRole('button', { name: SEND_KEYS.professionalTrigger })).toBeTruthy();
+    expect(within(article()).getByRole('button', { name: ISSUANCE_KEYS.markNotified })).toBeTruthy();
+    expect(within(article()).getByRole('link', { name: NEXT_STEP_KEYS.findProfessional })).toBeTruthy();
+  });
+
+  it('🔴 προσφορά χωρίς έγκριση (`quoted`) ⇒ «αναμένει απόφαση», η μπάλα στον υπεύθυνο με όνομα, και το «Βρες» ΦΕΥΓΕΙ', () => {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(QUOTED) }]);
+    render(<DocumentRegistryContent />);
+    expect(within(article()).getByText(ISSUANCE_STAGE_KEYS.quoted)).toBeTruthy();
+    expect(within(article()).queryByText(ISSUANCE_STAGE_KEYS.accepted)).toBeNull();
     const ball = within(article()).getByText(`${ISSUANCE_KEYS.ballInCourt} ${JSON.stringify({ party: BALL_IN_COURT_KEYS.owner })}`);
     expect(within(ball.parentElement as HTMLElement).getByRole('link').textContent).toBe('Συνθετικός Άλφα');
     expect(within(article()).getByRole('button', { name: ISSUANCE_KEYS.recordDecision })).toBeTruthy();
-    expect(within(article()).getByRole('link', { name: NEXT_STEP_KEYS.findProfessional })).toBeTruthy();
+    expect(within(article()).getByRole('button', { name: SEND_KEYS.ownerTrigger })).toBeTruthy();
+    expect(within(article()).queryByRole('link', { name: NEXT_STEP_KEYS.findProfessional })).toBeNull();
   });
 
   it('🔴 «ποτέ δύο»: δεσμευμένος επαγγελματίας ⇒ «Ανατέθηκε», μπάλα στον επαγγελματία, και το «Βρες» ΦΕΥΓΕΙ', () => {
@@ -148,16 +171,16 @@ describe('ADR-915 §27 — η ανάθεση πάνω στη γραμμή', () =
 
   it('χωρίς δικαίωμα ⇒ η κατάσταση λέγεται, τα κουμπιά ΟΧΙ', () => {
     verdict = 'denied-permission';
-    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(QUOTED) }]);
     render(<DocumentRegistryContent />);
-    expect(within(article()).getByText(ISSUANCE_STAGE_KEYS.proposed)).toBeTruthy();
+    expect(within(article()).getByText(ISSUANCE_STAGE_KEYS.quoted)).toBeTruthy();
     expect(within(article()).queryByRole('button', { name: ISSUANCE_KEYS.recordDecision })).toBeNull();
   });
 });
 
 describe('ADR-915 §27 — πράξεις από την οθόνη', () => {
   /** Ο Πελάτισσα έβγαλε ΠΕΑ στο p1 με έγκριση ⇒ γνωστή, πρώτη, με το προσόν της. */
-  const KNOWN: IssuanceRosterEntry = { propertyId: 'p1', documentKind: 'energy-certificate', record: recordOf([PROPOSE, APPROVE]) };
+  const KNOWN: IssuanceRosterEntry = { propertyId: 'p1', documentKind: 'energy-certificate', record: recordOf(ACCEPTED) };
 
   async function proposeKnown(): Promise<void> {
     const user = userEvent.setup();
@@ -198,7 +221,7 @@ describe('ADR-915 §27 — πράξεις από την οθόνη', () => {
 
   it('🔴 χωρίς υπεύθυνο ⇒ ο διάλογος απόφασης ΔΕΝ δίνει φόρμα: «ορίστε πρώτα υπεύθυνο»', async () => {
     registry = withRoster(
-      [{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }],
+      [{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(QUOTED) }],
       { kind: 'undesignated', reason: 'no-majority', staleContactId: null },
     );
     render(<DocumentRegistryContent />);
@@ -209,8 +232,8 @@ describe('ADR-915 §27 — πράξεις από την οθόνη', () => {
     expect(within(dialog).queryByRole('radio')).toBeNull();
   });
 
-  it('απόφαση ⇒ στέλνει τον υπεύθυνο που ΕΙΔΕ η οθόνη (CAS) και το στάδιο που είδε', async () => {
-    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
+  it('απόφαση ⇒ στέλνει τον υπεύθυνο που ΕΙΔΕ η οθόνη (CAS), το στάδιο και την ΑΝΑΘΕΩΡΗΣΗ προσφοράς που είδε', async () => {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(QUOTED) }]);
     render(<DocumentRegistryContent />);
     const user = userEvent.setup();
     await user.click(within(article()).getByRole('button', { name: ISSUANCE_KEYS.recordDecision }));
@@ -219,8 +242,79 @@ describe('ADR-915 §27 — πράξεις από την οθόνη', () => {
     await user.click(within(dialog).getAllByRole('radio')[3]);
     await user.click(within(dialog).getByRole('button', { name: DECISION_KEYS.submit }));
     expect(save).toHaveBeenCalledWith(expect.objectContaining({
-      action: 'decide', expectedStage: 'proposed', outcome: 'approved', expectedOwnerContactId: 'cont_alpha', note: null,
+      action: 'decide', expectedStage: 'quoted', outcome: 'approved', expectedOwnerContactId: 'cont_alpha', note: null, quoteRevision: 1,
     }));
+  });
+});
+
+describe('ADR-915 §42 — η προσφορά πάνω στην κάρτα: μία επόμενη ενέργεια ανά στάδιο', () => {
+  const renderStage = (actions: readonly IssuanceAction[]) => {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(actions) }]);
+    render(<DocumentRegistryContent />);
+  };
+  const startsWith = (key: string) => (content: string) => content.startsWith(key);
+
+  it('μετά το αίτημα προσφοράς (`sent`) ⇒ «Καταγραφή προσφοράς» και «Δεν δίνει προσφορά» — ΠΟΤΕ «Αναλαμβάνω»', () => {
+    renderStage([PROPOSE, NOTIFY]);
+    expect(within(article()).getByText(ISSUANCE_STAGE_KEYS.sent)).toBeTruthy();
+    expect(within(article()).getByRole('button', { name: QUOTE_KEYS.recordQuote })).toBeTruthy();
+    expect(within(article()).getByRole('button', { name: QUOTE_KEYS.noQuote })).toBeTruthy();
+    expect(within(article()).queryByRole('button', { name: ISSUANCE_KEYS.accepted })).toBeNull();
+  });
+
+  it('παλιά ανάθεση (§27) στο `sent` ⇒ ο παλιός δρόμος «Αναλαμβάνει / Αρνήθηκε», χωρίς καταγραφή προσφοράς', () => {
+    const legacy: IssuanceAssignmentRecord = {
+      ...recordOf([PROPOSE, NOTIFY]),
+      decision: { basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'uid_agent', outcome: 'approved', quoteRevision: null, ownerContactId: 'cont_alpha', note: null, at: ACTOR.nowIso },
+    };
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: legacy }]);
+    render(<DocumentRegistryContent />);
+    expect(within(article()).getByText(ISSUANCE_STAGE_KEYS.sent)).toBeTruthy();
+    expect(within(article()).getByRole('button', { name: ISSUANCE_KEYS.accepted })).toBeTruthy();
+    expect(within(article()).getByRole('button', { name: ISSUANCE_KEYS.declined })).toBeTruthy();
+    expect(within(article()).queryByRole('button', { name: QUOTE_KEYS.recordQuote })).toBeNull();
+  });
+
+  it('η προσφορά γράφει ΜΙΑ γραμμή στο ιστορικό', () => {
+    renderStage(QUOTED);
+    expect(within(article()).getAllByText(startsWith(QUOTE_KEYS.line))).toHaveLength(1);
+  });
+
+  it('εγκεκριμένη δεσμευτική ⇒ «Καταγραφή παραστατικού» και απόσυρση· ΧΩΡΙΣ αναθεώρηση', () => {
+    renderStage(ACCEPTED);
+    expect(within(article()).getByRole('button', { name: QUOTE_KEYS.recordReceipt })).toBeTruthy();
+    expect(within(article()).getByRole('button', { name: QUOTE_KEYS.withdrawn })).toBeTruthy();
+    expect(within(article()).queryByRole('button', { name: QUOTE_KEYS.recordRevision })).toBeNull();
+  });
+
+  it('εγκεκριμένη ενδεικτική ⇒ και «Καταγραφή αναθεώρησης» (η μία, μετά την αυτοψία)', () => {
+    renderStage([PROPOSE, NOTIFY, INDICATIVE_QUOTE, APPROVE]);
+    expect(within(article()).getByRole('button', { name: QUOTE_KEYS.recordRevision })).toBeTruthy();
+  });
+
+  it('η αναθεώρηση ακυρώνει την έγκριση: στάδιο `quoted` ξανά, με την ΑΝΑΘΕΩΡΗΣΗ 2 προς απόφαση', async () => {
+    renderStage([PROPOSE, NOTIFY, INDICATIVE_QUOTE, APPROVE, INDICATIVE_QUOTE]);
+    expect(within(article()).getByText(ISSUANCE_STAGE_KEYS.quoted)).toBeTruthy();
+    expect(within(article()).getAllByText(startsWith(QUOTE_KEYS.revisedLine))).toHaveLength(1);
+    const user = userEvent.setup();
+    await user.click(within(article()).getByRole('button', { name: ISSUANCE_KEYS.recordDecision }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('radio', { name: new RegExp(DECISION_KEYS.approved) }));
+    await user.click(within(dialog).getAllByRole('radio')[3]);
+    await user.click(within(dialog).getByRole('button', { name: DECISION_KEYS.submit }));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ action: 'decide', quoteRevision: 2 }));
+  });
+
+  it('απόσυρση από `quoted` ⇒ στέλνει `respond · declined` με το στάδιο που είδε', async () => {
+    renderStage(QUOTED);
+    await userEvent.setup().click(within(article()).getByRole('button', { name: QUOTE_KEYS.withdrawn }));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ action: 'respond', outcome: 'declined', expectedStage: 'quoted' }));
+  });
+
+  it('οι κωδικοί άρνησης §42 (`TERMS_REFUSED`, `RECEIPT_MISMATCH`) έχουν μήνυμα στην οθόνη', () => {
+    expect(ISSUANCE_REFUSAL_CODES).toEqual(expect.arrayContaining(['TERMS_REFUSED', 'RECEIPT_MISMATCH']));
+    expect(ISSUANCE_ERROR_KEYS.TERMS_REFUSED).toBeTruthy();
+    expect(ISSUANCE_ERROR_KEYS.RECEIPT_MISMATCH).toBeTruthy();
   });
 });
 
@@ -241,7 +335,7 @@ describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχει�
   });
 
   async function openSend(): Promise<HTMLElement> {
-    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(QUOTED) }]);
     render(<DocumentRegistryContent />);
     await userEvent.setup().click(within(article()).getByRole('button', { name: SEND_KEYS.ownerTrigger }));
     return screen.findByRole('dialog');
@@ -250,7 +344,7 @@ describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχει�
   it('🔴 ΤΙΠΟΤΑ δεν φεύγει πριν το πάτημα: ο διάλογος δείχνει την προεπισκόπηση του διακομιστή, όχι αποστολή', async () => {
     const dialog = await openSend();
     expect(await within(dialog).findByText('Θέμα προεπισκόπησης', {}, { timeout: 2000 })).toBeTruthy();
-    expect(preview).toHaveBeenCalledWith(expect.objectContaining({ audience: 'owner', expectedStage: 'proposed', expectedOwnerContactId: 'cont_alpha' }));
+    expect(preview).toHaveBeenCalledWith(expect.objectContaining({ audience: 'owner', expectedStage: 'quoted', expectedOwnerContactId: 'cont_alpha' }));
     expect(send).not.toHaveBeenCalled();
     expect(within(dialog).getByText(SEND_KEYS.never)).toBeTruthy();
   });
@@ -272,7 +366,7 @@ describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχει�
   });
 
   it('το email δεν έφυγε ⇒ η γραμμή το ΛΕΕΙ («δεν έφυγε — ξαναστείλτε»), και το κουμπί γίνεται «Ξαναστείλτε»', () => {
-    const requested = recordOf([PROPOSE, REQUEST]);
+    const requested = recordOf([...QUOTED, REQUEST]);
     const failed = withIssuanceDelivery(requested, 'diin_1', { recipient: 'failed', coOwners: {} });
     registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: failed ?? requested }]);
     render(<DocumentRegistryContent />);
@@ -281,7 +375,7 @@ describe('ADR-915 §28 — αποστολή με σύνδεσμο: πρόχει�
   });
 
   it('§30 — γεγονότα του παρόχου: «παραδόθηκε» ήσυχα · «επέστρεψε» / «ανεπιθύμητο» ως συναγερμός · επιστροφή συνιδιοκτήτη ΔΕΝ μετρά', () => {
-    const requested = recordOf([PROPOSE, REQUEST]);
+    const requested = recordOf([...QUOTED, REQUEST]);
     const cases = [
       [{ recipient: 'delivered', coOwners: { cont_beta: 'delivered' } }, DELIVERY_HISTORY_KEYS.delivered, false],
       [{ recipient: 'bounced', coOwners: { cont_beta: 'bounced' } }, DELIVERY_HISTORY_KEYS.bounced, true],
@@ -313,7 +407,7 @@ describe('ADR-915 §29 — κωδικός πρόσβασης: ο διακόπτ�
   });
 
   async function openSend(): Promise<HTMLElement> {
-    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(QUOTED) }]);
     render(<DocumentRegistryContent />);
     await userEvent.setup().click(within(article()).getByRole('button', { name: SEND_KEYS.ownerTrigger }));
     return screen.findByRole('dialog');
@@ -352,10 +446,10 @@ describe('ADR-915 §29 — κωδικός πρόσβασης: ο διακόπτ�
   });
 
   it('ιστορικό: «με κωδικό πρόσβασης» στο αίτημα· «επιβεβαιώθηκε με τον κωδικό» στην απόφαση', () => {
-    const requested = recordOf([PROPOSE, { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_alpha', note: null, verification: 'access-code' }]);
+    const requested = recordOf([...QUOTED, { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_alpha', note: null, verification: 'access-code' }]);
     const decided: IssuanceAssignmentRecord = {
       ...requested,
-      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'access-code', outcome: 'approved', ownerContactId: 'cont_alpha', note: null, at: '2026-10-11T09:00:00.000Z' },
+      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'access-code', outcome: 'approved', quoteRevision: 1, ownerContactId: 'cont_alpha', note: null, at: '2026-10-11T09:00:00.000Z' },
     };
     registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: decided }]);
     render(<DocumentRegistryContent />);
@@ -379,7 +473,7 @@ describe('ADR-915 §31 — αυτόματες υπενθυμίσεις: ο δι�
   });
 
   async function openSend(): Promise<HTMLElement> {
-    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE]) }]);
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(QUOTED) }]);
     render(<DocumentRegistryContent />);
     await userEvent.setup().click(within(article()).getByRole('button', { name: SEND_KEYS.ownerTrigger }));
     return screen.findByRole('dialog');
@@ -394,7 +488,7 @@ describe('ADR-915 §31 — αυτόματες υπενθυμίσεις: ο δι�
 
   /** Αίτημα που έφυγε, με πρόγραμμα, και (προαιρετικά) μία υπενθύμιση που ήδη στάλθηκε. */
   function requestWithReminders(sentOne: boolean): IssuanceAssignmentRecord {
-    const requested = recordOf([PROPOSE, REQUEST]);
+    const requested = recordOf([...QUOTED, REQUEST]);
     const delivered = withIssuanceDelivery(requested, 'diin_1', { recipient: 'accepted', coOwners: {} }) ?? requested;
     const planned = planIssuanceReminders(delivered, 'diin_1', EXPIRES) ?? delivered;
     const dueAt = planned.approvalRequest?.reminders?.dueAt ?? '';
@@ -428,7 +522,7 @@ describe('ADR-915 §31 — αυτόματες υπενθυμίσεις: ο δι�
 
     const answered: IssuanceAssignmentRecord = {
       ...requestWithReminders(true),
-      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'link', outcome: 'approved', ownerContactId: 'cont_alpha', note: null, at: '2026-10-11T09:00:00.000Z' },
+      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'link', outcome: 'approved', quoteRevision: 1, ownerContactId: 'cont_alpha', note: null, at: '2026-10-11T09:00:00.000Z' },
     };
     registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: answered }]);
     render(<DocumentRegistryContent />);

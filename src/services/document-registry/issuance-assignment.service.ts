@@ -20,6 +20,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
 import { issuanceActionOf, type IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
 import { trimmedStringOrNull } from '@/lib/type-guards';
+import { engageApprovedProfessional } from '@/server/issuance-invitations/issuance-space-invite';
 import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { readDocumentRegistry } from './document-registry.service';
@@ -92,7 +93,7 @@ export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequ
   if (leadRefusal !== null) return leadRefusal;
   const names = await namesFor(db, actor, body, registry);
   if (names === null) return refused('contact-unavailable');
-  return writeIssuanceAction(db, {
+  const result = await writeIssuanceAction(db, {
     companyId: actor.companyId,
     writer: { kind: 'office', uid: actor.uid, name: actor.name, expectedStage: body.expectedStage },
     property: { id: body.propertyId, scope: label.scope, name: label.name },
@@ -102,4 +103,15 @@ export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequ
     names,
     nowIso: now.toISOString(),
   });
+  await engageOnRecordedApproval(db, actor, body, result, now);
+  return result;
+}
+
+/**
+ * §42 — η **καταγεγραμμένη** έγκριση της προσφοράς είναι η ανάθεση, όπως και η έγκριση με σύνδεσμο: η ΙΔΙΑ πόρτα
+ * πρόσκλησης στον χώρο (§39). Μετά την εγγραφή, ποτέ δεν πετά — η κάρτα δείχνει «δεν έχει σταλεί» με κουμπί αποστολής.
+ */
+async function engageOnRecordedApproval(db: Firestore, actor: IssuanceRequester, body: IssuanceAssignmentBody, result: IssuanceResult, now: Date): Promise<void> {
+  if (body.action !== 'decide' || !result.ok || result.outcome !== 'changed' || result.stage !== 'accepted') return;
+  await engageApprovedProfessional(db, actor, { propertyId: body.propertyId, documentKind: body.documentKind }, now);
 }

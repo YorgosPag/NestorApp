@@ -9,7 +9,7 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import type { IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
+import type { IssuanceAssignmentBody, QuoteTermsBody } from '@/lib/document-validity/issuance-request';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { readDocumentRegistry } from '@/services/document-registry/document-registry.service';
 import { issuanceAssignmentIdOf } from '@/services/document-registry/issuance-assignment-schema';
@@ -21,6 +21,11 @@ jest.mock('@/lib/telemetry', () => ({
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') },
 }));
+jest.mock('@/server/issuance-invitations/issuance-space-invite', () => ({
+  engageApprovedProfessional: jest.fn(async () => undefined),
+}));
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { engageApprovedProfessional } = require('@/server/issuance-invitations/issuance-space-invite') as { engageApprovedProfessional: jest.Mock };
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { EntityAuditService } = require('@/services/entity-audit.service') as { EntityAuditService: { recordChange: jest.Mock } };
 
@@ -40,9 +45,21 @@ const PROPOSE = {
   action: 'propose', ...TARGET, expectedStage: null, professionalContactId: 'cont_pro',
   qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7',
 } as const satisfies IssuanceAssignmentBody;
+const NOTIFY = { action: 'notify', ...TARGET, expectedStage: 'proposed', channel: 'phone' } as const satisfies IssuanceAssignmentBody;
+const QUOTE_TERMS: QuoteTermsBody = {
+  basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'],
+};
+const RECORD_QUOTE = { action: 'record-quote', ...TARGET, expectedStage: 'sent', terms: QUOTE_TERMS, note: null } as const satisfies IssuanceAssignmentBody;
 const DECIDE = {
-  action: 'decide', ...TARGET, expectedStage: 'proposed', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a',
+  action: 'decide', ...TARGET, expectedStage: 'quoted', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a', quoteRevision: 1,
 } as const satisfies IssuanceAssignmentBody;
+
+/** §42 — πρόταση → αίτημα προσφοράς → προσφορά ⇒ στάδιο `quoted`, όπου αποφασίζει ο υπεύθυνος. */
+async function toQuoted(): Promise<void> {
+  await act(PROPOSE);
+  await act(NOTIFY);
+  await act(RECORD_QUOTE);
+}
 
 /** Ακίνητο με ΠΕΑ που λήγει 2026-11-01 (⇒ `expiring` ⇒ «Ανάθεση») και αγοραστές με μερίδια μετά το οριστικό. */
 function seedProperty(id: string, shares: readonly (readonly [string, number])[], companyId = COMPANY): void {
@@ -59,6 +76,7 @@ function seedContact(id: string, firstName: string, companyId = COMPANY): void {
 beforeEach(() => {
   fake = new FakeFirestore();
   EntityAuditService.recordChange.mockClear();
+  engageApprovedProfessional.mockClear();
   seedProperty('prop_1', [['cont_a', 60], ['cont_b', 40]]);
   seedContact('cont_a', 'Άλφα');
   seedContact('cont_b', 'Βήτα');
@@ -71,7 +89,7 @@ describe('actOnIssuanceAssignment — πρόταση', () => {
     expect(stored()).toMatchObject({
       companyId: COMPANY, propertyId: 'prop_1', scope: 'property', documentKind: 'energy-certificate',
       professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
-      proposedByUid: 'user_1', decision: null,
+      proposedByUid: 'user_1', decision: null, quote: null, receipt: null,
     });
     const registry = await readDocumentRegistry(db(), COMPANY, NOW);
     expect(registry.issuanceKnown).toBe(true);
@@ -114,38 +132,77 @@ describe('actOnIssuanceAssignment — πρόταση', () => {
 });
 
 describe('actOnIssuanceAssignment — απόφαση του ΥΠΕΥΘΥΝΟΥ', () => {
-  it('πλειοψηφία 60% ⇒ ο Άλφα αποφασίζει· η απόφαση γράφει ΑΥΤΟΝ (από τον κριτή), κανάλι, ώρα', async () => {
-    await act(PROPOSE);
-    expect(await act(DECIDE)).toMatchObject({ ok: true, outcome: 'changed', stage: 'ownerApproved' });
+  it('πλειοψηφία 60% ⇒ ο Άλφα αποφασίζει· η απόφαση γράφει ΑΥΤΟΝ (από τον κριτή), κανάλι, ώρα, ΑΝΑΘΕΩΡΗΣΗ προσφοράς', async () => {
+    await toQuoted();
+    expect(stored()).toMatchObject({ quote: { revision: 1, amountMinor: 10_000, submission: { by: 'recorded', recordedByUid: 'user_1' } } });
+    expect(await act(DECIDE)).toMatchObject({ ok: true, outcome: 'changed', stage: 'accepted' });
     expect(stored()).toMatchObject({
-      decision: { outcome: 'approved', ownerContactId: 'cont_a', basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'user_1' },
+      decision: { outcome: 'approved', ownerContactId: 'cont_a', basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'user_1', quoteRevision: 1 },
     });
   });
 
-  it('🔴 ο υπεύθυνος άλλαξε στο μεταξύ (η οθόνη είδε τον Βήτα) ⇒ `lead-changed`, ποτέ απόφαση στο όνομα άλλου', async () => {
+  it('🔴 απόφαση για αναθεώρηση που δεν είναι η τρέχουσα ⇒ `terms-refused`, τίποτα δεν γράφεται', async () => {
+    await toQuoted();
+    expect(await act({ ...DECIDE, quoteRevision: 2 })).toEqual({ ok: false, refusal: 'terms-refused' });
+    expect(stored()).toMatchObject({ decision: null });
+  });
+
+  it('🔴 απόφαση πριν υπάρξει προσφορά (στάδιο `sent`) ⇒ `stale` (η CAS) ή `transition-refused`', async () => {
     await act(PROPOSE);
+    await act(NOTIFY);
+    expect(await act(DECIDE)).toEqual({ ok: false, refusal: 'stale' });
+    expect(await act({ ...DECIDE, expectedStage: 'sent' })).toEqual({ ok: false, refusal: 'transition-refused' });
+  });
+
+  it('η ΚΑΤΑΓΕΓΡΑΜΜΕΝΗ έγκριση ανοίγει τον χώρο του επαγγελματία (§39) — η απόρριψη όχι', async () => {
+    await toQuoted();
+    await act({ ...DECIDE, outcome: 'rejected' });
+    expect(engageApprovedProfessional).not.toHaveBeenCalled();
+    // Η απόρριψη έκλεισε τον κύκλο (καμία ορατή ανάθεση ⇒ CAS `null`)· νέα πρόταση, νέα προσφορά, έγκριση.
+    await toQuoted();
+    await act(DECIDE);
+    expect(engageApprovedProfessional).toHaveBeenCalledTimes(1);
+    expect(engageApprovedProfessional).toHaveBeenCalledWith(expect.anything(), ACTOR, { propertyId: 'prop_1', documentKind: 'energy-certificate' }, NOW);
+  });
+
+  it('🔴 ο υπεύθυνος άλλαξε στο μεταξύ (η οθόνη είδε τον Βήτα) ⇒ `lead-changed`, ποτέ απόφαση στο όνομα άλλου', async () => {
+    await toQuoted();
     expect(await act({ ...DECIDE, expectedOwnerContactId: 'cont_b' })).toEqual({ ok: false, refusal: 'lead-changed' });
     expect(stored()).toMatchObject({ decision: null });
   });
 
   it('🔴 50/50 ⇒ κανείς υπεύθυνος ⇒ `lead-undesignated` (ένας δεν αποφασίζει για όλους χωρίς βάση)', async () => {
     seedProperty('prop_1', [['cont_a', 50], ['cont_b', 50]]);
-    await act(PROPOSE);
+    await toQuoted();
     expect(await act(DECIDE)).toEqual({ ok: false, refusal: 'lead-undesignated' });
   });
 
   it('🔴 «ποτέ δύο»: μετά την έγκριση, πρόταση άλλου ⇒ `transition-refused`', async () => {
-    await act(PROPOSE);
+    await toQuoted();
     await act(DECIDE);
-    expect(await act({ ...PROPOSE, expectedStage: 'ownerApproved', professionalContactId: 'cont_b' }))
+    expect(await act({ ...PROPOSE, expectedStage: 'accepted', professionalContactId: 'cont_b' }))
       .toEqual({ ok: false, refusal: 'transition-refused' });
+  });
+});
+
+describe('actOnIssuanceAssignment — παραστατικό της εγκεκριμένης τιμής (§42)', () => {
+  const RECEIPT = {
+    action: 'record-receipt', ...TARGET, expectedStage: 'accepted', mark: '123456789012345', issuedOn: '2026-10-18', totalMinor: 12_400,
+  } as const satisfies IssuanceAssignmentBody;
+
+  it('ίδιο σύνολο (10000 + ΦΠΑ 24%) ⇒ γράφεται· διαφορετικό ⇒ `receipt-mismatch`', async () => {
+    await toQuoted();
+    await act(DECIDE);
+    expect(await act({ ...RECEIPT, totalMinor: 10_000 })).toEqual({ ok: false, refusal: 'receipt-mismatch' });
+    expect(await act(RECEIPT)).toMatchObject({ ok: true, outcome: 'changed', stage: 'accepted' });
+    expect(stored()).toMatchObject({ receipt: { mark: '123456789012345', issuedOn: '2026-10-18', totalMinor: 12_400, recordedByUid: 'user_1' } });
   });
 });
 
 describe('ο κατάλογος του γραφείου γυρίζει ως «ξανά»', () => {
   it('εγκεκριμένη ανάθεση στο prop_1 ⇒ ο επιθεωρητής προτείνεται για το ΠΕΑ του prop_2, με το προσόν του', async () => {
     seedProperty('prop_2', [['cont_b', 100]]);
-    await act(PROPOSE);
+    await toQuoted();
     await act(DECIDE);
     const registry = await readDocumentRegistry(db(), COMPANY, NOW);
     expect(registry.issuance['prop_2:energy-certificate'].candidates).toEqual([{

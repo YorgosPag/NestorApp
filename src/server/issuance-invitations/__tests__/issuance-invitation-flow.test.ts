@@ -10,7 +10,7 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { issuanceSendBody, type IssuanceSendBody } from '@/lib/document-validity/issuance-request';
+import { issuanceSendBody, type IssuanceLinkAnswerBody, type IssuanceSendBody, type QuoteTermsBody } from '@/lib/document-validity/issuance-request';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { issuanceAssignmentIdOf } from '@/services/document-registry/issuance-assignment-schema';
 import { actOnIssuanceAssignment } from '@/services/document-registry/issuance-assignment.service';
@@ -27,6 +27,8 @@ jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { reco
 jest.mock('@/lib/workspace/workspace-catalog', () => ({ readWorkspaceName: jest.fn(async () => 'Γραφείο Άλφα') }));
 jest.mock('@/server/notifications/notification-orchestrator', () => ({ dispatchNotification: jest.fn(async () => ({ skipped: false })) }));
 jest.mock('@/server/invitations/invitation-notice', () => ({ deliverInvitationEmail: jest.fn() }));
+/** §42 — η έγκριση της προσφοράς ανοίγει τον χώρο· η ΜΙΑ πόρτα (§39) έχει δική της σουίτα (`issuance-space-bridge.test.ts`). */
+jest.mock('@/server/issuance-invitations/issuance-space-invite', () => ({ engageApprovedProfessional: jest.fn(async () => undefined) }));
 /** Άγκιστρο ΑΝΑΜΕΣΑ στο πρόχειρο και τη συναλλαγή (η έκδοση του token) — για το σενάριο αγώνα. Πραγματικό token κατά τα άλλα. */
 let beforeMint: (() => Promise<void>) | null = null;
 jest.mock('@/server/invitations/invitation-token', () => {
@@ -61,6 +63,7 @@ jest.mock('@/server/issuance-invitations/issuance-link-access', () => {
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { deliverInvitationEmail } = require('@/server/invitations/invitation-notice') as { deliverInvitationEmail: jest.Mock };
 const { dispatchNotification } = require('@/server/notifications/notification-orchestrator') as { dispatchNotification: jest.Mock };
+const { engageApprovedProfessional } = require('@/server/issuance-invitations/issuance-space-invite') as { engageApprovedProfessional: jest.Mock };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 interface Sent { readonly to: string; readonly kind: string; readonly subject: string; readonly text: string; readonly correlation?: { readonly purpose: string; readonly ref: string } }
@@ -101,11 +104,24 @@ function tokenIn(message: Sent): string {
 
 function body(overrides: Partial<IssuanceSendBody> = {}): IssuanceSendBody {
   return {
-    ...TARGET, expectedStage: 'proposed', audience: 'owner', note: 'Παρακαλούμε μέχρι την Παρασκευή.',
+    ...TARGET, expectedStage: 'quoted', audience: 'owner', note: 'Παρακαλούμε μέχρι την Παρασκευή.',
     // Οι σενάριοι του §28 = σύνδεσμος χωρίς κωδικό· το §29 τον ζητά ρητά (`requireAccessCode: true`).
     // §31 — οι υπενθυμίσεις έχουν δική τους σουίτα (`issuance-invitation-reminder.test.ts`).
     expectedOwnerContactId: 'cont_a', informContactIds: ['cont_b'], requireAccessCode: false, sendReminders: false, ...overrides,
   };
+}
+
+const QUOTE_TERMS: QuoteTermsBody = {
+  basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance', 'registration'],
+};
+/** §42 — οι απαντήσεις του υπευθύνου κρίνουν **την αναθεώρηση που είδε** (εδώ: την πρώτη). */
+const approveWith = (accessCode: string | null = null): IssuanceLinkAnswerBody => ({ answer: 'approve', note: null, accessCode, quoteRevision: 1 });
+const rejectWith = (accessCode: string | null = null): IssuanceLinkAnswerBody => ({ answer: 'reject', note: null, accessCode, quoteRevision: 1 });
+
+/** §42 — αίτημα προσφοράς (καταγεγραμμένο) → προσφορά του γραφείου ⇒ `quoted`, εκεί όπου αποφασίζει ο υπεύθυνος. */
+async function toQuoted(): Promise<void> {
+  await actOnIssuanceAssignment(db(), OFFICE, { action: 'notify', ...TARGET, expectedStage: 'proposed', channel: 'phone' }, NOW);
+  await actOnIssuanceAssignment(db(), OFFICE, { action: 'record-quote', ...TARGET, expectedStage: 'sent', terms: QUOTE_TERMS, note: null }, NOW);
 }
 
 beforeEach(async () => {
@@ -120,6 +136,7 @@ beforeEach(async () => {
     return delivery;
   });
   dispatchNotification.mockClear();
+  engageApprovedProfessional.mockClear();
   seedProperty([['cont_a', 60], ['cont_b', 40]]);
   seedContact('cont_a', 'Άλφα', 'alfa@example.test');
   seedContact('cont_b', 'Βήτα', 'vita@example.test');
@@ -130,6 +147,8 @@ beforeEach(async () => {
 });
 
 describe('ADR-915 §28 — πρόχειρο και προεπισκόπηση', () => {
+  beforeEach(toQuoted);
+
   it('η προεπισκόπηση λέει ποιος, τι και ποιοι ενημερώνονται — και ΔΕΝ γράφει τίποτα, δεν στέλνει τίποτα', async () => {
     const result = await previewIssuanceMessage(db(), OFFICE, body(), NOW);
     expect(result.ok).toBe(true);
@@ -166,9 +185,11 @@ describe('ADR-915 §28 — πρόχειρο και προεπισκόπηση', 
 });
 
 describe('ADR-915 §28 — αποστολή για έγκριση', () => {
+  beforeEach(toQuoted);
+
   it('ΜΙΑ συναλλαγή: η ανάθεση θυμάται τον σύνδεσμο που γράφτηκε· το email φεύγει μετά, ένα ανά πρόσωπο, ποτέ cc', async () => {
     const result = await sendIssuanceMessage(db(), OFFICE, body(), NOW);
-    expect(result).toEqual({ ok: true, stage: 'proposed', delivery: { recipient: 'accepted', coOwners: { cont_b: 'accepted' } }, accessCode: null });
+    expect(result).toEqual({ ok: true, stage: 'quoted', delivery: { recipient: 'accepted', coOwners: { cont_b: 'accepted' } }, accessCode: null });
     const [invitation] = invitations();
     expect(invitation).toMatchObject({ state: 'pending', audience: 'owner', contactId: 'cont_a', inviteeEmail: 'alfa@example.test', companyId: COMPANY });
     expect(assignment()).toMatchObject({
@@ -185,13 +206,13 @@ describe('ADR-915 §28 — αποστολή για έγκριση', () => {
   it('το email δεν έφυγε ⇒ η πράξη ΜΕΝΕΙ (ο σύνδεσμος υπάρχει) και η αποτυχία ΛΕΓΕΤΑΙ', async () => {
     delivery = 'failed';
     const result = await sendIssuanceMessage(db(), OFFICE, body({ informContactIds: [] }), NOW);
-    expect(result).toEqual({ ok: true, stage: 'proposed', delivery: { recipient: 'failed', coOwners: {} }, accessCode: null });
+    expect(result).toEqual({ ok: true, stage: 'quoted', delivery: { recipient: 'failed', coOwners: {} }, accessCode: null });
     expect(assignment()).toMatchObject({ approvalRequest: { delivery: { recipient: 'failed' } } });
   });
 
   it('🔴 αγώνας: το γραφείο ακύρωσε ΑΝΑΜΕΣΑ στο πρόχειρο και τη συναλλαγή ⇒ `stale` — κανένας σύνδεσμος, κανένα email', async () => {
     beforeMint = async () => {
-      await actOnIssuanceAssignment(db(), OFFICE, { action: 'cancel', ...TARGET, expectedStage: 'proposed' }, NOW);
+      await actOnIssuanceAssignment(db(), OFFICE, { action: 'cancel', ...TARGET, expectedStage: 'quoted' }, NOW);
     };
     expect(await sendIssuanceMessage(db(), OFFICE, body(), NOW)).toEqual({ ok: false, refusal: 'stale' });
     expect(invitations()).toEqual([]);
@@ -206,6 +227,8 @@ describe('ADR-915 §28 — αποστολή για έγκριση', () => {
 });
 
 describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά του ιδιοκτήτη', () => {
+  beforeEach(toQuoted);
+
   async function sendAndToken(): Promise<string> {
     await sendIssuanceMessage(db(), OFFICE, body(), NOW);
     const message = sent.find((candidate) => candidate.kind === 'document-issuance');
@@ -222,6 +245,8 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
       audience: 'owner', recipientName: 'Άλφα Συνθετικός', officeName: 'Γραφείο Άλφα', documentKind: 'energy-certificate',
       professional: { name: 'Επιθεωρητής Συνθετικός', qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
       note: 'Παρακαλούμε μέχρι την Παρασκευή.',
+      step: 'approve-quote', brief: null,
+      quote: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, revision: 1, previousTotalMinor: null },
     } });
     expect(invitations()[0]).toMatchObject({ state: 'pending', openedAt: null });
     expect(assignment()).toMatchObject({ decision: null });
@@ -229,16 +254,36 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
 
   it('«Εγκρίνω» ⇒ απόφαση με βάση τον σύνδεσμο, σφραγισμένη πρόσκληση, ειδοποίηση στο γραφείο — δεύτερο κλικ ⇒ `already-used`', async () => {
     const token = await sendAndToken();
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
+    expect(await answerIssuanceLink(db(), token, approveWith(), LATER)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
     const [invitation] = invitations();
-    expect(assignment()).toMatchObject({ decision: { basis: 'owner-link-approval', invitationId: invitation?.id, ownerContactId: 'cont_a', outcome: 'approved' } });
+    expect(assignment()).toMatchObject({
+      decision: { basis: 'owner-link-approval', invitationId: invitation?.id, ownerContactId: 'cont_a', outcome: 'approved', quoteRevision: 1 },
+    });
+    // §42 — η έγκριση της προσφοράς ΕΙΝΑΙ η ανάθεση: ο επαγγελματίας προσκαλείται στον χώρο, στο όνομα του αποστολέα.
+    expect(engageApprovedProfessional).toHaveBeenCalledTimes(1);
+    expect(engageApprovedProfessional).toHaveBeenCalledWith(expect.anything(), { companyId: COMPANY, uid: 'user_1', name: null }, TARGET, LATER);
     expect(invitation).toMatchObject({ state: 'accepted', resolvedByUid: null });
     expect(dispatchNotification).toHaveBeenCalledTimes(1);
     expect(dispatchNotification.mock.calls[0]?.[0]).toMatchObject({
       eventType: 'properties.documentIssuanceAnswered', recipientId: 'user_1', tenantId: COMPANY,
       eventId: `document-issuance:${issuanceAssignmentIdOf(COMPANY, 'prop_1', 'energy-certificate')}:${invitation?.id}:user_1`,
     });
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'already-used' });
+    expect(await answerIssuanceLink(db(), token, approveWith(), LATER)).toEqual({ kind: 'refused', reason: 'already-used' });
+  });
+
+  it('«Δεν εγκρίνω» ⇒ απόρριψη της προσφοράς· ο επαγγελματίας ΔΕΝ προσκαλείται στον χώρο', async () => {
+    const token = await sendAndToken();
+    expect(await answerIssuanceLink(db(), token, rejectWith(), LATER)).toEqual({ kind: 'answered', answer: 'reject', space: { kind: 'none' } });
+    expect(assignment()).toMatchObject({ decision: { outcome: 'rejected', quoteRevision: 1 } });
+    expect(engageApprovedProfessional).not.toHaveBeenCalled();
+  });
+
+  it('🔴 απάντηση για ΑΛΛΗ αναθεώρηση από αυτή που είδε το γραφείο ⇒ `superseded`, τίποτα δεν γράφεται (ποτέ «ναι» σε τιμή που άλλαξε)', async () => {
+    const token = await sendAndToken();
+    expect(await answerIssuanceLink(db(), token, { ...approveWith(), quoteRevision: 2 }, LATER)).toEqual({ kind: 'refused', reason: 'superseded' });
+    expect(assignment()).toMatchObject({ decision: null });
+    expect(invitations()[0]).toMatchObject({ state: 'pending' });
+    expect(engageApprovedProfessional).not.toHaveBeenCalled();
   });
 
   it('🔴 «Αναλαμβάνω» σε σύνδεσμο έγκρισης ⇒ `answer-mismatch`, τίποτα δεν γράφεται', async () => {
@@ -250,7 +295,7 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
   it('🔴 επαναποστολή ⇒ ο ΠΑΛΙΟΣ σύνδεσμος δεν απαντά πια — ανακλήθηκε ΚΑΙ δεν είναι ο τρέχων', async () => {
     const old = await sendAndToken();
     await sendIssuanceMessage(db(), OFFICE, body({ informContactIds: [] }), LATER);
-    expect(await answerIssuanceLink(db(), old, { answer: 'approve', note: null, accessCode: null }, LATER)).toMatchObject({ kind: 'refused' });
+    expect(await answerIssuanceLink(db(), old, approveWith(), LATER)).toMatchObject({ kind: 'refused' });
     expect(assignment()).toMatchObject({ decision: null });
   });
 
@@ -258,34 +303,84 @@ describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά τ�
     const token = await sendAndToken();
     seedProperty([['cont_a', 40], ['cont_b', 60]]);
     expect(await viewIssuanceLink(db(), token, LATER)).toEqual({ kind: 'refused', reason: 'lead-changed' });
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'lead-changed' });
+    expect(await answerIssuanceLink(db(), token, approveWith(), LATER)).toEqual({ kind: 'refused', reason: 'lead-changed' });
   });
 
   it('η καταγραφή του γραφείου κλείνει τον σύνδεσμο ⇒ `superseded`', async () => {
     const token = await sendAndToken();
     await actOnIssuanceAssignment(db(), OFFICE, {
-      action: 'decide', ...TARGET, expectedStage: 'proposed', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a',
+      action: 'decide', ...TARGET, expectedStage: 'quoted', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a', quoteRevision: 1,
     }, LATER);
-    expect(await answerIssuanceLink(db(), token, { answer: 'reject', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'superseded' });
+    expect(await answerIssuanceLink(db(), token, rejectWith(), LATER)).toEqual({ kind: 'refused', reason: 'superseded' });
   });
 });
 
 describe('ADR-915 §28 — ο σύνδεσμος, από την πλευρά του επαγγελματία', () => {
-  it('μετά την έγκριση: αποστολή στον επαγγελματία ⇒ «Δεν αναλαμβάνω» με σχόλιο ⇒ `declined`, η μπάλα στο γραφείο', async () => {
-    await actOnIssuanceAssignment(db(), OFFICE, {
-      action: 'decide', ...TARGET, expectedStage: 'proposed', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a',
-    }, NOW);
-    const result = await sendIssuanceMessage(db(), OFFICE, body({ audience: 'professional', expectedStage: 'ownerApproved', expectedOwnerContactId: null, informContactIds: [] }), NOW);
+  /** §42 — το αίτημα προσφοράς φεύγει από την ΠΡΟΤΑΣΗ, πριν από οποιαδήποτε τιμή ή έγκριση. */
+  async function sendQuoteRequest(): Promise<string> {
+    const result = await sendIssuanceMessage(db(), OFFICE, body({ audience: 'professional', expectedStage: 'proposed', expectedOwnerContactId: null, informContactIds: [] }), NOW);
     expect(result).toMatchObject({ ok: true, stage: 'sent' });
     const message = sent.find((candidate) => candidate.to === 'pro@example.test');
     if (message === undefined) throw new Error('not sent');
-    const token = tokenIn(message);
+    return tokenIn(message);
+  }
+
+  it('αίτημα προσφοράς από την πρόταση ⇒ «Δεν δίνω προσφορά» με σχόλιο ⇒ `declined`, η μπάλα στο γραφείο', async () => {
+    const token = await sendQuoteRequest();
     expect(await answerIssuanceLink(db(), token, { answer: 'decline', note: 'Εκτός περιοχής.', accessCode: null }, LATER)).toEqual({ kind: 'answered', answer: 'decline', space: { kind: 'none' } });
     expect(assignment()).toMatchObject({ response: { basis: 'professional-link', outcome: 'declined', note: 'Εκτός περιοχής.' } });
+  });
+
+  it('η όψη του επαγγελματία δείχνει ΤΟ ΒΗΜΑ και τον φάκελο προσφοράς — κανένα όνομα ή επαφή ιδιοκτήτη, ποτέ ακριβής διεύθυνση', async () => {
+    const view = await viewIssuanceLink(db(), await sendQuoteRequest(), LATER);
+    if (view.kind !== 'view' || view.landing.access !== 'open') throw new Error('no open view');
+    expect(view.landing.view).toMatchObject({
+      audience: 'professional', step: 'give-quote', quote: null, professional: null,
+      brief: { floor: null, constructionYear: null, energyClass: 'B' },
+    });
+    expect(JSON.stringify(view.landing.view.brief)).not.toContain('Άλφα');
+    expect(assignment()).toMatchObject({ quote: null });
+  });
+
+  it('η προσφορά με τον σύνδεσμο ⇒ στάδιο `quoted`, υποβολή «professional-link», ειδοποίηση στο γραφείο, απόδειξη στον ίδιο — ΧΩΡΙΣ πρόσκληση στον χώρο', async () => {
+    const token = await sendQuoteRequest();
+    const quote: IssuanceLinkAnswerBody = { answer: 'quote', note: 'Μετά από αυτοψία.', accessCode: null, terms: QUOTE_TERMS };
+    expect(await answerIssuanceLink(db(), token, quote, LATER)).toEqual({ kind: 'answered', answer: 'quote', space: { kind: 'none' } });
+    const [invitation] = invitations();
+    expect(assignment()).toMatchObject({
+      decision: null,
+      quote: { revision: 1, amountMinor: 10_000, note: 'Μετά από αυτοψία.', submission: { by: 'professional-link', invitationId: invitation?.id } },
+    });
+    expect(invitation).toMatchObject({ state: 'accepted' });
+    expect(dispatchNotification).toHaveBeenCalledTimes(1);
+    expect(dispatchNotification.mock.calls[0]?.[0]).toMatchObject({ titleKey: 'documentIssuanceAnswered.quoted' });
+    expect(sent.filter((message) => message.kind === 'document-issuance-receipt').map((message) => message.to)).toEqual(['pro@example.test']);
+    expect(engageApprovedProfessional).not.toHaveBeenCalled();
+  });
+
+  it('🔴 προσφορά με άκυρους όρους (ισχύς στο παρελθόν) ⇒ δεν γράφεται, ο σύνδεσμος μένει ανοιχτός', async () => {
+    const token = await sendQuoteRequest();
+    const expired: IssuanceLinkAnswerBody = { answer: 'quote', note: null, accessCode: null, terms: { ...QUOTE_TERMS, validUntil: '2026-10-16' } };
+    expect(await answerIssuanceLink(db(), token, expired, LATER)).toEqual({ kind: 'refused', reason: 'superseded' });
+    expect(assignment()).toMatchObject({ quote: null });
+    expect(invitations()[0]).toMatchObject({ state: 'pending' });
+  });
+
+  it('η αλυσίδα: προσφορά με σύνδεσμο → αποστολή στον υπεύθυνο → έγκριση ⇒ ανάθεση + πρόσκληση στον χώρο', async () => {
+    const token = await sendQuoteRequest();
+    await answerIssuanceLink(db(), token, { answer: 'quote', note: null, accessCode: null, terms: QUOTE_TERMS }, LATER);
+    expect(await sendIssuanceMessage(db(), OFFICE, body({ informContactIds: [] }), LATER)).toMatchObject({ ok: true, stage: 'quoted' });
+    const ownerMessage = sent.find((candidate) => candidate.kind === 'document-issuance' && candidate.to === 'alfa@example.test');
+    if (ownerMessage === undefined) throw new Error('owner not sent');
+    expect(await answerIssuanceLink(db(), tokenIn(ownerMessage), approveWith(), LATER)).toMatchObject({ kind: 'answered', answer: 'approve' });
+    expect(assignment()).toMatchObject({ decision: { outcome: 'approved', quoteRevision: 1 } });
+    expect(engageApprovedProfessional).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('ADR-915 §29 — κωδικός πρόσβασης σε δεύτερο κανάλι', () => {
+  beforeEach(toQuoted);
+
   async function sendWithCode(overrides: Partial<IssuanceSendBody> = {}): Promise<{ readonly token: string; readonly code: string }> {
     const result = await sendIssuanceMessage(db(), OFFICE, body({ requireAccessCode: true, informContactIds: [], ...overrides }), NOW);
     if (!result.ok || result.accessCode === null) throw new Error('not sent with code');
@@ -326,9 +421,9 @@ describe('ADR-915 §29 — κωδικός πρόσβασης σε δεύτερο
 
   it('🔴 απάντηση ΧΩΡΙΣ κωδικό ⇒ `code-required`, τίποτα δεν γράφεται· ΜΕ κωδικό ⇒ απόφαση `verifiedBy: access-code`', async () => {
     const { token, code } = await sendWithCode();
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER)).toEqual({ kind: 'refused', reason: 'code-required', remaining: 5 });
+    expect(await answerIssuanceLink(db(), token, approveWith(), LATER)).toEqual({ kind: 'refused', reason: 'code-required', remaining: 5 });
     expect(assignment()).toMatchObject({ decision: null });
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
+    expect(await answerIssuanceLink(db(), token, approveWith(code), LATER)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
     expect(assignment()).toMatchObject({ decision: { basis: 'owner-link-approval', verifiedBy: 'access-code', outcome: 'approved' } });
   });
 
@@ -340,7 +435,7 @@ describe('ADR-915 §29 — κωδικός πρόσβασης σε δεύτερο
     expect(await unlockIssuanceLink(db(), token, wrongOf(code), LATER)).toEqual({ kind: 'refused', reason: 'code-locked', remaining: 0 });
     expect(dispatchNotification).toHaveBeenCalledTimes(1);
     expect(dispatchNotification.mock.calls[0]?.[0]).toMatchObject({ titleKey: 'documentIssuanceAnswered.locked', eventId: expect.stringMatching(/:locked$/) });
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER)).toEqual({ kind: 'refused', reason: 'code-locked', remaining: 0 });
+    expect(await answerIssuanceLink(db(), token, approveWith(code), LATER)).toEqual({ kind: 'refused', reason: 'code-locked', remaining: 0 });
     expect(await viewIssuanceLink(db(), token, LATER)).toEqual({ kind: 'refused', reason: 'code-locked', remaining: 0 });
     expect(dispatchNotification).toHaveBeenCalledTimes(1);
     expect(assignment()).toMatchObject({ decision: null });
@@ -358,7 +453,7 @@ describe('ADR-915 §29 — κωδικός πρόσβασης σε δεύτερο
       if (invitation === undefined) throw new Error('no invitation');
       await fake.collection(COLLECTIONS.DOCUMENT_ISSUANCE_INVITATIONS).doc(invitation.id).update({ accessCode: { ...invitation.accessCode, lockedAt: NOW.toISOString() } });
     };
-    expect(await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER)).toMatchObject({ kind: 'refused', reason: 'code-locked' });
+    expect(await answerIssuanceLink(db(), token, approveWith(code), LATER)).toMatchObject({ kind: 'refused', reason: 'code-locked' });
     expect(assignment()).toMatchObject({ decision: null });
     expect(invitations()[0]).toMatchObject({ state: 'pending' });
   });
@@ -381,6 +476,7 @@ describe('ADR-915 §30 — απόδειξη απάντησης στη διεύθ
   const receipts = () => sent.filter((message) => message.kind === 'document-issuance-receipt');
 
   async function ownerToken(overrides: Partial<IssuanceSendBody> = {}): Promise<{ readonly token: string; readonly code: string | null }> {
+    await toQuoted();
     const result = await sendIssuanceMessage(db(), OFFICE, body({ informContactIds: [], ...overrides }), NOW);
     const message = sent.filter((candidate) => candidate.kind === 'document-issuance').at(-1);
     if (!result.ok || message === undefined) throw new Error('not sent');
@@ -389,11 +485,11 @@ describe('ADR-915 §30 — απόδειξη απάντησης στη διεύθ
 
   it('«Εγκρίνω» ⇒ ΜΙΑ απόδειξη στη διεύθυνση της πρόσκλησης: τι, πότε, πώς, «δεν ήσασταν εσείς;» — χωρίς σύνδεσμο', async () => {
     const { token } = await ownerToken();
-    await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: null }, LATER);
+    await answerIssuanceLink(db(), token, approveWith(), LATER);
     expect(receipts().map((message) => message.to)).toEqual(['alfa@example.test']);
     const [receipt] = receipts();
     expect(receipt?.subject).toContain('Καταγράψαμε την απάντησή σας');
-    expect(receipt?.text).toContain('Εγκρίνατε την ανάθεση');
+    expect(receipt?.text).toContain('Εγκρίνατε την προσφορά και την ανάθεση');
     expect(receipt?.text).toContain('Επιθεωρητής Συνθετικός');
     expect(receipt?.text).toContain('Δεν ήσασταν εσείς;');
     expect(receipt?.text).toContain('Γραφείο Άλφα');
@@ -406,8 +502,8 @@ describe('ADR-915 §30 — απόδειξη απάντησης στη διεύθ
     const { token } = await ownerToken();
     expect(await answerIssuanceLink(db(), token, { answer: 'accept', note: null, accessCode: null }, LATER)).toMatchObject({ kind: 'refused' });
     expect(receipts()).toEqual([]);
-    await answerIssuanceLink(db(), token, { answer: 'reject', note: null, accessCode: null }, LATER);
-    await answerIssuanceLink(db(), token, { answer: 'reject', note: null, accessCode: null }, LATER);
+    await answerIssuanceLink(db(), token, rejectWith(), LATER);
+    await answerIssuanceLink(db(), token, rejectWith(), LATER);
     expect(receipts()).toHaveLength(1);
     expect(receipts()[0]?.text).toContain('Δεν εγκρίνατε');
   });
@@ -415,16 +511,13 @@ describe('ADR-915 §30 — απόδειξη απάντησης στη διεύθ
   it('με κωδικό ⇒ «με τον κωδικό πρόσβασης» — ο ίδιος ο κωδικός ΠΟΤΕ στην απόδειξη', async () => {
     const { token, code } = await ownerToken({ requireAccessCode: true });
     if (code === null) throw new Error('no code');
-    await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code }, LATER);
+    await answerIssuanceLink(db(), token, approveWith(code), LATER);
     expect(receipts()[0]?.text).toContain('Με τον σύνδεσμο και τον κωδικό πρόσβασης');
     expect(receipts()[0]?.text).not.toContain(code);
   });
 
   it('ο επαγγελματίας αρνείται με σχόλιο ⇒ η απόδειξη πάει σε ΕΚΕΙΝΟΝ και του επιστρέφει το σχόλιό του', async () => {
-    await actOnIssuanceAssignment(db(), OFFICE, {
-      action: 'decide', ...TARGET, expectedStage: 'proposed', outcome: 'approved', channel: 'phone', note: null, expectedOwnerContactId: 'cont_a',
-    }, NOW);
-    await sendIssuanceMessage(db(), OFFICE, body({ audience: 'professional', expectedStage: 'ownerApproved', expectedOwnerContactId: null, informContactIds: [] }), NOW);
+    await sendIssuanceMessage(db(), OFFICE, body({ audience: 'professional', expectedStage: 'proposed', expectedOwnerContactId: null, informContactIds: [] }), NOW);
     const message = sent.find((candidate) => candidate.to === 'pro@example.test');
     if (message === undefined) throw new Error('not sent');
     await answerIssuanceLink(db(), tokenIn(message), { answer: 'decline', note: 'Εκτός περιοχής.', accessCode: null }, LATER);
@@ -448,6 +541,7 @@ describe('ADR-915 §30 — γεγονότα παράδοσης του παρόχ
   const bounceNotices = () => dispatchNotification.mock.calls.filter(([notice]) => String(notice.eventId).endsWith(':bounced'));
 
   async function sendForApproval(): Promise<string> {
+    await toQuoted();
     await sendIssuanceMessage(db(), OFFICE, body(), NOW);
     const id = invitations()[0]?.id;
     if (typeof id !== 'string') throw new Error('not sent');

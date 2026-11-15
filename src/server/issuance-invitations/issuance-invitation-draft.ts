@@ -31,8 +31,10 @@ import type { IssuanceEmailFacts } from '@/services/email-templates/issuance-inv
 
 /** Από ποια στάδια στέλνεται κάθε μήνυμα — **ίδια** με τον μειωτή (`request-approval` · `notify`), για καθαρή άρνηση στο πρόχειρο. */
 const SENDABLE_FROM: Readonly<Record<IssuanceSendBody['audience'], readonly IssuanceStage[]>> = {
-  owner: ['proposed'],
-  professional: ['ownerApproved', 'sent'],
+  // §42 — ο υπεύθυνος κρίνει **προσφορά**: ο σύνδεσμος έγκρισης φεύγει μόνο όταν υπάρχει τιμή.
+  owner: ['quoted'],
+  // §42 — αίτημα προσφοράς από `proposed`· `ownerApproved` = παλιά ανάθεση (§27) που περιμένει ενημέρωση.
+  professional: ['proposed', 'ownerApproved', 'sent'],
 };
 
 export interface DraftPerson {

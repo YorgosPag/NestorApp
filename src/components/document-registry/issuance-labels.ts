@@ -50,6 +50,7 @@ export const ISSUANCE_STAGE_KEYS: Readonly<Record<IssuanceStage, string>> = {
   ownerApproved: `${K}issuance.stage.ownerApproved`,
   ownerRejected: `${K}issuance.stage.ownerRejected`,
   sent: `${K}issuance.stage.sent`,
+  quoted: `${K}issuance.stage.quoted`,
   accepted: `${K}issuance.stage.accepted`,
   declined: `${K}issuance.stage.declined`,
   cancelled: `${K}issuance.stage.cancelled`,
@@ -111,6 +112,31 @@ export const DECISION_KEYS = {
   submit: `${K}issuance.decision.submit`,
 } as const;
 
+/** §42 — η προσφορά στην κάρτα του γραφείου: ιστορικό · καταγραφή · παραστατικό. */
+export const QUOTE_KEYS = {
+  line: `${K}issuance.quote.line`,
+  revisedLine: `${K}issuance.quote.revisedLine`,
+  receiptLine: `${K}issuance.quote.receiptLine`,
+  title: `${K}issuance.quote.title`,
+  description: `${K}issuance.quote.description`,
+  noteLabel: `${K}issuance.quote.noteLabel`,
+  submit: `${K}issuance.quote.submit`,
+  recordQuote: `${K}issuance.action.recordQuote`,
+  recordRevision: `${K}issuance.action.recordRevision`,
+  noQuote: `${K}issuance.action.noQuote`,
+  withdrawn: `${K}issuance.action.withdrawn`,
+  recordReceipt: `${K}issuance.action.recordReceipt`,
+} as const;
+
+
+export const RECEIPT_KEYS = {
+  title: `${K}issuance.receipt.title`,
+  description: `${K}issuance.receipt.description`,
+  markLabel: `${K}issuance.receipt.markLabel`,
+  issuedOnLabel: `${K}issuance.receipt.issuedOnLabel`,
+  submit: `${K}issuance.receipt.submit`,
+} as const;
+
 export const NOTICE_KEYS = {
   title: `${K}issuance.notice.title`,
   description: `${K}issuance.notice.description`,
@@ -131,7 +157,7 @@ export const CANCEL_KEYS = {
  */
 export const ISSUANCE_REFUSAL_CODES = [
   'NOT_FOUND', 'ASSIGNMENTS_UNAVAILABLE', 'CONTACT_UNAVAILABLE', 'UNQUALIFIED',
-  'LEAD_UNDESIGNATED', 'LEAD_CHANGED', 'STALE', 'TRANSITION_REFUSED', 'ACTOR_REFUSED',
+  'LEAD_UNDESIGNATED', 'LEAD_CHANGED', 'STALE', 'TRANSITION_REFUSED', 'ACTOR_REFUSED', 'TERMS_REFUSED', 'RECEIPT_MISMATCH',
 ] as const;
 export type IssuanceRefusalCode = (typeof ISSUANCE_REFUSAL_CODES)[number];
 
@@ -146,6 +172,8 @@ export const ISSUANCE_ERROR_KEYS: Readonly<Record<IssuanceRefusalCode | 'failed'
   STALE: `${K}issuance.error.stale`,
   TRANSITION_REFUSED: `${K}issuance.error.transitionRefused`,
   ACTOR_REFUSED: `${K}issuance.error.actorRefused`,
+  TERMS_REFUSED: `${K}issuance.error.termsRefused`,
+  RECEIPT_MISMATCH: `${K}issuance.error.receiptMismatch`,
 };
 
 /**

@@ -15,7 +15,6 @@ import React, { useId, useState } from 'react';
 
 import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -25,7 +24,7 @@ import {
   type InstructionChannel,
   type NoticeChannel,
 } from '@/lib/document-validity/issuance-assignment';
-import { isOneOf } from '@/lib/type-guards';
+import { ChoiceField } from '@/components/document-registry/IssuanceChoiceField';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
@@ -37,32 +36,6 @@ import {
   PROPOSE_KEYS,
 } from '@/components/document-registry/issuance-labels';
 
-interface ChoiceFieldProps<V extends string> {
-  readonly legend: string;
-  readonly options: readonly V[];
-  readonly value: V | null;
-  readonly onChange: (value: V) => void;
-  readonly labelOf: (value: V) => string;
-}
-
-/** Μία επιλογή από λίγες, όλες ορατές, μέσα σε `<fieldset>/<legend>` — κανάλι · απόφαση. */
-function ChoiceField<V extends string>({ legend, options, value, onChange, labelOf }: ChoiceFieldProps<V>): React.ReactElement {
-  const legendId = useId();
-  return (
-    <fieldset className="m-0 flex flex-col gap-2 border-0 p-0" aria-labelledby={legendId}>
-      <legend id={legendId} className="mb-1 text-sm font-medium text-foreground">{legend}</legend>
-      <RadioGroup value={value ?? ''} onValueChange={(next) => { if (isOneOf(options, next)) onChange(next); }}>
-        {options.map((option) => (
-          <Label key={option} className="flex items-center gap-2 text-sm font-normal">
-            <RadioGroupItem value={option} />
-            <span>{labelOf(option)}</span>
-          </Label>
-        ))}
-      </RadioGroup>
-    </fieldset>
-  );
-}
-
 const OUTCOMES = ['approved', 'rejected'] as const;
 type Outcome = (typeof OUTCOMES)[number];
 
@@ -71,7 +44,14 @@ export interface IssuanceFormProps {
   readonly close: () => void;
 }
 
-export function DecisionForm({ view, close, professionalName, leadId }: IssuanceFormProps & { readonly professionalName: string; readonly leadId: string }): React.ReactElement {
+export interface DecisionFormProps extends IssuanceFormProps {
+  readonly professionalName: string;
+  readonly leadId: string;
+  /** §42 — η αναθεώρηση της προσφοράς που **βλέπει** ο άνθρωπος· ο μειωτής αρνείται απόφαση για άλλη. */
+  readonly quoteRevision: number;
+}
+
+export function DecisionForm({ view, close, professionalName, leadId, quoteRevision }: DecisionFormProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -81,7 +61,7 @@ export function DecisionForm({ view, close, professionalName, leadId }: Issuance
   const submit = () => {
     if (actions === null || outcome === null || channel === null) return;
     close();
-    actions.act({ action: 'decide', ...issuanceTargetOf(view), outcome, channel, note: note.trim() || null, expectedOwnerContactId: leadId });
+    actions.act({ action: 'decide', ...issuanceTargetOf(view), outcome, channel, note: note.trim() || null, expectedOwnerContactId: leadId, quoteRevision });
   };
   return (
     <>

@@ -18,12 +18,18 @@ const OFFICE: IssuanceActor = { kind: 'office', uid: 'uid_agent', nowIso: NOW };
 const PROPOSE: IssuanceAction = {
   kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: null },
 };
+/** §42 — το αίτημα έγκρισης φεύγει μόνο όταν υπάρχει προσφορά: πρόταση → αίτημα προσφοράς → προσφορά (`quoted`). */
+const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null };
+const QUOTE: IssuanceAction = {
+  kind: 'quote',
+  terms: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null },
+};
 const REQUEST: IssuanceAction = { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_lead', note: null, verification: 'link' };
 const RECIPIENT = { kind: 'recipient' } as const;
 
 function requested(): IssuanceAssignmentRecord {
   let record: IssuanceAssignmentRecord | null = null;
-  for (const action of [PROPOSE, REQUEST]) {
+  for (const action of [PROPOSE, NOTIFY, QUOTE, REQUEST]) {
     const reduced = reduceIssuance('energy-certificate', record, null, action, OFFICE);
     if (!reduced.ok) throw new Error(reduced.refusal);
     record = reduced.record;

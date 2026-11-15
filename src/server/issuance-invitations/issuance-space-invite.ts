@@ -28,8 +28,12 @@ import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { issuanceAssignmentIdOf, parseIssuanceAssignment, type DocumentIssuanceAssignment } from '@/services/document-registry/issuance-assignment-schema';
 import { EntityAuditService } from '@/services/entity-audit.service';
 
+import { createModuleLogger } from '@/lib/telemetry';
+
 import { issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
 import { planIssuanceSpace } from './issuance-space-bridge';
+
+const logger = createModuleLogger('issuance-space-invite');
 
 /** Ποιος στέλνει — από το token του αιτήματος (`withAuth`), ποτέ από το σώμα. */
 export interface SpaceInviteSender {
@@ -58,9 +62,15 @@ async function readOwnAssignment(db: Firestore, companyId: string, propertyId: s
   return assignment && assignment.companyId === companyId && assignment.id === id ? assignment : null;
 }
 
+/** Ο σύνδεσμος από τον οποίο **απάντησε** ο ίδιος — η προσφορά του (§42) ή, σε παλιά ανάθεση, το «Αναλαμβάνω» (§28). */
+function professionalLinkIdOf(assignment: DocumentIssuanceAssignment): string | null {
+  if (assignment.quote?.submission.by === 'professional-link') return assignment.quote.submission.invitationId;
+  return assignment.response?.basis === 'professional-link' ? assignment.response.invitationId : null;
+}
+
 /** Η διεύθυνση: πρώτα όποια **απέδειξε** ο ίδιος στον σύνδεσμο της ανάθεσης, μετά η κύρια της επαφής του γραφείου. */
 async function inviteeEmailOf(db: Firestore, assignment: DocumentIssuanceAssignment): Promise<string | null> {
-  const linkId = assignment.response?.basis === 'professional-link' ? assignment.response.invitationId : null;
+  const linkId = professionalLinkIdOf(assignment);
   if (linkId !== null) {
     const link = parseIssuanceInvitation((await issuanceInvitationsCollection(db).doc(linkId).get()).data(), linkId);
     if (link && link.companyId === assignment.companyId) return link.inviteeEmail;
@@ -87,6 +97,25 @@ async function recordSpaceInviteAudit(assignment: DocumentIssuanceAssignment, se
     performedByName: sender.name,
     companyId: assignment.companyId,
   });
+}
+
+/**
+ * §42 — **η έγκριση της προσφοράς ΕΙΝΑΙ η ανάθεση**: με σύνδεσμο ή καταγεγραμμένη, ο επαγγελματίας προσκαλείται στον
+ * χώρο από **αυτή** την πόρτα — μία διαδρομή. Τρέχει μετά το commit και **ποτέ δεν πετά**: αν δεν έφυγε, η κάρτα του
+ * γραφείου λέει «δεν έχει σταλεί πρόσκληση» και δίνει το κουμπί αποστολής (belt-and-suspenders).
+ */
+export async function engageApprovedProfessional(
+  db: Firestore,
+  sender: SpaceInviteSender,
+  target: { readonly propertyId: string; readonly documentKind: DocumentKind },
+  now: Date,
+): Promise<void> {
+  try {
+    const engaged = await inviteIssuanceProfessionalToSpace(db, sender, target, now);
+    if (!engaged.ok) logger.warn('Η εγκεκριμένη προσφορά δεν άνοιξε χώρο ανάθεσης', { propertyId: target.propertyId, refusal: engaged.refusal });
+  } catch (error) {
+    logger.error('Αποτυχία πρόσκλησης στον χώρο μετά την έγκριση προσφοράς', { propertyId: target.propertyId, error });
+  }
 }
 
 /** **Νέος σύνδεσμος εισόδου στον χώρο της ανάθεσης.** Η πρόσκληση γράφεται πρώτα (await)· το email μετά, με ονομασμένη έκβαση. */

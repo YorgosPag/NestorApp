@@ -24,6 +24,8 @@ import {
   type IssuanceAssignmentRecord,
 } from '@/lib/document-validity/issuance-assignment';
 import { ISSUANCE_DELIVERY_OUTCOMES } from '@/lib/document-validity/issuance-delivery';
+import { MYDATA_MARK_PATTERN, QUOTE_BASES, QUOTE_MAX_REVISION, QUOTE_SCOPE_ITEMS } from '@/lib/document-validity/issuance-quote';
+import { isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
 import { generateDeterministicDocumentIssuanceAssignmentId } from '@/services/enterprise-id.service';
 import { REGISTRY_PROPERTY_SCOPES, type RegistryPropertyScope } from './document-registry.types';
 
@@ -50,7 +52,39 @@ const remindersSchema = z.object({ dueAt: nonEmpty.nullable(), sentAt: z.array(n
 const decisionSchema = z.discriminatedUnion('basis', [
   z.object({ basis: z.literal('recorded-instruction'), channel: z.enum(INSTRUCTION_CHANNELS), recordedByUid: nonEmpty }),
   z.object({ basis: z.literal('owner-link-approval'), invitationId: nonEmpty, verifiedBy: verification }),
-]).and(z.object({ outcome: z.enum(['approved', 'rejected']), ownerContactId: nonEmpty, note, at: nonEmpty }));
+]).and(z.object({
+  outcome: z.enum(['approved', 'rejected']),
+  /** §42 — έγγραφα πριν από την προσφορά δεν το έγραφαν: διαβάζονται ως παλιά ανάθεση (`null`), που ήταν και η αλήθεια τους. */
+  quoteRevision: z.number().int().min(1).nullable().default(null),
+  ownerContactId: nonEmpty,
+  note,
+  at: nonEmpty,
+}));
+
+const minor = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+
+/** §42 — μία αναθεώρηση της προσφοράς (χωρίς την προηγούμενή της). */
+const quoteRevisionSchema = z.object({
+  basis: z.enum(QUOTE_BASES),
+  amountMinor: minor,
+  vatRatePercent: vatRatePercentSchema,
+  vatIncluded: z.boolean(),
+  validUntil: isoDay,
+  scope: z.array(z.enum(QUOTE_SCOPE_ITEMS)).min(1),
+  note,
+  revision: z.number().int().min(1).max(QUOTE_MAX_REVISION),
+  at: nonEmpty,
+  submission: z.discriminatedUnion('by', [
+    z.object({ by: z.literal('professional-link'), invitationId: nonEmpty }),
+    z.object({ by: z.literal('recorded'), recordedByUid: nonEmpty }),
+  ]),
+});
+
+/** §42 — έγγραφα πριν από την προσφορά δεν είχαν τα πεδία: «καμία προσφορά / κανένα παραστατικό». */
+const quoteSchema = quoteRevisionSchema.extend({ previous: quoteRevisionSchema.nullable() }).nullable().default(null);
+const receiptSchema = z.object({
+  mark: z.string().regex(MYDATA_MARK_PATTERN), issuedOn: isoDay, totalMinor: minor, at: nonEmpty, recordedByUid: nonEmpty,
+}).nullable().default(null);
 
 const responseSchema = z.discriminatedUnion('basis', [
   z.object({ basis: z.literal('recorded'), recordedByUid: nonEmpty }),
@@ -81,6 +115,8 @@ const assignmentSchema = z.object({
     reminders: remindersSchema,
   }).nullable(),
   response: responseSchema.nullable(),
+  quote: quoteSchema,
+  receipt: receiptSchema,
   cancellation: z.object({ byUid: nonEmpty, at: nonEmpty }).nullable(),
   updatedAt: nonEmpty,
 });
@@ -93,8 +129,12 @@ export function parseIssuanceAssignment(raw: unknown): DocumentIssuanceAssignmen
 
 /** Τα γεγονότα μόνο — ό,τι κρίνει ο μειωτής, χωρίς την ταυτότητα. */
 export function issuanceRecordOf(assignment: DocumentIssuanceAssignment): IssuanceAssignmentRecord {
-  const { professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, cancellation } = assignment;
-  return { professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, cancellation };
+  const {
+    professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt, cancellation,
+  } = assignment;
+  return {
+    professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt, cancellation,
+  };
 }
 
 /** Η ΜΙΑ ταυτότητα ανά (γραφείο, ακίνητο, είδος) — ο γραφέας και ο αναγνώστης βρίσκουν το ίδιο έγγραφο χωρίς ερώτημα. */

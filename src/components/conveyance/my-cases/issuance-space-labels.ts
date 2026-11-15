@@ -19,6 +19,7 @@ export const PROFESSIONAL_STAGE_KEYS: Readonly<Record<IssuanceStage, string>> = 
   ownerApproved: 'conveyance:engagement.issuance.stage.ownerApproved',
   ownerRejected: 'conveyance:engagement.issuance.stage.ownerRejected',
   sent: 'conveyance:engagement.issuance.stage.sent',
+  quoted: 'conveyance:engagement.issuance.stage.quoted',
   accepted: 'conveyance:engagement.issuance.stage.accepted',
   declined: 'conveyance:engagement.issuance.stage.declined',
   cancelled: 'conveyance:engagement.issuance.stage.cancelled',
