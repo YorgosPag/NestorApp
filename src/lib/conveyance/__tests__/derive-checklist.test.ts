@@ -123,7 +123,8 @@ describe('deriveChecklist — καταστάσεις', () => {
 describe('ADR-915 §44 — άγνωστη λήξη: θέλει προσοχή, δεν μπλοκάρει, δεν μετρά ως ολοκληρωμένη', () => {
   const unknownEnergy = () => deriveChecklist(input({
     items: [item('energy_certificate')],
-    evidence: [file()],
+    // ίδιο αρχείο με τα tests ισχύος (Σ-5): αρχείο ΑΚΙΝΗΤΟΥ, ώστε να πέφτει στη γραμμή του ΠΕΑ
+    evidence: [file({ level: 'property', entityType: 'property', purpose: 'certificate' })],
     overrides: {
       energy_certificate: { review: { verdict: 'accepted' as const, fileId: 'file_1', fileFingerprint: 'file_1:0:2026-09-01', issuedOn: null, printedValidUntil: null, reason: null, reviewedBy: 'u', reviewedAt: 't' } },
     },
