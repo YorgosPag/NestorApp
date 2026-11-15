@@ -13,16 +13,15 @@
  *    υπογράψει το έγγραφο (όχι στο επάγγελμα) **και** στον δήμο του ακινήτου — και όταν ο δήμος δεν αποδεικνύεται, το
  *    λέει αντί να μαντέψει.
  * 🔑 ADR-915 §27 — **πρώτα** «Ανάθεση σε επαγγελματία» (γνωστός · πρόταση · απόφαση ιδιοκτήτη · μπάλα), **μετά** «Βρες».
- * ⚠️ Εξωτερική πύλη ⇒ `target="_blank"` + `rel="noopener noreferrer"` + δήλωση για τους αναγνώστες οθόνης (ίδιο ιδίωμα
- *    με το `LicenceStatement`). Εσωτερικός σύνδεσμος ⇒ **μόνο** από το σύνορο πλοήγησης (CHECK 3.61).
+ * ⚠️ Εξωτερική πύλη ⇒ **μόνο** το `RegistryAuthorityLink` (§43 — ίδιο κουμπί με τον πίνακα). Εσωτερικός σύνδεσμος ⇒
+ *    **μόνο** από το σύνορο πλοήγησης (CHECK 3.61).
  */
 
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { documentIssuerSearchHref } from '@/components/mandate/agency-directory-route';
-import { AUTHORITY_SERVICE_SPECS, type AuthorityService } from '@/config/document-validity/document-issuers';
+import type { AuthorityService } from '@/config/document-validity/document-issuers';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { documentNextSteps, type DocumentNextStep } from '@/lib/document-validity/document-next-step';
@@ -31,9 +30,9 @@ import { canProposeIssuance } from '@/lib/document-validity/issuance-assignment'
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import type { RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { RegistryIssuanceStep } from '@/components/document-registry/RegistryIssuanceStep';
+import { RegistryAuthorityLink } from '@/components/document-registry/RegistryAuthorityLink';
 import { Link } from '@/lib/workspace/navigation';
 import {
-  ISSUER_AUTHORITY_LABEL_KEYS,
   NEXT_STEP_KEYS,
   REGISTRY_NS,
   SELF_SERVICE_PATH_KEYS,
@@ -56,18 +55,9 @@ function FindProfessionalStep({ kind, areaId }: { readonly kind: DocumentKind; r
 
 function SelfServiceStep({ service }: { readonly service: AuthorityService }) {
   const { t } = useTranslation([REGISTRY_NS]);
-  // `useId`: το ίδιο είδος εμφανίζεται σε ΠΟΛΛΕΣ γραμμές — σταθερό id θα συγκρουόταν.
-  const hintId = React.useId();
-  const { authority, entryUrl } = AUTHORITY_SERVICE_SPECS[service];
   return (
     <li className="flex flex-col gap-1">
-      <Button asChild variant="outline" size="sm" className="w-fit">
-        <a href={entryUrl} target="_blank" rel="noopener noreferrer" aria-describedby={hintId}>
-          {t(NEXT_STEP_KEYS.selfService, { authority: t(ISSUER_AUTHORITY_LABEL_KEYS[authority]) })}
-          <ExternalLink className="size-3" aria-hidden="true" />
-        </a>
-      </Button>
-      <span id={hintId} className="sr-only">{t(NEXT_STEP_KEYS.opensInNewTab)}</span>
+      <RegistryAuthorityLink service={service} />
       <p className="m-0 text-xs text-foreground">{t(SELF_SERVICE_PATH_KEYS[service])}</p>
       <p className="m-0 text-xs text-muted-foreground">{t(NEXT_STEP_KEYS.selfServiceHint)}</p>
     </li>
@@ -90,16 +80,19 @@ function StepItem({ step, areaId, issuance, registry }: StepItemProps) {
     case 'assign-professional': return issuance === null ? null : <RegistryIssuanceStep view={issuance} registry={registry} />;
     case 'find-professional': return <FindProfessionalStep kind={step.documentKind} areaId={areaId} />;
     case 'self-service': return <SelfServiceStep service={step.service} />;
+    // §43 — στην κάρτα το «Συμπλήρωσε στοιχεία» ζει ήδη ως `RegistryFactsDeclaration` (φιλτράρεται στο `visibleSteps`).
+    case 'declare-facts': return null;
   }
 }
 
 /**
  * ADR-915 §27 — **μία** ενεργή ανάθεση ανά (ακίνητο, είδος): όταν έχει δεσμευτεί επαγγελματίας (εγκρίθηκε · ενημερώθηκε
- * · αποδέχτηκε), το «Βρες» **φεύγει** — δεύτερος επαγγελματίας θα σήμαινε δεύτερο ΠΕΑ.
+ * · αποδέχτηκε), το «Βρες» **φεύγει** — δεύτερος επαγγελματίας θα σήμαινε δεύτερο ΠΕΑ. §43 — το `declare-facts` φεύγει
+ * πάντα εδώ: η κάρτα έχει ήδη το κουμπί του (`RegistryFactsDeclaration`), άρα κανένα δεύτερο σημείο και καμία κενή ενότητα.
  */
 function visibleSteps(steps: readonly DocumentNextStep[], issuance: Issuance): readonly DocumentNextStep[] {
   const committed = issuance !== null && issuance !== 'unavailable' && !canProposeIssuance(issuance.state);
-  return committed ? steps.filter((step) => step.kind !== 'find-professional') : steps;
+  return steps.filter((step) => step.kind !== 'declare-facts' && !(committed && step.kind === 'find-professional'));
 }
 
 export interface RegistryNextStepProps {

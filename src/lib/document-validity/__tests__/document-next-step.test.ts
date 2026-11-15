@@ -26,11 +26,21 @@ describe('ADR-915 §24 — «Επόμενο βήμα»', () => {
     expect(bad).toEqual([]);
   });
 
-  it('έγκυρο · αντικατεστημένο · άγνωστης λήξης ⇒ καμία ενέργεια', () => {
-    const quiet = REGISTRY_ROW_STATES.filter((state) => !(NEXT_STEP_STATES as readonly string[]).includes(state));
-    expect(quiet.sort()).toEqual(['expiry-unknown', 'superseded', 'valid']);
+  it('έγκυρο · αντικατεστημένο ⇒ καμία ενέργεια', () => {
+    const quiet = REGISTRY_ROW_STATES.filter((state) => !(NEXT_STEP_STATES as readonly string[]).includes(state) && state !== 'expiry-unknown');
+    expect(quiet.sort()).toEqual(['superseded', 'valid']);
     const bad = DOCUMENT_KINDS.flatMap((kind) => quiet.filter((state) => documentNextSteps(kind, state).length > 0));
     expect(bad).toEqual([]);
+  });
+
+  it('§43 — άγνωστης λήξης ⇒ ΜΟΝΟ «Συμπλήρωσε στοιχεία», για κάθε είδος· καμία αναζήτηση ή ανάθεση από τον διακομιστή', () => {
+    const bad = DOCUMENT_KINDS.filter((kind) => {
+      const steps = documentNextSteps(kind, 'expiry-unknown');
+      return steps.length !== 1 || steps[0].kind !== 'declare-facts';
+    });
+    expect(bad).toEqual([]);
+    expect(DOCUMENT_KINDS.some((kind) => needsProfessionalSearch(kind, 'expiry-unknown') || needsIssuanceAssignment(kind, 'expiry-unknown')))
+      .toBe(false);
   });
 
   it('οι ενέργειες ΠΑΡΑΓΟΝΤΑΙ από τον εκδότη: επαγγελματίας ⇒ «Ανάθεση» ΠΡΩΤΑ, μετά «Βρες» · αρχή ⇒ η υπηρεσία της', () => {

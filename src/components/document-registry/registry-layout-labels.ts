@@ -19,6 +19,7 @@ export const LAYOUT_KEYS = {
   blocksNow: `${K}blocks.now`,
   blocksOn: `${K}blocks.on`,
   blocksNo: `${K}blocks.no`,
+  blocksUndetermined: `${K}blocks.undetermined`,
   colDocument: `${K}col.document`,
   colProperty: `${K}col.property`,
   colState: `${K}col.state`,

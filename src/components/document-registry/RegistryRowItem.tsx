@@ -110,7 +110,7 @@ export function RegistryRowItem({ row, registry, supersededByName }: RegistryRow
           issuance={registryIssuanceOf(row, registry)} registry={registry}
         />
       )}
-      {superseded ? null : <RegistryDependents dependents={row.dependents} state={row.state} />}
+      {superseded ? null : <RegistryDependents dependents={row.dependents} state={row.state} names={registry} />}
     </article>
   );
 }

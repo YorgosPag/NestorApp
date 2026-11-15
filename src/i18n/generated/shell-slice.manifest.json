@@ -53,7 +53,7 @@
     "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "d47039d4bdc9eb77a9ffe4da5461f9a3b3948fb6258a7782bc34d19c962d9862",
     "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "0f5974343b7bbe05ccd34ad4730893c2e33cc6bdb232a058b82e82b66c8060f9",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "b17ea343f52c9956232d1dc8a8a2d19c1f99558dce9edc4a14e9bb947d012b76",
+    "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "5930ae29f39af755ec158c8e20981549f24ce0515dc440eeb4d45382395104b0",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "9d9edfd603c5ac5ce7c58de6db68cfba11fb2527a7000d3da57ce93e5af8ec84",
+  "inputsSha256": "dc0a1424598e7c7c6f55e2026089e9e9f1ec705566d3dd14d9b22fbe65c9d16d",
   "languages": [
     "el"
   ],
@@ -13593,9 +13593,13 @@
         },
         "document-registry": {
           "keys": [
+            "dependents.conveyance",
+            "dependents.listing-publication",
+            "dependents.property-upkeep",
             "empty.hint",
             "empty.openProperties",
             "empty.title",
+            "factsDeclaration.declare",
             "filter.all",
             "filter.blocking",
             "filter.discrepancy",
@@ -13642,6 +13646,7 @@
             "layout.blocks.no",
             "layout.blocks.now",
             "layout.blocks.on",
+            "layout.blocks.undetermined",
             "layout.col.blocks",
             "layout.col.document",
             "layout.col.expiry",
@@ -13671,6 +13676,7 @@
             "load.loading",
             "load.retry",
             "nextStep.findProfessional",
+            "nextStep.opensInNewTab",
             "nextStep.selfService",
             "page.asOf",
             "page.lead",
@@ -40880,7 +40886,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1333650
+    "sliceBytes": 1334103
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

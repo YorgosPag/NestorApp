@@ -524,9 +524,10 @@
       "emptyHint": "Every document in the registry is under “All documents”."
     },
     "blocks": {
-      "now": "Blocking now",
-      "on": "Blocks on {date}",
-      "no": "Not blocking"
+      "now": "now",
+      "on": "from {date}",
+      "no": "Not blocking",
+      "undetermined": "Cannot be judged — expiry unknown"
     },
     "col": {
       "document": "Document",

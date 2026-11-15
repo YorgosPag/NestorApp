@@ -9,7 +9,9 @@
  *    στήλη **«Μπλοκάρει»** — πότε σταματά συναλλαγή, όχι μόνο πότε λήγει.
  * 🔑 **Στο κινητό λίστα, όχι στοιβαγμένος πίνακας** (CMS Design System · W3C WAI): κάθε τιμή με δική της ετικέτα (`dt`) —
  *    ο ίδιος λόγος που η κάρτα είναι `<article>` + `<dl>` (βλ. `RegistryRowItem`).
- * 🔑 Η κύρια πράξη της γραμμής είναι **ένα** κουμπί (το όνομα του εγγράφου) που ανοίγει το πάνελ με `?doc=`.
+ * 🔑 Η κύρια πράξη της γραμμής είναι **ένα** κουμπί (το όνομα του εγγράφου) που ανοίγει το πάνελ με `?doc=`. Η γραμμή
+ *    **δεν** είναι κλικαρίσιμη (W3C/WebAIM): κάθε άλλος στόχος — ακίνητο · διαδικασία · ενέργεια (§43) — είναι δικός του
+ *    σύνδεσμος/κουμπί στο κελί του, χωρίς φωλιασμένη πράξη.
  */
 
 import React from 'react';
@@ -23,13 +25,9 @@ import type { DocumentRegistryResponse } from '@/services/document-registry/docu
 import { registryPropertyNameOf } from '@/components/document-registry/RegistryPropertyValue';
 import { RegistryStateBadge } from '@/components/document-registry/RegistryRowHeader';
 import { RegistrySurfaces } from '@/components/document-registry/registry-surfaces';
-import {
-  BlocksText,
-  ExpiryText,
-  NextStepText,
-  rowDocumentText,
-  useRowKindLabel,
-} from '@/components/document-registry/RegistryRowCells';
+import { BlocksText, ExpiryText, rowDocumentText, useRowKindLabel } from '@/components/document-registry/RegistryRowCells';
+import { RegistryRowAction } from '@/components/document-registry/RegistryRowAction';
+import { REGISTRY_LINK_CLASS, RegistryPropertyLink } from '@/components/document-registry/registry-links';
 import { LAYOUT_KEYS } from '@/components/document-registry/registry-layout-labels';
 import { CONVEYANCE_NS, LEGALITY_NS, REGISTRY_KEYS, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 
@@ -67,10 +65,20 @@ export function RowOpenButton({ row, registry, onOpen }: RowProps): React.ReactE
   );
 }
 
+/**
+ * ADR-915 §43 — το ακίνητο **ως σύνδεσμος** (Linear · Jira: το γονικό αντικείμενο ανοίγει από το κελί). Η γραμμή δεν είναι
+ * κλικαρίσιμη, άρα καμία σύγκρουση με το άνοιγμα του πάνελ· ο ΙΔΙΟΣ κανόνας με την κάρτα (εταιρεία · εντολή).
+ */
 function PropertyText({ row, registry }: Omit<RowProps, 'onOpen'>): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
-  const name = registryPropertyNameOf(t, registryRowPropertyIdOf(row), registry);
-  return <span className={name === null ? 'text-muted-foreground' : 'text-foreground'}>{name ?? t(REGISTRY_KEYS.propertyNone)}</span>;
+  const propertyId = registryRowPropertyIdOf(row);
+  const name = registryPropertyNameOf(t, propertyId, registry);
+  if (propertyId === null || name === null) return <span className="text-muted-foreground">{t(REGISTRY_KEYS.propertyNone)}</span>;
+  return (
+    <RegistryPropertyLink propertyId={propertyId} names={registry} className={`text-foreground ${REGISTRY_LINK_CLASS}`}>
+      {name}
+    </RegistryPropertyLink>
+  );
 }
 
 function TableRowOf({ row, registry, onOpen }: RowProps): React.ReactElement {
@@ -81,7 +89,7 @@ function TableRowOf({ row, registry, onOpen }: RowProps): React.ReactElement {
       <TableCell><RegistryStateBadge state={row.state} /></TableCell>
       <TableCell><ExpiryText row={row} registry={registry} /></TableCell>
       <TableCell><BlocksText row={row} registry={registry} /></TableCell>
-      <TableCell><NextStepText row={row} registry={registry} /></TableCell>
+      <TableCell><RegistryRowAction row={row} registry={registry} onOpen={onOpen} /></TableCell>
     </TableRow>
   );
 }
@@ -124,7 +132,7 @@ function MobileItem({ row, registry, onOpen }: RowProps): React.ReactElement {
         <dt className="text-muted-foreground">{t(LAYOUT_KEYS.colBlocks)}</dt>
         <dd className="m-0"><BlocksText row={row} registry={registry} /></dd>
         <dt className="text-muted-foreground">{t(LAYOUT_KEYS.colNextStep)}</dt>
-        <dd className="m-0"><NextStepText row={row} registry={registry} /></dd>
+        <dd className="m-0"><RegistryRowAction row={row} registry={registry} onOpen={onOpen} /></dd>
       </dl>
     </li>
   );

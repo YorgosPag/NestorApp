@@ -17,6 +17,7 @@ import { RegistryIssuerValue } from '../RegistryIssuerValue';
 import { RegistryNextStep } from '../RegistryNextStep';
 import {
   APPOINTED_BY_LABEL_KEYS,
+  FACTS_DECLARATION_KEYS,
   ISSUER_AUTHORITY_LABEL_KEYS,
   ISSUER_KEYS,
   LEAD_KEYS,
@@ -24,6 +25,7 @@ import {
   LICENCE_REGISTRY_LABEL_KEYS,
   NEXT_STEP_KEYS,
   OBLIGOR_LABEL_KEYS,
+  PROCESS_LABEL_KEYS,
   REGISTRY_KEYS,
   REGISTRY_STATE_LABEL_KEYS,
   REGISTRY_STATE_LOOK,
@@ -43,6 +45,7 @@ import {
 import { rowsOfActionTab } from '@/lib/document-validity/document-registry-view';
 import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
 import type { DocumentRequirement } from '@/lib/document-validity/document-requirement';
+import { formatDateKey } from '@/lib/intl-formatting';
 import { mandateDetailHref } from '@/lib/mandate/mandate-routes';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
@@ -571,5 +574,57 @@ describe('ADR-915 §25 (5γ) — γραμμή ΠΡΟΣΩΠΟΥ: «Το φέρν�
     const cell = obligorCellOf(cardById(registryRowIdOf(gap), response));
     expect(within(cell).getByText(ISSUER_KEYS.obligorNone)).toBeTruthy();
     expect(within(cell).queryByRole('link')).toBeNull();
+  });
+});
+
+describe('ADR-915 §43 — ο πίνακας: σύνδεσμοι · ΤΙ μπλοκάρει · μία ενέργεια ανά γραμμή', () => {
+  const tableRow = (id: string) => window.document.querySelector(`tbody tr[data-row-id="${id}"]`) as HTMLElement;
+  const conveyanceLabel = PROCESS_LABEL_KEYS.conveyance;
+
+  it('το ακίνητο είναι σύνδεσμος — εταιρεία ⇒ σελίδα ακινήτου · ιδιώτης ⇒ σελίδα εντολής (ΙΔΙΟΣ κανόνας με την κάρτα)', () => {
+    renderReady(fixtureResponse(), { tab: 'all' });
+    expect(within(tableRow('f-expiring')).getByRole('link', { name: 'Συνθετικό Β2' }).getAttribute('href'))
+      .toBe(ENTITY_ROUTES.properties.withId('p2'));
+    const gap = fixtureResponse().rows.find((row) => registryRowPropertyIdOf(row) === 'ownp_7')!;
+    expect(within(tableRow(registryRowIdOf(gap))).getByRole('link', { name: 'Συνθετική εντολή Η7' }).getAttribute('href'))
+      .toBe(mandateDetailHref('ownp_7'));
+  });
+
+  it('«Μπλοκάρει» λέει ΤΙ (η διαδικασία, ως σύνδεσμος) και ΠΟΤΕ — όχι μόνο «ήδη»', () => {
+    renderReady();
+    const cell = tableRow('f-expiring');
+    expect(within(cell).getByRole('link', { name: conveyanceLabel }).getAttribute('href')).toBe(ENTITY_ROUTES.properties.withId('p2'));
+    expect(within(cell).getByText(`${LAYOUT_KEYS.blocksOn} ${JSON.stringify({ date: formatDateKey('2027-03-01') })}`)).toBeTruthy();
+    expect(within(tableRow('missing:p6:energy-certificate')).getByText(LAYOUT_KEYS.blocksNow)).toBeTruthy();
+  });
+
+  it('άγνωστη λήξη που τη ζητά μεταβίβαση ⇒ «Χρειάζονται ενέργεια» με «Δεν κρίνεται» — ποτέ «μπλοκάρει»', () => {
+    const requirement: DocumentRequirement = {
+      documentKind: 'energy-certificate', subject: { propertyId: 'p3', party: null }, process: { kind: 'conveyance', caseId: 'case-k' },
+      neededOn: { kind: 'on', day: '2027-03-01' }, policy: 'block', warnWindowDays: 15,
+      basis: { kind: 'checklist-item', itemId: 'energy_certificate', verifiedAt: null }, presence: 'required', attestation: null,
+    };
+    renderReady(fixtureResponse({}, FIXTURE_DOCUMENTS, [requirement]));
+    const row = tableRow('f-unknown');
+    expect(within(row).getByText(LAYOUT_KEYS.blocksUndetermined)).toBeTruthy();
+    expect(within(row).queryByText(LAYOUT_KEYS.blocksNow)).toBeNull();
+    expect(within(row).getByRole('link', { name: conveyanceLabel })).toBeTruthy();
+  });
+
+  it('η ενέργεια της γραμμής: «Συμπλήρωση στοιχείων» ανοίγει το πάνελ της γραμμής (`?doc=`)', () => {
+    const requirement: DocumentRequirement = {
+      documentKind: 'energy-certificate', subject: { propertyId: 'p3', party: null }, process: { kind: 'conveyance', caseId: 'case-k' },
+      neededOn: { kind: 'unscheduled' }, policy: 'block', warnWindowDays: 15,
+      basis: { kind: 'checklist-item', itemId: 'energy_certificate', verifiedAt: null }, presence: 'required', attestation: null,
+    };
+    renderReady(fixtureResponse({}, FIXTURE_DOCUMENTS, [requirement]));
+    fireEvent.click(within(tableRow('f-unknown')).getByRole('button', { name: FACTS_DECLARATION_KEYS.declare }));
+    expect(urlParams().get('doc')).toBe('f-unknown');
+  });
+
+  it('«Ανάθεση σε επαγγελματία» είναι κουμπί που ανοίγει το πάνελ, όχι κείμενο', () => {
+    renderReady();
+    fireEvent.click(within(tableRow('f-expired')).getByRole('button', { name: LAYOUT_KEYS.nextAssign }));
+    expect(urlParams().get('doc')).toBe('f-expired');
   });
 });

@@ -58,7 +58,7 @@ export function RegistryGapItem({ row, registry }: RegistryGapItemProps): React.
         kind={gap.kind} state={row.state} areaId={areaIdOf(gap.propertyId, registry)}
         issuance={registryIssuanceOf(row, registry)} registry={registry}
       />
-      <RegistryDependents dependents={row.dependents} state={row.state} />
+      <RegistryDependents dependents={row.dependents} state={row.state} names={registry} />
     </article>
   );
 }

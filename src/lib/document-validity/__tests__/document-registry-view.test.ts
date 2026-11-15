@@ -10,6 +10,7 @@ import {
   type RegistryRow,
 } from '../document-registry';
 import {
+  blockersOf,
   blockingDayOf,
   documentExpiryHref,
   needsRegistryAction,
@@ -24,10 +25,12 @@ import {
   registryViewOf,
   registryViewTally,
   rowsOfRegistryView,
+  undeterminedBlockersOf,
 } from '../document-registry-view';
 import { DOCUMENT_EXPIRY_ROUTE } from '../document-registry-routes';
+import type { DocumentRequirement } from '../document-requirement';
 import { issuanceKeyOf } from '../issuance-assignment';
-import { FIXTURE_AS_OF, fixtureResponse } from './registry-fixture';
+import { FIXTURE_AS_OF, FIXTURE_DOCUMENTS, fixtureResponse } from './registry-fixture';
 
 const { rows } = fixtureResponse();
 const ids = (list: readonly RegistryRow[]): string[] => list.map(registryRowIdOf);
@@ -175,6 +178,45 @@ describe('§41.5 «Χρειάζονται ενέργεια» — κατά το �
 
   it('μετρητής καρτελών από τις ΙΔΙΕΣ γραμμές', () => {
     expect(registryTabTally(rows, 3)).toEqual({ action: rowsOfActionTab(rows, FIXTURE_AS_OF).length, all: rows.length, decisions: 3 });
+  });
+});
+
+describe('§43 — ΤΙ μπλοκάρει · άγνωστη λήξη που θέλει προσοχή', () => {
+  const byId = (list: readonly RegistryRow[], id: string) => list.find((row) => registryRowIdOf(row) === id)!;
+  const unknownBlocked: DocumentRequirement = {
+    documentKind: 'energy-certificate', subject: { propertyId: 'p3', party: null }, process: { kind: 'conveyance', caseId: 'case-k' },
+    neededOn: { kind: 'on', day: '2027-03-01' }, policy: 'block', warnWindowDays: 15,
+    basis: { kind: 'checklist-item', itemId: 'energy_certificate', verifiedAt: null }, presence: 'required', attestation: null,
+  };
+
+  it('`blockersOf`: οι διαδικασίες με τη μέρα τους · το `blockingDayOf` είναι η ΝΩΡΙΤΕΡΗ τους (μία πηγή)', () => {
+    const expiring = blockersOf(byId(rows, 'f-expiring'), FIXTURE_AS_OF);
+    expect(expiring.map(({ dependent, day }) => [dependent.requirement.process.kind, day])).toEqual([['conveyance', '2027-03-01']]);
+    for (const row of rows) expect(blockingDayOf(row, FIXTURE_AS_OF)).toBe(blockersOf(row, FIXTURE_AS_OF)[0]?.day ?? null);
+    expect(blockersOf(byId(rows, 'f-valid'), FIXTURE_AS_OF)).toEqual([]);
+  });
+
+  it('άγνωστη λήξη χωρίς διαδικασία `block` ⇒ ΟΧΙ στο «Χρειάζονται ενέργεια» (κανείς δεν περιμένει)', () => {
+    expect(undeterminedBlockersOf(byId(rows, 'f-unknown'))).toEqual([]);
+    expect(needsRegistryAction(byId(rows, 'f-unknown'))).toBe(false);
+  });
+
+  it('άγνωστη λήξη που τη ζητά διαδικασία `block` ⇒ θέλει ενέργεια, αλλά ΔΕΝ «μπλοκάρει» (η μεταβίβαση τη δέχεται)', () => {
+    const local = fixtureResponse({}, FIXTURE_DOCUMENTS, [unknownBlocked]).rows;
+    const unknown = byId(local, 'f-unknown');
+    expect(undeterminedBlockersOf(unknown).map((d) => d.requirement.process)).toEqual([{ kind: 'conveyance', caseId: 'case-k' }]);
+    expect(needsRegistryAction(unknown)).toBe(true);
+    expect(unknown.blocking).toBe(false);
+    expect(blockingDayOf(unknown, FIXTURE_AS_OF)).toBeNull();
+    // Μετά όσα μπλοκάρουν (`null` μέρα ⇒ στο τέλος) — και ο μετρητής τη μετρά.
+    expect(ids(rowsOfActionTab(local, FIXTURE_AS_OF))).toContain('f-unknown');
+    expect(registryTabTally(local, 0).action).toBe(rowsOfActionTab(local, FIXTURE_AS_OF).length);
+  });
+
+  it('`warn` δεν αρκεί: άγνωστη λήξη που τη ζητά μόνο αγγελία `warn` ⇒ καμία ενέργεια', () => {
+    const warnOnly: DocumentRequirement = { ...unknownBlocked, policy: 'warn' };
+    const unknown = byId(fixtureResponse({}, FIXTURE_DOCUMENTS, [warnOnly]).rows, 'f-unknown');
+    expect(needsRegistryAction(unknown)).toBe(false);
   });
 });
 

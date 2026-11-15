@@ -13,12 +13,11 @@
 
 import React from 'react';
 
-import { TOUCH_TARGET_MIN } from '@/design-system/touch-target';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { mandateDetailHref } from '@/lib/mandate/mandate-routes';
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { Link } from '@/lib/workspace/navigation';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
+import { REGISTRY_LINK_CLASS, RegistryPropertyLink } from '@/components/document-registry/registry-links';
 import {
   CONVEYANCE_NS,
   LEGALITY_NS,
@@ -30,9 +29,6 @@ interface RegistryPropertyValueProps {
   readonly propertyId: string | null;
   readonly names: Pick<DocumentRegistryResponse, 'properties'>;
 }
-
-// WCAG 2.5.8: όνομα σε δύο γραμμές + «Έγγραφα ακινήτου» από κάτω = στόχοι που εφάπτονται (μετρημένο 390 px, §37.6).
-const LINK = `${TOUCH_TARGET_MIN} underline underline-offset-4`;
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
@@ -50,20 +46,16 @@ export function registryPropertyNameOf(
 export function RegistryPropertyValue({ propertyId, names }: RegistryPropertyValueProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   if (propertyId === null) return <dd className="m-0 text-sm text-muted-foreground">{t(REGISTRY_KEYS.propertyNone)}</dd>;
-  const label = names.properties[propertyId];
   const name = registryPropertyNameOf(t, propertyId, names);
-  if (label?.scope === 'owner-property') {
-    // Τα έγγραφα της εντολής ζουν στη σελίδα της — ένας σύνδεσμος, όχι δύο προς τον ίδιο προορισμό.
-    return (
-      <dd className="m-0 text-sm">
-        <Link href={mandateDetailHref(propertyId)} className={`text-foreground ${LINK}`}>{name}</Link>
-      </dd>
-    );
-  }
+  const nameLink = (
+    <RegistryPropertyLink propertyId={propertyId} names={names} className={`text-foreground ${REGISTRY_LINK_CLASS}`}>{name}</RegistryPropertyLink>
+  );
+  // Τα έγγραφα της εντολής ζουν στη σελίδα της — ένας σύνδεσμος, όχι δύο προς τον ίδιο προορισμό.
+  if (names.properties[propertyId]?.scope === 'owner-property') return <dd className="m-0 text-sm">{nameLink}</dd>;
   return (
     <dd className="m-0 flex flex-wrap gap-x-3 text-sm">
-      <Link href={ENTITY_ROUTES.properties.withId(propertyId)} className={`text-foreground ${LINK}`}>{name}</Link>
-      <Link href={ENTITY_ROUTES.properties.withTab(propertyId, 'documents')} className={`text-muted-foreground ${LINK}`}>
+      {nameLink}
+      <Link href={ENTITY_ROUTES.properties.withTab(propertyId, 'documents')} className={`text-muted-foreground ${REGISTRY_LINK_CLASS}`}>
         {t(REGISTRY_KEYS.openDocuments)}
       </Link>
     </dd>

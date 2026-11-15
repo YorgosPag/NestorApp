@@ -9,8 +9,10 @@
  *    **προσόν**)· αρχή ⇒ «Πώς εκδίδεται» (ο υπόχρεος το βγάζει μόνος του, την ίδια μέρα).
  * 🔑 **Καθαρό, χωρίς React και χωρίς I/O**: ο ίδιος πυρήνας ρωτιέται από τον διακομιστή (ποια ακίνητα χρειάζονται
  *    περιοχή) και από την οθόνη — και αργότερα από τα έγγραφα ακινήτου και τη λίστα υπόθεσης (§18.5, μία πηγή).
- * ⚠️ **Καμία ενέργεια σε `valid` / `superseded` / `expiry-unknown`**: το πρώτο δεν θέλει τίποτα, το δεύτερο ανανεώθηκε
- *    ήδη, και το τρίτο θέλει **ανάγνωση** της λήξης (ανέβασμα/γεγονότα), όχι νέο έγγραφο.
+ * ⚠️ **Καμία ενέργεια σε `valid` / `superseded`**: το πρώτο δεν θέλει τίποτα, το δεύτερο ανανεώθηκε ήδη.
+ * 🔑 ADR-915 §43 — **`expiry-unknown` ⇒ «Συμπλήρωσε στοιχεία»** (`declare-facts`), όχι νέο έγγραφο: το έγγραφο υπάρχει,
+ *    λείπει η **ανάγνωση** της λήξης (έκδοση · τυπωμένη ισχύς). Vanta «Needs document» · Drata «Needs attention»: το
+ *    άγνωστο δεν μένει ουδέτερο — έχει δική του ενέργεια.
  * 🔑 ADR-915 §27 — επαγγελματίας ⇒ **πρώτα** «Ανάθεση σε επαγγελματία» (γνωστός, με αποθηκευμένη ανάθεση: πρόταση ·
  *    απόφαση ιδιοκτήτη · μπάλα), **μετά** «Βρες» (κανείς γνωστός). Ο κύκλος «βρίσκω κάθε φορά από την αρχή» δεν είναι
  *    επαγγελματικό εργαλείο — Thumbtack «hire your favorite» · Procore «Use Previous Bidders».
@@ -27,7 +29,8 @@ export const NEXT_STEP_STATES = ['expired', 'expiring', 'missing'] as const sati
 export type DocumentNextStep =
   | { readonly kind: 'assign-professional'; readonly documentKind: DocumentKind }
   | { readonly kind: 'find-professional'; readonly documentKind: DocumentKind }
-  | { readonly kind: 'self-service'; readonly service: AuthorityService };
+  | { readonly kind: 'self-service'; readonly service: AuthorityService }
+  | { readonly kind: 'declare-facts' };
 
 function needsNewDocument(state: RegistryRowState): boolean {
   return (NEXT_STEP_STATES as readonly RegistryRowState[]).includes(state);
@@ -35,6 +38,7 @@ function needsNewDocument(state: RegistryRowState): boolean {
 
 /** Τι κάνει ο άνθρωπος τώρα για αυτό το είδος σε αυτή την κατάσταση — κενό όταν δεν χρειάζεται τίποτα. */
 export function documentNextSteps(kind: DocumentKind, state: RegistryRowState): readonly DocumentNextStep[] {
+  if (state === 'expiry-unknown') return [{ kind: 'declare-facts' }];
   if (!needsNewDocument(state)) return [];
   const { issuer } = documentKindSpec(kind);
   return issuer.kind === 'professional'

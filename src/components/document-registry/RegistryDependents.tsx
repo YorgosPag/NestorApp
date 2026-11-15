@@ -21,16 +21,10 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate, formatDateKey } from '@/lib/intl-formatting';
-import { listingDetailHref } from '@/lib/listings/listing-routes';
-import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
-import { Link } from '@/lib/workspace/navigation';
+import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
+import { RegistryProcessLink, registryProcessKeyOf } from '@/components/document-registry/registry-links';
 import { isBlockingDependent, type RegistryRowState } from '@/lib/document-validity/document-registry';
-import {
-  isNeededDayUnknown,
-  type DocumentDependent,
-  type NeededOn,
-  type RequirementProcessRef,
-} from '@/lib/document-validity/document-requirement';
+import { isNeededDayUnknown, type DocumentDependent, type NeededOn } from '@/lib/document-validity/document-requirement';
 import {
   IMPACT_LABEL_KEYS,
   POLICY_LABEL_KEYS,
@@ -42,6 +36,7 @@ import {
 } from '@/components/document-registry/document-registry-labels';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
+type Names = Pick<DocumentRegistryResponse, 'properties'>;
 
 /** Πότε τη χρειάζεται η διαδικασία — με λέξεις. */
 function neededOnText(t: Translate, neededOn: NeededOn): string {
@@ -63,29 +58,14 @@ function impactText(t: Translate, dependent: DocumentDependent): string {
   return t(IMPACT_LABEL_KEYS[dependent.impact]);
 }
 
-/** Η ταυτότητα της συγκεκριμένης διαδικασίας — εξαντλητικά: νέα διαδικασία δεν μεταγλωττίζεται χωρίς απάντηση. */
-function processIdOf(process: RequirementProcessRef): string {
-  switch (process.kind) {
-    case 'conveyance': return process.caseId;
-    case 'listing-publication': return process.listingId;
-    case 'property-upkeep': return process.propertyId;
-  }
-}
-
-/**
- * Ο σύνδεσμος της διαδικασίας — **μόνο** από τα μητρώα διαδρομών, μέσα από το σύνορο πλοήγησης (CHECK 3.61). Η
- * μεταβίβαση και η μόνιμη υποχρέωση ζουν στο **ακίνητο**· η αγγελία έχει δική της σελίδα.
- */
-function ProcessLink({ dependent }: { readonly dependent: DocumentDependent }): React.ReactElement {
+/** Ο σύνδεσμος της διαδικασίας — ο ΕΝΑΣ κανόνας του μητρώου (`RegistryProcessLink`, ADR-915 §43). */
+function ProcessLink({ dependent, names }: { readonly dependent: DocumentDependent; readonly names: Names }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
-  const { process, subject } = dependent.requirement;
-  const href = process.kind === 'listing-publication'
-    ? listingDetailHref(process.listingId)
-    : ENTITY_ROUTES.properties.withId(subject.propertyId);
+  const { process } = dependent.requirement;
   return (
-    <Link href={href} className="text-sm underline underline-offset-4">
+    <RegistryProcessLink requirement={dependent.requirement} names={names} className="text-sm underline underline-offset-4">
       {t(process.kind === 'listing-publication' ? REGISTRY_KEYS.openListing : REGISTRY_KEYS.openProperty)}
-    </Link>
+    </RegistryProcessLink>
   );
 }
 
@@ -101,9 +81,11 @@ interface DependentProps {
   readonly dependent: DocumentDependent;
   /** Η κατάσταση της γραμμής — ο πυρήνας κρίνει με αυτήν αν η διαδικασία μπλοκάρει **ήδη**. */
   readonly state: RegistryRowState;
+  /** Τα ακίνητα της απόκρισης — το `scope` αποφασίζει τη διεύθυνση (εταιρεία · εντολή). */
+  readonly names: Names;
 }
 
-function DependentItem({ dependent, state }: DependentProps): React.ReactElement {
+function DependentItem({ dependent, state, names }: DependentProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   const { process, neededOn, policy } = dependent.requirement;
   return (
@@ -117,7 +99,7 @@ function DependentItem({ dependent, state }: DependentProps): React.ReactElement
         {isBlockingDependent(dependent, state) ? <Badge variant="error">{t(REGISTRY_KEYS.blockingNow)}</Badge> : null}
       </p>
       <p className="m-0 text-sm text-muted-foreground">{impactText(t, dependent)}</p>
-      <ProcessLink dependent={dependent} />
+      <ProcessLink dependent={dependent} names={names} />
     </li>
   );
 }
@@ -125,9 +107,11 @@ function DependentItem({ dependent, state }: DependentProps): React.ReactElement
 export function RegistryDependents({
   dependents,
   state,
+  names,
 }: {
   readonly dependents: readonly DocumentDependent[];
   readonly state: RegistryRowState;
+  readonly names: Names;
 }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   // Φ4δ — για ό,τι λείπει η ερώτηση δεν είναι «τι σταματά αν λήξει», αλλά «ποιος το ζητά» (όλα `absent`).
@@ -142,7 +126,7 @@ export function RegistryDependents({
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {dependents.map((dependent) => (
-            <DependentItem key={`${dependent.requirement.process.kind}:${processIdOf(dependent.requirement.process)}`} dependent={dependent} state={state} />
+            <DependentItem key={registryProcessKeyOf(dependent.requirement.process)} dependent={dependent} state={state} names={names} />
           ))}
         </ul>
       )}

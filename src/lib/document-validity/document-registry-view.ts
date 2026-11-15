@@ -32,6 +32,7 @@ import {
   type RegistryRow,
   type RegistryRowState,
 } from '@/lib/document-validity/document-registry';
+import type { DocumentDependent } from '@/lib/document-validity/document-requirement';
 import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
 
 /** Η προβολή χωρίς φίλτρο — δείχνει **και** τις αντικατεστημένες γραμμές, υποβαθμισμένες. */
@@ -177,26 +178,51 @@ export function documentExpiryHref(view: RegistryView = REGISTRY_VIEW_ALL, extra
   return query === '' ? DOCUMENT_EXPIRY_ROUTE : withQuery(DOCUMENT_EXPIRY_ROUTE, query);
 }
 
-/** Θέλει ενέργεια; — έληξε · λήγει · λείπει **και μπλοκάρει**. Κατάσταση και `blocking` είναι κρίση του διακομιστή. */
-export function needsRegistryAction(row: RegistryRow): boolean {
-  return row.state === 'expired' || row.state === 'expiring' || (row.state === 'missing' && row.blocking);
+/**
+ * ADR-915 §43 — **άγνωστη λήξη που τη ζητά διαδικασία `block`**: δεν αποδεικνύεται ότι ισχύει, άρα θέλει προσοχή — αλλά
+ * **δεν** λέγεται «μπλοκάρει» (η μεταβίβαση τη δέχεται σήμερα· δύο κριτές δεν διαφωνούν). Οι διαδικασίες που περιμένουν.
+ */
+export function undeterminedBlockersOf(row: RegistryRow): readonly DocumentDependent[] {
+  if (row.state !== 'expiry-unknown') return [];
+  return row.dependents.filter((dependent) => dependent.requirement.policy === 'block');
 }
 
 /**
- * **Πότε μπλοκάρει συναλλαγή** — η νωρίτερη μέρα ανάμεσα στις εξαρτήσεις που ο πυρήνας **ήδη** κρίνει μπλοκαρισμένες
- * (`isBlockingDependent` — κανένα δεύτερο κριτήριο): λείπει ⇒ σήμερα · συγκεκριμένη υπογραφή ⇒ η μέρα της · διαρκής ⇒ η
- * πρώτη μέρα εκτός ισχύος. Παρελθόν ⇒ σήμερα («μπλοκάρει ήδη»). `null` = δεν μπλοκάρει τίποτα.
+ * Θέλει ενέργεια; — έληξε · λήγει · λείπει **και μπλοκάρει** · άγνωστη λήξη που τη ζητά διαδικασία `block` (§43).
+ * Κατάσταση και `blocking` είναι κρίση του διακομιστή.
  */
-export function blockingDayOf(row: RegistryRow, asOf: string): string | null {
-  let earliest: string | null = null;
+export function needsRegistryAction(row: RegistryRow): boolean {
+  if (row.state === 'expired' || row.state === 'expiring') return true;
+  if (row.state === 'missing') return row.blocking;
+  return undeterminedBlockersOf(row).length > 0;
+}
+
+/** Μία διαδικασία που μπλοκάρει, με τη μέρα της (ADR-915 §43 — «ΤΙ μπλοκάρει», όχι μόνο «πότε»). */
+export interface RegistryBlocker {
+  readonly dependent: DocumentDependent;
+  /** Η μέρα που μπλοκάρει — ποτέ πριν από το `asOf` (παρελθόν ⇒ «ήδη»). */
+  readonly day: string;
+}
+
+/**
+ * **Τι μπλοκάρει και πότε** — οι εξαρτήσεις που ο πυρήνας **ήδη** κρίνει μπλοκαρισμένες (`isBlockingDependent` — κανένα
+ * δεύτερο κριτήριο): λείπει ⇒ σήμερα · συγκεκριμένη υπογραφή ⇒ η μέρα της · διαρκής ⇒ η πρώτη μέρα εκτός ισχύος.
+ * Παρελθόν ⇒ σήμερα. Νωρίτερη πρώτη (σταθερή σειρά).
+ */
+export function blockersOf(row: RegistryRow, asOf: string): readonly RegistryBlocker[] {
+  const blockers: RegistryBlocker[] = [];
   for (const dependent of row.dependents) {
     if (!isBlockingDependent(dependent, row.state)) continue;
     const { neededOn } = dependent.requirement;
     const day = dependent.impact === 'absent' ? asOf : neededOn.kind === 'on' ? neededOn.day : (dependent.stopsOn ?? asOf);
-    const clamped = day < asOf ? asOf : day;
-    if (earliest === null || clamped < earliest) earliest = clamped;
+    blockers.push({ dependent, day: day < asOf ? asOf : day });
   }
-  return earliest;
+  return blockers.sort((a, b) => a.day.localeCompare(b.day));
+}
+
+/** **Πότε μπλοκάρει συναλλαγή** — η νωρίτερη μέρα του {@link blockersOf}. `null` = δεν μπλοκάρει τίποτα. */
+export function blockingDayOf(row: RegistryRow, asOf: string): string | null {
+  return blockersOf(row, asOf)[0]?.day ?? null;
 }
 
 /**
