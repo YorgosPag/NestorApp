@@ -34,12 +34,24 @@ interface RegistryPropertyValueProps {
 // WCAG 2.5.8: όνομα σε δύο γραμμές + «Έγγραφα ακινήτου» από κάτω = στόχοι που εφάπτονται (μετρημένο 390 px, §37.6).
 const LINK = `${TOUCH_TARGET_MIN} underline underline-offset-4`;
 
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+/** Το όνομα του ακινήτου — ΕΝΑΣ κανόνας για κάρτα, πίνακα και ομάδα (ADR-915 §41.5). `null` = γραμμή χωρίς ακίνητο. */
+export function registryPropertyNameOf(
+  t: Translate,
+  propertyId: string | null,
+  names: Pick<DocumentRegistryResponse, 'properties'>,
+): string | null {
+  if (propertyId === null) return null;
+  return names.properties[propertyId]?.name ?? t(REGISTRY_KEYS.propertyUnnamed);
+}
+
 /** Το `<dd>` της ετικέτας «Ακίνητο»: όνομα με σύνδεσμο + ο δρόμος προς τα έγγραφά του. */
 export function RegistryPropertyValue({ propertyId, names }: RegistryPropertyValueProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   if (propertyId === null) return <dd className="m-0 text-sm text-muted-foreground">{t(REGISTRY_KEYS.propertyNone)}</dd>;
   const label = names.properties[propertyId];
-  const name = label?.name ?? t(REGISTRY_KEYS.propertyUnnamed);
+  const name = registryPropertyNameOf(t, propertyId, names);
   if (label?.scope === 'owner-property') {
     // Τα έγγραφα της εντολής ζουν στη σελίδα της — ένας σύνδεσμος, όχι δύο προς τον ίδιο προορισμό.
     return (

@@ -21,7 +21,7 @@ import { RegistryDependents } from '@/components/document-registry/RegistryDepen
 import { RegistryIssuerValue } from '@/components/document-registry/RegistryIssuerValue';
 import { RegistryNextStep } from '@/components/document-registry/RegistryNextStep';
 import { RegistryPropertyValue } from '@/components/document-registry/RegistryPropertyValue';
-import { areaIdOf } from '@/components/document-registry/RegistryRowItem';
+import { areaIdOf } from '@/components/document-registry/registry-row-text';
 import { RegistryRowHeader } from '@/components/document-registry/RegistryRowHeader';
 import { registryIssuanceOf } from '@/components/document-registry/registry-issuance';
 import { registryObligorsOf } from '@/components/document-registry/registry-obligors';

@@ -17,10 +17,9 @@
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { daysBetweenDateKeys } from '@/lib/calendar/date-key';
 import { formatDateKey } from '@/lib/intl-formatting';
 import { cn } from '@/lib/utils';
-import type { RegistryDocument, RegistryDocumentRow } from '@/lib/document-validity/document-registry';
+import type { RegistryDocumentRow } from '@/lib/document-validity/document-registry';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import { factsDeclarationOf } from '@/lib/document-validity/facts-declaration';
 import { RegistryDependents } from '@/components/document-registry/RegistryDependents';
@@ -31,6 +30,7 @@ import { RegistryPropertyValue } from '@/components/document-registry/RegistryPr
 import { RegistryRowHeader } from '@/components/document-registry/RegistryRowHeader';
 import { registryIssuanceOf } from '@/components/document-registry/registry-issuance';
 import { registryObligorsOf } from '@/components/document-registry/registry-obligors';
+import { areaIdOf, documentNameOf, relativeText } from '@/components/document-registry/registry-row-text';
 import {
   REGISTRY_KEYS,
   EXPIRY_SOURCE_LABEL_KEYS,
@@ -40,32 +40,6 @@ import {
   REGISTRY_STATE_HINT_KEYS,
 } from '@/components/document-registry/document-registry-labels';
 
-type Translate = ReturnType<typeof useTranslation>['t'];
-type Names = Pick<DocumentRegistryResponse, 'files' | 'properties'>;
-
-/**
- * Πώς λέγεται το έγγραφο: όνομα αρχείου · «δηλωμένο χωρίς αρχείο» (Α3) · «εγκρίθηκε στον έλεγχο» (Φ4δ Ε8 — το αρχείο,
- * αν υπάρχει, δεν διαβάστηκε από το μητρώο, άρα δεν έχει όνομα εδώ).
- */
-export function documentNameOf(t: Translate, document: RegistryDocument, names: Names): string {
-  switch (document.origin.kind) {
-    case 'declared': return t(REGISTRY_KEYS.declared);
-    case 'attested': return t(REGISTRY_KEYS.attested);
-    case 'file': return names.files[document.origin.fileId]?.name ?? t(REGISTRY_KEYS.fileUnnamed);
-  }
-}
-
-/** Ο δήμος του ακινήτου της γραμμής — `null` όταν δεν ρωτήθηκε ή δεν αποδεικνύεται (ADR-915 §24). */
-export function areaIdOf(propertyId: string | null, names: Pick<DocumentRegistryResponse, 'properties'>): string | null {
-  return propertyId === null ? null : names.properties[propertyId]?.areaId ?? null;
-}
-
-/** «σε 12 ημέρες» / «πριν από 3 ημέρες» — από το `asOf` της απόκρισης. */
-function relativeText(t: Translate, expiresOn: string, asOf: string): string | null {
-  const days = daysBetweenDateKeys(asOf, expiresOn);
-  if (days === null) return null;
-  return days >= 0 ? t(REGISTRY_KEYS.daysLeft, { count: days }) : t(REGISTRY_KEYS.daysAgo, { count: -days });
-}
 
 function ExpiryValue({ row, asOf }: { readonly row: RegistryDocumentRow; readonly asOf: string }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);

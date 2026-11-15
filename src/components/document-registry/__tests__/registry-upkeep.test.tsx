@@ -52,6 +52,9 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }),
 }));
 
+// ADR-915 §41.5 — η κάρτα είναι τεμπέλικη επιφάνεια· εδώ ελέγχεται το ΠΕΡΙΕΧΟΜΕΝΟ της, σύγχρονα (`registry-surfaces-sync.ts`).
+jest.mock('@/components/document-registry/registry-surfaces', () => jest.requireActual('./registry-surfaces-sync'));
+
 jest.mock('@/lib/workspace/navigation', () => ({
   Link: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
   useRouter: () => ({ replace: jest.fn() }),
@@ -78,7 +81,13 @@ function withUpkeep(declaration: UpkeepDeclaration | null): DocumentRegistryResp
 const panel = () => screen.getByRole('region', { name: new RegExp(UPKEEP_KEYS.title) });
 const button = (name: string) => within(panel()).queryByRole('button', { name });
 
+/** ADR-915 §41.5 — οι αποφάσεις ζουν στην καρτέλα «Προς απόφαση»· η κάρτα μιας γραμμής στο πλαϊνό πάνελ. */
+function at(params: Record<string, string>): void {
+  window.history.replaceState(null, '', `/document-expiry?${new URLSearchParams(params).toString()}`);
+}
+
 beforeEach(() => {
+  at({ tab: 'decisions' });
   verdict = 'granted-by-role';
   save.mockReset().mockResolvedValue({ kind: 'saved' });
   revalidate.mockClear();
@@ -143,10 +152,14 @@ describe('πριν την απόφαση', () => {
 describe('μετά την απόφαση', () => {
   it('επιβεβαιωμένη ⇒ το κενό «λείπει» ζητείται από τη μόνιμη υποχρέωση, με το πότε επιβεβαιώθηκε· «Αναίρεση» στέλνει `null`', async () => {
     registry = withUpkeep(decided());
+    at({ doc: `missing:p1:${YDE}` });
+    const card = render(<DocumentRegistryContent />);
+    const gap = screen.getByRole('article');
+    expect(within(gap).getByText('document-registry:dependents.property-upkeep')).toBeInTheDocument();
+    expect(within(gap).getByText(new RegExp(`^${REGISTRY_KEYS.upkeepDeclaredOn}`))).toBeInTheDocument();
+    card.unmount();
+    at({ tab: 'decisions' });
     render(<DocumentRegistryContent />);
-    const gap = screen.getAllByRole('article').find((article) => within(article).queryByText('document-registry:dependents.property-upkeep'));
-    expect(gap).toBeDefined();
-    expect(within(gap!).getByText(new RegExp(`^${REGISTRY_KEYS.upkeepDeclaredOn}`))).toBeInTheDocument();
     expect(within(panel()).getByText(UPKEEP_DECISION_KEYS.required)).toBeInTheDocument();
     await userEvent.click(button(UPKEEP_KEYS.reask)!);
     expect(save).toHaveBeenCalledWith({ propertyId: 'p1', documentKind: YDE, decision: null, exemptionReason: null });

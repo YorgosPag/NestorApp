@@ -189,6 +189,9 @@ const DEFAULTS = Object.freeze({
     // ADR-915 §40.7 — οι τάξεις μιας άδειας: μόνο όταν τσεκαριστεί άδεια με `gradeScheme`, με τα κείμενά τους στο chunk
     // (όχι στο slice της σελίδας «Άδειες» της βιτρίνας ούτε κάθε φόρμας επαφής).
     'src/components/mandate/licence-grade-surfaces.tsx',
+    // ADR-915 §41.5 — η κάρτα μιας γραμμής του μητρώου λήξεων: μόνο στο πλαϊνό πάνελ (`?doc=`), με τα κείμενά της στο
+    // chunk (όχι στο slice της σελίδας, που κουβαλά πλέον μόνο πίνακα + καρτέλες).
+    'src/components/document-registry/registry-surfaces.tsx',
   ],
 
   /**

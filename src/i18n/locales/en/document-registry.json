@@ -455,5 +455,53 @@
       "retired": "The property is archived or in the trash.",
       "notStanding": "Not a standing obligation."
     }
+  },
+  "layout": {
+    "tabs": {
+      "label": "Registry sections",
+      "action": "Needs action",
+      "all": "All documents",
+      "decisions": "To decide"
+    },
+    "grouping": {
+      "label": "Group by",
+      "state": "By status",
+      "property": "By property",
+      "kind": "By type"
+    },
+    "action": {
+      "empty": "Nothing needs action today.",
+      "emptyHint": "Every document in the registry is under “All documents”."
+    },
+    "blocks": {
+      "now": "Blocking now",
+      "on": "Blocks on {date}",
+      "no": "Not blocking"
+    },
+    "col": {
+      "document": "Document",
+      "property": "Property",
+      "state": "Status",
+      "expiry": "Expiry",
+      "blocks": "Blocks",
+      "nextStep": "Next step"
+    },
+    "table": {
+      "caption": "Registry documents — select a document for details."
+    },
+    "next": {
+      "assign": "Assign to a professional",
+      "none": "—"
+    },
+    "noExpiry": "—",
+    "sheet": {
+      "description": "Status, expiry, what it stops and the next step for this document."
+    },
+    "group": {
+      "noProperty": "No property"
+    },
+    "decisions": {
+      "empty": "No standing-obligation proposals to decide."
+    }
   }
 }

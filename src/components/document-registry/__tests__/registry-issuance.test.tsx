@@ -67,6 +67,9 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }),
 }));
 
+// ADR-915 §41.5 — η κάρτα είναι τεμπέλικη επιφάνεια· εδώ ελέγχεται το ΠΕΡΙΕΧΟΜΕΝΟ της, σύγχρονα (`registry-surfaces-sync.ts`).
+jest.mock('@/components/document-registry/registry-surfaces', () => jest.requireActual('./registry-surfaces-sync'));
+
 jest.mock('@/lib/workspace/navigation', () => ({
   Link: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
   useRouter: () => ({ replace: jest.fn() }),
@@ -95,9 +98,11 @@ function withRoster(roster: readonly IssuanceRosterEntry[], lead: ObligorLead = 
   return { ...base, properties: { ...base.properties, p6: { ...base.properties.p6, obligorLead: lead } } };
 }
 
-const article = () => screen.getByText('Συνθετικό Ζ6').closest('article') as HTMLElement;
+// ADR-915 §41.5 — η κάρτα του κενού p6 ζει στο πλαϊνό πάνελ, ανοιχτό από τη διεύθυνση (`?doc=`).
+const article = () => screen.getByRole('article');
 
 beforeEach(() => {
+  window.history.replaceState(null, '', `/document-expiry?doc=${encodeURIComponent('missing:p6:energy-certificate')}`);
   verdict = 'granted-by-role';
   save.mockClear();
   revalidate.mockClear();

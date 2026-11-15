@@ -10,15 +10,23 @@ import {
   type RegistryRow,
 } from '../document-registry';
 import {
+  blockingDayOf,
   documentExpiryHref,
+  needsRegistryAction,
   REGISTRY_PICKER_VIEWS,
   REGISTRY_VIEWS,
+  registryGroupingOf,
+  registryRowOfDocParam,
+  registryTabOf,
+  registryTabTally,
+  rowsOfActionTab,
   toggledRegistryView,
   registryViewOf,
   registryViewTally,
   rowsOfRegistryView,
 } from '../document-registry-view';
 import { DOCUMENT_EXPIRY_ROUTE } from '../document-registry-routes';
+import { issuanceKeyOf } from '../issuance-assignment';
 import { FIXTURE_AS_OF, fixtureResponse } from './registry-fixture';
 
 const { rows } = fixtureResponse();
@@ -107,5 +115,84 @@ describe('η προβολή στη διεύθυνση', () => {
       const param = new URL(documentExpiryHref(view), 'https://synthetic.invalid').searchParams.get('view');
       expect(registryViewOf(param)).toBe(view);
     }
+  });
+});
+
+// =============================================================================
+// ADR-915 §41.5 — καρτέλες · «Χρειάζονται ενέργεια» · `?doc=`
+// =============================================================================
+
+const paramsOf = (href: string): URLSearchParams => new URL(href, 'https://synthetic.invalid').searchParams;
+
+describe('§41.5 η καρτέλα στη διεύθυνση — και οι παλιοί σύνδεσμοι προσγειώνονται εκεί που έδειχναν', () => {
+  it('ρητή έγκυρη καρτέλα κερδίζει· καμία ⇒ «Χρειάζονται ενέργεια»', () => {
+    expect(registryTabOf(null, null)).toBe('action');
+    expect(registryTabOf('decisions', 'blocking')).toBe('decisions');
+    expect(registryTabOf('no-such-tab', null)).toBe('action');
+  });
+
+  it('`?view=` χωρίς καρτέλα (ειδοποίηση Φ5) ⇒ «Όλα»· άγνωστη προβολή ⇒ προεπιλογή', () => {
+    expect(registryTabOf(null, 'blocking')).toBe('all');
+    expect(registryTabOf(null, 'expired')).toBe('all');
+    expect(registryTabOf(null, 'no-such-view')).toBe('action');
+  });
+
+  it('η διεύθυνση γράφει μόνο ό,τι δεν θα έβγαζε μόνη της', () => {
+    expect(documentExpiryHref('all', { tab: 'action' })).toBe(DOCUMENT_EXPIRY_ROUTE);
+    expect(paramsOf(documentExpiryHref('blocking', { tab: 'all' })).has('tab')).toBe(false);
+    expect(paramsOf(documentExpiryHref('all', { tab: 'decisions' })).get('tab')).toBe('decisions');
+    expect(paramsOf(documentExpiryHref(undefined, { doc: 'missing:p6:energy-certificate' })).get('doc')).toBe('missing:p6:energy-certificate');
+  });
+
+  it('ομαδοποίηση: ανεκτικός αναγνώστης', () => {
+    expect(registryGroupingOf(null)).toBe('state');
+    expect(registryGroupingOf('property')).toBe('property');
+    expect(registryGroupingOf('colour')).toBe('state');
+  });
+});
+
+describe('§41.5 «Χρειάζονται ενέργεια» — κατά το ΠΟΤΕ ΜΠΛΟΚΑΡΕΙ, όχι κατά λήξη', () => {
+  it('μέλη: έληξε · λήγει · λείπει-και-μπλοκάρει — όχι το «λείπει» που δεν μπλοκάρει (αγγελία `warn`), όχι έγκυρο/αντικατεστημένο', () => {
+    const shown = ids(rowsOfActionTab(rows, FIXTURE_AS_OF));
+    expect(shown).toContain('missing:p6:energy-certificate');
+    expect(shown).not.toContain('missing:ownp_7:energy-certificate');
+    expect(shown).not.toContain('f-valid');
+    expect(shown).not.toContain('f-old');
+    expect([...shown].sort()).toEqual(ids(rows.filter(needsRegistryAction)).sort());
+  });
+
+  it('σειρά: μπλοκάρει ήδη (κενό p6) · μπλοκάρει στις 2027-03-01 (υπογραφή p2) · μετά όσα δεν μπλοκάρουν, στη σειρά του διακομιστή', () => {
+    expect(ids(rowsOfActionTab(rows, FIXTURE_AS_OF))).toEqual(['missing:p6:energy-certificate', 'f-expiring', 'f-expired', 'f-soon']);
+  });
+
+  it('μέρα μπλοκαρίσματος: λείπει ⇒ σήμερα · υπογραφή ⇒ η μέρα της · τίποτα ⇒ `null` · ίδιο κριτήριο με τον πυρήνα', () => {
+    const byId = (id: string) => rows.find((row) => registryRowIdOf(row) === id)!;
+    expect(blockingDayOf(byId('missing:p6:energy-certificate'), FIXTURE_AS_OF)).toBe(FIXTURE_AS_OF);
+    expect(blockingDayOf(byId('f-expiring'), FIXTURE_AS_OF)).toBe('2027-03-01');
+    expect(blockingDayOf(byId('f-valid'), FIXTURE_AS_OF)).toBeNull();
+    for (const row of rows) expect(blockingDayOf(row, FIXTURE_AS_OF) !== null).toBe(row.blocking);
+  });
+
+  it('μετρητής καρτελών από τις ΙΔΙΕΣ γραμμές', () => {
+    expect(registryTabTally(rows, 3)).toEqual({ action: rowsOfActionTab(rows, FIXTURE_AS_OF).length, all: rows.length, decisions: 3 });
+  });
+});
+
+describe('§41.5 `?doc=` — ταυτότητα γραμμής ή κλειδί υποκειμένου', () => {
+  it('ταυτότητα γραμμής ⇒ αυτή η γραμμή (και η αντικατεστημένη)', () => {
+    expect(registryRowOfDocParam(rows, 'f-old')?.state).toBe('superseded');
+    expect(registryRowOfDocParam(rows, 'missing:p6:energy-certificate')?.kind).toBe('gap');
+  });
+
+  it('κλειδί υποκειμένου ⇒ η ΤΡΕΧΟΥΣΑ γραμμή: ληγμένο έγγραφο ή κενό — ποτέ η αντικατεστημένη', () => {
+    expect(registryRowIdOf(registryRowOfDocParam(rows, issuanceKeyOf('p1', 'energy-certificate'))!)).toBe('f-expired');
+    expect(registryRowIdOf(registryRowOfDocParam(rows, issuanceKeyOf('p6', 'energy-certificate'))!)).toBe('missing:p6:energy-certificate');
+    expect(registryRowIdOf(registryRowOfDocParam(rows, issuanceKeyOf('p4', 'energy-certificate'))!)).toBe('f-valid');
+  });
+
+  it('άγνωστο ή κενό ⇒ `null` (το πάνελ μένει κλειστό)', () => {
+    expect(registryRowOfDocParam(rows, 'f-nowhere')).toBeNull();
+    expect(registryRowOfDocParam(rows, '')).toBeNull();
+    expect(registryRowOfDocParam(rows, null)).toBeNull();
   });
 });

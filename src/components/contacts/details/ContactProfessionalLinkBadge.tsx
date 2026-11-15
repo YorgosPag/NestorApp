@@ -20,6 +20,8 @@ import { Link } from '@/lib/workspace/navigation';
 import { CASE_INVITE_ROLE_KEY } from '@/components/case-invite/case-invite-labels';
 import { ISSUANCE_SPACE_KEYS } from '@/components/conveyance/my-cases/issuance-space-labels';
 import { DOCUMENT_KIND_LABEL_KEYS } from '@/components/document-registry/document-registry-labels';
+import { documentExpiryHref } from '@/lib/document-validity/document-registry-view';
+import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
 import { isLegalEngagementRole } from '@/types/engagement';
 import type { ComparableContact } from '@/lib/contacts/declared-credential-comparison';
 import type { ContactProfessionalAssignment, ContactProfessionalLink } from '@/types/contact-professional-link';
@@ -49,10 +51,29 @@ function AssignmentProperty({ assignment, t }: { readonly assignment: ContactPro
   );
 }
 
+/**
+ * Τι ανέλαβε — σε ανάθεση έκδοσης με γνωστό ακίνητο **και** είδος, σύνδεσμος στην κάρτα του μητρώου (ADR-915 §41.5).
+ * Το `?doc=` είναι το **κλειδί υποκειμένου** (ακίνητο · είδος): η επαφή δεν ξέρει αν η γραμμή είναι κενό ή ληγμένο
+ * έγγραφο — το λύνει το μητρώο (`registryRowOfDocParam`).
+ */
+function AssignmentSubject({ assignment, t }: { readonly assignment: ContactProfessionalAssignment; readonly t: Translate }) {
+  const label = subjectLabelOf(assignment, t);
+  const { propertyId, documentKind } = assignment;
+  if (assignment.kind !== 'document_issuance' || propertyId === null || documentKind === null) return <>{label}</>;
+  return (
+    <Link
+      href={documentExpiryHref(undefined, { doc: issuanceKeyOf(propertyId, documentKind) })}
+      className={`${TOUCH_TARGET_MIN} underline underline-offset-4`}
+    >
+      {label}
+    </Link>
+  );
+}
+
 function AssignmentLine({ assignment, t }: { readonly assignment: ContactProfessionalAssignment; readonly t: Translate }) {
   return (
     <li>
-      {subjectLabelOf(assignment, t)} — <AssignmentProperty assignment={assignment} t={t} />
+      <AssignmentSubject assignment={assignment} t={t} /> — <AssignmentProperty assignment={assignment} t={t} />
       <span className="text-muted-foreground"> · {t(ENGAGEMENT_STATE_KEYS[assignment.state])}</span>
     </li>
   );

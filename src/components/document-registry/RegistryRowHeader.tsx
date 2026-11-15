@@ -24,17 +24,25 @@ import {
   REGISTRY_STATE_LOOK,
 } from '@/components/document-registry/document-registry-labels';
 
-export function RegistryRowHeader({ kind, state }: { readonly kind: DocumentKind; readonly state: RegistryRowState }): React.ReactElement {
+/** Το σήμα κατάστασης — εικονίδιο **και** λέξη (CHECK 3.41). Κοινό με τον πίνακα του μητρώου (ADR-915 §41.5). */
+export function RegistryStateBadge({ state }: { readonly state: RegistryRowState }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
   const look = REGISTRY_STATE_LOOK[state];
   const Icon = look.icon;
   return (
+    <Badge variant={look.badge} className="gap-1">
+      <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+      {t(REGISTRY_STATE_LABEL_KEYS[state])}
+    </Badge>
+  );
+}
+
+export function RegistryRowHeader({ kind, state }: { readonly kind: DocumentKind; readonly state: RegistryRowState }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS, CONVEYANCE_NS, LEGALITY_NS]);
+  return (
     <header className="flex flex-wrap items-start justify-between gap-2">
       <h3 className="m-0 text-base font-semibold text-foreground">{t(DOCUMENT_KIND_LABEL_KEYS[kind])}</h3>
-      <Badge variant={look.badge} className="gap-1">
-        <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-        {t(REGISTRY_STATE_LABEL_KEYS[state])}
-      </Badge>
+      <RegistryStateBadge state={state} />
     </header>
   );
 }

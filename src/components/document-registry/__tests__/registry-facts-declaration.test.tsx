@@ -47,6 +47,9 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }),
 }));
 
+// ADR-915 §41.5 — η κάρτα είναι τεμπέλικη επιφάνεια· εδώ ελέγχεται το ΠΕΡΙΕΧΟΜΕΝΟ της, σύγχρονα (`registry-surfaces-sync.ts`).
+jest.mock('@/components/document-registry/registry-surfaces', () => jest.requireActual('./registry-surfaces-sync'));
+
 jest.mock('@/lib/workspace/navigation', () => ({
   Link: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
   useRouter: () => ({ replace: jest.fn() }),
@@ -71,6 +74,8 @@ const row = () => screen.getByRole('article');
 const declareButton = () => within(row()).queryByRole('button', { name: FACTS_DECLARATION_KEYS.declare });
 
 beforeEach(() => {
+  // ADR-915 §41.5 — η κάρτα ζει στο πλαϊνό πάνελ: ανοίγει από τη διεύθυνση (`?doc=`).
+  window.history.replaceState(null, '', `/document-expiry?doc=${encodeURIComponent('file:f-yde')}`);
   verdict = 'granted-by-role';
   save.mockReset().mockResolvedValue({ kind: 'saved' });
   revalidate.mockClear();

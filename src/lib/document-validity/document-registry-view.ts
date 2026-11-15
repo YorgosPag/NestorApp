@@ -18,15 +18,21 @@
  * @module lib/document-validity/document-registry-view
  */
 
-import { withQuery } from '@/lib/workspace/route-worlds';
+import { withQuery, type WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { DOCUMENT_EXPIRY_ROUTE } from '@/lib/document-validity/document-registry-routes';
 import {
+  isBlockingDependent,
   matchesRegistryFilter,
   REGISTRY_FILTERS,
+  registryRowIdOf,
+  registryRowKindOf,
+  registryRowPartyOf,
+  registryRowPropertyIdOf,
   type RegistryFilter,
   type RegistryRow,
   type RegistryRowState,
 } from '@/lib/document-validity/document-registry';
+import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
 
 /** Η προβολή χωρίς φίλτρο — δείχνει **και** τις αντικατεστημένες γραμμές, υποβαθμισμένες. */
 export const REGISTRY_VIEW_ALL = 'all' as const;
@@ -76,12 +82,7 @@ export function registryViewOf(param: string | null | undefined): RegistryView {
   return isRegistryView(param) ? param : REGISTRY_VIEW_ALL;
 }
 
-/** Η διεύθυνση μιας προβολής. Το «Όλα» **δεν** γράφει παράμετρο: μία διεύθυνση ανά περιεχόμενο. */
-export function documentExpiryHref(view: RegistryView = REGISTRY_VIEW_ALL): string {
-  return view === REGISTRY_VIEW_ALL
-    ? DOCUMENT_EXPIRY_ROUTE
-    : withQuery(DOCUMENT_EXPIRY_ROUTE, `${REGISTRY_VIEW_PARAM}=${encodeURIComponent(view)}`);
-}
+
 
 /**
  * Ταιριάζει η γραμμή στην προβολή; Το «Όλα» δέχεται τα πάντα· κάθε φίλτρο ρωτά τον ΕΝΑ ταξινομητή· η προβολή
@@ -105,4 +106,137 @@ export function registryViewTally(rows: readonly RegistryRow[], asOf: string): R
     for (const view of REGISTRY_VIEWS) if (matchesRegistryView(row, view, asOf)) tally[view] += 1;
   }
   return tally;
+}
+
+// =============================================================================
+// ADR-915 §41.5 — ΚΑΡΤΕΛΕΣ · ΟΜΑΔΟΠΟΙΗΣΗ · ΠΛΑΪΝΟ ΠΑΝΕΛ (όλα στη διεύθυνση)
+// =============================================================================
+
+/**
+ * Οι καρτέλες της σελίδας, στη σειρά εμφάνισης. Κλειστό σύνολο. Η πρώτη είναι η προεπιλογή.
+ * - `action`    — ό,τι θέλει ενέργεια **τώρα** (έληξε · λήγει · λείπει-και-μπλοκάρει), κατά το **πότε μπλοκάρει**
+ * - `all`       — το πλήρες μητρώο σε πυκνό πίνακα, με τις προβολές `?view=` και ομαδοποίηση `?group=`
+ * - `decisions` — οι προτάσεις μόνιμων υποχρεώσεων (§35): **απόφαση**, όχι κατάσταση εγγράφου — γι' αυτό χωριστά
+ * (Η «Ανά ακίνητο» της §41.3 είναι Φάση Β.)
+ */
+export const REGISTRY_TABS = ['action', 'all', 'decisions'] as const;
+export type RegistryTab = (typeof REGISTRY_TABS)[number];
+export const REGISTRY_DEFAULT_TAB: RegistryTab = 'action';
+
+/** Οι άξονες ομαδοποίησης της καρτέλας «Όλα» — ο άνθρωπος διαλέγει (§41.1 αιτία β: ΕΝΑΣ άξονας σκόρπιζε το ακίνητο). */
+export const REGISTRY_GROUPINGS = ['state', 'property', 'kind'] as const;
+export type RegistryGrouping = (typeof REGISTRY_GROUPINGS)[number];
+export const REGISTRY_DEFAULT_GROUPING: RegistryGrouping = 'state';
+
+/** Οι παράμετροι της διεύθυνσης — ΕΝΑ όνομα η καθεμία. */
+export const REGISTRY_TAB_PARAM = 'tab' as const;
+export const REGISTRY_GROUP_PARAM = 'group' as const;
+export const REGISTRY_DOC_PARAM = 'doc' as const;
+
+const TAB_SET: ReadonlySet<string> = new Set(REGISTRY_TABS);
+const GROUPING_SET: ReadonlySet<string> = new Set(REGISTRY_GROUPINGS);
+
+export function isRegistryTab(value: unknown): value is RegistryTab {
+  return typeof value === 'string' && TAB_SET.has(value);
+}
+
+function isRegistryGrouping(value: unknown): value is RegistryGrouping {
+  return typeof value === 'string' && GROUPING_SET.has(value);
+}
+
+/**
+ * Η καρτέλα από τη διεύθυνση. Ρητή έγκυρη καρτέλα κερδίζει· αλλιώς μια **προβολή** (`?view=` ≠ «Όλα») σημαίνει «Όλα» —
+ * έτσι κάθε σύνδεσμος πριν τις καρτέλες (ειδοποιήσεις Φ5: `?view=blocking`) προσγειώνεται εκεί που έδειχνε.
+ */
+export function registryTabOf(tabParam: string | null | undefined, viewParam: string | null | undefined): RegistryTab {
+  if (isRegistryTab(tabParam)) return tabParam;
+  return registryViewOf(viewParam) === REGISTRY_VIEW_ALL ? REGISTRY_DEFAULT_TAB : 'all';
+}
+
+/** Ανεκτικός αναγνώστης της ομαδοποίησης: άγνωστη ⇒ κατά κατάσταση. */
+export function registryGroupingOf(param: string | null | undefined): RegistryGrouping {
+  return isRegistryGrouping(param) ? param : REGISTRY_DEFAULT_GROUPING;
+}
+
+export interface RegistryHrefExtra {
+  readonly tab?: RegistryTab;
+  /** Η γραμμή του πλαϊνού πάνελ — `registryRowIdOf` **ή** κλειδί υποκειμένου (βλ. {@link registryRowOfDocParam}). */
+  readonly doc?: string;
+}
+
+/**
+ * **Η ΜΙΑ διεύθυνση της σελίδας.** Παράμετρος γράφεται μόνο όταν διαφέρει από ό,τι θα έβγαζε μόνη της η διεύθυνση: μία
+ * διεύθυνση ανά περιεχόμενο. Χωρίς `extra` είναι η ίδια με πριν τις καρτέλες (οι ειδοποιήσεις του διακομιστή δεν αλλάζουν).
+ */
+export function documentExpiryHref(view: RegistryView = REGISTRY_VIEW_ALL, extra: RegistryHrefExtra = {}): WorkspaceHref {
+  const params = new URLSearchParams();
+  if (view !== REGISTRY_VIEW_ALL) params.set(REGISTRY_VIEW_PARAM, view);
+  if (extra.tab !== undefined && extra.tab !== registryTabOf(null, view)) params.set(REGISTRY_TAB_PARAM, extra.tab);
+  if (extra.doc !== undefined) params.set(REGISTRY_DOC_PARAM, extra.doc);
+  const query = params.toString();
+  return query === '' ? DOCUMENT_EXPIRY_ROUTE : withQuery(DOCUMENT_EXPIRY_ROUTE, query);
+}
+
+/** Θέλει ενέργεια; — έληξε · λήγει · λείπει **και μπλοκάρει**. Κατάσταση και `blocking` είναι κρίση του διακομιστή. */
+export function needsRegistryAction(row: RegistryRow): boolean {
+  return row.state === 'expired' || row.state === 'expiring' || (row.state === 'missing' && row.blocking);
+}
+
+/**
+ * **Πότε μπλοκάρει συναλλαγή** — η νωρίτερη μέρα ανάμεσα στις εξαρτήσεις που ο πυρήνας **ήδη** κρίνει μπλοκαρισμένες
+ * (`isBlockingDependent` — κανένα δεύτερο κριτήριο): λείπει ⇒ σήμερα · συγκεκριμένη υπογραφή ⇒ η μέρα της · διαρκής ⇒ η
+ * πρώτη μέρα εκτός ισχύος. Παρελθόν ⇒ σήμερα («μπλοκάρει ήδη»). `null` = δεν μπλοκάρει τίποτα.
+ */
+export function blockingDayOf(row: RegistryRow, asOf: string): string | null {
+  let earliest: string | null = null;
+  for (const dependent of row.dependents) {
+    if (!isBlockingDependent(dependent, row.state)) continue;
+    const { neededOn } = dependent.requirement;
+    const day = dependent.impact === 'absent' ? asOf : neededOn.kind === 'on' ? neededOn.day : (dependent.stopsOn ?? asOf);
+    const clamped = day < asOf ? asOf : day;
+    if (earliest === null || clamped < earliest) earliest = clamped;
+  }
+  return earliest;
+}
+
+/**
+ * Οι γραμμές της καρτέλας «Χρειάζονται ενέργεια»: πρώτα όσες μπλοκάρουν, η νωρίτερη μέρα πρώτη· μετά οι υπόλοιπες.
+ * Ισοπαλία ⇒ η σειρά του διακομιστή (σταθερή ταξινόμηση — επείγον πρώτα).
+ */
+export function rowsOfActionTab(rows: readonly RegistryRow[], asOf: string): readonly RegistryRow[] {
+  const keyed = rows.filter(needsRegistryAction).map((row) => ({ row, day: blockingDayOf(row, asOf) }));
+  keyed.sort((a, b) => {
+    if (a.day === b.day) return 0;
+    if (a.day === null) return 1;
+    if (b.day === null) return -1;
+    return a.day.localeCompare(b.day);
+  });
+  return keyed.map(({ row }) => row);
+}
+
+/** Ο αριθμός κάθε καρτέλας. «Προς απόφαση» = όσες προτάσεις **περιμένουν** απόφαση (ίδιο μέτρο με το «Εκκρεμούν»). */
+export function registryTabTally(
+  rows: readonly RegistryRow[],
+  pendingDecisions: number,
+): Readonly<Record<RegistryTab, number>> {
+  return { action: rows.filter(needsRegistryAction).length, all: rows.length, decisions: pendingDecisions };
+}
+
+/**
+ * Η γραμμή του πλαϊνού πάνελ από το `?doc=`:
+ *  (α) η ταυτότητα της γραμμής (`registryRowIdOf`) — ό,τι γράφει η ίδια η σελίδα·
+ *  (β) αλλιώς το **κλειδί υποκειμένου** `issuanceKeyOf(ακίνητο, είδος)` ⇒ η **τρέχουσα** γραμμή του (κενό ή έγγραφο,
+ *      ποτέ αντικατεστημένη, μόνο του ακινήτου — `party === null`). Γιατί: όποιος ξέρει μόνο «ΠΕΑ αυτού του ακινήτου»
+ *      (η γραμμή «Ανέλαβε» μιας επαφής) δεν μπορεί να ξέρει αν η γραμμή είναι `missing:…` ή το `id` ενός ληγμένου εγγράφου.
+ * Άγνωστη τιμή ⇒ `null` (το πάνελ μένει κλειστό — καμία ψευδής κάρτα).
+ */
+export function registryRowOfDocParam(rows: readonly RegistryRow[], param: string | null | undefined): RegistryRow | null {
+  if (typeof param !== 'string' || param === '') return null;
+  const byId = rows.find((row) => registryRowIdOf(row) === param);
+  if (byId !== undefined) return byId;
+  return rows.find((row) => {
+    const propertyId = registryRowPropertyIdOf(row);
+    return row.state !== 'superseded' && propertyId !== null && registryRowPartyOf(row) === null
+      && issuanceKeyOf(propertyId, registryRowKindOf(row)) === param;
+  }) ?? null;
 }
