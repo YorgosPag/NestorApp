@@ -32,9 +32,14 @@ import type { DeliveryReminderMoment } from '@/lib/document-validity/issuance-de
 import type { IssuanceLinkAnswer } from '@/lib/document-validity/issuance-request';
 import { formatOperatorDate, formatOperatorDateTime } from '@/lib/operator-time-format';
 
-import { escapeHtml } from './base-email-template';
 import type { ConfirmationEmailResult } from './confirmation-email-shared';
-import { composeInvitationEmail, composeNoticeEmail, invitationDetailLine, type InvitationEmailLine } from './invitation-email-shared';
+import {
+  composeInvitationEmail,
+  composeNoticeEmail,
+  emphasizedInvitationLine,
+  invitationDetailLine,
+  type InvitationEmailLine,
+} from './invitation-email-shared';
 import { ISSUANCE_EMAIL_TEXTS, type IssuanceEmailWording } from './issuance-invitation-email-texts';
 
 /** Οι ονομασίες, ανά γλώσσα, από τα **ίδια** locale της οθόνης. */
@@ -115,9 +120,9 @@ function namedOf(input: IssuanceEmailInput): Named {
   };
 }
 
-/** Ωμό κείμενο ή ασφαλές HTML από την **ίδια** φράση: οι τιμές τονίζονται, κάθε τιμή περνά από `escapeHtml`. */
+/** Ωμό κείμενο ή ασφαλές HTML από την **ίδια** φράση — ο κοινός συνθέτης (τονισμός · `escapeHtml` · μία τελεία). */
 function lineOf(phrase: (...values: string[]) => string, values: readonly string[]): InvitationEmailLine {
-  return { html: phrase(...values.map((value) => `<strong>${escapeHtml(value)}</strong>`)), text: phrase(...values) };
+  return emphasizedInvitationLine(phrase, values);
 }
 
 function noteLine(named: Named, note: string | null): InvitationEmailLine[] {

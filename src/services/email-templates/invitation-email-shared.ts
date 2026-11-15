@@ -71,6 +71,32 @@ export function invitationDetailLine(label: string, value: string): InvitationEm
   return { html: `${escapeHtml(label)}: <strong>${escapeHtml(value)}</strong>`, text: `${label}: ${value}` };
 }
 
+/** Θέσεις τιμών μέσα στη φράση — χαρακτήρες ιδιωτικής χρήσης Unicode, που κανένα κείμενο χρήστη δεν περιέχει. */
+const SLOT_OPEN = '';
+const SLOT_CLOSE = '';
+const SLOT = new RegExp(`${SLOT_OPEN}(\\d+)${SLOT_CLOSE}(\\.?)`, 'g');
+
+function fillSlots(template: string, values: readonly string[], render: (value: string) => string): string {
+  return template.replace(SLOT, (_match, index: string, dot: string) => {
+    const value = values[Number(index)] ?? '';
+    return render(value) + (dot !== '' && value.endsWith('.') ? '' : dot);
+  });
+}
+
+/**
+ * Μια φράση με **τονισμένες** τιμές, στις δύο μορφές. **Μία τελεία στο τέλος πρότασης**: τιμή που ήδη λήγει σε «.»
+ * (π.χ. «Διαμέρισμα 95 τ.μ.») απορροφά την τελεία της φράσης — αλλιώς ο παραλήπτης διάβαζε «95 τ.μ..» (ADR-915 §45).
+ * Η φράση καλείται **μία** φορά με θέσεις, ώστε η απόφαση να κρίνεται στο σημείο συνάντησης τιμής-φράσης και μόνο εκεί
+ * (ποτέ αντικατάσταση «..» στο αποτέλεσμα: θα έτρωγε αποσιωπητικά που έγραψε ο άνθρωπος).
+ */
+export function emphasizedInvitationLine(phrase: (...values: string[]) => string, values: readonly string[]): InvitationEmailLine {
+  const template = phrase(...values.map((_value, index) => `${SLOT_OPEN}${index}${SLOT_CLOSE}`));
+  return {
+    html: fillSlots(template, values, (value) => `<strong>${escapeHtml(value)}</strong>`),
+    text: fillSlots(template, values, (value) => value),
+  };
+}
+
 const PARAGRAPH = `font-size:15px;color:${BRAND.gray};line-height:1.6;`;
 const SMALL = `font-size:13px;color:${BRAND.grayLight};line-height:1.6;`;
 

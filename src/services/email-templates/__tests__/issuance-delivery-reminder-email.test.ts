@@ -66,3 +66,28 @@ describe('ADR-915 §45 Φ3 — η στιγμή αλλάζει θέμα και ε
     expect(build().subject).toContain('Η παράδοση καθυστερεί');
   });
 });
+
+describe('ADR-915 §45 — μία τελεία στο τέλος πρότασης (ζωντανό εύρημα 2026-11-16: «95 τ.μ..»)', () => {
+  const facts = (propertyLabel: string): ReminderInput['facts'] => ({
+    officeName: 'Γραφείο Συνθετικό', propertyLabel, documentKind: 'energy-certificate',
+    professionalName: 'Επιθεωρητής Συνθετικός', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-1' }, note: null,
+  });
+
+  it('τιμή που λήγει σε «.» απορροφά την τελεία της φράσης — και στο κείμενο και στο HTML', () => {
+    const email = build({ moment: 'no-due-date', dueOn: null, facts: facts('Διαμέρισμα 95 τ.μ.') });
+    expect(email.text).toContain('Διαμέρισμα 95 τ.μ.\n');
+    expect(email.text).not.toContain('τ.μ..');
+    expect(email.html).toContain('<strong>Διαμέρισμα 95 τ.μ.</strong></p>');
+    expect(email.html).not.toContain('τ.μ.</strong>.');
+  });
+
+  it('παρονομαστής: τιμή χωρίς τελεία κρατά την τελεία της φράσης', () => {
+    const email = build({ moment: 'no-due-date', dueOn: null, facts: facts('Διαμέρισμα Α1') });
+    expect(email.html).toContain('<strong>Διαμέρισμα Α1</strong>.');
+  });
+
+  it('τελεία στη ΜΕΣΗ της φράσης (όχι αμέσως μετά την τιμή) δεν αγγίζεται', () => {
+    const email = build({ moment: 'overdue', facts: facts('Διαμέρισμα 95 τ.μ.') });
+    expect(email.text).toContain('Διαμέρισμα 95 τ.μ. πέρασε.');
+  });
+});
