@@ -199,14 +199,15 @@ describe('§41.5 καρτέλες', () => {
 });
 
 describe('§41.5 πλαϊνό πάνελ — `?doc=`', () => {
-  it('πάτημα στο έγγραφο ⇒ `?doc=<γραμμή>` με ΝΕΑ καταχώριση ιστορικού, και ανοίγει η κάρτα', () => {
+  // ⚠️ async: το `pushState` ειδοποιεί το `url-query-state` ΕΞΩ από το συμβάν του React ⇒ το πάνελ αποδίδεται στον επόμενο κύκλο.
+  it('πάτημα στο έγγραφο ⇒ `?doc=<γραμμή>` με ΝΕΑ καταχώριση ιστορικού, και ανοίγει η κάρτα', async () => {
     renderReady();
     const before = window.history.length;
     const row = window.document.querySelector('tbody tr[data-row-id="f-expiring"]') as HTMLElement;
     fireEvent.click(within(row).getAllByRole('button')[0]);
     expect(urlParams().get('doc')).toBe('f-expiring');
     expect(window.history.length).toBe(before + 1);
-    expect(within(screen.getByRole('article')).getByText('synthetic-expiring.pdf')).toBeTruthy();
+    expect(within(await screen.findByRole('article')).getByText('synthetic-expiring.pdf')).toBeTruthy();
   });
 
   it('κλειδί υποκειμένου (η γραμμή «Ανέλαβε» της επαφής) ⇒ η ΤΡΕΧΟΥΣΑ γραμμή — κενό ή ληγμένο', () => {
