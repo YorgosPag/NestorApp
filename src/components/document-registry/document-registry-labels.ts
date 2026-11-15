@@ -16,8 +16,8 @@
 import {
   CalendarCheck2,
   CalendarClock,
+  CalendarSearch,
   CalendarX2,
-  CircleHelp,
   FileX2,
   History,
   type LucideIcon,
@@ -123,7 +123,7 @@ export const REGISTRY_STATE_LOOK: Readonly<Record<RegistryRowState, RegistryStat
   expired: { icon: CalendarX2, tone: 'red', badge: 'error' },
   missing: { icon: FileX2, tone: 'red', badge: 'error' },
   expiring: { icon: CalendarClock, tone: 'orange', badge: 'warning' },
-  'expiry-unknown': { icon: CircleHelp, tone: 'gray', badge: 'muted' },
+  'expiry-unknown': { icon: CalendarSearch, tone: 'yellow', badge: 'warning' },
   valid: { icon: CalendarCheck2, tone: 'green', badge: 'success' },
   superseded: { icon: History, tone: 'gray', badge: 'outline' },
 };
