@@ -16,18 +16,28 @@
  * κριτήριο στο σημείο τομής. ⚠️ Ο παράγοντας βαθμού (`ends`) μετρά **μόνο τα άκρα**, όπως πριν: το `dimensionScore` δεν
  * αλλάζει· τα ενδιάμεσα δίνουν μόνο **άγκυρες** για το δέσιμο (`anchors`) και τον ρόλο `extension-line`.
  *
+ * 🔑 **ADR-929 §6.21.2 — η βάση ανήκει στο βέλος.** Η βάση ενός κλειστού βέλους είναι κι αυτή λεπτή κάθετη πινελιά που
+ * διασχίζει τη γραμμή, και περνούσε για επέκταση (ΤΕΣΤ2: η 4.12 κοβόταν σε 0.12 + 3.88 + 0.12). Η βοηθητική είναι **στην
+ * κορυφή** του βέλους (Dori · Lai & Kasturi 1994)· ό,τι βρίσκεται **μέσα στο μετρημένο σώμα** του και **κλείνει το τρίγωνο**
+ * (τα δύο άκρα του πατούν στους δύο βραχίονες) δεν είναι επέκταση. ⛔ Όχι κανόνας συμμετρίας: και η σωστή βοηθητική του
+ * ΤΕΣΤ2 είναι συμμετρική γύρω από τη γραμμή.
+ *
  * @module subapps/dxf-viewer/bim/plan-recognition/classify/extension-lines
  */
 
 import type { PlanePoint } from '@/lib/geometry/homography';
 import { inkFractionAlong, type InkMask } from '@/lib/geometry/raster/ink-probe';
 import type { PlanExtensionAnchor } from '../plan-recognition-types';
-import { localOf, sinBetween, type FramedSegment } from './segment-frame';
+import type { ArrowBody } from './dimension-terminators';
+import { endOf, localOf, sinBetween, type FramedSegment } from './segment-frame';
 
 export interface ExtensionScale {
   readonly strokePx: number;
   readonly textPx: number;
 }
+
+/** §6.21.2 — το μετρημένο σώμα του βέλους στο άκρο `which` ενός τμήματος (από τον ανιχνευτή απολήξεων), ή `null`. */
+export type ArrowBodyAt = (segmentId: string, which: 'start' | 'end') => ArrowBody | null;
 
 /** Για κάθε υποψήφια διάσταση: πόσα **άκρα** της (0–2) έχουν γραμμή επέκτασης, ποιες, και οι άγκυρές τους. */
 export interface ExtensionMatch {
@@ -54,9 +64,35 @@ function isFreeEnd(m: InkMask, e: FramedSegment, which: 'start' | 'end', sc: Ext
   return side < FREE_END_MAX_INK;
 }
 
+/**
+ * §6.21.2 — η `e` είναι η **βάση** του βέλους σε άκρο της `d`: και τα δύο άκρα της μέσα στο σώμα (πέρα από την κορυφή,
+ * ως το μήκος του βέλους) και το καθένα **πάνω σε βραχίονα** (κλείνει το τρίγωνο).
+ * 🔑 «Ένα άκρο σε κάθε πλευρά» **δεν** ελέγχεται χωριστά: η `e` γίνεται άγκυρα μόνο αν **διασχίζει** τη γραμμή (`off` στο
+ * `extensionFootAt`), άρα δύο άκρα πάνω στους βραχίονες είναι ήδη ένα σε κάθε πλευρά (μετάλλαξη: ο όρος δεν άλλαζε τίποτα).
+ */
+function isArrowBase(d: FramedSegment, e: FramedSegment, arrowAt: ArrowBodyAt, sc: ExtensionScale): boolean {
+  const tol = Math.max(1.5, sc.strokePx);
+  return (['start', 'end'] as const).some((which) => {
+    const body = arrowAt(d.id, which);
+    if (body === null || body.lengthPx <= tol) return false;
+    const { p, out } = endOf(d, which);
+    const at = (q: PlanePoint): { s: number; r: number } => {
+      const rx = q.x - p.x;
+      const ry = q.y - p.y;
+      return { s: -(rx * out.x + ry * out.y), r: rx * d.n.x + ry * d.n.y };
+    };
+    const onArm = (q: { s: number; r: number }): boolean => q.s > tol && q.s <= body.lengthPx + tol
+      && Math.abs(Math.abs(q.r) - (q.s * body.halfWidthPx) / body.lengthPx) <= tol;
+    return onArm(at(e.a)) && onArm(at(e.b));
+  });
+}
+
 /** Είναι η `e` γραμμή επέκτασης για το σημείο `p` της `d`; Αν ναι, το πόδι της (το ελεύθερο άκρο)· αλλιώς `null`. */
-function extensionFootAt(m: InkMask, d: FramedSegment, e: FramedSegment, p: PlanePoint, sc: ExtensionScale): 'start' | 'end' | null {
+function extensionFootAt(
+  m: InkMask, d: FramedSegment, e: FramedSegment, p: PlanePoint, sc: ExtensionScale, arrowAt: ArrowBodyAt,
+): 'start' | 'end' | null {
   if (e === d || sinBetween(d, e) < PERPENDICULAR_MIN_SIN || e.width > EXT_MAX_WIDTH * sc.strokePx) return null;
+  if (isArrowBase(d, e, arrowAt, sc)) return null;
   const { t, d: off } = localOf(e, p);
   const tol = e.width / 2 + 1.5;
   if (Math.abs(off) > tol || t < -tol || t > e.length + tol) return null;
@@ -79,20 +115,24 @@ function interiorCrossing(d: FramedSegment, e: FramedSegment, endTolPx: number):
 }
 
 /** Οι επεκτάσεις **ενός** σημείου της `d`, ως άγκυρες. */
-function anchorsAt(m: InkMask, d: FramedSegment, p: PlanePoint, strokes: readonly FramedSegment[], sc: ExtensionScale): PlanExtensionAnchor[] {
+function anchorsAt(
+  m: InkMask, d: FramedSegment, p: PlanePoint, strokes: readonly FramedSegment[], sc: ExtensionScale, arrowAt: ArrowBodyAt,
+): PlanExtensionAnchor[] {
   return strokes.flatMap((e) => {
-    const foot = extensionFootAt(m, d, e, p, sc);
+    const foot = extensionFootAt(m, d, e, p, sc, arrowAt);
     return foot === null ? [] : [{ extensionId: e.id, foot }];
   });
 }
 
 /** Οι επεκτάσεις που **τέμνουν** το εσωτερικό της `d` (ενδιάμεσα σημεία αλυσίδας). */
-function interiorAnchors(m: InkMask, d: FramedSegment, strokes: readonly FramedSegment[], sc: ExtensionScale): PlanExtensionAnchor[] {
+function interiorAnchors(
+  m: InkMask, d: FramedSegment, strokes: readonly FramedSegment[], sc: ExtensionScale, arrowAt: ArrowBodyAt,
+): PlanExtensionAnchor[] {
   const endTol = sc.strokePx;
   return strokes.flatMap((e) => {
     if (e === d || sinBetween(d, e) < PERPENDICULAR_MIN_SIN) return [];
     const p = interiorCrossing(d, e, endTol);
-    const foot = p === null ? null : extensionFootAt(m, d, e, p, sc);
+    const foot = p === null ? null : extensionFootAt(m, d, e, p, sc, arrowAt);
     return foot === null ? [] : [{ extensionId: e.id, foot }];
   });
 }
@@ -107,12 +147,13 @@ function uniqueAnchors(anchors: readonly PlanExtensionAnchor[]): PlanExtensionAn
 /** Οι γραμμές επέκτασης κάθε υποψήφιας διάστασης (`candidates`), ανάμεσα σε όλα τα τμήματα-πινελιές. */
 export function extensionMatches(
   m: InkMask, candidates: readonly FramedSegment[], all: readonly FramedSegment[], sc: ExtensionScale,
+  arrowAt: ArrowBodyAt = () => null,
 ): Map<string, ExtensionMatch> {
   const strokes = all.filter((s) => s.style === 'stroke');
   const out = new Map<string, ExtensionMatch>();
   for (const d of candidates) {
-    const atEnds = [d.a, d.b].map((p) => anchorsAt(m, d, p, strokes, sc));
-    const anchors = uniqueAnchors([...atEnds.flat(), ...interiorAnchors(m, d, strokes, sc)]);
+    const atEnds = [d.a, d.b].map((p) => anchorsAt(m, d, p, strokes, sc, arrowAt));
+    const anchors = uniqueAnchors([...atEnds.flat(), ...interiorAnchors(m, d, strokes, sc, arrowAt)]);
     out.set(d.id, {
       ends: atEnds.filter((hits) => hits.length > 0).length,
       extensionIds: anchors.map((a) => a.extensionId),

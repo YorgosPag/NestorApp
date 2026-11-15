@@ -44,6 +44,23 @@ export function inkFractionAlong(m: InkMask, from: ProbePoint, dir: ProbePoint, 
 }
 
 /**
+ * Ως πού φτάνει το **συνεχές** μελάνι στην ακτίνα `from + t·dir`, ξεκινώντας από το `t0` (`dir` μοναδιαίο): το μεγαλύτερο
+ * `t ≤ t1` με μελάνι, χωρίς ενδιάμεσο κενό μεγαλύτερο από `maxGapPx`. Χωρίς μελάνι κοντά στο `t0` ⇒ `t0`.
+ * Μετρά το **μήκος** ενός σχεδιασμένου κομματιού (π.χ. του βραχίονα ενός βέλους), όχι μόνο αν υπάρχει.
+ */
+export function inkReachAlong(m: InkMask, from: ProbePoint, dir: ProbePoint, t0: number, t1: number, maxGapPx: number): number {
+  let last = t0;
+  let seen = false;
+  for (let t = t0; t <= t1 + 1e-9; t += STEP_PX) {
+    if (inkAt(m, from.x + dir.x * t, from.y + dir.y * t)) {
+      last = t;
+      seen = true;
+    } else if (t - last > maxGapPx) break;
+  }
+  return seen ? last : t0;
+}
+
+/**
  * Το πάχος του συνεχούς μελανιού που περνά από το `p`, κατά τη διεύθυνση `dir` και την αντίθετή της (`dir` μοναδιαίο),
  * έως `maxPx` προς κάθε μεριά. `0` όταν στο `p` δεν υπάρχει μελάνι. Μετρά την πινελιά **όπως είναι στην εικόνα**, και όχι
  * όπως τη μοίρασαν οι ζώνες (σε στραβή σάρωση ένα μέρος της πάει σε κρόσσι).

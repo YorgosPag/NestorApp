@@ -34,6 +34,16 @@ export interface SyntheticDimension {
   readonly stubMm?: number;
   /** ADR-929 §6.19 — μισό πλάτος του βέλους σε mm χαρτιού (μήκος 3 mm). `0.5` ⇒ το συνηθισμένο 1 : 3. Λείπει ⇒ 0,9. */
   readonly arrowHalfWidthMm?: number;
+  /**
+   * ADR-929 §6.21.2 — το σχέδιο του βέλους (ISO 129-1 / AutoCAD «Closed filled» · «Closed blank»): `filled` = γεμάτο
+   * τρίγωνο· `closed-blank` = δύο βραχίονες **και η βάση** ως πινελιές (το στυλ του ΤΕΣΤ2). Λείπει ⇒ `filled`.
+   */
+  readonly arrowStyle?: 'filled' | 'closed-blank';
+  /**
+   * ADR-929 §6.21.2 — η βοηθητική **κεντραρισμένη** στη γραμμή διάστασης: τόσα mm χαρτιού προς το αντικείμενο (χωρίς να το
+   * φτάνει) και τόσα πέρα από τη γραμμή (το στυλ του ΤΕΣΤ2: ±2 mm). Λείπει ⇒ από το κενό `extensionGap` ως `extensionOvershoot`.
+   */
+  readonly extensionAroundLineMm?: number;
 }
 
 /** Ευθύγραμμο τμήμα αλήθειας σε mm κάτοψης. */
@@ -114,11 +124,16 @@ function labelShapes(label: string, centre: Point2D, along: Point2D, up: Point2D
 
 function terminatorShapes(
   end: Point2D, out: Point2D, nrm: Point2D, kind: SyntheticTerminator, k: number, r: number,
-  arrowHalfWidthMm: number = PAPER.arrowHalfWidth,
+  dim: Pick<SyntheticDimension, 'arrowHalfWidthMm' | 'arrowStyle'>,
 ): Shape[] {
   if (kind === 'arrow') {
     const base = add(end, out, -PAPER.arrowLength * k);
-    return [{ kind: 'triangle', p: [end, add(base, nrm, arrowHalfWidthMm * k), add(base, nrm, -arrowHalfWidthMm * k)] }];
+    const hw = (dim.arrowHalfWidthMm ?? PAPER.arrowHalfWidth) * k;
+    const [left, right] = [add(base, nrm, hw), add(base, nrm, -hw)];
+    const outline: readonly (readonly [Point2D, Point2D])[] = [[end, left], [end, right], [left, right]];
+    return dim.arrowStyle === 'closed-blank'
+      ? outline.map(([a, b]): Shape => ({ kind: 'capsule', a, b, r }))
+      : [{ kind: 'triangle', p: [end, left, right] }];
   }
   if (kind === 'tick') {
     const dg = { x: (out.x + nrm.x) / Math.SQRT2, y: (out.y + nrm.y) / Math.SQRT2 };
@@ -143,14 +158,15 @@ function oneDimension(dim: SyntheticDimension, k: number, r: number): DimensionI
   const lines: TruthSegment[] = dim.text !== 'interrupt' ? [{ a: A, b: B }]
     : stub !== null ? [{ a: A, b: add(A, d, stub) }, { a: add(B, d, -stub), b: B }]
       : [{ a: A, b: add(mid, d, -halfGap) }, { a: add(mid, d, halfGap), b: B }];
-  const extensions: TruthSegment[] = [dim.from, dim.to].map((p) => ({
-    a: add(p, away, PAPER.extensionGap * k), b: add(add(p, nrm, dim.offsetMm), away, PAPER.extensionOvershoot * k),
-  }));
+  const around = dim.extensionAroundLineMm;
+  const extensions: TruthSegment[] = [dim.from, dim.to].map((p) => (around === undefined
+    ? { a: add(p, away, PAPER.extensionGap * k), b: add(add(p, nrm, dim.offsetMm), away, PAPER.extensionOvershoot * k) }
+    : { a: add(add(p, nrm, dim.offsetMm), away, -around * k), b: add(add(p, nrm, dim.offsetMm), away, around * k) }));
   const textCentre = dim.text === 'interrupt' ? mid : add(mid, away, h / 2 + PAPER.textClearance * k);
   const shapes: Shape[] = [
     ...[...lines, ...extensions].map((s): Shape => ({ kind: 'capsule', a: s.a, b: s.b, r })),
-    ...terminatorShapes(A, { x: -d.x, y: -d.y }, nrm, dim.terminator, k, r, dim.arrowHalfWidthMm),
-    ...terminatorShapes(B, d, nrm, dim.terminator, k, r, dim.arrowHalfWidthMm),
+    ...terminatorShapes(A, { x: -d.x, y: -d.y }, nrm, dim.terminator, k, r, dim),
+    ...terminatorShapes(B, d, nrm, dim.terminator, k, r, dim),
     ...labelShapes(dim.label, textCentre, d, away, h, r),
   ];
   const extent = [A, B, ...extensions.flatMap((s) => [s.a, s.b]), add(textCentre, away, h)];

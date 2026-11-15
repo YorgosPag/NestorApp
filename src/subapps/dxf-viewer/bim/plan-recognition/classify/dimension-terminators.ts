@@ -17,6 +17,7 @@ import {
   inkFractionAlong,
   inkFractionInDisk,
   inkFractionOnCircle,
+  inkReachAlong,
   inkThicknessAcross,
   type InkMask,
 } from '@/lib/geometry/raster/ink-probe';
@@ -30,9 +31,22 @@ export interface TerminatorScale {
   readonly reachPx: number;
 }
 
+/**
+ * ADR-929 §6.21.2 — το **σώμα** ενός βέλους, μετρημένο στο μελάνι: από την κορυφή (το άκρο της γραμμής) ως εκεί όπου
+ * τελειώνουν οι βραχίονες. Ό,τι σχεδιάζεται μέσα του (η βάση ενός κλειστού βέλους) ανήκει στο βέλος.
+ */
+export interface ArrowBody {
+  /** Κατά μήκος της γραμμής, από την κορυφή προς τα μέσα (px). */
+  readonly lengthPx: number;
+  /** Η κάθετη απόσταση κάθε βραχίονα από τη γραμμή στο τέλος του (px). */
+  readonly halfWidthPx: number;
+}
+
 export interface Terminator {
   readonly kind: PlanTerminatorKind;
   readonly score: number;
+  /** Μόνο για `arrow`: το μετρημένο σώμα του. */
+  readonly arrowBody?: ArrowBody;
 }
 
 /** Ποσοστό μελανιού πάνω από το οποίο ένα σχήμα θεωρείται παρόν. */
@@ -58,6 +72,8 @@ const DOT_MIN_CORE = 0.85;
 const DOT_MAX_RING = 0.25;
 /** Η εμβέλεια είναι τουλάχιστον τόσες πινελιές του τμήματος. */
 const MIN_REACH_STROKES = 4;
+/** Ο βραχίονας ενός βέλους ακολουθείται έως τόσες εμβέλειες (§6.21.2). */
+const ARROW_BODY_MAX_REACHES = 3;
 /** Θέσεις (κλάσμα του μήκους) όπου μετριέται το πάχος της πινελιάς στο μελάνι. */
 const THICKNESS_SAMPLES = [0.2, 0.35, 0.5, 0.65, 0.8] as const;
 
@@ -68,26 +84,44 @@ const unit = (v: PlanePoint): PlanePoint => {
   return { x: v.x / l, y: v.y / l };
 };
 
+/** Οι δύο βραχίονες ενός βέλους μισής γωνίας `deg` με κορυφή στο άκρο, και η απόσταση από την κορυφή όπου βγαίνουν από τη γραμμή. */
+function armsOf(out: PlanePoint, n: PlanePoint, deg: number, sc: TerminatorScale) {
+  const inward = neg(out);
+  const c = Math.cos((deg * Math.PI) / 180);
+  const s = Math.sin((deg * Math.PI) / 180);
+  return {
+    c, s,
+    t0: Math.max(sc.strokePx, (0.75 * sc.strokePx) / s),
+    armA: { x: inward.x * c + n.x * s, y: inward.y * c + n.y * s },
+    armB: { x: inward.x * c - n.x * s, y: inward.y * c - n.y * s },
+  };
+}
+
 /**
  * Βέλος με κορυφή στο άκρο: δύο βραχίονες προς τα μέσα, σε μισή γωνία θ από τη γραμμή. Μετρά μόνο το κομμάτι κάθε
  * βραχίονα που έχει βγει από την ίδια τη γραμμή (απόσταση > πινελιά), αλλιώς κάθε χοντρή γραμμή θα έμοιαζε με βέλος.
+ * Επιστρέφει και τη γωνία που νίκησε (για τη μέτρηση του σώματος).
  */
-function arrowScore(m: InkMask, p: PlanePoint, out: PlanePoint, n: PlanePoint, sc: TerminatorScale): number {
-  const inward = neg(out);
-  let best = 0;
+function arrowScore(m: InkMask, p: PlanePoint, out: PlanePoint, n: PlanePoint, sc: TerminatorScale): { score: number; deg: number } {
+  let best = { score: 0, deg: 0 };
   for (const deg of ARROW_HALF_ANGLES_DEG) {
-    const c = Math.cos((deg * Math.PI) / 180);
-    const s = Math.sin((deg * Math.PI) / 180);
-    const t0 = Math.max(sc.strokePx, (0.75 * sc.strokePx) / s);
+    const { t0, armA, armB } = armsOf(out, n, deg, sc);
     if (sc.reachPx - t0 < 2) continue;
-    const armA = { x: inward.x * c + n.x * s, y: inward.y * c + n.y * s };
-    const armB = { x: inward.x * c - n.x * s, y: inward.y * c - n.y * s };
-    best = Math.max(best, Math.min(
-      inkFractionAlong(m, p, armA, t0, sc.reachPx),
-      inkFractionAlong(m, p, armB, t0, sc.reachPx),
-    ));
+    const score = Math.min(inkFractionAlong(m, p, armA, t0, sc.reachPx), inkFractionAlong(m, p, armB, t0, sc.reachPx));
+    if (score > best.score) best = { score, deg };
   }
   return best;
+}
+
+/**
+ * ADR-929 §6.21.2 — το σώμα του βέλους: ως πού φτάνει το συνεχές μελάνι **κάθε** βραχίονα (ο κοντύτερος ορίζει το σώμα).
+ * Πέρα από την εμβέλεια (μέχρι `ARROW_BODY_MAX_REACHES`·R): ένα βέλος μπορεί να είναι μακρύτερο από έναν χαρακτήρα.
+ */
+function arrowBodyOf(m: InkMask, p: PlanePoint, out: PlanePoint, n: PlanePoint, deg: number, sc: TerminatorScale): ArrowBody {
+  const { c, s, t0, armA, armB } = armsOf(out, n, deg, sc);
+  const maxT = ARROW_BODY_MAX_REACHES * sc.reachPx;
+  const arm = Math.min(inkReachAlong(m, p, armA, t0, maxT, sc.strokePx), inkReachAlong(m, p, armB, t0, maxT, sc.strokePx));
+  return { lengthPx: arm * c, halfWidthPx: arm * s };
 }
 
 /** Πλάγια παύλα: πινελιά υπό 45° που διασχίζει το άκρο **και προς τις δύο** μεριές. */
@@ -158,13 +192,16 @@ function localScale(m: InkMask, s: FramedSegment, sc: TerminatorScale): Terminat
 export function detectTerminator(m: InkMask, s: FramedSegment, which: 'start' | 'end', scale: TerminatorScale): Terminator {
   const { p, out } = endOf(s, which);
   const sc = localScale(m, s, scale);
+  const arrow = arrowScore(m, p, out, s.n, sc);
   const strong: Terminator[] = [
-    { kind: 'arrow', score: arrowScore(m, p, out, s.n, sc) },
+    { kind: 'arrow', score: arrow.score },
     { kind: 'tick', score: tickScore(m, p, out, s.n, sc) },
     { kind: 'dot', score: dotScore(m, p, out, sc) },
   ];
   const best = strong.reduce((x, y) => (y.score > x.score ? y : x));
-  if (best.score >= TERMINATOR_MIN_SCORE) return best;
+  if (best.score >= TERMINATOR_MIN_SCORE) {
+    return best.kind === 'arrow' ? { ...best, arrowBody: arrowBodyOf(m, p, out, s.n, arrow.deg, sc) } : best;
+  }
   const cross = crossScore(m, p, out, s.n, sc);
   return cross >= TERMINATOR_MIN_SCORE ? { kind: 'cross', score: cross } : { kind: 'none', score: 0 };
 }

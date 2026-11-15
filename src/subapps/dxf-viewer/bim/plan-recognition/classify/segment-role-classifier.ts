@@ -110,15 +110,18 @@ function gatherEvidence(input: SegmentRoleInput, framed: readonly FramedSegment[
   const textPx = medianGlyphSize(glyphs) ?? FALLBACK_TEXT_STROKES * strokePx;
   const term: TerminatorScale = { strokePx, reachPx: Math.max(MIN_REACH_STROKES * strokePx, REACH_TEXT_HEIGHTS * textPx) };
   const strokes = framed.filter((s) => s.style === 'stroke');
-  const terminators = new Map(strokes.map((s) => [s.id, [
-    detectTerminator(input.ink, s, 'start', term).kind,
-    detectTerminator(input.ink, s, 'end', term).kind,
+  const detected = new Map(strokes.map((s) => [s.id, [
+    detectTerminator(input.ink, s, 'start', term),
+    detectTerminator(input.ink, s, 'end', term),
   ] as const]));
+  const terminators = new Map([...detected].map(([id, [a, b]]) => [id, [a.kind, b.kind] as const]));
   // §6.19 — οι ΙΔΙΕΣ κρίσεις απολήξεων αγκυρώνουν τη διακοπή από κείμενο· καμία δεύτερη ανίχνευση.
   const strongEnd = (id: string, which: 'start' | 'end'): boolean =>
     STRONG.has(terminators.get(id)?.[which === 'start' ? 0 : 1] ?? 'none');
   const text = textEvidence(framed, glyphs, { textPx, strokePx, endZonePx: term.reachPx, strongEnd });
-  const extension = extensionMatches(input.ink, strokes, framed, { strokePx, textPx });
+  // §6.21.2 — το ΜΕΤΡΗΜΕΝΟ σώμα κάθε βέλους: η βάση του δεν είναι επέκταση. Καμία δεύτερη ανίχνευση βέλους.
+  const arrowAt = (id: string, which: 'start' | 'end') => detected.get(id)?.[which === 'start' ? 0 : 1].arrowBody ?? null;
+  const extension = extensionMatches(input.ink, strokes, framed, { strokePx, textPx }, arrowAt);
   const annotation = new Set(strokes.filter((s) => isInsideGlyph(s, glyphs, strokePx)).map((s) => s.id));
   return { framed, terminators, text, extension, annotation, strokePx, reachPx: term.reachPx };
 }
