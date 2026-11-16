@@ -22,7 +22,12 @@ import {
   OpeningsStart,
   type OpeningReviewActions,
 } from '../ModelFromDrawingOpeningSections';
-import { PREVIEW_ZONE_STYLE } from '../../../../systems/region-preview/preview-zone-style';
+import {
+  PREVIEW_ZONE_STYLE,
+  previewZoneStyle,
+  type PreviewZoneStyle,
+  type PreviewZoneTone,
+} from '../../../../systems/region-preview/preview-zone-style';
 
 const t = (key: string, params?: Record<string, unknown>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
@@ -57,6 +62,14 @@ function renderSection(options: Options = {}) {
   const press = (code: string, shiftKey = false) => fireEvent.keyDown(list(), { code, shiftKey });
   return { ...view, actions, q, rows, list, press };
 }
+
+/**
+ * ADR-911 §Φ3β-palette — στο jsdom δεν υπάρχει `--canvas-background-dxf` (⇒ ο μαύρος καμβάς του SSoT) ούτε υπόβαθρο
+ * ⇒ ο ζωγράφος διαλέγει τη ΣΚΟΥΡΑ παλέτα. Αν αυτό αλλάξει, οι ισχυρισμοί χρώματος κοκκινίζουν — σκόπιμα.
+ */
+const ZONE_STYLE = Object.fromEntries(
+  (Object.keys(PREVIEW_ZONE_STYLE) as PreviewZoneTone[]).map((tone) => [tone, previewZoneStyle(tone, 'dark')]),
+) as Readonly<Record<PreviewZoneTone, PreviewZoneStyle>>;
 
 describe('OpeningsStart', () => {
   it('ένα κουμπί που οπλίζει το δείγμα «κούφωμα»', () => {
@@ -253,6 +266,6 @@ describe('OpeningsSection — η ΜΙΑ έγκριση', () => {
       .toBe('modelFromDrawing.openings.unexplained{"count":2}');
     // §6.21.10 (Ε3) — το δείγμα = ο τόνος του καμβά για τις μονές γραμμές.
     const swatch = renderSection({ proposal: orphaned, preview: null }).q('mfd-openings-unexplained')!.querySelector('line');
-    expect(swatch?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.unpaired.stroke);
+    expect(swatch?.getAttribute('stroke')).toBe(ZONE_STYLE.unpaired.stroke);
   });
 });

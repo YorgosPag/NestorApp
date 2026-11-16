@@ -14,7 +14,12 @@ import { ModelFromDrawingPreviewOverlay } from '../ModelFromDrawingPreviewOverla
 import { modelFromDrawingStore } from '../../../systems/model-from-drawing/model-from-drawing-store';
 import { ASSISTANT_STATUS_TONE, OPENING_STATUS_TONE } from '../../../systems/model-from-drawing/assistant-status-tone';
 import type { OpeningPreview, OpeningPreviewZone } from '../../../bim/model-from-drawing/opening-preview';
-import { PREVIEW_ZONE_STYLE } from '../../../systems/region-preview/preview-zone-style';
+import {
+  PREVIEW_ZONE_STYLE,
+  previewZoneStyle,
+  type PreviewZoneStyle,
+  type PreviewZoneTone,
+} from '../../../systems/region-preview/preview-zone-style';
 import type { AssistantPreview, AssistantPreviewZone } from '../../../bim/model-from-drawing/assistant-preview';
 import type { WallProposalStatus } from '../../../bim/model-from-drawing/wall-proposal';
 import { updateImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
@@ -49,6 +54,14 @@ const zoneGroups = (container: HTMLElement) => [...container.querySelectorAll('g
 
 afterEach(() => act(() => modelFromDrawingStore.reset()));
 
+/**
+ * ADR-911 §Φ3β-palette — στο jsdom δεν υπάρχει `--canvas-background-dxf` (⇒ ο μαύρος καμβάς του SSoT) ούτε υπόβαθρο
+ * ⇒ ο ζωγράφος διαλέγει τη ΣΚΟΥΡΑ παλέτα. Αν αυτό αλλάξει, οι ισχυρισμοί χρώματος κοκκινίζουν — σκόπιμα.
+ */
+const ZONE_STYLE = Object.fromEntries(
+  (Object.keys(PREVIEW_ZONE_STYLE) as PreviewZoneTone[]).map((tone) => [tone, previewZoneStyle(tone, 'dark')]),
+) as Readonly<Record<PreviewZoneTone, PreviewZoneStyle>>;
+
 describe('ModelFromDrawingPreviewOverlay', () => {
   it('κλειστός βοηθός ⇒ τίποτα στον καμβά, ακόμη κι αν έμεινε προεπισκόπηση', () => {
     const { container } = renderOverlay();
@@ -60,7 +73,7 @@ describe('ModelFromDrawingPreviewOverlay', () => {
     const { container } = renderOverlay();
     seed({ phase: 'review', preview: PREVIEW });
     for (const z of PREVIEW.zones) {
-      const style = PREVIEW_ZONE_STYLE[ASSISTANT_STATUS_TONE[z.status]];
+      const style = ZONE_STYLE[ASSISTANT_STATUS_TONE[z.status]];
       const path = container.querySelector(`[data-testid="mfd-zone-${z.status}"] path`);
       expect(path?.getAttribute('stroke')).toBe(style.stroke);
       expect(path?.getAttribute('stroke-dasharray')).toBe(style.dash);
@@ -93,7 +106,7 @@ describe('ModelFromDrawingPreviewOverlay', () => {
     const order = zoneGroups(container).map((g) => g.getAttribute('data-tone'));
     expect(order[order.length - 1]).toBe('existing');
     const focused = container.querySelector('[data-testid="mfd-zone-existing"] path');
-    expect(Number(focused?.getAttribute('stroke-width'))).toBeGreaterThan(PREVIEW_ZONE_STYLE.existing.strokeWidth);
+    expect(Number(focused?.getAttribute('stroke-width'))).toBeGreaterThan(ZONE_STYLE.existing.strokeWidth);
   });
 
   it('§6.21.10 (Ε3) — οι μονές γραμμές: ανοιχτές, στον τόνο «μονή γραμμή» (όχι απόρριψη), με το ΜΟΤΙΒΟ του', () => {
@@ -101,9 +114,9 @@ describe('ModelFromDrawingPreviewOverlay', () => {
     seed({ phase: 'review', preview: PREVIEW });
     const lines = container.querySelectorAll('[data-testid="mfd-unexplained"]');
     expect(lines).toHaveLength(1);
-    expect(lines[0].getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.unpaired.stroke);
-    expect(lines[0].getAttribute('stroke')).not.toBe(PREVIEW_ZONE_STYLE.reject.stroke);
-    expect(lines[0].getAttribute('stroke-dasharray')).toBe(PREVIEW_ZONE_STYLE.unpaired.dash);
+    expect(lines[0].getAttribute('stroke')).toBe(ZONE_STYLE.unpaired.stroke);
+    expect(lines[0].getAttribute('stroke')).not.toBe(ZONE_STYLE.reject.stroke);
+    expect(lines[0].getAttribute('stroke-dasharray')).toBe(ZONE_STYLE.unpaired.dash);
     expect(lines[0].getAttribute('d')?.endsWith('Z')).toBe(false);
   });
 
@@ -156,7 +169,7 @@ describe('ModelFromDrawingPreviewOverlay — ανοίγματα', () => {
     const { container } = renderOverlay();
     seed({ phase: 'review', openingPreview: OPENINGS });
     for (const z of OPENINGS.zones) {
-      const style = PREVIEW_ZONE_STYLE[OPENING_STATUS_TONE[z.status]];
+      const style = ZONE_STYLE[OPENING_STATUS_TONE[z.status]];
       expect(pathOf(container, z.status)?.getAttribute('stroke')).toBe(style.stroke);
       expect(pathOf(container, z.status)?.getAttribute('stroke-dasharray')).toBe(style.dash);
     }
@@ -178,27 +191,27 @@ describe('ModelFromDrawingPreviewOverlay — ανοίγματα', () => {
     const { container } = renderOverlay();
     const dismissed = { ...OPENINGS, zones: OPENINGS.zones.map((z) => (z.key === '3' ? { ...z, dismissed: true } : z)) };
     seed({ phase: 'review', openingPreview: dismissed });
-    expect(pathOf(container, 'needs-decision')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
+    expect(pathOf(container, 'needs-decision')?.getAttribute('stroke')).toBe(ZONE_STYLE.reject.stroke);
   });
 
   it('άρνηση του σχεδίου εγγραφής ⇒ ό,τι «θα γραφόταν» κοκκινίζει· τα υπόλοιπα μένουν όπως ήταν', () => {
     const { container } = renderOverlay();
     seed({ phase: 'review', openingPreview: { ...OPENINGS, refusal: 'overlap' } });
-    expect(pathOf(container, 'door')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
-    expect(pathOf(container, 'window')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.reject.stroke);
-    expect(pathOf(container, 'needs-decision')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.decide.stroke);
-    expect(pathOf(container, 'existing')?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.existing.stroke);
+    expect(pathOf(container, 'door')?.getAttribute('stroke')).toBe(ZONE_STYLE.reject.stroke);
+    expect(pathOf(container, 'window')?.getAttribute('stroke')).toBe(ZONE_STYLE.reject.stroke);
+    expect(pathOf(container, 'needs-decision')?.getAttribute('stroke')).toBe(ZONE_STYLE.decide.stroke);
+    expect(pathOf(container, 'existing')?.getAttribute('stroke')).toBe(ZONE_STYLE.existing.stroke);
   });
 
   it('ένοικοι και σύμβολα χωρίς λωρίδα στον τόνο της απόφασης· μονές γραμμές στον τόνο «μονή γραμμή»', () => {
     const { container } = renderOverlay();
     seed({ phase: 'review', openingPreview: OPENINGS });
     const strokes = (testId: string) => [...container.querySelectorAll(`[data-testid="${testId}"]`)].map((p) => p.getAttribute('stroke'));
-    expect(strokes('mfd-opening-occupant')).toEqual([PREVIEW_ZONE_STYLE.decide.stroke]);
-    expect(strokes('mfd-opening-loose')).toEqual([PREVIEW_ZONE_STYLE.decide.stroke, PREVIEW_ZONE_STYLE.decide.stroke]);
-    expect(strokes('mfd-opening-unexplained')).toEqual([PREVIEW_ZONE_STYLE.unpaired.stroke]);
+    expect(strokes('mfd-opening-occupant')).toEqual([ZONE_STYLE.decide.stroke]);
+    expect(strokes('mfd-opening-loose')).toEqual([ZONE_STYLE.decide.stroke, ZONE_STYLE.decide.stroke]);
+    expect(strokes('mfd-opening-unexplained')).toEqual([ZONE_STYLE.unpaired.stroke]);
     const dashes = (testId: string) => [...container.querySelectorAll(`[data-testid="${testId}"]`)].map((p) => p.getAttribute('stroke-dasharray'));
-    expect(dashes('mfd-opening-loose')).toEqual([PREVIEW_ZONE_STYLE.decide.dash, PREVIEW_ZONE_STYLE.decide.dash]);
+    expect(dashes('mfd-opening-loose')).toEqual([ZONE_STYLE.decide.dash, ZONE_STYLE.decide.dash]);
   });
 
   it('τα ανοίγματα ζωγραφίζονται ΠΑΝΩ από τους τοίχους, και το εστιασμένο τελευταίο', () => {

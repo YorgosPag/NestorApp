@@ -14,8 +14,11 @@ import { render } from '@testing-library/react';
 import { PreviewZoneShape } from '../PreviewZoneShape';
 import { pointsCentroid, screenPointsToSvgPath, worldRingToSvgPath } from '../world-ring-path';
 import {
+  PREVIEW_SURFACE_KEYS,
+  PREVIEW_SURFACES,
   PREVIEW_ZONE_PAINT_ORDER,
   PREVIEW_ZONE_STYLE,
+  previewZoneStyle,
   type PreviewZoneTone,
 } from '../../../../systems/region-preview/preview-zone-style';
 import { CoordinateTransforms } from '../../../../rendering/core/CoordinateTransforms';
@@ -36,6 +39,7 @@ function renderZone(props: Partial<React.ComponentProps<typeof PreviewZoneShape>
       <PreviewZoneShape
         pieces={[rect(0, 0, 1000, 200)]}
         tone="accept"
+        surface="light"
         transform={transform}
         viewport={viewport}
         {...props}
@@ -50,8 +54,14 @@ describe('preview-zone-style — οι τόνοι ξεχωρίζουν χωρίς
     expect(new Set(dashes).size).toBe(TONES.length);
   });
 
-  it('κάθε ζεύγος τόνων έχει και διαφορετικό χρώμα', () => {
-    expect(new Set(TONES.map((tone) => PREVIEW_ZONE_STYLE[tone].stroke)).size).toBe(TONES.length);
+  it.each(PREVIEW_SURFACE_KEYS)('παλέτα «%s»: κάθε ζεύγος τόνων έχει και διαφορετικό χρώμα', (surface) => {
+    expect(new Set(TONES.map((tone) => PREVIEW_SURFACES[surface].stroke[tone])).size).toBe(TONES.length);
+  });
+
+  it('κάθε παλέτα καλύπτει ΑΚΡΙΒΩΣ τους τόνους του μοτίβου (κανένας τόνος χωρίς χρώμα σε καμία επιφάνεια)', () => {
+    for (const surface of PREVIEW_SURFACE_KEYS) {
+      expect(Object.keys(PREVIEW_SURFACES[surface].stroke).sort()).toEqual([...TONES].sort());
+    }
   });
 
   it('η σειρά ζωγραφικής περιέχει κάθε τόνο ακριβώς μία φορά', () => {
@@ -74,15 +84,26 @@ describe('preview-zone-style — οι τόνοι ξεχωρίζουν χωρίς
 });
 
 describe('PreviewZoneShape — το λεξιλόγιο φτάνει στο SVG', () => {
-  it.each(TONES)('τόνος «%s»: χρώμα, πάχος, μοτίβο και γέμισμα από το SSoT', (tone) => {
-    const { container } = renderZone({ tone });
+  it.each(PREVIEW_SURFACE_KEYS.flatMap((surface) => TONES.map((tone) => [surface, tone] as const)))(
+    'επιφάνεια «%s», τόνος «%s»: χρώμα, πάχος, μοτίβο και γέμισμα από το SSoT', (surface, tone) => {
+    const { container } = renderZone({ tone, surface });
     const path = container.querySelector('path');
-    const style = PREVIEW_ZONE_STYLE[tone];
+    const style = previewZoneStyle(tone, surface);
     expect(path?.getAttribute('stroke')).toBe(style.stroke);
     expect(path?.getAttribute('stroke-width')).toBe(String(style.strokeWidth));
     expect(path?.getAttribute('stroke-dasharray')).toBe(style.dash);
     expect(path?.getAttribute('fill')).toBe(style.fillOpacity > 0 ? style.stroke : 'none');
     expect(container.querySelector('g')?.getAttribute('data-tone')).toBe(tone);
+  });
+
+  it('η επιφάνεια αλλάζει ΜΟΝΟ το χρώμα — ποτέ το μοτίβο ή το πάχος (η ταυτότητα δεν εξαρτάται από το φόντο)', () => {
+    for (const tone of TONES) {
+      const light = renderZone({ tone, surface: 'light' }).container.querySelector('path');
+      const dark = renderZone({ tone, surface: 'dark' }).container.querySelector('path');
+      expect(dark?.getAttribute('stroke')).not.toBe(light?.getAttribute('stroke'));
+      expect(dark?.getAttribute('stroke-dasharray')).toBe(light?.getAttribute('stroke-dasharray'));
+      expect(dark?.getAttribute('stroke-width')).toBe(light?.getAttribute('stroke-width'));
+    }
   });
 
   it('η εστίαση παχαίνει τη γραμμή χωρίς να αλλάζει τόνο', () => {

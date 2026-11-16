@@ -15,9 +15,17 @@
  *                  Βιολετί (ρόλος «discovery» του Atlassian, καμία σημασία σφάλματος/προειδοποίησης), παύλα-τελεία-τελεία
  *                  (ISO 128 «phantom»). Μόνο γραμμή, ποτέ ζώνη.
  *
+ * 🎨 **ΔΥΟ παλέτες, μία ανά επιφάνεια** (ADR-911 §Φ3β-palette, 2026-11-16). Οι ζώνες ζωγραφίζονται είτε πάνω στο
+ * **χαρτί** ενός υποβάθρου PDF/εικόνας (λευκό) είτε πάνω στον **μαύρο** καμβά DXF (`CANVAS_BACKGROUND`). Καμία μία
+ * παλέτα δεν κρατά WCAG 1.4.11 (≥ 3:1) και στα δύο με ουδέτερο «υπάρχει» — μετρημένο: το slate-700 δίνει 10,4:1 σε
+ * λευκό αλλά **2,0:1** σε μαύρο. Το Revit/AutoCAD αφήνουν τον χρήστη να ξαναρυθμίσει τα χρώματα επισήμανσης όταν
+ * αλλάζει φόντο· εδώ η επιλογή είναι **αυτόματη** (`preview-surface.ts`) και **εγγυημένη από πύλη**: το CHECK 3.41 κρίνει
+ * κάθε παλέτα στη **δική της** επιφάνεια (`preview-zone:light` · `preview-zone:dark`: ΔE ≥ 8 σε protan/deutan, μοναδικό
+ * μοτίβο, αντίθεση ≥ 3:1). Το **μοτίβο** δεν αλλάζει με την επιφάνεια — η ταυτότητα δεν εξαρτάται από το φόντο.
+ *
  * 🔑 **Οι τόνοι ΓΡΑΜΜΗΣ** (`PREVIEW_LINE_TONES`) ζωγραφίζονται στην **ίδια** επιφάνεια με τα τμήματα της αναγνώρισης
- * κάτοψης (ADR-929) ⇒ το CHECK 3.41 τους κρίνει **μαζί** (οικογένεια `plan-surface`): κάθε μοτίβο μοναδικό, κάθε
- * χρώμα ΔE ≥ 8 σε protan/deutan. Ο ζωγράφος (`SegmentStrokes`) δέχεται **μόνο** αυτούς τους τόνους.
+ * κάτοψης (ADR-929) ⇒ το CHECK 3.41 τους κρίνει **μαζί** (οικογένειες `plan-surface` · `plan-surface:dark`): κάθε μοτίβο
+ * μοναδικό, κάθε χρώμα ΔE ≥ 8 σε protan/deutan. Ο ζωγράφος (`SegmentStrokes`) δέχεται **μόνο** αυτούς τους τόνους.
  *
  * Πριν από αυτό το module τα χρώματα ζούσαν ως literals μέσα στο `RegionPerimeterPreviewOverlay`
  * και πράσινο/κόκκινο μοιράζονταν την ΙΔΙΑ παύλα — η διάκριση ήταν μόνο χρωματική.
@@ -27,6 +35,7 @@
  *
  * ΚΑΘΑΡΟ (pure) — zero React/DOM/store.
  *
+ * @see ./preview-surface.ts (ποια επιφάνεια είναι κάτω από τη ζώνη ΤΩΡΑ)
  * @see ../../components/dxf-layout/preview-zone/PreviewZoneShape.tsx (ο ΜΟΝΟΣ ζωγράφος)
  * @see docs/centralized-systems/reference/adrs/ADR-911-model-from-drawing-assistant.md §Φ3β
  */
@@ -35,23 +44,66 @@ import { UI_COLORS } from '../../config/color-config';
 
 export type PreviewZoneTone = 'accept' | 'reject' | 'decide' | 'existing' | 'unpaired';
 
-export interface PreviewZoneStyle {
-  readonly stroke: string;
+/** Το μη-χρωματικό μέρος της όψης ενός τόνου — ΙΔΙΟ σε κάθε επιφάνεια. */
+export interface PreviewZonePattern {
   /** CSS px. */
   readonly strokeWidth: number;
   /** SVG `stroke-dasharray`· `null` = συμπαγής. */
   readonly dash: string | null;
-  /** Αδιαφάνεια γεμίσματος στο χρώμα του `stroke`· `0` = χωρίς γέμισμα. */
+  /** Αδιαφάνεια γεμίσματος στο χρώμα της γραμμής· `0` = χωρίς γέμισμα. */
   readonly fillOpacity: number;
 }
 
-export const PREVIEW_ZONE_STYLE: Readonly<Record<PreviewZoneTone, PreviewZoneStyle>> = {
-  accept: { stroke: UI_COLORS.PREVIEW_ZONE_ACCEPT, strokeWidth: 2, dash: '8 4', fillOpacity: 0.12 },
-  reject: { stroke: UI_COLORS.PREVIEW_ZONE_REJECT, strokeWidth: 2, dash: '2 4', fillOpacity: 0.1 },
-  decide: { stroke: UI_COLORS.PREVIEW_ZONE_DECIDE, strokeWidth: 2, dash: '12 4 2 4', fillOpacity: 0 },
-  existing: { stroke: UI_COLORS.PREVIEW_ZONE_EXISTING, strokeWidth: 1, dash: null, fillOpacity: 0 },
-  unpaired: { stroke: UI_COLORS.PREVIEW_ZONE_UNPAIRED, strokeWidth: 2, dash: '8 3 1.5 3 1.5 3', fillOpacity: 0 },
+/** Η πλήρης όψη ενός τόνου πάνω σε μια επιφάνεια: μοτίβο + χρώμα. */
+export interface PreviewZoneStyle extends PreviewZonePattern {
+  readonly stroke: string;
+}
+
+export const PREVIEW_ZONE_STYLE: Readonly<Record<PreviewZoneTone, PreviewZonePattern>> = {
+  accept: { strokeWidth: 2, dash: '8 4', fillOpacity: 0.12 },
+  reject: { strokeWidth: 2, dash: '2 4', fillOpacity: 0.1 },
+  decide: { strokeWidth: 2, dash: '12 4 2 4', fillOpacity: 0 },
+  existing: { strokeWidth: 1, dash: null, fillOpacity: 0 },
+  unpaired: { strokeWidth: 2, dash: '8 3 1.5 3 1.5 3', fillOpacity: 0 },
 };
+
+/**
+ * Οι δύο παλέτες. `surface` = η επιφάνεια απέναντι στην οποία η παλέτα **υπόσχεται** ≥ 3:1 (τη διαβάζει και το
+ * CHECK 3.41)· `stroke` = το χρώμα κάθε τόνου. Χρώματα μόνο από το `color-config` (SSoT).
+ */
+export const PREVIEW_SURFACES = {
+  light: {
+    surface: UI_COLORS.WHITE,
+    stroke: {
+      accept: UI_COLORS.PREVIEW_ZONE_ACCEPT,
+      reject: UI_COLORS.PREVIEW_ZONE_REJECT,
+      decide: UI_COLORS.PREVIEW_ZONE_DECIDE,
+      existing: UI_COLORS.PREVIEW_ZONE_EXISTING,
+      unpaired: UI_COLORS.PREVIEW_ZONE_UNPAIRED,
+    },
+  },
+  dark: {
+    surface: UI_COLORS.CANVAS_BACKGROUND,
+    stroke: {
+      accept: UI_COLORS.PREVIEW_ZONE_ACCEPT_ON_DARK,
+      reject: UI_COLORS.PREVIEW_ZONE_REJECT_ON_DARK,
+      decide: UI_COLORS.PREVIEW_ZONE_DECIDE_ON_DARK,
+      existing: UI_COLORS.PREVIEW_ZONE_EXISTING_ON_DARK,
+      unpaired: UI_COLORS.PREVIEW_ZONE_UNPAIRED_ON_DARK,
+    },
+  },
+} as const satisfies Readonly<Record<string, { readonly surface: string; readonly stroke: Readonly<Record<PreviewZoneTone, string>> }>>;
+
+/** Η επιφάνεια κάτω από τις ζώνες: χαρτί (`light`) ή σκούρος καμβάς (`dark`). */
+export type PreviewSurface = keyof typeof PREVIEW_SURFACES;
+
+/** Όλες οι επιφάνειες, σε σταθερή σειρά (για όποιον πρέπει να τις εξετάσει όλες). */
+export const PREVIEW_SURFACE_KEYS: readonly PreviewSurface[] = ['light', 'dark'];
+
+/** Η όψη ενός τόνου πάνω σε μια επιφάνεια — ο ΜΟΝΟΣ τρόπος να πάρει ζωγράφος χρώμα ζώνης. */
+export function previewZoneStyle(tone: PreviewZoneTone, surface: PreviewSurface): PreviewZoneStyle {
+  return { ...PREVIEW_ZONE_STYLE[tone], stroke: PREVIEW_SURFACES[surface].stroke[tone] };
+}
 
 /** Όλοι οι τόνοι, στη σειρά ζωγραφικής: ό,τι θέλει προσοχή μπαίνει τελευταίο (από πάνω). */
 export const PREVIEW_ZONE_PAINT_ORDER: readonly PreviewZoneTone[] = ['existing', 'unpaired', 'accept', 'decide', 'reject'];

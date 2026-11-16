@@ -35,6 +35,7 @@
  * | 1 | `table-bound-state` (ADR-767/769/771 Φ.1) | ζωντάνια δεσμού + 2 εξαιρέσεις | ένταση · μοτίβο · **γωνία** |
  * | 2 | `basemap-correspondence` (ADR-782 §27.4) | σημείο σχεδίου · εκκρεμές · σημείο χάρτη | **σχήμα** · μοτίβο |
  * | 4 | `import-review-overlay` (ADR-923 §5.5.2 Β8) | εκκρεμεί · αποδεκτό · πρόβλημα · απορρίφθηκε — πάνω στο PDF | **μοτίβο** · **σύμβολο γωνίας** · χρώμα από tokens χαρτιού (`globals.css`) |
+ * | 5 | `preview-zone:<επιφάνεια>` (ADR-911 §Φ3β-palette) | αποδοχή · απόρριψη · απόφαση · υπάρχει · μονή γραμμή — μία παλέτα ανά επιφάνεια | **μοτίβο** · + **Κ3** αντίθεση στη δηλωμένη επιφάνεια |
  *
  * 🔑 **Η κρίση τρέχει ΑΝΑ ΟΙΚΟΓΕΝΕΙΑ.** Και οι δύο κανόνες έχουν νόημα μόνο ανάμεσα σε
  * καταστάσεις που ο χρήστης βλέπει **μαζί**: ένα κελί πίνακα και ένα σημάδι χάρτη δεν
@@ -48,8 +49,9 @@
  * δύο σημάδια **επικαλύπτονται εκ σχεδιασμού** όταν η προσαρμογή είναι τέλεια.
  *
  * ## ⚠️ ΤΙ ΔΕΝ ΚΑΝΕΙ
- * Δεν κρίνει **αντίθεση** των σημαδιών με το φόντο — αυτό είναι άλλη ερώτηση (1.4.11) και
- * άλλος ιδιοκτήτης (`adaptive-entity-color`). Δεν σαρώνει οικογένειες που δεν έχουν γραφτεί
+ * Δεν κρίνει **αντίθεση** των σημαδιών με φόντο που η οικογένεια **δεν δηλώνει** — εκεί είναι άλλη ερώτηση και άλλος
+ * ιδιοκτήτης (`adaptive-entity-color`). Το **Κ3** (WCAG 1.4.11) τρέχει **μόνο** όπου η οικογένεια δηλώνει `surface`
+ * (ADR-911 §Φ3β-palette: οι παλέτες ζωνών υπόσχονται ρητά «≥ 3:1 πάνω σε αυτή την επιφάνεια»). Δεν σαρώνει οικογένειες που δεν έχουν γραφτεί
  * ρητά στον αναγνώστη (`lib/contrast/state-marks.js`), ώστε μια νέα να **προστεθεί ρητά** αντί
  * να συμπεριληφθεί κατά λάθος και να γεννήσει θόρυβο.
  *
@@ -60,6 +62,7 @@
 'use strict';
 
 const { hexToRgb, worstCvdDeltaE, deltaE } = require('./lib/contrast/cvd');
+const { contrastRatio } = require('./lib/contrast/wcag-contrast');
 const { readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH } = require('./lib/contrast/state-marks');
 const { commitInput } = require('./lib/gate-input');
 
@@ -68,6 +71,12 @@ const { commitInput } = require('./lib/gate-input');
  * αυτά τα δύο χρώματα διακριτά σε αχρωματοψία;») θα ήταν δύο απαντήσεις.
  */
 const CVD_TARGET = 8.0;
+
+/**
+ * **Κ3 — WCAG 1.4.11** (Non-text Contrast): γραφικό που μεταφέρει πληροφορία ≥ 3:1 απέναντι στο διπλανό χρώμα. Κρίνεται
+ * **μόνο** σε οικογένεια που **δηλώνει** την επιφάνειά της (`family.surface`) — αλλού η πύλη δεν μαντεύει φόντο.
+ */
+const CONTRAST_TARGET = 3.0;
 
 const C = {
   red: (s) => `\x1b[31m${s}\x1b[0m`,
@@ -137,6 +146,39 @@ function checkColourPromise(marks, verbose) {
   return failures;
 }
 
+/** `#rrggbb` → `[r,g,b]` σε 0..255 (η κλίμακα του `wcag-contrast`)· `null` αν δεν είναι hex. */
+function hexToRgb255(hex) {
+  const rgb = hexToRgb(hex);
+  return rgb === null ? null : rgb.map((v) => Math.round(v * 255));
+}
+
+/**
+ * **Κ3 — WCAG 1.4.11.** Κάθε σημάδι οικογένειας με δηλωμένη επιφάνεια διαβάζεται πάνω της ≥ 3:1. Ανεξάρτητο από τα Κ1/Κ2:
+ * δύο τόνοι μπορεί να διακρίνονται τέλεια μεταξύ τους και να μη φαίνονται **καθόλου** στο φόντο (ADR-911 §Φ3β-palette:
+ * το παλιό πράσινο `#22c55e` έδινε 2,28:1 σε λευκό χαρτί).
+ */
+function checkSurfaceContrast(family) {
+  if (typeof family.surface !== 'string') return [];
+  const surface = hexToRgb255(family.surface);
+  if (surface === null) return [{ rule: 'Κ3', detail: `Ανεπίλυτη επιφάνεια: ${family.surface}` }];
+  const failures = [];
+  for (const mark of family.marks) {
+    const rgb = hexToRgb255(mark.hex);
+    if (rgb === null) {
+      failures.push({ rule: 'Κ3', detail: `Ανεπίλυτο χρώμα: ${mark.id}=${mark.hex}` });
+      continue;
+    }
+    const ratio = contrastRatio(rgb, surface);
+    if (ratio < CONTRAST_TARGET) {
+      failures.push({
+        rule: 'Κ3',
+        detail: `«${mark.id}» (${mark.hex}) πάνω στην επιφάνεια ${family.surface}: ${ratio.toFixed(2)}:1 (< ${CONTRAST_TARGET}:1, WCAG 1.4.11).`,
+      });
+    }
+  }
+  return failures;
+}
+
 function main() {
   if (process.env.SKIP_STATE_CHANNEL === '1') {
     console.log(C.dim('CHECK 3.41 — παρακάμφθηκε (SKIP_STATE_CHANNEL=1)'));
@@ -164,7 +206,8 @@ function main() {
       }
     }
     // 🔑 Ανά οικογένεια, ΠΟΤΕ όλα μαζί — δες `readStateMarkFamilies` για το γιατί.
-    for (const f of [...checkIdentity(family.marks), ...checkColourPromise(family.marks, verbose)]) {
+    const found = [...checkIdentity(family.marks), ...checkColourPromise(family.marks, verbose), ...checkSurfaceContrast(family)];
+    for (const f of found) {
       failures.push({ ...f, family: family.id });
     }
   }
@@ -173,6 +216,7 @@ function main() {
   if (failures.length === 0) {
     console.log(C.green(`  [PASS] Κ1 ταυτότητα      ${total} καταστάσεις σε ${families.length} οικογένειες, κάθε ζεύγος διακρίνεται χωρίς χρώμα`));
     console.log(C.green('  [PASS] Κ2 υπόσχεση       κάθε χρωματική διαφορά επιβιώνει σε protan + deutan'));
+    console.log(C.green(`  [PASS] Κ3 αντίθεση       κάθε σημάδι με δηλωμένη επιφάνεια ≥ ${CONTRAST_TARGET}:1 πάνω της (WCAG 1.4.11)`));
     console.log(C.green('\n✓ CHECK 3.41 PASS\n'));
     return 0;
   }
@@ -188,4 +232,4 @@ function main() {
 
 if (require.main === module) process.exit(main());
 
-module.exports = { checkIdentity, checkColourPromise, CVD_TARGET };
+module.exports = { checkIdentity, checkColourPromise, checkSurfaceContrast, CVD_TARGET, CONTRAST_TARGET };

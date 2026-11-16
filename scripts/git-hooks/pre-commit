@@ -780,7 +780,7 @@ register_area "Theme Classes Gate (CHECK 3.42)" \
 # οι δύο καταστάσεις ΔΗΛΩΝΟΥΝ διαφορετική γωνία, η δεύτερη ότι ο καμβάς την ΤΙΜΑ. Χωριστά,
 # καθεμία αφήνει ανοιχτό το μισό ελάττωμα.
 register_area "State Channel Gate (CHECK 3.41)" \
-    "^(scripts/check-state-channel-distinctness\.js$|scripts/lib/contrast/(cvd|state-marks)\.js$|src/subapps/dxf-viewer/config/color-config\.ts$|src/subapps/dxf-viewer/systems/region-preview/preview-zone-style\.ts$|src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state\.ts$|src/subapps/dxf-viewer/components/dxf-layout/(BasemapCorrespondenceMarksLeaf\.tsx|basemap-correspondence-marks\.ts)$)" \
+    "^(scripts/check-state-channel-distinctness\.js$|scripts/lib/contrast/(cvd|state-marks|wcag-contrast)\.js$|src/subapps/dxf-viewer/config/color-config\.ts$|src/subapps/dxf-viewer/systems/region-preview/preview-zone-style\.ts$|src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state\.ts$|src/subapps/dxf-viewer/components/dxf-layout/(BasemapCorrespondenceMarksLeaf\.tsx|basemap-correspondence-marks\.ts)$)" \
     "(check-state-channel-distinctness|table-bound-mark-corner|basemap-correspondence-marks)\.test\." \
     "npm run test:state-channel"
 

@@ -4,7 +4,8 @@ import React from 'react';
 import { largestBodyPieceIndex } from '../../../bim/walls/wall-painted-body';
 import {
   PREVIEW_ZONE_LABEL,
-  PREVIEW_ZONE_STYLE,
+  previewZoneStyle,
+  type PreviewSurface,
   type PreviewZoneTone,
 } from '../../../systems/region-preview/preview-zone-style';
 import type { Point2D, ViewTransform, Viewport } from '../../../rendering/types/Types';
@@ -17,6 +18,8 @@ export interface PreviewZoneShapeProps {
    */
   readonly pieces: readonly (readonly Point2D[])[];
   readonly tone: PreviewZoneTone;
+  /** Η επιφάνεια κάτω από τη ζώνη (`usePreviewSurface` στο φύλλο-γονέα): διαλέγει την παλέτα, όχι το μοτίβο. */
+  readonly surface: PreviewSurface;
   /** Ένα κείμενο ανά ζώνη· μπαίνει στο ΜΕΓΑΛΥΤΕΡΟ κομμάτι. Κενό ⇒ καμία ετικέτα. */
   readonly label?: string;
   /** Κείμενο hover (native SVG `<title>`) — π.χ. ο λόγος απόρριψης. */
@@ -41,6 +44,7 @@ const FOCUS_EXTRA_WIDTH = 2;
 export function PreviewZoneShape({
   pieces,
   tone,
+  surface,
   label = '',
   title,
   focused = false,
@@ -51,7 +55,7 @@ export function PreviewZoneShape({
   const drawable = pieces.filter((piece) => piece.length >= 3);
   if (drawable.length === 0) return null;
 
-  const style = PREVIEW_ZONE_STYLE[tone];
+  const style = previewZoneStyle(tone, surface);
   const screenPieces = drawable.map((piece) => worldRingToScreen(piece, transform, viewport));
   const labelAt = label ? pointsCentroid(screenPieces[largestBodyPieceIndex(drawable)] ?? []) : null;
 

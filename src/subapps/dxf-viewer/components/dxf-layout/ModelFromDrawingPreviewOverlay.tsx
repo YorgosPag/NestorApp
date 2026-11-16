@@ -18,8 +18,9 @@ import {
 } from '../../systems/model-from-drawing/opening-label-keys';
 import {
   PREVIEW_ZONE_PAINT_ORDER,
-  PREVIEW_ZONE_STYLE,
+  previewZoneStyle,
   type PreviewLineTone,
+  type PreviewSurface,
   type PreviewZoneTone,
 } from '../../systems/region-preview/preview-zone-style';
 // ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
@@ -27,6 +28,7 @@ import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore'
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { AssistantPreview, UnexplainedSegment } from '../../bim/model-from-drawing/assistant-preview';
 import type { OpeningPreview, OpeningPreviewZone } from '../../bim/model-from-drawing/opening-preview';
+import { usePreviewSurface } from '../../systems/region-preview/usePreviewSurface';
 import { PreviewZoneShape } from './preview-zone/PreviewZoneShape';
 import { worldRingToSvgPath } from './preview-zone/world-ring-path';
 import { chainLinkedSegments, coincidentEndLinks } from '@/lib/geometry/linked-segment-chains';
@@ -35,10 +37,12 @@ interface Props {
   readonly viewport: Viewport;
 }
 
-/** Ό,τι χρειάζεται κάθε στρώση για να ζωγραφίσει: ΕΝΑ transform, διαβασμένο από το φύλλο. */
+/** Ό,τι χρειάζεται κάθε στρώση για να ζωγραφίσει: ΕΝΑ transform και ΜΙΑ επιφάνεια, διαβασμένα από το φύλλο. */
 interface Projection {
   readonly transform: ViewTransform;
   readonly viewport: Viewport;
+  /** ADR-911 §Φ3β-palette — χαρτί υποβάθρου ή σκούρος καμβάς: διαλέγει την παλέτα, ποτέ το μοτίβο. */
+  readonly surface: PreviewSurface;
 }
 
 type Translate = (key: string) => string;
@@ -76,6 +80,7 @@ function SegmentStrokes(props: Projection & {
 }): React.ReactElement {
   // Η αλυσίδα αλλάζει μόνο με τα τμήματα (χαμηλόσυχνο store)· ανά transform γίνεται μόνο η προβολή (ADR-040).
   const chains = React.useMemo(() => chainLinkedSegments(props.segments, coincidentEndLinks(props.segments)), [props.segments]);
+  const style = previewZoneStyle(props.tone, props.surface);
   return (
     <>
       {chains.map((chain, i) => (
@@ -85,9 +90,9 @@ function SegmentStrokes(props: Projection & {
           data-count={chain.segmentIndices.length}
           d={worldRingToSvgPath(chain.points, props.transform, props.viewport, chain.closed)}
           fill="none"
-          stroke={PREVIEW_ZONE_STYLE[props.tone].stroke}
+          stroke={style.stroke}
           strokeWidth={SEGMENT_STROKE_PX}
-          strokeDasharray={PREVIEW_ZONE_STYLE[props.tone].dash ?? undefined}
+          strokeDasharray={style.dash ?? undefined}
           strokeLinecap="butt"
           strokeLinejoin="miter"
         />
@@ -101,7 +106,7 @@ function WallLayer(props: Projection & {
   readonly focusedKey: string | null;
   readonly t: Translate;
 }): React.ReactElement {
-  const { preview, focusedKey, t, transform, viewport } = props;
+  const { preview, focusedKey, t, transform, viewport, surface } = props;
   return (
     <>
       {inPaintOrder(preview.zones, (zone) => ASSISTANT_STATUS_TONE[zone.status], focusedKey).map((zone) => (
@@ -112,11 +117,12 @@ function WallLayer(props: Projection & {
           tone={ASSISTANT_STATUS_TONE[zone.status]}
           title={zone.reason ? t(zone.reason) : undefined}
           focused={zone.key === focusedKey}
+          surface={surface}
           transform={transform}
           viewport={viewport}
         />
       ))}
-      <SegmentStrokes segments={preview.unexplained} tone="unpaired" testId="mfd-unexplained" transform={transform} viewport={viewport} />
+      <SegmentStrokes segments={preview.unexplained} tone="unpaired" testId="mfd-unexplained" surface={surface} transform={transform} viewport={viewport} />
     </>
   );
 }
@@ -130,7 +136,7 @@ function OpeningLayer(props: Projection & {
   readonly focusedKey: string | null;
   readonly t: Translate;
 }): React.ReactElement {
-  const { preview, focusedKey, t, transform, viewport } = props;
+  const { preview, focusedKey, t, transform, viewport, surface } = props;
   const toneOf = (zone: OpeningPreviewZone): PreviewZoneTone => openingZoneTone(zone, preview.refusal !== undefined);
   return (
     <>
@@ -145,14 +151,15 @@ function OpeningLayer(props: Projection & {
             label={labelKey ? t(labelKey) : undefined}
             title={zone.reason ? t(OPENING_REASON_LABEL_KEY[zone.reason]) : undefined}
             focused={zone.key === focusedKey}
+            surface={surface}
             transform={transform}
             viewport={viewport}
           />
         );
       })}
-      <SegmentStrokes segments={preview.occupants} tone="decide" testId="mfd-opening-occupant" transform={transform} viewport={viewport} />
-      <SegmentStrokes segments={preview.loose} tone="decide" testId="mfd-opening-loose" transform={transform} viewport={viewport} />
-      <SegmentStrokes segments={preview.unexplained} tone="unpaired" testId="mfd-opening-unexplained" transform={transform} viewport={viewport} />
+      <SegmentStrokes segments={preview.occupants} tone="decide" testId="mfd-opening-occupant" surface={surface} transform={transform} viewport={viewport} />
+      <SegmentStrokes segments={preview.loose} tone="decide" testId="mfd-opening-loose" surface={surface} transform={transform} viewport={viewport} />
+      <SegmentStrokes segments={preview.unexplained} tone="unpaired" testId="mfd-opening-unexplained" surface={surface} transform={transform} viewport={viewport} />
     </>
   );
 }
@@ -175,6 +182,7 @@ export function ModelFromDrawingPreviewOverlay({ viewport }: Props): React.React
   const { phase, preview, openingPreview, focusedKey } = useModelFromDrawingState();
   // ADR-040 Phase XXII.B — leaf-level transform (κοστίζει μόνο όσο υπάρχει προεπισκόπηση).
   const transform = useTransformValue();
+  const surface = usePreviewSurface();
 
   if (phase === 'closed' || (!preview && !openingPreview)) return null;
 
@@ -184,9 +192,9 @@ export function ModelFromDrawingPreviewOverlay({ viewport }: Props): React.React
       xmlns="http://www.w3.org/2000/svg"
       data-testid="model-from-drawing-preview"
     >
-      {preview ? <WallLayer preview={preview} focusedKey={focusedKey} t={t} transform={transform} viewport={viewport} /> : null}
+      {preview ? <WallLayer preview={preview} focusedKey={focusedKey} t={t} surface={surface} transform={transform} viewport={viewport} /> : null}
       {openingPreview
-        ? <OpeningLayer preview={openingPreview} focusedKey={focusedKey} t={t} transform={transform} viewport={viewport} />
+        ? <OpeningLayer preview={openingPreview} focusedKey={focusedKey} t={t} surface={surface} transform={transform} viewport={viewport} />
         : null}
     </svg>
   );

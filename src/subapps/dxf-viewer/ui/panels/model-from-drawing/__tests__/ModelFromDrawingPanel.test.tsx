@@ -18,7 +18,12 @@ import { computeWallProposal, type WallProposal } from '../../../../bim/model-fr
 import { decisionAnchorsForKeys } from '../../../../bim/model-from-drawing/decision-anchors';
 import { NO_OPENING_REVIEW_DECISIONS } from '../../../../bim/model-from-drawing/opening-review';
 import fixture from '../../../../bim/model-from-drawing/__tests__/fixtures/floor-plan-lines.json';
-import { PREVIEW_ZONE_STYLE } from '../../../../systems/region-preview/preview-zone-style';
+import {
+  PREVIEW_ZONE_STYLE,
+  previewZoneStyle,
+  type PreviewZoneStyle,
+  type PreviewZoneTone,
+} from '../../../../systems/region-preview/preview-zone-style';
 import { ASSISTANT_STATUS_ORDER, ASSISTANT_STATUS_TONE } from '../../../../systems/model-from-drawing/assistant-status-tone';
 import type {
   ModelFromDrawingNotice,
@@ -135,6 +140,14 @@ function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: Im
   const all = (testId: string) => [...view.container.querySelectorAll(`[data-testid="${testId}"]`)];
   return { ...view, actions, q, all };
 }
+
+/**
+ * ADR-911 §Φ3β-palette — στο jsdom δεν υπάρχει `--canvas-background-dxf` (⇒ ο μαύρος καμβάς του SSoT) ούτε υπόβαθρο
+ * ⇒ ο ζωγράφος διαλέγει τη ΣΚΟΥΡΑ παλέτα. Αν αυτό αλλάξει, οι ισχυρισμοί χρώματος κοκκινίζουν — σκόπιμα.
+ */
+const ZONE_STYLE = Object.fromEntries(
+  (Object.keys(PREVIEW_ZONE_STYLE) as PreviewZoneTone[]).map((tone) => [tone, previewZoneStyle(tone, 'dark')]),
+) as Readonly<Record<PreviewZoneTone, PreviewZoneStyle>>;
 
 describe('ModelFromDrawingPanel — όψεις', () => {
   it('κλειστός βοηθός ⇒ κανένα πάνελ', () => {
@@ -266,7 +279,7 @@ describe('ModelFromDrawingPanel — υπόμνημα, κάλυψη, ειδοπο
     const rows = [...(q('mfd-legend') as HTMLElement).querySelectorAll('li')];
     expect(rows.map((r) => r.getAttribute('data-status'))).toEqual([...ASSISTANT_STATUS_ORDER]);
     rows.forEach((row) => {
-      const style = PREVIEW_ZONE_STYLE[ASSISTANT_STATUS_TONE[row.getAttribute('data-status') as keyof typeof ASSISTANT_STATUS_TONE]];
+      const style = ZONE_STYLE[ASSISTANT_STATUS_TONE[row.getAttribute('data-status') as keyof typeof ASSISTANT_STATUS_TONE]];
       const line = row.querySelector('line');
       expect(line?.getAttribute('stroke')).toBe(style.stroke);
       expect(line?.getAttribute('stroke-dasharray')).toBe(style.dash);
@@ -284,8 +297,8 @@ describe('ModelFromDrawingPanel — υπόμνημα, κάλυψη, ειδοπο
     expect(warned.querySelector('[role="status"]')?.textContent).toBe('modelFromDrawing.coverage.unexplainedHint');
     // §6.21.10 (Ε3) — το δείγμα του υπομνήματος είναι ο ΙΔΙΟΣ τόνος με τον καμβά: «μονή γραμμή», όχι απόρριψη.
     const swatch = warned.querySelector('[role="status"] line');
-    expect(swatch?.getAttribute('stroke')).toBe(PREVIEW_ZONE_STYLE.unpaired.stroke);
-    expect(swatch?.getAttribute('stroke-dasharray')).toBe(PREVIEW_ZONE_STYLE.unpaired.dash);
+    expect(swatch?.getAttribute('stroke')).toBe(ZONE_STYLE.unpaired.stroke);
+    expect(swatch?.getAttribute('stroke-dasharray')).toBe(ZONE_STYLE.unpaired.dash);
   });
 
   const NOTICES: readonly (readonly [ModelFromDrawingNotice, string])[] = [

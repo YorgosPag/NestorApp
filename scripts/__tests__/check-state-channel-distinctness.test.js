@@ -21,7 +21,7 @@ const { execFileSync } = require('child_process');
 const {
   readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH, REVIEW_MARKS_PATH, PREVIEW_STYLE_PATH,
 } = require('../lib/contrast/state-marks');
-const { checkIdentity, checkColourPromise, CVD_TARGET } = require('../check-state-channel-distinctness');
+const { checkIdentity, checkColourPromise, checkSurfaceContrast, CVD_TARGET } = require('../check-state-channel-distinctness');
 const { hexToRgb, worstCvdDeltaE } = require('../lib/contrast/cvd');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -409,8 +409,12 @@ describe('Μ11..Μ13 — plan-surface (επίπεδα βεβαιότητας + �
   const livePreview = liveFile(PREVIEW_STYLE_PATH);
 
   it('Μ18: η ιστορική σύγκρουση — η αναγνώριση ξαναπαίρνει κεχριμπαρί ⇒ Κ2 απέναντι στο «θέλει απόφαση» (ΔE 0,5)', () => {
-    const mutated = liveConfigSource().replace("  hex: '#1F77B4',\n  tiers: {", "  hex: '#E0A100',\n  tiers: {");
+    // ADR-911 §Φ3β-palette: το «απόφαση» έγινε amber-600 ⇒ η ιστορική σύγκρουση αναπαράγεται με ΚΑΙ τα δύο ιστορικά χρώματα.
+    const mutated = liveConfigSource()
+      .replace("  hex: '#1F77B4',\n  tiers: {", "  hex: '#E0A100',\n  tiers: {")
+      .replace("PREVIEW_ZONE_DECIDE: '#d97706'", "PREVIEW_ZONE_DECIDE: '#f59e0b'");
     expect(mutated).not.toBe(liveConfigSource());
+    expect(mutated).toContain("PREVIEW_ZONE_DECIDE: '#f59e0b'");
     const { failures } = runPlan(mutated);
     expect(rulesOf(failures)).toContain('Κ2');
     expect(failures.map((f) => f.detail).join(' ')).toMatch(/preview:decide/);
@@ -439,6 +443,86 @@ describe('Μ11..Μ13 — plan-surface (επίπεδα βεβαιότητας + �
     const ghost = livePreview.replace("= ['decide', 'unpaired'];", "= ['decide', 'ghost'];");
     expect(ghost).not.toBe(livePreview);
     expect(() => runPlan(liveConfigSource(), { previewStyle: ghost })).toThrow(/PREVIEW_ZONE_STYLE\.ghost/);
+  });
+});
+
+// ─── Μ22..Μ27 — preview-zone:<επιφάνεια> (ADR-911 §Φ3β-palette) ─────────────────
+
+/**
+ * Οι ζώνες προεπισκόπησης: ΜΙΑ οικογένεια ανά παλέτα, με δηλωμένη επιφάνεια ⇒ κρίνονται και με το Κ3 (≥ 3:1, WCAG 1.4.11).
+ * Κάθε μετάλλαξη αφαιρεί ένα κανάλι — και ξαναφέρνει μια ιστορική ή μετρημένη αποτυχία.
+ */
+describe('Μ22..Μ27 — preview-zone (δύο παλέτες, μία ανά επιφάνεια)', () => {
+  const livePreview = liveFile(PREVIEW_STYLE_PATH);
+  const runZones = (configSource, overrides = {}) => {
+    const families = readStateMarkFamilies(miniRepo(configSource, overrides)).filter((f) => f.id.startsWith('preview-zone:'));
+    const failures = families.flatMap((family) =>
+      [...checkIdentity(family.marks), ...checkColourPromise(family.marks, false), ...checkSurfaceContrast(family)]
+        .map((f) => ({ ...f, family: family.id })));
+    return { families, failures };
+  };
+  const tagsOf = (failures) => failures.map((f) => `${f.family}:${f.rule}`);
+
+  it('Μ0ε: το ζωντανό δέντρο — δύο οικογένειες (light · dark), 5 τόνοι η καθεμιά, με επιφάνεια — και περνούν Κ1+Κ2+Κ3', () => {
+    const { families, failures } = runZones(liveConfigSource());
+    expect(families.map((f) => f.id).sort()).toEqual(['preview-zone:dark', 'preview-zone:light']);
+    for (const family of families) {
+      expect(family.marks).toHaveLength(5);
+      expect(typeof family.surface).toBe('string');
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it('Μ22: η ιστορική παλέτα (πράσινο #22c55e · κόκκινο #ef4444) στο χαρτί ⇒ Κ3 (2,28:1) ΚΑΙ Κ2 (7,4)', () => {
+    const mutated = liveConfigSource()
+      .replace("PREVIEW_ZONE_ACCEPT: '#0f766e'", "PREVIEW_ZONE_ACCEPT: '#22c55e'")
+      .replace("PREVIEW_ZONE_REJECT: '#b91c1c'", "PREVIEW_ZONE_REJECT: '#ef4444'");
+    expect(mutated).not.toBe(liveConfigSource());
+    const tags = tagsOf(runZones(mutated).failures);
+    expect(tags).toEqual(expect.arrayContaining(['preview-zone:light:Κ2', 'preview-zone:light:Κ3']));
+    expect(tags.filter((t) => t.startsWith('preview-zone:dark'))).toEqual([]);
+  });
+
+  it('Μ23: η slate-700 «υπάρχει» στον ΜΑΥΡΟ καμβά ⇒ Κ3 (2,03:1) — ο λόγος που υπάρχουν δύο παλέτες', () => {
+    const mutated = liveConfigSource().replace("PREVIEW_ZONE_EXISTING_ON_DARK: '#94a3b8'", "PREVIEW_ZONE_EXISTING_ON_DARK: '#334155'");
+    expect(mutated).not.toBe(liveConfigSource());
+    const { failures } = runZones(mutated);
+    expect(tagsOf(failures)).toContain('preview-zone:dark:Κ3');
+    expect(failures.map((f) => f.detail).join(' ')).toMatch(/preview:existing/);
+  });
+
+  it('Μ24: δύο τόνοι με το ΙΔΙΟ μοτίβο ⇒ Κ1 σε ΚΑΘΕ παλέτα (το μοτίβο είναι κοινό, όχι ανά επιφάνεια)', () => {
+    const mutated = livePreview.replace("reject: { strokeWidth: 2, dash: '2 4'", "reject: { strokeWidth: 2, dash: '8 4'");
+    expect(mutated).not.toBe(livePreview);
+    const { failures } = runZones(liveConfigSource(), { previewStyle: mutated });
+    const k1 = [...new Set(failures.filter((f) => f.rule === 'Κ1').map((f) => f.family))].sort();
+    expect(k1).toEqual(['preview-zone:dark', 'preview-zone:light']);
+  });
+
+  it('Μ25: σκούρα «απόφαση» πορτοκαλί (#f97316) κοντά στην «απόρριψη» ⇒ Κ2 μόνο στη σκούρα παλέτα', () => {
+    const mutated = liveConfigSource().replace("PREVIEW_ZONE_DECIDE_ON_DARK: '#fbbf24'", "PREVIEW_ZONE_DECIDE_ON_DARK: '#f97316'");
+    expect(mutated).not.toBe(liveConfigSource());
+    const tags = tagsOf(runZones(mutated).failures);
+    expect(tags).toContain('preview-zone:dark:Κ2');
+    expect(tags.filter((t) => t.startsWith('preview-zone:light'))).toEqual([]);
+  });
+
+  it('Μ26: επιφάνεια που δεν λύνεται, ή καμία παλέτα ⇒ σφάλμα, ΠΟΤΕ σιωπηλό πράσινο', () => {
+    const noSurface = livePreview.replace('surface: UI_COLORS.CANVAS_BACKGROUND,', 'surface: UI_COLORS.NO_SUCH_COLOR,');
+    expect(noSurface).not.toBe(livePreview);
+    expect(() => runZones(liveConfigSource(), { previewStyle: noSurface })).toThrow(/PREVIEW_SURFACES\.dark/);
+    const none = livePreview.replace('export const PREVIEW_SURFACES = {', 'const PREVIEW_SURFACES_DISABLED = {');
+    expect(none).not.toBe(livePreview);
+    expect(() => runZones(liveConfigSource(), { previewStyle: none })).toThrow(/PREVIEW_SURFACES/);
+  });
+
+  it('Μ27: οι γραμμές του βοηθού στη σκούρα παλέτα κρίνονται ΚΑΙ μαζί με την αναγνώριση (plan-surface:dark)', () => {
+    const solid = livePreview.replace("dash: '8 3 1.5 3 1.5 3'", 'dash: null');
+    expect(solid).not.toBe(livePreview);
+    const family = readStateMarkFamilies(miniRepo(liveConfigSource(), { previewStyle: solid })).find((f) => f.id === 'plan-surface:dark');
+    expect(family).toBeDefined();
+    expect(rulesOf(checkIdentity(family.marks))).toContain('Κ1');
+    expect(checkIdentity(family.marks).map((f) => f.detail).join(' ')).toMatch(/preview:unpaired/);
   });
 });
 

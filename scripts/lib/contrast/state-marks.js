@@ -212,6 +212,9 @@ function readCorrespondenceMarks(source, primitives) {
  */
 const PLAN_LINE_CARRIER = 'plan-line';
 
+/** ADR-911 §Φ3β-palette — ο φορέας των τόνων μιας επικάλυψης προεπισκόπησης (ζώνες + γραμμές του βοηθού). */
+const PREVIEW_ZONE_CARRIER = 'zone';
+
 /**
  * Το μοτίβο **όπως ζωγραφίζεται** (`strokeDasharray` σε px), κανονικοποιημένο: κενό/απόν ⇒ `solid` (ο browser τότε
  * ζωγραφίζει συμπαγή). Συγκρίνεται το px και **όχι** το όνομα: οι πηγές ονομάζουν διαφορετικά («dashed» ↔ «6 4»), και
@@ -276,29 +279,61 @@ function readPlanRoleMarks(source, primitives) {
 }
 
 /**
- * ADR-929 §6.21.10 (Ε3) — οι **τόνοι γραμμής** του βοηθού «Μοντέλο από το σχέδιο» (`PREVIEW_LINE_TONES` · στυλ από το
- * `PREVIEW_ZONE_STYLE`), που ζωγραφίζονται στην **ίδια** επιφάνεια με τα τμήματα της αναγνώρισης. Διαβάζονται από το
- * **ίδιο** αρχείο και τα **ίδια** πεδία (`stroke` · `dash`) που διαβάζει ο ζωγράφος `SegmentStrokes`. Ο κατάλογος των
- * τόνων γραμμής είναι **κλειστός** (πίνακας-literal)· τόνος χωρίς στυλ, ή κενός κατάλογος ⇒ σφάλμα, ποτέ σιωπηλό πράσινο.
+ * Το `preview-zone-style.ts` **μία φορά**: οι παλέτες ανά επιφάνεια (`PREVIEW_SURFACES`), το μοτίβο ανά τόνο
+ * (`PREVIEW_ZONE_STYLE`) και ο κλειστός κατάλογος τόνων γραμμής (`PREVIEW_LINE_TONES`). Διαβάζονται τα **ίδια** πεδία που
+ * διαβάζει ο ζωγράφος (`previewZoneStyle` → `stroke` · `dash`). Κάθε κενό ή ανεπίλυτο ⇒ σφάλμα, ποτέ σιωπηλό πράσινο.
  */
-function readPreviewLineMarks(repoRoot, input, primitives) {
+function readPreviewStyle(repoRoot, input, primitives) {
   const text = input.readRequired(PREVIEW_STYLE_PATH);
   const source = ts.createSourceFile(path.join(repoRoot, PREVIEW_STYLE_PATH), text, ts.ScriptTarget.Latest, true);
-  const tones = resolveValue(findConstObject(source, 'PREVIEW_LINE_TONES'), primitives);
-  const styles = propsOf(findConstObject(source, 'PREVIEW_ZONE_STYLE'));
-  if (!Array.isArray(tones) || tones.length === 0) {
+  const lineTones = resolveValue(findConstObject(source, 'PREVIEW_LINE_TONES'), primitives);
+  if (!Array.isArray(lineTones) || lineTones.length === 0) {
     throw new Error(`PREVIEW_LINE_TONES δεν βρέθηκε ή είναι κενό στο ${PREVIEW_STYLE_PATH}`);
   }
-  return tones.map((tone) => {
-    const style = propsOf(styles.get(tone) ?? null);
-    if (style.size === 0) throw new Error(`PREVIEW_ZONE_STYLE.${tone} δεν βρέθηκε στο ${PREVIEW_STYLE_PATH}`);
-    return {
-      id: `preview:${tone}`,
-      carrier: PLAN_LINE_CARRIER,
-      variant: dashPattern(resolveValue(style.get('dash') ?? null, primitives)),
-      hex: resolveValue(style.get('stroke') ?? null, primitives),
-    };
-  });
+  const patterns = propsOf(findConstObject(source, 'PREVIEW_ZONE_STYLE'));
+  const surfaces = new Map();
+  for (const [id, node] of propsOf(findConstObject(source, 'PREVIEW_SURFACES'))) {
+    const spec = propsOf(node);
+    const surface = resolveValue(spec.get('surface') ?? null, primitives);
+    const strokes = new Map([...propsOf(spec.get('stroke') ?? null)].map(([tone, n]) => [tone, resolveValue(n, primitives)]));
+    if (typeof surface !== 'string' || strokes.size === 0) {
+      throw new Error(`PREVIEW_SURFACES.${id}: ανεπίλυτη επιφάνεια ή κενή παλέτα στο ${PREVIEW_STYLE_PATH}`);
+    }
+    surfaces.set(id, { surface, strokes });
+  }
+  if (surfaces.size === 0) throw new Error(`PREVIEW_SURFACES δεν βρέθηκε ή είναι κενό στο ${PREVIEW_STYLE_PATH}`);
+  return { lineTones, patterns, surfaces };
+}
+
+/** Ένα σημάδι τόνου προεπισκόπησης πάνω σε μια επιφάνεια: μοτίβο από το `PREVIEW_ZONE_STYLE`, χρώμα από την παλέτα. */
+function previewMark(style, surfaceId, tone, carrier, primitives) {
+  const pattern = propsOf(style.patterns.get(tone) ?? null);
+  if (pattern.size === 0) throw new Error(`PREVIEW_ZONE_STYLE.${tone} δεν βρέθηκε στο ${PREVIEW_STYLE_PATH}`);
+  const hex = style.surfaces.get(surfaceId).strokes.get(tone);
+  if (typeof hex !== 'string') throw new Error(`PREVIEW_SURFACES.${surfaceId}.stroke.${tone} δεν λύνεται στο ${PREVIEW_STYLE_PATH}`);
+  return { id: `preview:${tone}`, carrier, variant: dashPattern(resolveValue(pattern.get('dash') ?? null, primitives)), hex };
+}
+
+/**
+ * ADR-929 §6.21.10 (Ε3) — οι **τόνοι γραμμής** του βοηθού («απόφαση» · «μονή γραμμή») πάνω σε μια επιφάνεια: ζωγραφίζονται
+ * στην **ίδια** επιφάνεια με τα τμήματα της αναγνώρισης, άρα κρίνονται μαζί τους (`plan-surface[:<επιφάνεια>]`).
+ */
+function readPreviewLineMarks(style, surfaceId, primitives) {
+  return style.lineTones.map((tone) => previewMark(style, surfaceId, tone, PLAN_LINE_CARRIER, primitives));
+}
+
+/**
+ * ADR-911 §Φ3β-palette — **όλοι** οι τόνοι μιας παλέτας (ζώνες + γραμμές που ζωγραφίζονται μαζί στην ίδια επικάλυψη),
+ * φορέας `zone`, `variant` = το `strokeDasharray` σε px. Η οικογένεια δηλώνει και την `surface` της ⇒ το Κ3 κρίνει
+ * αντίθεση ≥ 3:1 (WCAG 1.4.11) **στη δική της** επιφάνεια. Ζώνες ↔ γραμμές αναγνώρισης **δεν** συγκρίνονται εδώ
+ * (άλλος φορέας· η εξαντλητική αναζήτηση 2026-11-16 έδειξε μηδέν λύσεις με αυτή την απαίτηση).
+ */
+function readPreviewZoneFamilies(style, primitives) {
+  return [...style.surfaces].map(([surfaceId, { surface, strokes }]) => ({
+    id: `preview-zone:${surfaceId}`,
+    surface,
+    marks: [...strokes.keys()].map((tone) => previewMark(style, surfaceId, tone, PREVIEW_ZONE_CARRIER, primitives)),
+  }));
 }
 
 /**
@@ -356,20 +391,21 @@ function readStateMarkFamilies(repoRoot = process.cwd(), input = undefined) {
   const gateInput = input ?? openGateInput({ root: repoRoot });
   const parsed = parseColorConfig(repoRoot, gateInput);
   const { source, primitives } = parsed;
+  const preview = readPreviewStyle(repoRoot, gateInput, primitives);
+  const planMarks = [...readPlanConfidenceMarks(source, primitives), ...readPlanRoleMarks(source, primitives)];
   return [
     { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot, gateInput, parsed) },
     { id: 'basemap-correspondence', marks: readCorrespondenceMarks(source, primitives) },
     // ADR-929 Φ5.4β + §6.21.10 — ΜΙΑ επιφάνεια, ΜΙΑ οικογένεια: επίπεδα βεβαιότητας + σημάδια ρόλου της αναγνώρισης
     // ΚΑΙ οι γραμμές του βοηθού που ζωγραφίζονται από πάνω τους (ως τις 2026-11-16 εκτός πύλης: «μέτρια» ↔ «απόφαση»
     // ΔE 0,5, «χαμηλή» ↔ «απόρριψη» 6,9, και η «ανεξήγητη» συμπαγής όπως η «υψηλή»).
-    {
-      id: 'plan-surface',
-      marks: [
-        ...readPlanConfidenceMarks(source, primitives),
-        ...readPlanRoleMarks(source, primitives),
-        ...readPreviewLineMarks(repoRoot, gateInput, primitives),
-      ],
-    },
+    // ADR-911 §Φ3β-palette — μία οικογένεια ΑΝΑ επιφάνεια: οι γραμμές του βοηθού παίρνουν την παλέτα του φόντου.
+    ...[...preview.surfaces.keys()].map((surfaceId) => ({
+      id: surfaceId === 'light' ? 'plan-surface' : `plan-surface:${surfaceId}`,
+      marks: [...planMarks, ...readPreviewLineMarks(preview, surfaceId, primitives)],
+    })),
+    // ADR-911 §Φ3β-palette — οι ζώνες προεπισκόπησης, μία οικογένεια ανά παλέτα, με αντίθεση στη δική της επιφάνεια (Κ3).
+    ...readPreviewZoneFamilies(preview, primitives),
     // ADR-923 §5.5.2 Β8 — χάρτης κατάστασης πάνω στο PDF της αναθεώρησης: άλλο αρχείο, άλλη επιφάνεια, δική της οικογένεια.
     { id: 'import-review-overlay', marks: readImportReviewMarks(repoRoot, gateInput) },
   ];

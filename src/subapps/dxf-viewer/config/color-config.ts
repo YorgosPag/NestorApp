@@ -223,14 +223,24 @@ export const UI_COLORS_BASE = {
   // vocabulary for every surface that lights a zone before a write (region/perimeter hover,
   // «Μοντέλο από το σχέδιο»). Colour is never the only carrier: each tone also has its own
   // line pattern in `systems/region-preview/preview-zone-style.ts` (WCAG 1.4.1).
-  PREVIEW_ZONE_ACCEPT: '#22c55e',   // will be created exactly as lit
-  PREVIEW_ZONE_REJECT: '#ef4444',   // will NOT be created — the reason is shown
-  PREVIEW_ZONE_DECIDE: '#f59e0b',   // needs a human decision — neither green nor red
-  PREVIEW_ZONE_EXISTING: '#94a3b8', // already there — nothing will be written
+  // ADR-911 §Φ3β-palette (2026-11-16) — TWO palettes, one per drawing surface, chosen at paint time
+  // (`systems/region-preview/preview-surface.ts`). Each holds WCAG 1.4.11 ≥ 3:1 against ITS surface and
+  // worst-CVD ΔE ≥ 8 between its own tones (CHECK 3.41 families `preview-zone:light` / `preview-zone:dark`).
+  // · LIGHT surface (paper of a PDF/image background, light canvas): Tailwind 700/600 shades.
+  PREVIEW_ZONE_ACCEPT: '#0f766e',   // teal-700  — will be created exactly as lit
+  PREVIEW_ZONE_REJECT: '#b91c1c',   // red-700   — will NOT be created — the reason is shown
+  PREVIEW_ZONE_DECIDE: '#d97706',   // amber-600 — needs a human decision — neither green nor red
+  PREVIEW_ZONE_EXISTING: '#334155', // slate-700 — already there — nothing will be written
   // ADR-929 §6.21.10 (Ε3) — a single line of the drawing with no second face: NOT a wall, NOT an error.
   // Violet = Atlassian «discovery» role (no error/warning meaning). Worst-CVD ΔE ≥ 10.0 against every
   // line mark of the shared plan surface (CHECK 3.41 family `plan-surface`).
   PREVIEW_ZONE_UNPAIRED: '#6d28d9',
+  // · DARK surface (the AutoCAD-black 2D canvas, `CANVAS_BACKGROUND`): same hues, lighter shades.
+  PREVIEW_ZONE_ACCEPT_ON_DARK: '#5eead4',   // teal-300
+  PREVIEW_ZONE_REJECT_ON_DARK: '#ef4444',   // red-500
+  PREVIEW_ZONE_DECIDE_ON_DARK: '#fbbf24',   // amber-400
+  PREVIEW_ZONE_EXISTING_ON_DARK: '#94a3b8', // slate-400
+  PREVIEW_ZONE_UNPAIRED_ON_DARK: '#8b5cf6', // violet-500
   PREVIEW_ZONE_LABEL_CASING: '#0b0f19', // dark casing under a zone label (legible on any plan)
 
   // Selection colors

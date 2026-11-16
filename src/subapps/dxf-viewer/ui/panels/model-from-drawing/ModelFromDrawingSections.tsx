@@ -24,7 +24,8 @@ import {
   ASSISTANT_STATUS_ORDER,
   ASSISTANT_STATUS_TONE,
 } from '../../../systems/model-from-drawing/assistant-status-tone';
-import { PREVIEW_ZONE_STYLE, type PreviewZoneTone } from '../../../systems/region-preview/preview-zone-style';
+import { previewZoneStyle, type PreviewZoneTone } from '../../../systems/region-preview/preview-zone-style';
+import { usePreviewSurface } from '../../../systems/region-preview/usePreviewSurface';
 
 /** Το `t` όπως το χρειάζεται το πάνελ: κλειδί + παράμετροι ICU. Το δίνει ο `useTranslation` του έργου. */
 export type Translate = (key: string, params?: Record<string, string | number>) => string;
@@ -42,9 +43,12 @@ const STATUS_LABEL_KEY: Readonly<Record<WallProposalStatus, string>> = {
 export const SECTION_TITLE = 'm-0 text-xs font-semibold text-foreground';
 export const MUTED = 'm-0 text-[11px] text-muted-foreground';
 
-/** Δείγμα γραμμής ενός τόνου — το ΙΔΙΟ χρώμα και μοτίβο με τον καμβά (ένα SSoT, δύο αναγνώστες). */
+/**
+ * Δείγμα γραμμής ενός τόνου — το ΙΔΙΟ χρώμα και μοτίβο με τον καμβά (ένα SSoT, δύο αναγνώστες). ADR-911 §Φ3β-palette:
+ * ρωτά την ΙΔΙΑ επιφάνεια με τις επικαλύψεις, ώστε το δείγμα να είναι το χρώμα που ο άνθρωπος βλέπει **τώρα** στο σχέδιο.
+ */
 export function ToneSwatch({ tone }: { readonly tone: PreviewZoneTone }): React.ReactElement {
-  const style = PREVIEW_ZONE_STYLE[tone];
+  const style = previewZoneStyle(tone, usePreviewSurface());
   return (
     <svg width="30" height="10" viewBox="0 0 30 10" className="shrink-0" aria-hidden="true">
       <line

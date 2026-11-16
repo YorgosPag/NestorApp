@@ -10,6 +10,7 @@ import {
 import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 import type { Viewport } from '../../rendering/types/Types';
 import { PreviewZoneShape } from './preview-zone/PreviewZoneShape';
+import { usePreviewSurface } from '../../systems/region-preview/usePreviewSurface';
 
 interface Props {
   viewport: Viewport;
@@ -36,6 +37,8 @@ export function RegionPerimeterPreviewOverlay({ viewport }: Props) {
   );
   // ADR-040 Phase XXII.B — leaf-level transform (κοστίζει μόνο όσο υπάρχει preview).
   const transform = useTransformValue();
+  // ADR-911 §Φ3β-palette — χαρτί υποβάθρου ή σκούρος καμβάς: διαλέγει την παλέτα (χαμηλόσυχνο).
+  const surface = usePreviewSurface();
 
   if (!preview || preview.zones.length === 0) return null;
 
@@ -58,6 +61,7 @@ export function RegionPerimeterPreviewOverlay({ viewport }: Props) {
             key={zi}
             pieces={[zone.polygon]}
             tone={rejected ? 'reject' : 'accept'}
+            surface={surface}
             label={reasonText ?? zone.label}
             title={reasonText}
             transform={transform}
