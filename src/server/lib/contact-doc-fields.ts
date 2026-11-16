@@ -61,12 +61,14 @@ function textOrNull(value: unknown): string | null {
 /**
  * Το **κύριο** τηλέφωνο της επαφής από το ωμό έγγραφο — ίδια σειρά με το τυποποιημένο `getPrimaryPhone`
  * (`types/contacts/helpers`): το σημειωμένο κύριο → το πρώτο → τα παλιά πεδία υπηρεσίας. `null` = κανένα.
+ * Εγγραφή λίστας: `number`, αλλιώς το παλιό `phone` (επαφές που έγραψε το ai-pipeline πριν από το ADR-326).
  */
 export function extractContactPrimaryPhone(data: FirebaseFirestore.DocumentData): string | null {
   const phones: readonly Record<string, unknown>[] = Array.isArray(data.phones) ? data.phones : [];
-  const numbers = phones.filter((p) => textOrNull(p?.number) !== null);
-  const chosen = numbers.find((p) => p.isPrimary === true) ?? numbers[0];
-  if (chosen) return textOrNull(chosen.number);
+  const entryNumber = (p: Record<string, unknown>): string | null => textOrNull(p?.number) ?? textOrNull(p?.phone);
+  const numbered = phones.filter((p) => entryNumber(p) !== null);
+  const chosen = numbered.find((p) => p.isPrimary === true) ?? numbered[0];
+  if (chosen) return entryNumber(chosen);
   return textOrNull(data.phone) ?? textOrNull(data.telephone) ?? textOrNull(data.centralPhone);
 }
 

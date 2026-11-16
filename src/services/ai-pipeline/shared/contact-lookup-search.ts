@@ -17,6 +17,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { extractContactPrimaryPhone } from '@/server/lib/contact-doc-fields';
 import { fuzzyGreekMatch } from './greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -83,14 +84,8 @@ function extractContactFields(data: FirebaseFirestore.DocumentData, docId: strin
     email = data.email as string;
   }
 
-  // Extract primary phone
-  let phone: string | null = null;
-  const phones = data.phones as Array<{ phone?: string; number?: string }> | undefined;
-  if (phones && phones.length > 0) {
-    phone = (phones[0].phone ?? phones[0].number ?? null) as string | null;
-  } else if (data.phone) {
-    phone = data.phone as string;
-  }
+  // Το κύριο τηλέφωνο — ο ΕΝΑΣ αναγνώστης ωμού εγγράφου (ADR-915 §45.15): σημειωμένο κύριο → πρώτο → παλιά πεδία.
+  const phone = extractContactPrimaryPhone(data);
 
   return {
     contactId: docId,

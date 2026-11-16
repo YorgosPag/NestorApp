@@ -16,6 +16,10 @@ describe('extractContactPrimaryPhone', () => {
     expect(extractContactPrimaryPhone({ phones: [{ number: '  ' }, { number: ' 2102222222 ' }] })).toBe('2102222222');
   });
 
+  it('παλιό σχήμα λίστας `{ phone }` (ai-pipeline πριν από το ADR-326) διαβάζεται', () => {
+    expect(extractContactPrimaryPhone({ phones: [{ phone: '6911111111' }] })).toBe('6911111111');
+  });
+
   it('χωρίς λίστα ⇒ τα παλιά πεδία υπηρεσίας, με τη σειρά τους', () => {
     expect(extractContactPrimaryPhone({ telephone: '2103333333', centralPhone: '2104444444' })).toBe('2103333333');
   });
