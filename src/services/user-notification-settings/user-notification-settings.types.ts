@@ -260,6 +260,11 @@ export interface PropertiesNotificationSettings {
    */
   documentIssuanceAnswers: boolean;
   /**
+   * ⏰ ADR-915 §45 Φ5 — η **προθεσμία παράδοσης** μιας ανάθεσης έκδοσης: «λήγει αύριο» (επαγγελματίας) · «καθυστερεί»
+   * (γραφείο, +1 και +7 ημέρες). Μία φορά ανά ορόσημο.
+   */
+  documentIssuanceDelivery: boolean;
+  /**
    * 🔑 ADR-916 §5.15 Φ-Δ.2 — «ο αγοραστής **απάντησε** στην πρόσκληση παράδοσης» (αποδοχή · άρνηση), με την επόμενη κίνηση.
    * Σε όποιον την έστειλε + στους διαχειριστές του χώρου.
    */
@@ -529,6 +534,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   caseExpiryAlerts: true,
   documentExpiryAlerts: true,
   documentIssuanceAnswers: true,
+  documentIssuanceDelivery: true,
   handoverInvitationAnswers: true,
   caseDocumentTransmitted: true,
   caseDocumentRequests: true,

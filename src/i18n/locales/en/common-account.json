@@ -170,6 +170,7 @@
           "caseDocumentRequests": "Document requests waiting on me in my conveyance cases",
           "ownershipVerificationDecided": "My ownership verification was decided",
           "documentIssuanceAnswers": "Owner and professional answers to document issuance assignments",
+          "documentIssuanceDelivery": "Delivery deadlines of document issuance assignments (due tomorrow · late)",
           "handoverInvitationAnswers": "Buyer answers to handover invitations"
         },
         "tasks": {

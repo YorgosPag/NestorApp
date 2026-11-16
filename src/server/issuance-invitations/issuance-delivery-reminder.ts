@@ -23,7 +23,6 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
-import { readEngagementForSubject } from '@/lib/auth/engagement-read';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { issuanceKeyOf, issuanceStateOf, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
@@ -39,7 +38,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { trimmedStringOrNull } from '@/lib/type-guards';
 import { addressInWorkspace } from '@/lib/workspace/workspace-address';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
-import { latestIssuanceSpaceInvitations } from '@/server/engagement-invitations/engagement-invitation-issue';
 import { deliverInvitationEmail, type InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 import { zonedParts } from '@/server/notifications/email-delivery-clock';
 import { caseEngagementChangedDestination } from '@/services/conveyance/conveyance-engagement-notifier';
@@ -50,6 +48,8 @@ import { readDueDeliveryReminders, recordDeliveryReminder } from '@/services/doc
 import { buildIssuanceEmail } from '@/services/email-templates/issuance-invitation-email';
 import { DEFAULT_NOTIFICATION_TIMEZONE } from '@/services/user-notification-settings/user-notification-settings.types';
 
+import { activeIssuanceEngagementOf, type ActiveIssuanceEngagement } from './issuance-active-engagement';
+import { announceDeliveryMilestone } from './issuance-delivery-notifier';
 import type { IssuanceReminderSweepReport } from './issuance-invitation-reminder';
 import { inviteeEmailOf, readOwnAssignment } from './issuance-space-invite';
 
@@ -72,25 +72,17 @@ function acceptedRecordOf(registry: DocumentRegistryResponse, propertyId: string
 }
 
 /**
- * Ο χώρος του επαγγελματία, ως **απόλυτος** σύνδεσμος — μόνο αν μπήκε (η κάρτα το λέει ήδη) **και** η συμμετοχή του είναι
- * ενεργή. Ο προορισμός είναι ο ΙΔΙΟΣ με τις ειδοποιήσεις συμμετοχής (σπίτι της συμμετοχής, όχι του γραφείου). Ποτέ δεν
- * πετά: χωρίς βεβαιότητα ⇒ `null` ⇒ μήνυμα χωρίς σύνδεσμο.
+ * Ο χώρος του επαγγελματία, ως **απόλυτος** σύνδεσμος. Ο προορισμός είναι ο ΙΔΙΟΣ με τις ειδοποιήσεις συμμετοχής (σπίτι
+ * της συμμετοχής, όχι του γραφείου). Χωρίς βεβαιότητα ⇒ `null` ⇒ μήνυμα χωρίς σύνδεσμο.
  */
-async function spaceLinkOf(db: Firestore, assignment: DocumentIssuanceAssignment, registry: DocumentRegistryResponse, nowIso: string): Promise<string | null> {
-  if (registry.issuanceSpaces?.[issuanceKeyOf(assignment.propertyId, assignment.documentKind)]?.kind !== 'entered') return null;
+async function spaceLinkOf(engagement: ActiveIssuanceEngagement | null): Promise<string | null> {
+  if (engagement === null) return null;
   try {
-    const latest = (await latestIssuanceSpaceInvitations(db, assignment.companyId, nowIso)).byAssignment.get(assignment.id);
-    if (latest === undefined || latest.resolvedByUid === null) return null;
-    const read = await readEngagementForSubject(db, {
-      hostCompanyId: assignment.companyId, projectId: latest.projectId, uid: latest.resolvedByUid,
-      subject: { kind: 'document_issuance', assignmentId: assignment.id },
-    });
-    if (read.outcome !== 'found' || read.engagement === null || read.engagement.state !== 'active') return null;
-    const destination = await caseEngagementChangedDestination(read.engagement);
+    const destination = await caseEngagementChangedDestination(engagement);
     const path = destination.actions[0]?.url;
     return path === undefined ? null : publicUrl(await addressInWorkspace(destination.workspace, path));
   } catch (error: unknown) {
-    logger.warn('Ο σύνδεσμος του χώρου δεν βρέθηκε — υπενθύμιση χωρίς σύνδεσμο', { assignmentId: assignment.id, error: error instanceof Error ? error.message : String(error) });
+    logger.warn('Ο σύνδεσμος του χώρου δεν βρέθηκε — υπενθύμιση χωρίς σύνδεσμο', { engagementId: engagement.id, error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -108,7 +100,7 @@ async function deliverDeliveryReminder(db: Firestore, subject: ReminderSubject):
   const email = await inviteeEmailOf(db, assignment);
   if (email === null) return 'no-email';
   const [spaceLink, officeName] = await Promise.all([
-    spaceLinkOf(db, assignment, registry, now.toISOString()),
+    activeIssuanceEngagementOf(db, assignment, registry, now.toISOString()).then(spaceLinkOf),
     readWorkspaceName(assignment.companyId).then(trimmedStringOrNull, () => null),
   ]);
   const dueOn = issuanceDeliveryOf(record)?.dueOn ?? null;
@@ -143,6 +135,8 @@ async function settle(db: Firestore, assignment: DocumentIssuanceAssignment, reg
   if (verdict.kind === 'wait') return 'waiting';
   const retire = async (): Promise<Settled> => { await recordDeliveryReminder(db, targetOf(assignment), { kind: 'retired', dueAt: verdict.dueAt }); return 'retired'; };
   if (verdict.kind === 'retire' || record === null) return retire();
+  // §45 Φ5 — το ορόσημο (αύριο · +1 · +7) στον σωστό αποδέκτη, με τον ρυθμό των υπενθυμίσεων· μία φορά ανά ορόσημο (`eventId`).
+  await announceDeliveryMilestone(db, { assignment, registry, record, now });
   const outcome = await deliverDeliveryReminder(db, { assignment, registry, record, now });
   if (outcome === 'no-email') {
     logger.warn('Υπενθύμιση παράδοσης χωρίς διεύθυνση — το πρόγραμμα αποσύρεται', { assignmentId: assignment.id });

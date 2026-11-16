@@ -994,6 +994,13 @@
     "body": "Do you want to save your changes before leaving?",
     "save": "Save"
   },
+  "documentIssuanceDelivery": {
+    "overdue": "Delivery is late — “{title}”",
+    "overdueBody": "{name}: {days, plural, one {# day} other {# days}} past the due date. Open the row to send a reminder or set a new date.",
+    "overdueBodyUnnamed": "{days, plural, one {# day} other {# days}} past the due date. Open the row to send a reminder or set a new date.",
+    "dueTomorrow": "Delivery is due tomorrow — “{title}”",
+    "dueTomorrowBody": "The agreed delivery date is tomorrow. Open the assignment space."
+  },
   "documentIssuanceAnswered": {
     "approved": "Assignment approved — «{title}»",
     "rejected": "Assignment not approved — «{title}»",
