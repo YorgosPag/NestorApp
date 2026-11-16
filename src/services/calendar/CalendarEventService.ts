@@ -3,8 +3,8 @@
  * ENTERPRISE: CALENDAR EVENT SERVICE
  * =============================================================================
  *
- * Merges Tasks + Appointments (+ ADR-915 §45 Φ4: delivery due dates of open document-issuance assignments, read-only)
- * into a unified CalendarEvent[] for the calendar UI.
+ * Merges Tasks + Appointments (+ ADR-915 §45 Φ4: delivery due dates of open document-issuance assignments, read-only;
+ * + §45.19 Φ6β: the user's own open items as a professional in other offices, read-only) into a unified CalendarEvent[].
  *
  * Data Flow:
  *   Firestore tasks → TasksRepository.getAll() → CrmTask[]
@@ -18,8 +18,14 @@
 
 import { TasksRepository } from '@/services/crm/tasks/repositories/TasksRepository';
 import { AppointmentsRepository } from './AppointmentsRepository';
-import { taskToCalendarEvent, appointmentToCalendarEvent, issuanceOpenItemToCalendarEvent } from './mappers';
+import {
+  taskToCalendarEvent,
+  appointmentToCalendarEvent,
+  issuanceOpenItemToCalendarEvent,
+  engagementOpenItemToCalendarEvent,
+} from './mappers';
 import { fetchIssuanceOpenItems } from '@/services/document-registry/document-registry.client';
+import { fetchMyOpenItems } from '@/services/conveyance/conveyance-engagement-gateway';
 import type { CalendarEvent } from '@/types/calendar-event';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -51,6 +57,25 @@ function getAppointmentsRepository(): AppointmentsRepository {
 // ============================================================================
 
 /**
+ * ADR-915 §45 — μια πηγή **εκτός CRM** (μόνο ανάγνωση): αποτυχία ⇒ προειδοποίηση και καμία εγγραφή (οι άλλες πηγές
+ * φαίνονται κανονικά)· `null` ⇒ η πηγή δεν ζητήθηκε σε αυτή την προβολή. Μόνο όσα πέφτουν στο εύρος.
+ */
+function readOnlyEvents<T>(
+  result: PromiseSettledResult<T | null>,
+  label: string,
+  start: Date,
+  end: Date,
+  toEvents: (value: T) => readonly (CalendarEvent | null)[],
+): CalendarEvent[] {
+  if (result.status === 'rejected') {
+    logger.warn(`${label} fetch failed`, { reason: result.reason });
+    return [];
+  }
+  if (result.value === null) return [];
+  return toEvents(result.value).filter((e): e is CalendarEvent => e !== null && e.start >= start && e.start <= end);
+}
+
+/**
  * Fetch calendar events (tasks + appointments) for a given date range.
  *
  * @param start - Start of date range
@@ -68,10 +93,12 @@ export async function getCalendarEvents(
 
   // Fetch in parallel — graceful degradation: if one source fails, show the others.
   // ADR-915 §45 Φ4 — οι αναθέσεις του μητρώου ανήκουν στο γραφείο, όχι σε χρήστη: μόνο στην προβολή «όλων».
-  const [taskResult, appointmentResult, issuanceResult] = await Promise.allSettled([
+  // §45.19 Φ6β — οι εκκρεμότητες του χρήστη ως επαγγελματία (ίδια πηγή με «Οι υποθέσεις μου»): ίδιος κανόνας προβολής.
+  const [taskResult, appointmentResult, issuanceResult, engagementResult] = await Promise.allSettled([
     userId ? tasks.getByUser(userId) : tasks.getAll(),
     appointments.getByDateRange(start, end),
     userId ? Promise.resolve(null) : fetchIssuanceOpenItems(),
+    userId ? Promise.resolve(null) : fetchMyOpenItems(),
   ]);
 
   const taskList = taskResult.status === 'fulfilled' ? taskResult.value : [];
@@ -83,13 +110,10 @@ export async function getCalendarEvents(
   if (appointmentResult.status === 'rejected') {
     logger.warn('Appointments fetch failed', { reason: appointmentResult.reason });
   }
-  if (issuanceResult.status === 'rejected') {
-    logger.warn('Document-issuance open items fetch failed', { reason: issuanceResult.reason });
-  }
-  const issuanceItems = issuanceResult.status === 'fulfilled' && issuanceResult.value !== null ? issuanceResult.value.items : [];
-  const issuanceEvents = issuanceItems
-    .map((item) => issuanceOpenItemToCalendarEvent(item, null))
-    .filter((e): e is CalendarEvent => e !== null && e.start >= start && e.start <= end);
+  const issuanceEvents = readOnlyEvents(issuanceResult, 'Document-issuance open items', start, end,
+    (value) => value.items.map((item) => issuanceOpenItemToCalendarEvent(item, null)));
+  const engagementEvents = readOnlyEvents(engagementResult, 'Engagement open items', start, end,
+    (value) => value.openItems.map(engagementOpenItemToCalendarEvent));
 
   // Map to CalendarEvent, filtering out entries without dates
   const taskEvents = taskList
@@ -106,7 +130,7 @@ export async function getCalendarEvents(
   );
 
   // Merge and sort by start date
-  const allEvents = [...filteredTaskEvents, ...appointmentEvents, ...issuanceEvents];
+  const allEvents = [...filteredTaskEvents, ...appointmentEvents, ...issuanceEvents, ...engagementEvents];
   allEvents.sort((a, b) => a.start.getTime() - b.start.getTime());
 
   return allEvents;

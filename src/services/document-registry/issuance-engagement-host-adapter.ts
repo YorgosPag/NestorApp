@@ -45,7 +45,7 @@ import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.
 import type { EngagementHostLine } from '@/types/contact-professional-link';
 import { SCOPE_OF_SUBJECT, type IssuanceEngagement } from '@/types/engagement';
 import type { IssuanceEngagementInvitation } from '@/types/engagement-invitation';
-import type { IssuanceAgreementView, IssuanceDeliveryGlance, MyIssuanceCard } from '@/types/my-engagements';
+import type { EngagementOpenItem, IssuanceAgreementView, IssuanceDeliveryGlance, MyIssuanceCard } from '@/types/my-engagements';
 import { readIssuanceAgreementParties } from './issuance-agreement-parties.server';
 import { issuanceRecordOf, parseIssuanceAssignment, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
 
@@ -204,6 +204,25 @@ async function listCards(db: Firestore, viewer: CasesViewer, history: readonly I
 }
 
 /**
+ * §45.19 Φ6β — η προθεσμία παράδοσης ως εκκρεμότητα του επαγγελματία: **μόνο** σε ενεργή συμμετοχή και αναληφθείσα
+ * ανάθεση με προθεσμία (ο ίδιος `deliveryGlanceOf` με την κάρτα — καμία δεύτερη αριθμητική).
+ */
+async function openItem(db: Firestore, uid: string, engagement: IssuanceEngagement, nowMs: number): Promise<EngagementOpenItem | null> {
+  if (!isEngaged(judge(engagement, uid, nowMs).verdict)) return null;
+  const assignment = await readAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId);
+  const glance = assignment ? deliveryGlanceOf(issuanceStageOf(assignment), assignment, nowMs) : null;
+  if (!assignment || !glance) return null;
+  const [propertyName, hostName] = await Promise.all([
+    propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
+    hostNameOf(engagement.hostCompanyId),
+  ]);
+  return {
+    engagementId: engagement.id, kind: 'document_issuance', due: 'delivery',
+    dueOn: glance.dueOn, countdown: glance.lateness, hostName, propertyName,
+  };
+}
+
+/**
  * ADR-915 §45.10 — ό,τι υποσχέθηκε η σελίδα προσφοράς «μετά την έγκριση» (Π-7): **μόνο** σε αναληφθείσα ανάθεση.
  * Πριν (προσφορά · απόφαση) ή μετά (ακύρωση) ⇒ `null`: ο φάκελος προσφοράς δεν διευρύνεται σιωπηλά.
  */
@@ -273,5 +292,6 @@ export const ISSUANCE_ENGAGEMENT_HOST: EngagementHostAdapter<IssuanceEngagementI
   announceUnanswered: (db, invitation) => announceSpace(db, invitation, 'space-pending'),
   listCards,
   view,
+  openItem,
   hostLine,
 };

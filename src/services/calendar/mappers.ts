@@ -16,6 +16,8 @@ import { normalizeToDate, normalizeCalendarDay } from '@/lib/date-local';
 import { appointmentStartAt } from '@/services/appointments/appointment-schedule';
 import { documentExpiryHref } from '@/lib/document-validity/document-registry-view';
 import type { IssuanceOpenItem } from '@/lib/document-validity/issuance-open-item';
+import { myCaseHref } from '@/lib/conveyance/conveyance-routes';
+import type { EngagementOpenItem } from '@/types/my-engagements';
 
 // ============================================================================
 // HELPERS
@@ -181,5 +183,35 @@ export function issuanceOpenItemToCalendarEvent(item: IssuanceOpenItem, companyI
     companyId,
     // Το πάνελ της γραμμής ανοίγει από τη διεύθυνση — η «Υπενθύμιση» είναι ήδη εκεί.
     href: documentExpiryHref(undefined, { doc: item.key }),
+  };
+}
+
+// ============================================================================
+// ADR-915 §45.19 Φ6β — ΕΚΚΡΕΜΟΤΗΤΑ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ («ΟΙ ΥΠΟΘΕΣΕΙΣ ΜΟΥ») → CALENDAR EVENT
+// ============================================================================
+
+/**
+ * Μια εκκρεμότητα του **ίδιου του χρήστη** σε ξένο γραφείο (παράδοση εγγράφου · υπογραφή) ως ολοήμερο γεγονός. Τίτλος
+ * από **δεδομένα** (ακίνητο · γραφείο)· ο σύνδεσμος ανοίγει τη σελίδα της συμμετοχής στον χώρο του γραφείου (η σελίδα
+ * ανακατευθύνει στο σπίτι της αν ζει αλλού). `null` αν η ημέρα δεν διαβάζεται.
+ */
+export function engagementOpenItemToCalendarEvent(item: EngagementOpenItem): CalendarEvent | null {
+  const start = normalizeToDate(item.dueOn);
+  if (!start) return null;
+  const title = [item.propertyName, item.hostName].filter((part): part is string => part !== null).join(' · ');
+  return {
+    id: `engagement:${item.engagementId}:${item.due}`,
+    title: title === '' ? item.engagementId : title,
+    start,
+    end: start,
+    allDay: true,
+    source: 'engagement',
+    eventType: item.due === 'delivery' ? 'document' : 'meeting',
+    entityId: item.engagementId,
+    description: '',
+    assignedTo: '',
+    status: item.countdown.tier,
+    companyId: null,
+    href: myCaseHref(item.engagementId, 'org'),
   };
 }

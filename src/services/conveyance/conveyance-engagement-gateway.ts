@@ -13,11 +13,11 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import { invitationLinkRefusalOf } from '@/lib/invitations/invitation-link-refusal';
-import { CASE_HOME_PARAM, type CaseHome } from '@/lib/conveyance/conveyance-routes';
+import { CASE_HOME_PARAM, ENGAGEMENTS_VIEW_PARAM, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import type { CaseActivityItem, CaseProfessionalSlot, MyCaseCard } from '@/types/conveyance-case';
-import type { EngagedView, MyEngagementCard } from '@/types/my-engagements';
+import type { EngagedView, EngagementOpenItem, MyEngagementCard } from '@/types/my-engagements';
 import type { ContributionSummary } from '@/types/conveyance-contribution';
 import { isEngagementVerdict, type ConsentBasis, type EngagementVerdict } from '@/types/engagement';
 import { ENGAGEMENT_INVITATION_REFUSALS, type EngagementInvitationRefusal } from '@/types/engagement-invitation';
@@ -71,8 +71,19 @@ function fromHome(home: CaseHome) {
   return { params: { [CASE_HOME_PARAM]: home } };
 }
 
-export function fetchMyCases(home: CaseHome): Promise<{ readonly cards: readonly MyEngagementCard[] }> {
+/** Οι κάρτες του χώρου της σελίδας + οι εκκρεμότητες από **όλα** τα γραφεία (`null` = δεν διαβάστηκαν, ADR-915 §45.19). */
+export interface MyCasesResponse {
+  readonly cards: readonly MyEngagementCard[];
+  readonly openItems: readonly EngagementOpenItem[] | null;
+}
+
+export function fetchMyCases(home: CaseHome): Promise<MyCasesResponse> {
   return apiClient.get(API_ROUTES.ENGAGEMENTS.MINE, fromHome(home));
+}
+
+/** ADR-915 §45.19 Φ6β — **μόνο** οι εκκρεμότητες του ανθρώπου (ημερολόγιο CRM): χωρίς χώρο σελίδας, χωρίς κάρτες. */
+export function fetchMyOpenItems(): Promise<{ readonly openItems: readonly EngagementOpenItem[] }> {
+  return apiClient.get(API_ROUTES.ENGAGEMENTS.MINE, { params: { [ENGAGEMENTS_VIEW_PARAM]: 'open-items' } });
 }
 
 /** «Αναλαμβάνω» (με δήλωση ιδιότητας, Ε-4) / «Δεν αναλαμβάνω». */

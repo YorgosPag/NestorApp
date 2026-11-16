@@ -22,7 +22,7 @@ import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import type { CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
 import type { Engagement, EngagementVerdict } from '@/types/engagement';
 import type { EngagementInvitation, EngagementInvitationDescription } from '@/types/engagement-invitation';
-import type { EngagedView, MyEngagementCard } from '@/types/my-engagements';
+import type { EngagedView, EngagementOpenItem, MyEngagementCard } from '@/types/my-engagements';
 import type { WorkspaceRef } from '@/types/workspace-membership';
 
 /** Ποιος απάντησε στην πρόσκληση — ο λογαριασμός **του Auth**. */
@@ -80,6 +80,12 @@ export interface EngagementHostAdapter<I extends EngagementInvitation, E extends
   listCards(db: Firestore, viewer: CasesViewer, history: readonly E[], nowMs: number): Promise<readonly MyEngagementCard[] | 'unknown'>;
   /** Ο χώρος μέσω της **δικής του** συμμετοχής — κρίση ανά αίτημα, θέση μετά την πρόσβαση. */
   view(db: Firestore, viewer: CasesViewer, engagement: E, nowMs: number): Promise<EngagedViewOutcome>;
+  /**
+   * ADR-915 §45.19 Φ6β — η **εκκρεμότητα** αυτής της συμμετοχής («Οι εκκρεμότητές μου» · ημερολόγιο): μία ημερομηνία
+   * με βαθμίδα. `null` ⇒ η συμμετοχή δεν είναι ενεργή, η υπόθεση έκλεισε ή δεν υπάρχει ημερομηνία. **Χωρίς** κρίση
+   * χώρου: η λίστα είναι ενοποιημένη από όλα τα γραφεία (Procore «My Open Items»).
+   */
+  openItem(db: Firestore, uid: string, engagement: E, nowMs: number): Promise<EngagementOpenItem | null>;
 
   // ── Η πλευρά του γραφείου ─────────────────────────────────────────────────
   /**

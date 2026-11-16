@@ -21,7 +21,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
 import type { IssuanceDeliveryStatus, IssuanceLateness } from '@/lib/document-validity/issuance-delivery-due';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
-import { DELIVERY_KEYS, DELIVERY_TIER_KEYS, DELIVERY_TIER_LOOK } from '@/components/document-registry/issuance-delivery-labels';
+import { DELIVERY_KEYS, DELIVERY_TIER_KEYS } from '@/components/document-registry/issuance-delivery-labels';
+import { DUE_COUNTDOWN_LOOK } from '@/components/shared/due-countdown-look';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
@@ -39,7 +40,7 @@ function tierText(t: Translate, lateness: IssuanceLateness): string {
 /** Η βαθμίδα ως σήμα: εικονίδιο + λέξη — το χρώμα είναι το τρίτο κανάλι, όχι το μόνο. */
 export function DeliveryLatenessBadge({ lateness }: { readonly lateness: IssuanceLateness }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
-  const look = DELIVERY_TIER_LOOK[lateness.tier];
+  const look = DUE_COUNTDOWN_LOOK[lateness.tier];
   const Icon = look.icon;
   return (
     <Badge variant={look.badge} className="gap-1 font-normal">

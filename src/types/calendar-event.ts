@@ -20,8 +20,10 @@ import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 /**
  * Tracks where a calendar event originated. ADR-915 §45 Φ4 — `document-issuance`: η προθεσμία παράδοσης μιας ανάθεσης
  * έκδοσης του μητρώου λήξεων (προβολή, ΟΧΙ εργασία· κάτοχος το μητρώο ⇒ μόνο ανάγνωση εδώ).
+ * ADR-915 §45.19 Φ6β — `engagement`: εκκρεμότητα του **ίδιου του χρήστη** ως επαγγελματία σε ξένο γραφείο (παράδοση ·
+ * υπογραφή), από το «Οι υποθέσεις μου»· κάτοχος ο οικοδεσπότης ⇒ μόνο ανάγνωση.
  */
-export type CalendarEventSource = 'task' | 'appointment' | 'document-issuance';
+export type CalendarEventSource = 'task' | 'appointment' | 'document-issuance' | 'engagement';
 
 /** Event type for color coding in calendar views */
 export type CalendarEventType =

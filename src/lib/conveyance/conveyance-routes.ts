@@ -42,6 +42,13 @@ export const CASE_HOMES = ['org', 'personal'] as const satisfies readonly CaseHo
 /** Η παράμετρος με την οποία η σελίδα **δηλώνει το είδος της** στον διακομιστή (ποτέ ταυτότητα χώρου). */
 export const CASE_HOME_PARAM = 'home' as const;
 
+/**
+ * ADR-915 §45.19 Φ6β — η **όψη** της λίστας (`GET /api/engagements?view=open-items`): μόνο οι εκκρεμότητες, για το
+ * ημερολόγιο CRM — χωρίς κάρτες και καταλόγους υπόθεσης. Απούσα ⇒ η πλήρης λίστα της σελίδας.
+ */
+export const ENGAGEMENTS_VIEW_PARAM = 'view' as const;
+export const ENGAGEMENTS_VIEWS = ['open-items'] as const;
+
 /** Το τμήμα των υποθέσεων **μέσα** στον χώρο του γραφείου — ΕΝΑ όνομα (και για το προσωπικό του δίδυμο). */
 export const OFFICE_CASES_SEGMENT = 'cases' as const;
 

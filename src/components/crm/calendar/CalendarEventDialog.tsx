@@ -49,6 +49,7 @@ function sourceLabel(t: ReturnType<typeof useTranslation>['t'], source: Calendar
     case 'task': return t('calendarPage.source.task');
     case 'appointment': return t('calendarPage.source.appointment');
     case 'document-issuance': return t('calendarPage.source.documentIssuance');
+    case 'engagement': return t('calendarPage.source.engagement');
   }
 }
 

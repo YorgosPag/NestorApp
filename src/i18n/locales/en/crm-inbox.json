@@ -36,7 +36,8 @@
     "source": {
       "task": "Task",
       "appointment": "Appointment",
-      "documentIssuance": "Document registry — document delivery"
+      "documentIssuance": "Document registry — document delivery",
+      "engagement": "My cases — open item"
     },
     "dialog": {
       "viewTitle": "Event Details",

@@ -67,7 +67,7 @@ To CRM system needs a full calendar view for users to manage their schedule. The
 **SSoT**: `src/types/calendar-event.ts`
 
 ```typescript
-export type CalendarEventSource = 'task' | 'appointment' | 'document-issuance'; // ADR-915 §45.16 — μόνο ανάγνωση
+export type CalendarEventSource = 'task' | 'appointment' | 'document-issuance' | 'engagement'; // ADR-915 §45.16 · §45.19 — μόνο ανάγνωση
 export type CalendarEventType = 'appointment' | 'call' | 'email' | 'meeting'
   | 'viewing' | 'follow_up' | 'document' | 'other';
 
@@ -283,6 +283,7 @@ sections.calendar.*         -> CRM landing page card
 | 2026-03-14 | Fix: CalendarCreateDialog date sync on every open (`[open, initialDate]` deps) | Claude Code |
 | 2026-03-14 | Fix: CalendarSidebar mini calendar `required` prop — prevent deselect in react-day-picker v9 | Claude Code |
 | 2026-11-16 | **Τρίτη πηγή `document-issuance`** (ADR-915 §45.16 Φ4): οι προθεσμίες παράδοσης των ανοιχτών αναθέσεων έκδοσης του μητρώου λήξεων, από `GET /api/document-registry/open-items`, **μέσα** στο `CalendarEventService` (`Promise.allSettled`, μόνο στην προβολή «όλων»). Νέο πεδίο `CalendarEvent.href` (πρωτότυπο εκτός CRM ⇒ «Άνοιγμα» εκεί). **Ένας** κανόνας `isCalendarEventEditable` (`services/calendar/calendar-event-editability.ts`, λίστα επιτρεπόμενων = μόνο `task`) αντικαθιστά τέσσερα αντίγραφα του `source === 'appointment'` — κάθε νέα πηγή γεννιέται μόνο για ανάγνωση. | Claude Code |
+| 2026-11-16 | **Τέταρτη πηγή `engagement`** (ADR-915 §45.19 Φ6β): οι εκκρεμότητες του **ίδιου του χρήστη** ως επαγγελματία σε ξένα γραφεία (παράδοση εγγράφου · υπογραφή μεταβίβασης), από `GET /api/engagements?view=open-items` — ίδια πηγή με το «Οι υποθέσεις μου». Μόνο στην προβολή «όλων», μόνο ανάγνωση (`isCalendarEventEditable`), σύνδεσμος στη σελίδα της συμμετοχής. Οι δύο πηγές εκτός CRM περνούν από **έναν** βοηθό `readOnlyEvents` (αποτυχία ⇒ προειδοποίηση, εύρος ημερών). | Claude Code |
 | 2026-03-14 | Feature: Edit button in CalendarEventDialog → opens TaskEditDialog for task-source events | Claude Code |
 | 2026-03-14 | Cleanup: TaskEditDialog remove hardcoded defaultValue Greek strings, add proper i18n keys | Claude Code |
 

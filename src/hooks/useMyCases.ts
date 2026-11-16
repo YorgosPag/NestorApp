@@ -23,7 +23,7 @@ import { actingForAfterAccept } from '@/lib/conveyance/acting-acceptance';
 import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer } from '@/lib/conveyance/declared-credential';
 import type { MyCaseCard } from '@/types/conveyance-case';
-import type { MyEngagementCard } from '@/types/my-engagements';
+import type { EngagementOpenItem, MyEngagementCard } from '@/types/my-engagements';
 
 export type RespondOutcome = { readonly ok: true } | { readonly ok: false; readonly rejection: RespondRejection };
 
@@ -33,8 +33,15 @@ export type MyCasesList =
   | { readonly state: 'error' }
   | { readonly state: 'ready'; readonly cards: readonly MyEngagementCard[] };
 
+/** ADR-915 §45.19 Φ6β — οι εκκρεμότητες, με **δική τους** αποτυχία: «δεν φορτώθηκαν» ≠ «καμία εκκρεμότητα». */
+export type MyOpenItemsList =
+  | { readonly state: 'loading' }
+  | { readonly state: 'error' }
+  | { readonly state: 'ready'; readonly items: readonly EngagementOpenItem[] };
+
 interface UseMyCasesReturn {
   readonly list: MyCasesList;
+  readonly openItems: MyOpenItemsList;
   readonly pending: ReadonlySet<string>;
   readonly respond: (engagementId: string, answer: CaseEngagementAnswer) => Promise<RespondOutcome>;
 }
@@ -53,6 +60,7 @@ function optimisticCard(card: MyCaseCard, answer: CaseEngagementAnswer): MyCaseC
 /** @param home το είδος χώρου της σελίδας (§15 Γ2) — η λίστα έρχεται ήδη φιλτραρισμένη από τον server. */
 export function useMyCases(home: CaseHome): UseMyCasesReturn {
   const [cards, setCards] = useState<readonly MyEngagementCard[]>([]);
+  const [openItems, setOpenItems] = useState<readonly EngagementOpenItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
@@ -61,7 +69,7 @@ export function useMyCases(home: CaseHome): UseMyCasesReturn {
   useEffect(() => {
     let alive = true;
     fetchMyCases(home)
-      .then((result) => { if (alive) { setCards(result.cards); setFailed(false); } })
+      .then((result) => { if (alive) { setCards(result.cards); setOpenItems(result.openItems); setFailed(false); } })
       .catch(() => { if (alive) setFailed(true); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
@@ -91,5 +99,7 @@ export function useMyCases(home: CaseHome): UseMyCasesReturn {
   }, [cards, replace]);
 
   const list: MyCasesList = loading ? { state: 'loading' } : failed ? { state: 'error' } : { state: 'ready', cards };
-  return { list, pending, respond };
+  const items: MyOpenItemsList = loading ? { state: 'loading' }
+    : failed || openItems === null ? { state: 'error' } : { state: 'ready', items: openItems };
+  return { list, openItems: items, pending, respond };
 }

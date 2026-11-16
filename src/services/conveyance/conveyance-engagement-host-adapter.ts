@@ -14,10 +14,14 @@ import 'server-only';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isEngaged } from '@/lib/auth/engagement-judge';
 import { acceptsEngagements, effectiveCaseState } from '@/lib/conveyance/case-state';
+import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { parseConveyanceCase } from '@/lib/conveyance/conveyance-case-schema';
 import { legalRoleAuthority } from '@/lib/conveyance/declared-credential';
+import { issuanceLatenessOf } from '@/lib/document-validity/issuance-delivery-due';
 import { createModuleLogger } from '@/lib/telemetry';
+import { trimmedStringOrNull } from '@/lib/type-guards';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
 import type {
   EngagementHostAdapter,
@@ -28,10 +32,12 @@ import type { EngagementHostLine } from '@/types/contact-professional-link';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import { TEMPLATE_OF_SUBJECT, type ConveyanceEngagement } from '@/types/engagement';
 import type { ConveyanceEngagementInvitation, EngagementInvitationChecklist } from '@/types/engagement-invitation';
+import type { EngagementOpenItem } from '@/types/my-engagements';
 import {
   checklistForRole,
   engagementChecklistViewer,
   getEngagedCaseView,
+  judge as judgeCaseEngagement,
   listCaseCards,
   readCaseOf,
 } from './conveyance-engagement-access.service';
@@ -129,6 +135,28 @@ async function hostLine(db: Firestore, engagement: ConveyanceEngagement): Promis
   return { propertyId: record?.subject.propertyId ?? null, propertyName: context?.propertyName ?? null, documentKind: null };
 }
 
+/**
+ * ADR-915 §45.19 Φ6β — η ημέρα υπογραφής ως εκκρεμότητα του επαγγελματία: **μόνο** σε ενεργή συμμετοχή, σε υπόθεση
+ * που ζει ακόμη (με τη φάση του ακινήτου, όπως `stillOpen`) και έχει ημερομηνία. Βαθμίδα από τον ίδιο κριτή ημερών.
+ */
+async function openItem(db: Firestore, uid: string, engagement: ConveyanceEngagement, nowMs: number): Promise<EngagementOpenItem | null> {
+  if (!isEngaged(judgeCaseEngagement(engagement, uid, nowMs).verdict)) return null;
+  const record = await readCaseOf(db, engagement);
+  if (!record || record.targetSigningDate === null) return null;
+  const [context, hostName] = await Promise.all([
+    loadConveyanceSubject(db, record.companyId, record.subject.propertyId),
+    readWorkspaceName(record.companyId).then(trimmedStringOrNull, () => null),
+  ]);
+  if (!acceptsEngagements(effectiveCaseState(record.storedState, context?.legalPhase))) return null;
+  return {
+    engagementId: engagement.id, kind: 'conveyance_case', due: 'signing',
+    dueOn: record.targetSigningDate,
+    countdown: issuanceLatenessOf(record.targetSigningDate, conveyanceToday(new Date(nowMs))),
+    hostName,
+    propertyName: context?.propertyName ?? null,
+  };
+}
+
 export const CONVEYANCE_ENGAGEMENT_HOST: EngagementHostAdapter<ConveyanceEngagementInvitation, ConveyanceEngagement> = {
   invitationSignal: (db, invitation) => invitationHostSignal(db, invitation),
   stillOpen,
@@ -139,5 +167,6 @@ export const CONVEYANCE_ENGAGEMENT_HOST: EngagementHostAdapter<ConveyanceEngagem
   announceUnanswered: async (db, invitation) => announceInvitationUnanswered(invitation, await propertyNameOf(db, invitation)),
   listCards: (db, viewer, history, nowMs) => listCaseCards(db, viewer, history, nowMs),
   view: (db, viewer, engagement, nowMs) => getEngagedCaseView(db, viewer, engagement.id, nowMs),
+  openItem,
   hostLine,
 };

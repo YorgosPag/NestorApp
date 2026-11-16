@@ -1,16 +1,14 @@
 /**
  * @fileoverview ADR-915 §45 Φ2 — **οι λέξεις και η όψη της προθεσμίας παράδοσης**: βαθμίδα καθυστέρησης (εικονίδιο +
  *   σήμα + λέξη — ποτέ μόνο χρώμα, CHECK 3.41) · προέλευση της προθεσμίας · διάλογος ορισμού/αλλαγής.
- * @related lib/document-validity/issuance-delivery-due.ts (οι ρίζες) · RegistryIssuanceDelivery.tsx · RegistryRowAction.tsx
+ * @related lib/document-validity/issuance-delivery-due.ts (οι ρίζες) · RegistryIssuanceDelivery.tsx · RegistryRowAction.tsx ·
+ *   components/shared/due-countdown-look.ts (η όψη της βαθμίδας — χωρίς κείμενα, ADR-915 §45.19)
  * @module components/document-registry/issuance-delivery-labels
  *
  * 🔑 **`Record<Ρίζα, …>`** (CHECK 3.73): νέα βαθμίδα ή προέλευση δεν μεταγλωττίζεται χωρίς λέξη και όψη.
  * ⚠️ Κυριολεκτικά κλειδιά (template σε σταθερά module): ο γεννήτορας του route slice τα **λύνει** στατικά.
  */
 
-import { CalendarCheck2, CalendarClock, CalendarX2, CalendarOff, type LucideIcon } from 'lucide-react';
-
-import type { BadgeVariantProps } from '@/components/ui/badge';
 import type { IssuanceDueSource, IssuanceLatenessTier } from '@/lib/document-validity/issuance-delivery-due';
 
 const K = 'document-registry:issuance.delivery.';
@@ -42,15 +40,6 @@ export const DELIVERY_TIER_KEYS: Readonly<Record<IssuanceLatenessTier, string>> 
   'due-soon': `${K}tier.due-soon`,
   'on-track': `${K}tier.on-track`,
   'no-due-date': `${K}tier.no-due-date`,
-};
-
-/** Η όψη κάθε βαθμίδας (Procore: Overdue κόκκινο · Due today/σύντομα κίτρινο · εντός γκρι). */
-export const DELIVERY_TIER_LOOK: Readonly<Record<IssuanceLatenessTier, { readonly icon: LucideIcon; readonly badge: NonNullable<BadgeVariantProps['variant']> }>> = {
-  overdue: { icon: CalendarX2, badge: 'error' },
-  'due-today': { icon: CalendarClock, badge: 'warning' },
-  'due-soon': { icon: CalendarClock, badge: 'warning' },
-  'on-track': { icon: CalendarCheck2, badge: 'muted' },
-  'no-due-date': { icon: CalendarOff, badge: 'outline' },
 };
 
 /** §45 Φ3 — το κουμπί «Υπενθύμιση» και η γραμμή «τελευταία / επόμενη». */

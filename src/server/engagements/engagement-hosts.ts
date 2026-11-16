@@ -15,6 +15,7 @@ import 'server-only';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import type { RegistryAuthorityId } from '@/constants/professional-registries';
+import { createModuleLogger } from '@/lib/telemetry';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import { CONVEYANCE_ENGAGEMENT_HOST } from '@/services/conveyance/conveyance-engagement-host-adapter';
 import type { CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
@@ -31,7 +32,7 @@ import {
   type EngagementInvitation,
   type EngagementInvitationDescription,
 } from '@/types/engagement-invitation';
-import type { MyEngagementCard } from '@/types/my-engagements';
+import type { EngagementOpenItem, MyEngagementCard } from '@/types/my-engagements';
 
 import type {
   EngagedViewOutcome,
@@ -39,6 +40,8 @@ import type {
   InvitationAnswer,
   InvitationAnswerer,
 } from './engagement-host-adapter';
+
+const logger = createModuleLogger('engagement-hosts');
 
 /** Ο οικοδεσπότης του είδους `K` — πάνω στην πρόσκληση **και** τη συμμετοχή **αυτού** του είδους. */
 type HostFor<K extends EngagementSubjectKind> = EngagementHostAdapter<
@@ -112,6 +115,30 @@ export async function engagementCardsOf(
   return parts
     .flatMap((part) => (part === 'unknown' ? [] : part))
     .sort((a, b) => b.offeredAt.localeCompare(a.offeredAt));
+}
+
+/**
+ * ADR-915 §45.19 Φ6β — **οι εκκρεμότητές του**, από **όλα** τα γραφεία (καμία κρίση χώρου — Procore «My Open Items»,
+ * Consolidated): κάθε οικοδεσπότης κρίνει τη δική του συμμετοχή· η κοντινότερη ημερομηνία πρώτη. Ένας οικοδεσπότης
+ * που πετά ⇒ `unknown` («δεν φορτώθηκε»), ποτέ μισή λίστα που μοιάζει πλήρης.
+ */
+export async function engagementOpenItemsOf(
+  db: Firestore,
+  uid: string,
+  engagements: readonly Engagement[],
+  nowMs: number,
+): Promise<readonly EngagementOpenItem[] | 'unknown'> {
+  const hosts = engagementHosts();
+  const items = await Promise.all(engagements.map((engagement) => (isIssuanceEngagement(engagement)
+    ? hosts.document_issuance.openItem(db, uid, engagement, nowMs)
+    : hosts.conveyance_case.openItem(db, uid, asConveyance(engagement), nowMs)))).catch((error: unknown) => {
+    logger.warn('Οι εκκρεμότητες του επαγγελματία δεν διαβάστηκαν', { error: String(error) });
+    return 'unknown' as const;
+  });
+  if (items === 'unknown') return 'unknown';
+  return items
+    .filter((item): item is EngagementOpenItem => item !== null)
+    .sort((a, b) => a.dueOn.localeCompare(b.dueOn) || a.engagementId.localeCompare(b.engagementId));
 }
 
 /** Ο χώρος μιας **δικής του** συμμετοχής, από τον οικοδεσπότη του είδους της. */

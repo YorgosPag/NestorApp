@@ -105,7 +105,7 @@ export async function locateOwnCaseHome(db: Firestore, uid: string, engagementId
   return placement.outcome === 'placed' ? { outcome: 'home', home: placement.home } : { outcome: 'unknown' };
 }
 
-function judge(engagement: ConveyanceEngagement, uid: string, nowMs: number): EngagementDecision {
+export function judge(engagement: ConveyanceEngagement, uid: string, nowMs: number): EngagementDecision {
   return decideEngagement({ engagement, uid, subject: engagement.subject, scope: SCOPE_OF_SUBJECT.conveyance_case, nowMs });
 }
 

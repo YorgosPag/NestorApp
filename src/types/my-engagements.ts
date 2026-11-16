@@ -17,7 +17,7 @@ import type { IssuanceLateness } from '@/lib/document-validity/issuance-delivery
 import type { InspectionContactRole } from '@/lib/document-validity/issuance-inspection-contact';
 import type { QuoteTotals } from '@/lib/document-validity/issuance-quote';
 import type { ActingForView, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
-import type { DeclaredCredential, EngagementState, EngagementVerdict } from '@/types/engagement';
+import type { DeclaredCredential, EngagementState, EngagementSubjectKind, EngagementVerdict } from '@/types/engagement';
 import type { ViewFreshness } from '@/types/server-view';
 
 /** Η κάρτα μιας **ανάθεσης έκδοσης** — ό,τι χρειάζεται για να αποφασίσει «ανοίγω;». */
@@ -49,6 +49,26 @@ export interface IssuanceDeliveryGlance {
 }
 
 export type MyEngagementCard = MyCaseCard | MyIssuanceCard;
+
+/** Τι ημερομηνία είναι η εκκρεμότητα — η παράδοση του εγγράφου ή η υπογραφή της μεταβίβασης. */
+export type EngagementOpenItemDue = 'delivery' | 'signing';
+
+/**
+ * ADR-915 §45.19 Φ6β — **μία εκκρεμότητα του επαγγελματία** (Procore «My Open Items»): ποια ημερομηνία, σε ποιο
+ * ακίνητο, για ποιο γραφείο. Παράγεται από τον οικοδεσπότη κάθε είδους (`openItem`, ADR-862 §5.3.11), **ποτέ**
+ * αποθηκεύεται. Η βαθμίδα από τον **ίδιο** κριτή ημερών με το μητρώο (`issuanceLatenessOf`).
+ * 🔒 Μόνο ημερομηνίες και ονόματα: καμία τιμή, κανένα κανάλι επικοινωνίας (Ε-9′).
+ */
+export interface EngagementOpenItem {
+  readonly engagementId: string;
+  readonly kind: EngagementSubjectKind;
+  readonly due: EngagementOpenItemDue;
+  /** ISO ημέρα. */
+  readonly dueOn: string;
+  readonly countdown: IssuanceLateness;
+  readonly hostName: string | null;
+  readonly propertyName: string | null;
+}
 
 /**
  * ADR-915 §45.15 — ο υπεύθυνος επικοινωνίας αυτοψίας που **όρισε ρητά** το γραφείο. Όνομα και τηλέφωνο είναι της

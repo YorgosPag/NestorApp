@@ -503,6 +503,36 @@
         "description": "You are taking on «{property}» as {role}. The parties to the case will see the registration details you declare, marked as «declared».",
         "cancel": "Cancel",
         "accepting": "Sending…"
+      },
+      "openItems": {
+        "title": "My open items",
+        "lead": "Everything with a date, from every office you work with — nearest first.",
+        "loading": "Loading your open items…",
+        "loadError": "Your open items could not be loaded. Please try again.",
+        "empty": "No open items with a date.",
+        "office": "Office: {office}",
+        "unnamedOffice": "unnamed",
+        "open": "Open",
+        "due": {
+          "delivery": "Document delivery by {date}",
+          "signing": "Signing on {date}"
+        },
+        "countdown": {
+          "delivery": {
+            "overdue": "{count, plural, one {# day overdue} other {# days overdue}}",
+            "due-today": "due today",
+            "due-soon": "{count, plural, one {due in # day} other {due in # days}}",
+            "on-track": "on track",
+            "no-due-date": "no deadline"
+          },
+          "signing": {
+            "overdue": "{count, plural, one {passed # day ago} other {passed # days ago}}",
+            "due-today": "today",
+            "due-soon": "{count, plural, one {in # day} other {in # days}}",
+            "on-track": "scheduled",
+            "no-due-date": "no date"
+          }
+        }
       }
     },
     "verdicts": {

@@ -31,6 +31,7 @@ import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import { AcceptEngagementDialog } from './AcceptEngagementDialog';
 import { MyCaseCardView } from './MyCaseCardView';
+import { MyOpenItemsSection } from './MyOpenItemsSection';
 import { IssuanceSurfaces } from '@/components/conveyance/issuance-surfaces';
 
 interface CaseListProps {
@@ -60,7 +61,7 @@ function CaseList({ home, cards, pending, onRespond }: CaseListProps) {
 export function MyCasesContent({ home }: { readonly home: CaseHome }) {
   const { t } = useTranslation(['conveyance']);
   const { error: notifyError } = useNotifications();
-  const { list, pending, respond } = useMyCases(home);
+  const { list, openItems, pending, respond } = useMyCases(home);
   /** Η πρόταση που αναλαμβάνεται — ο διάλογος δήλωσης ανοίγει **πριν** φύγει οτιδήποτε (Ε-4). */
   const [accepting, setAccepting] = useState<MyCaseCard | null>(null);
 
@@ -88,6 +89,8 @@ export function MyCasesContent({ home }: { readonly home: CaseHome }) {
   return (
     <section className="flex w-full flex-col gap-6">
       <PrivatePageHeader title={t('engagement.myCases.title')} lead={t('engagement.myCases.subtitle')} />
+      {/* ADR-915 §45.19 Φ6β — οι ημερομηνίες από ΟΛΑ τα γραφεία, πάνω από τις κάρτες αυτού του χώρου. */}
+      <MyOpenItemsSection state={openItems} home={home} />
       <OwnedListStatus
         state={list}
         loadingText={t('engagement.myCases.loading')}
