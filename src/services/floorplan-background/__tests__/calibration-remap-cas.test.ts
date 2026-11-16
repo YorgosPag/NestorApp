@@ -18,6 +18,7 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   }),
 }));
 
+import { FieldValue } from 'firebase-admin/firestore';
 import { CalibrationRemapService } from '../calibration-remap.service';
 import { BackgroundLockedError, CalibrationStaleError } from '../background-ownership';
 import type { BackgroundTransform, CalibrationData } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
@@ -114,5 +115,31 @@ describe('CalibrationRemapService.applyCalibration — τι γράφεται', (
     primeReads(row({ providerId: 'pdf-page' }));
     await CalibrationRemapService.applyCalibration(INPUT);
     expect(backgroundWrite()).not.toHaveProperty('scale');
+  });
+});
+
+describe('CalibrationRemapService.applyCalibration — §6.24 επιστροφή σε «χωρίς βαθμονόμηση» (αναίρεση)', () => {
+  const PREVIOUS_SCALE = { unitsPerMeter: 50, sourceUnit: 'pixel' as const, calibratedAt: 7, calibratedBy: 'user_earlier' };
+  const UNCALIBRATE = { ...INPUT, oldTransform: NEW, newTransform: OLD, calibration: null, scale: null };
+
+  it('γράφει θέση + `calibration: null` και ΣΒΗΝΕΙ την κλίμακα συλλογής όταν πριν δεν υπήρχε', async () => {
+    primeReads(row({ transform: NEW }));
+    await CalibrationRemapService.applyCalibration(UNCALIBRATE);
+    const write = backgroundWrite();
+    expect(write.transform).toEqual(OLD);
+    expect(write.calibration).toBeNull();
+    expect((write.scale as FieldValue).isEqual(FieldValue.delete())).toBe(true);
+  });
+
+  it('επαναφέρει την κλίμακα συλλογής ΟΠΩΣ ήταν πριν (αλλιώς ο όροφος θα έμοιαζε βαθμονομημένος)', async () => {
+    primeReads(row({ transform: NEW }));
+    await CalibrationRemapService.applyCalibration({ ...UNCALIBRATE, scale: PREVIOUS_SCALE });
+    expect(backgroundWrite().scale).toEqual(PREVIOUS_SCALE);
+  });
+
+  it('🔴 ίδιος έλεγχος σύγκρουσης: άλλη θέση στον server ⇒ CalibrationStaleError, καμία εγγραφή', async () => {
+    primeReads(row({ transform: { ...NEW, translateX: 42 } }));
+    await expect(CalibrationRemapService.applyCalibration(UNCALIBRATE)).rejects.toBeInstanceOf(CalibrationStaleError);
+    expect(mockTxUpdate).not.toHaveBeenCalled();
   });
 });

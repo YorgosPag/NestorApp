@@ -28,6 +28,9 @@ import { addDimensionsToScene } from '../../bim/scene/add-dimensions-to-scene';
 import { getDimStyleRegistry } from '../dimensions/dim-style-registry';
 import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { commitCalibration } from '../../floorplan-background/services/commit-calibration';
+import { recordCalibrationChange } from '../../floorplan-background/services/calibration-command';
+import { calibrationSnapshot, type CalibrationSnapshot } from '../../floorplan-background/geometry/calibration-snapshot';
+import type { ICommand } from '../../core/commands/interfaces';
 import {
   isPdfVectorScaleCurrent, pdfVectorScale, pdfVectorScaleCalibration, type PdfVectorScale, type PdfVectorScaleProposal,
 } from './pdf-vector-scale';
@@ -72,7 +75,8 @@ export interface PdfVectorImportCounts {
 
 /** Τι έγινε — ΠΑΝΤΑ με όνομα, ποτέ σιωπηλό μηδέν. */
 export type PdfVectorImportOutcome =
-  | ({ readonly kind: 'imported'; readonly calibrated: boolean } & PdfVectorImportCounts)
+  /** `undo` (ADR-929 §6.24): το βήμα της εισαγωγής στο ιστορικό — μαζί με τη βαθμονόμηση όταν `calibrated`. */
+  | ({ readonly kind: 'imported'; readonly calibrated: boolean; readonly undo: ICommand | null } & PdfVectorImportCounts)
   | { readonly kind: 'not-vector' }
   | { readonly kind: 'source-changed' }
   | { readonly kind: 'refused'; readonly reason: NamedLayerRefusal }
@@ -160,33 +164,49 @@ function writeImport(
   };
 }
 
-/** Διάβασε και γράψε (Δ7). `undoName` = η ήδη μεταφρασμένη ετικέτα του βήματος αναίρεσης. */
-export async function importFloorPdfVectors(target: PdfVectorImportTarget, undoName: string): Promise<PdfVectorImportOutcome> {
+/**
+ * Διάβασε και γράψε (Δ7). `undoName` = η ήδη μεταφρασμένη ετικέτα του βήματος αναίρεσης.
+ * ADR-929 §6.24 — `calibrationBefore`: η εισαγωγή ακολουθεί **ήδη σωσμένη** βαθμονόμηση· αυτή καταγράφεται **μέσα** στην
+ * ίδια ομάδα, άρα **ένα** Ctrl+Z αναιρεί εισαγωγή **και** βαθμονόμηση. Αν η εισαγωγή δεν γίνει, η βαθμονόμηση μένει
+ * αναιρέσιμη μόνη της (ποτέ βαθμονόμηση εκτός ιστορικού).
+ */
+export async function importFloorPdfVectors(
+  target: PdfVectorImportTarget, undoName: string, calibrationBefore: CalibrationSnapshot | null = null,
+): Promise<PdfVectorImportOutcome> {
   const read = await readFloorPdfVectors(target.floorId);
-  if ('kind' in read) return read;
+  if ('kind' in read) {
+    if (calibrationBefore) recordCalibrationChange(calibrationBefore, undoName);
+    return read;
+  }
   const reading = bindPdfDimensions(read.content);
-  return getGlobalCommandHistory().runAsSingleUndo(undoName, (): PdfVectorImportOutcome => {
+  const history = getGlobalCommandHistory();
+  const outcome = history.runAsSingleUndo(undoName, (): PdfVectorImportOutcome => {
+    if (calibrationBefore) recordCalibrationChange(calibrationBefore, undoName);
     const layers = ensureImportLayers(target, reading.bindings.length > 0);
     if (typeof layers === 'string') return { kind: 'refused', reason: layers };
     const replaced = removePreviousImport(target, read.sourceKey);
     const counts = writeImport(target, read, reading, layers, undoName);
-    return { kind: 'imported', calibrated: false, ...counts, replaced, skippedFills: read.content.skippedFills };
+    return { kind: 'imported', calibrated: false, undo: null, ...counts, replaced, skippedFills: read.content.skippedFills };
   });
+  // Το βήμα της ομάδας: το κουμπί «Αναίρεση» του αποτελέσματος = το ίδιο Ctrl+Z (`undoIfLast`).
+  return outcome.kind === 'imported' ? { ...outcome, undo: history.getLastCommand() } : outcome;
 }
 
 /**
- * Δ15 — **πρώτα** η βαθμονόμηση από τις γραμμένες τιμές, **μετά** η εισαγωγή πάνω στη νέα τοποθέτηση. Δύο πράξεις: η
- * κλίμακα είναι ιδιότητα του υποβάθρου (ο ΕΝΑΣ γραφέας `commitCalibration`, εκτός command history), η εισαγωγή είναι ένα
- * Ctrl+Z. Μπαγιάτικη κάρτα ⇒ τίποτα· βαθμονόμηση που δεν σώθηκε ⇒ καμία εισαγωγή.
+ * Δ15 — **πρώτα** η βαθμονόμηση από τις γραμμένες τιμές, **μετά** η εισαγωγή πάνω στη νέα τοποθέτηση. ADR-929 §6.24: η
+ * βαθμονόμηση **δεν** μένει πια εκτός command history — γίνεται μέρος του **ενός** βήματος αναίρεσης της εισαγωγής.
+ * Μπαγιάτικη κάρτα ⇒ τίποτα· βαθμονόμηση που δεν σώθηκε ⇒ καμία εισαγωγή.
  */
 export async function calibrateAndImportFloorPdfVectors(
   target: PdfVectorImportTarget, proposal: PdfVectorScaleProposal, undoName: string,
 ): Promise<PdfVectorImportOutcome> {
-  if (!isPdfVectorScaleCurrent(proposal, getFloorBackground(target.floorId) ?? null)) return { kind: 'calibration-stale' };
+  const background = getFloorBackground(target.floorId) ?? null;
+  if (!isPdfVectorScaleCurrent(proposal, background)) return { kind: 'calibration-stale' };
+  const before = calibrationSnapshot(target.floorId, background);
   const { transform, data } = pdfVectorScaleCalibration(proposal, Date.now());
   const saved = await commitCalibration(target.floorId, transform, data);
   if (saved.status !== 'saved') return { kind: 'calibration-failed' };
-  const outcome = await importFloorPdfVectors(target, undoName);
+  const outcome = await importFloorPdfVectors(target, undoName, before);
   return outcome.kind === 'imported' ? { ...outcome, calibrated: true } : outcome;
 }
 

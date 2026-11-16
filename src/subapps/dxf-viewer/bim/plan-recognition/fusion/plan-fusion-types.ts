@@ -249,6 +249,11 @@ export interface FusedDimension {
   readonly valueMm: number;
   /** Η ακρίβεια γραφής («3.50» ⇒ 10 mm), από το κείμενο όπως γράφτηκε. */
   readonly precisionMm: number;
+  /**
+   * ADR-929 §6.23 — η a priori τυπική απόκλιση της τιμής (γραφή ⊕ σχεδίαση, `dimensionSigmaMm`), η **ίδια** με το βάρος
+   * της στη συνόρθωση. Τη διαβάζει το ολικό τεστ συμφωνίας της βαθμονόμησης (`calibration-agreement.ts`).
+   */
+  readonly sigmaMm: number;
   readonly binding: DimensionBinding | null;
   /** Η απόσταση των παρειών **όπως σχεδιάστηκε**, στην επιλεγμένη κλίμακα. */
   readonly measuredMm: number | null;

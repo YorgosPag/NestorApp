@@ -9,6 +9,10 @@
  *   αρνείται (`stale`): ποτέ εγγραφή πάνω σε βάση που ο άνθρωπος δεν είδε.
  * - `syncKnownScale` — μετά από **κάθε** βαθμονόμηση (κάρτα ή διάλογος) η σύντηξη ξανατρέχει με τη νέα κλίμακα: η κάρτα
  *   γίνεται «επιβεβαιωμένη» και η πηγή γραμμών του βοηθού παίρνει νέα έκδοση. Ιδεμποτικό: ίδια κλίμακα ⇒ τίποτα.
+ * - `refinement` — §6.23: «Ευθυγράμμιση με τις διαστάσεις» πάνω σε επιβεβαιωμένη βαθμονόμηση, **οκνηρά** (μόνο όταν ο
+ *   άνθρωπος τη ζητήσει: θέλει δεύτερη σύντηξη).
+ * - §6.24 — κάθε «Εφαρμογή» είναι **βήμα του ενός ιστορικού αναίρεσης** (`changeCalibration` ⇒ `CalibrationChangeCommand`):
+ *   το `apply` επιστρέφει την εντολή, που αναιρεί το Ctrl+Z **και** το κουμπί «Αναίρεση» του μηνύματος.
  * - `hover` — ποια διάσταση δείχνει ο άνθρωπος στην κάρτα (επισήμανση στον καμβά).
  *
  * Zero React.
@@ -28,16 +32,23 @@ import {
   type FloorplanBackground,
 } from '../../floorplan-background/providers/types';
 import type { CalibrationCommitResult } from '../../floorplan-background/services/commit-calibration';
+import type { CalibrationChange, CalibrationChangeCommand } from '../../floorplan-background/services/calibration-command';
 import type { SceneUnits } from '../../utils/scene-units';
 import { planRecognitionStore, type PlanRecognitionRun } from './plan-recognition-store';
 import { planScaleReferences, type PlanScaleReferenceSet } from '../../bim/plan-recognition/fusion/scale-references';
 import {
   planScaleCard,
+  planScaleRefinement,
   planScaleSubject,
   scaleCardCalibration,
   type PlanScaleCard,
+  type PlanScaleCardInput,
+  type PlanScaleFailed,
   type PlanScaleProposal,
 } from './plan-scale-card';
+
+/** Η θέση της εικόνας **και** η βαθμονόμησή της (η προέλευση μπαίνει στην κάρτα). */
+export type PlanScalePlacement = RasterPlacement & Pick<FloorplanBackground, 'calibration'>;
 
 export interface PlanScaleControllerDeps<TSource> {
   /** Η σύντηξη μιας αναγνώρισης (καθαρή): ίδια με εκείνη της συνεδρίας. */
@@ -45,7 +56,8 @@ export interface PlanScaleControllerDeps<TSource> {
   /** Υιοθετεί νέα σύντηξη (store + νέα έκδοση πηγής γραμμών). */
   readonly adoptFusion: (run: PlanRecognitionRun, fusion: PlanFusionResult) => TSource;
   readonly background: (floorId: string) => FloorplanBackground | null;
-  readonly commit: (floorId: string, transform: BackgroundTransform, data: CalibrationData) => Promise<CalibrationCommitResult>;
+  /** Η μία πόρτα εγγραφής **με** καταγραφή στο ιστορικό αναίρεσης (§6.24, `changeCalibration`). */
+  readonly change: (floorId: string, transform: BackgroundTransform, data: CalibrationData, undoName: string) => Promise<CalibrationChange>;
   readonly now: () => number;
 }
 
@@ -57,6 +69,8 @@ interface PlanScaleApplyResult<TSource> {
   readonly overlaysSkipped: number;
   /** Νέα πηγή γραμμών όταν η σύντηξη ξανάτρεξε με τη νέα κλίμακα (`saved`). */
   readonly source: TSource | null;
+  /** §6.24 — το βήμα στο ιστορικό αναίρεσης (`saved` μόνο). */
+  readonly command: CalibrationChangeCommand | null;
 }
 
 const sameScale = (a: RasterPixelScale | null, b: RasterPixelScale | null): boolean =>
@@ -72,14 +86,27 @@ export function createPlanScaleController<TSource>(getDeps: () => PlanScaleContr
     return unknownScaleMemo.fusion;
   }
 
-  function card(placement: RasterPlacement, sceneUnits: SceneUnits): PlanScaleCard | null {
+  function cardInput(placement: PlanScalePlacement, sceneUnits: SceneUnits): PlanScaleCardInput | null {
     const { run, reading, fusion } = planRecognitionStore.get();
     if (!run || !fusion) return null;
-    return planScaleCard({
+    const { calibration } = placement;
+    return {
       fusion, reading, placement, sceneUnits,
       alignment: run.alignment,
+      origin: calibration ? calibration.origin ?? 'manual' : null,
       dimensionFusion: () => dimensionFusion(run, reading, fusion),
-    });
+    };
+  }
+
+  function card(placement: PlanScalePlacement, sceneUnits: SceneUnits): PlanScaleCard | null {
+    const input = cardInput(placement, sceneUnits);
+    return input === null ? null : planScaleCard(input);
+  }
+
+  /** §6.23 — η ευθυγράμμιση μιας επιβεβαιωμένης βαθμονόμησης, μόνο όταν ζητηθεί. */
+  function refinement(placement: PlanScalePlacement, sceneUnits: SceneUnits): PlanScaleProposal | PlanScaleFailed | null {
+    const input = cardInput(placement, sceneUnits);
+    return input === null ? null : planScaleRefinement(input);
   }
 
   /**
@@ -112,20 +139,21 @@ export function createPlanScaleController<TSource>(getDeps: () => PlanScaleContr
       && background !== null && transformsEqual(background.transform, proposal.basis.transform);
   }
 
-  async function apply(proposal: PlanScaleProposal): Promise<PlanScaleApplyResult<TSource>> {
+  /** `undoName` = η ήδη μεταφρασμένη ετικέτα του βήματος αναίρεσης (§6.24). */
+  async function apply(proposal: PlanScaleProposal, undoName: string): Promise<PlanScaleApplyResult<TSource>> {
     const floorId = planRecognitionStore.get().run?.floorId;
-    if (!floorId || !isCurrent(proposal, floorId)) return { status: 'stale', overlaysSkipped: 0, source: null };
+    if (!floorId || !isCurrent(proposal, floorId)) return { status: 'stale', overlaysSkipped: 0, source: null, command: null };
     const { transform, data } = scaleCardCalibration(proposal, getDeps().now());
-    const result = await getDeps().commit(floorId, transform, data);
+    const { result, command } = await getDeps().change(floorId, transform, data, undoName);
     // Και στη σύγκρουση ο ελεγκτής ακολουθεί ό,τι υιοθέτησε το store από τον διακομιστή (ιδεμποτικό).
     const source = result.status === 'failed' ? null : syncKnownScale(floorId);
-    return { status: result.status, overlaysSkipped: result.overlaysSkipped, source };
+    return { status: result.status, overlaysSkipped: result.overlaysSkipped, source, command };
   }
 
   function hover(textId: string | null): void {
     if (planRecognitionStore.get().scaleHoverTextId !== textId) planRecognitionStore.patch({ scaleHoverTextId: textId });
   }
 
-  return { card, references, apply, syncKnownScale, hover };
+  return { card, refinement, references, apply, syncKnownScale, hover };
 }
 

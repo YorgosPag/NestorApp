@@ -45,7 +45,7 @@ import { createPlanReadingReview, type PlanReadingReviewDeps } from './plan-read
 import { planReadingApi } from './plan-reading-api-client';
 import { createPlanScaleController, type PlanScaleControllerDeps } from './plan-scale-controller';
 import { createPlanSegmentMaskController, type PlanSegmentMaskDeps } from './plan-segment-mask-controller';
-import { commitCalibration } from '../../floorplan-background/services/commit-calibration';
+import { changeCalibration } from '../../floorplan-background/services/calibration-command';
 import { createExternalStore } from '../../stores/createExternalStore';
 import { createPlanOcrReader, type PlanOcrReader } from '../../bim/plan-recognition/ocr/plan-ocr-client';
 import { resolveOcrAssets } from '../../bim/plan-recognition/ocr/ocr-model-assets';
@@ -289,7 +289,7 @@ const DEFAULT_SCALE_DEPS: PlanScaleControllerDeps<RasterLineSource> = {
   fuse,
   adoptFusion,
   background: (floorId) => getFloorBackground(floorId) ?? null,
-  commit: commitCalibration,
+  change: changeCalibration,
   now: () => Date.now(),
 };
 let scaleDeps = DEFAULT_SCALE_DEPS;
@@ -378,7 +378,7 @@ export const planRecognitionSession = {
 
   /**
    * ADR-929 Φ5.3γ — η κάρτα κλίμακας από τις διαβασμένες διαστάσεις: `card` · `apply` (μόνο με ρητή πράξη, από τη μία
-   * πόρτα `commitCalibration`) · `syncKnownScale` (μετά από κάθε βαθμονόμηση) · `hover`.
+   * πόρτα `commitCalibration`, ως βήμα του ιστορικού αναίρεσης — §6.24) · `syncKnownScale` (μετά από κάθε βαθμονόμηση) · `hover`.
    */
   scale: scaleController,
 

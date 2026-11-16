@@ -112,6 +112,7 @@ function fuseOne(
     textId: target.dimension.textId,
     valueMm: target.dimension.valueMm,
     precisionMm: target.precisionMm,
+    sigmaMm: target.sigmaMm,
     binding,
     measuredMm: binding && pxPerMm ? binding.gapPx / pxPerMm : null,
     adjustedMm: adjustedPx !== null && pxPerMm ? adjustedPx / pxPerMm : null,

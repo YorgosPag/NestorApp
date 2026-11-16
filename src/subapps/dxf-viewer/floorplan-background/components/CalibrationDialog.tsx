@@ -31,7 +31,7 @@ import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor
 import { isCalibrationPickComplete, useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import { useCalibrationPreview, type CalibrationPreview } from '../hooks/useCalibration';
 import { buildCalibrationData, type CalibrationLengthDraft } from '../geometry/calibration-draft';
-import { commitCalibration } from '../services/commit-calibration';
+import { changeCalibration } from '../services/calibration-command';
 import { useAnnounceCalibration } from '../hooks/useAnnounceCalibration';
 import { CalibrationAlignToggle, CalibrationReferenceField, CalibrationSecondReference, CalibrationSummary } from './CalibrationDialogParts';
 
@@ -84,11 +84,14 @@ function useCalibrationDialogModel(levelManager: LevelSceneReader) {
   const lengths = useMemo(() => activeLengths(first, second, pointCount), [first, second, pointCount]);
   const preview = useCalibrationPreview(lengths, alignToAxis, sceneUnits);
   const announce = useAnnounceCalibration();
+  const { t } = useTranslation(['dxf-viewer-panels']);
   const apply = () => {
     if (!session || preview.status !== 'solved') return;
     const data = buildCalibrationData(preview.references, preview.solution, sceneUnits, alignToAxis, Date.now(), 'manual');
-    // Αισιόδοξα: εφαρμόζεται και κλείνει αμέσως· το μήνυμα λέει αν έμεινε (ADR-929 Φ5.2γ).
-    void commitCalibration(session.floorId, preview.solution.transform, data).then(announce);
+    // Αισιόδοξα: εφαρμόζεται και κλείνει αμέσως· το μήνυμα λέει αν έμεινε (ADR-929 Φ5.2γ). §6.24: βήμα του ιστορικού
+    // αναίρεσης — Ctrl+Z ή «Αναίρεση» στο μήνυμα επιτυχίας (και η αναίρεση μιας πρώτης βαθμονόμησης γυρίζει σε «χωρίς»).
+    void changeCalibration(session.floorId, preview.solution.transform, data, t(`${KEY}.undoName`))
+      .then(({ result, command }) => announce(result, command));
   };
   return { session, form, preview, apply };
 }

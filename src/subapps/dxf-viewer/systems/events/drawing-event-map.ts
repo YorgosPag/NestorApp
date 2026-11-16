@@ -406,4 +406,8 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   'canvas-restore-viewport': {
     transform: { scale: number; offsetX: number; offsetY: number };
   };
+  // ADR-929 §6.24 — η αναίρεση/επανάληψη μιας βαθμονόμησης ΔΕΝ έγινε: η κατάσταση του υποβάθρου άλλαξε στο μεταξύ (άλλη
+  // καρτέλα, άλλος χρήστης) — αναιρείς μόνο τη ΔΙΚΗ σου αλλαγή (Figma). `failed` = η εγγραφή απέτυχε στον server.
+  // Ακροατής: `hooks/notifications/calibration-history-notifications.ts` (toast).
+  'floorplan:calibration-history-skipped': { floorId: string; reason: 'changed-meanwhile' | 'failed' };
 }

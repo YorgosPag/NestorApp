@@ -232,6 +232,19 @@ export interface BackgroundScale {
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
 
+const BACKGROUND_SCALE_SOURCE_UNITS: readonly BackgroundScaleSourceUnit[] = ['mm', 'cm', 'm', 'pixel'];
+
+/**
+ * Έγκυρη κλίμακα συλλογής από το σύρμα: `unitsPerMeter > 0` και γνωστή μονάδα. Ένας έλεγχος για το `POST …/calibrate` και
+ * (ADR-929 §6.24) την αναίρεση βαθμονόμησης (`PATCH kind:'uncalibrate'`), που επαναφέρει την προηγούμενη κλίμακα.
+ */
+export function isBackgroundScale(v: unknown): v is BackgroundScale {
+  if (!v || typeof v !== 'object') return false;
+  const s = v as BackgroundScale;
+  return typeof s.unitsPerMeter === 'number' && Number.isFinite(s.unitsPerMeter) && s.unitsPerMeter > 0
+    && BACKGROUND_SCALE_SOURCE_UNITS.includes(s.sourceUnit);
+}
+
 export function isPolygonGeometry(
   g: OverlayGeometry,
 ): g is Extract<OverlayGeometry, { type: 'polygon' }> {

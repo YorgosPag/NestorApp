@@ -107,9 +107,13 @@ interface StoreActions {
   _adoptPlacement(floorId: string, placement: AdoptedPlacement): void;
 }
 
-/** Ό,τι αλλάζει μια βαθμονόμηση στο υπόβαθρο. */
+/**
+ * Ό,τι αλλάζει μια βαθμονόμηση στο υπόβαθρο. `scale`: απούσα ⇒ μένει ως έχει · `null` ⇒ **σβήνεται** (ADR-929 §6.24: η
+ * αναίρεση μιας πρώτης βαθμονόμησης επαναφέρει και την κλίμακα συλλογής).
+ */
 export type AdoptedPlacement = Pick<FloorplanBackground, 'transform' | 'calibration'>
-  & Partial<Pick<FloorplanBackground, 'scale' | 'updatedAt' | 'updatedBy'>>;
+  & Partial<Pick<FloorplanBackground, 'updatedAt' | 'updatedBy'>>
+  & { readonly scale?: FloorplanBackground['scale'] | null };
 
 type FloorplanBackgroundStoreType = StoreState & StoreActions;
 
@@ -336,7 +340,8 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
             if (!bg) return;
             bg.transform = { ...placement.transform };
             bg.calibration = placement.calibration;
-            if (placement.scale !== undefined) bg.scale = placement.scale;
+            if (placement.scale === null) delete bg.scale;
+            else if (placement.scale !== undefined) bg.scale = placement.scale;
             if (placement.updatedAt !== undefined) bg.updatedAt = placement.updatedAt;
             if (placement.updatedBy !== undefined) bg.updatedBy = placement.updatedBy;
           });

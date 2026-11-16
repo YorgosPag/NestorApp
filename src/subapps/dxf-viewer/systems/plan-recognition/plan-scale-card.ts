@@ -10,6 +10,11 @@
  * | Βαθμονόμηση + διαστάσεις που **συμφωνούν** | `confirmed`: «συμφωνεί με N διαστάσεις, μέγιστη απόκλιση x%» (ο έλεγχος του Bluebeam, αυτόματος) |
  * | Βαθμονόμηση + διαστάσεις που **διαφωνούν** (`scale-conflict`) | `proposal` με `replaces`: οι δύο τιμές, αντικατάσταση μόνο με ρητή πράξη |
  *
+ * 🔑 **§6.23 — η επιβεβαίωση δεν είναι αδιέξοδο.** Η `confirmed` κρατά το **ολικό τεστ χ²** (`calibrationAgreement`): είναι
+ * οι διαφορές μέσα στην ακρίβεια των γραμμένων τιμών; Και ο άνθρωπος μπορεί **πάντα** να ζητήσει «Ευθυγράμμιση με τις
+ * διαστάσεις» (`planScaleRefinement`): η ίδια λύση με τη διαφωνία, οκνηρά, με την ετυμηγορία του τεστ δίπλα της
+ * (`refines`) ώστε η επιβεβαίωση να λέει ρητά αν η αλλαγή βελτιώνει κάτι. Bluebeam: η επαναβαθμονόμηση είναι πάντα εκεί.
+ *
  * 🔑 **Ό,τι βλέπεις, αυτό γράφεται.** Η κάρτα κρατά τη **λύση** (`solveCalibration`, ο ένας επιλυτής) και τη βάση της
  * (τη σύντηξη και την τοποθέτηση). Το `scaleCardCalibration` φτιάχνει την εγγραφή από **αυτή** τη λύση, όχι από νέο
  * υπολογισμό. Αν άλλαξε η βάση στο μεταξύ, ο ελεγκτής αρνείται (`plan-recognition-session.applyScaleCard`).
@@ -21,7 +26,8 @@
  * @module subapps/dxf-viewer/systems/plan-recognition/plan-scale-card
  */
 
-import type { BackgroundTransform, CalibrationData } from '../../floorplan-background/providers/types';
+import type { BackgroundTransform, CalibrationData, CalibrationOrigin } from '../../floorplan-background/providers/types';
+import { calibrationAgreement, type CalibrationAgreement } from '../../bim/plan-recognition/fusion/calibration-agreement';
 import type { PlanFusionResult } from '../../bim/plan-recognition/fusion/plan-fusion-types';
 import type { PlanReadingOutcome } from '../../bim/plan-recognition/plan-recognition-types';
 import {
@@ -63,14 +69,19 @@ export interface PlanScaleProposal {
   readonly needsReview: boolean;
   /** Στη διαφωνία: η κλίμακα της υπάρχουσας βαθμονόμησης (mm ανά pixel), για να φαίνονται **και οι δύο** τιμές. */
   readonly replacesMmPerPixel: number | null;
+  /**
+   * §6.23 — ευθυγράμμιση **χωρίς** διαφωνία: η ετυμηγορία του ολικού τεστ για την υπάρχουσα βαθμονόμηση. `null` ⇒ δεν
+   * είναι ευθυγράμμιση (πρόταση χωρίς βαθμονόμηση, ή διαφωνία πάνω από την ανοχή).
+   */
+  readonly refines: CalibrationAgreement | null;
 }
 
 export interface PlanScaleConfirmed {
   readonly kind: 'confirmed';
-  /** Πόσες διαστάσεις ελέγχθηκαν και συμφωνούν με την υπάρχουσα βαθμονόμηση. */
-  readonly agreeing: number;
-  /** Η μεγαλύτερη σχετική απόκλιση «μετρημένο / γραμμένο − 1» ανάμεσά τους. */
-  readonly maxDeviationRel: number;
+  /** Οι διαστάσεις που συμφωνούν, ανά μία, και το ολικό τεστ χ² πάνω τους (§6.23). */
+  readonly agreement: CalibrationAgreement;
+  /** Από πού ήρθε η υπάρχουσα βαθμονόμηση (το διανυσματικό PDF μετρά ακριβέστερα από την εικόνα). */
+  readonly origin: CalibrationOrigin | null;
   readonly rejected: readonly RejectedScaleDimension[];
 }
 
@@ -88,7 +99,9 @@ export interface PlanScaleCardInput {
   readonly alignment: ReferenceAlignment;
   readonly placement: RasterPlacement;
   readonly sceneUnits: SceneUnits;
-  /** Η σύντηξη **χωρίς** γνωστή κλίμακα (οκνηρά: μόνο στη διαφωνία). */
+  /** Η προέλευση της υπάρχουσας βαθμονόμησης· `null` χωρίς βαθμονόμηση. */
+  readonly origin: CalibrationOrigin | null;
+  /** Η σύντηξη **χωρίς** γνωστή κλίμακα (οκνηρά: μόνο στη διαφωνία ή στην ευθυγράμμιση). */
   readonly dimensionFusion: () => PlanFusionResult;
 }
 
@@ -97,7 +110,12 @@ function solverReferences(used: readonly PlanScaleReference[]): CalibrationRefer
   return inputs.length > 0 ? [inputs[0], ...inputs.slice(1)] : null;
 }
 
-function proposalFrom(fusion: PlanFusionResult, input: PlanScaleCardInput, replacesMmPerPixel: number | null): PlanScaleProposal | PlanScaleFailed | null {
+function proposalFrom(
+  fusion: PlanFusionResult,
+  input: PlanScaleCardInput,
+  replacesMmPerPixel: number | null,
+  refines: CalibrationAgreement | null,
+): PlanScaleProposal | PlanScaleFailed | null {
   const references = planScaleReferences(fusion, input.alignment);
   const solverRefs = solverReferences(references.used);
   if (solverRefs === null) return null;
@@ -111,19 +129,14 @@ function proposalFrom(fusion: PlanFusionResult, input: PlanScaleCardInput, repla
     sigmaRel: fusion.scale?.sigmaRel ?? null,
     needsReview: calibrationNeedsReview(result.solution),
     replacesMmPerPixel,
+    refines,
   };
 }
 
-function confirmedFrom(fusion: PlanFusionResult, alignment: ReferenceAlignment): PlanScaleConfirmed | null {
-  let agreeing = 0;
-  let maxDeviationRel = 0;
-  for (const d of fusion.dimensions) {
-    if (d.status !== 'consistent' || d.measuredMm === null) continue;
-    agreeing += 1;
-    maxDeviationRel = Math.max(maxDeviationRel, Math.abs(d.measuredMm / d.valueMm - 1));
-  }
-  if (agreeing === 0) return null;
-  return { kind: 'confirmed', agreeing, maxDeviationRel, rejected: planScaleReferences(fusion, alignment).rejected };
+function confirmedFrom(fusion: PlanFusionResult, input: PlanScaleCardInput): PlanScaleConfirmed | null {
+  const agreement = calibrationAgreement(fusion.dimensions);
+  if (agreement === null) return null;
+  return { kind: 'confirmed', agreement, origin: input.origin, rejected: planScaleReferences(fusion, input.alignment).rejected };
 }
 
 const disagreesWithDimensions = (fusion: PlanFusionResult): boolean =>
@@ -155,8 +168,21 @@ export function planScaleCard(input: PlanScaleCardInput): PlanScaleCard | null {
   const subject = planScaleSubject(input.fusion, input.reading, input.dimensionFusion);
   if (subject === null) return null;
   return subject.kind === 'confirmed'
-    ? confirmedFrom(subject.fusion, input.alignment)
-    : proposalFrom(subject.fusion, input, subject.replacesMmPerPixel);
+    ? confirmedFrom(subject.fusion, input)
+    : proposalFrom(subject.fusion, input, subject.replacesMmPerPixel, null);
+}
+
+/**
+ * §6.23 — «Ευθυγράμμιση με τις διαστάσεις» πάνω σε **επιβεβαιωμένη** βαθμονόμηση: η λύση των διαστάσεων χωρίς γνωστή
+ * κλίμακα (ο ίδιος δρόμος με τη διαφωνία), με την υπάρχουσα τιμή δίπλα και την ετυμηγορία του τεστ. `null` όταν η κάρτα
+ * δεν είναι `confirmed` (εκεί η πρόταση ή η αποτυχία υπάρχουν ήδη).
+ */
+export function planScaleRefinement(input: PlanScaleCardInput): PlanScaleProposal | PlanScaleFailed | null {
+  const subject = planScaleSubject(input.fusion, input.reading, input.dimensionFusion);
+  if (subject?.kind !== 'confirmed' || input.fusion.scale === null) return null;
+  const agreement = calibrationAgreement(input.fusion.dimensions);
+  if (agreement === null) return null;
+  return proposalFrom(input.dimensionFusion(), input, input.fusion.scale.metresPerOriginalPx * MM_PER_M, agreement);
 }
 
 /** Η αναφορά όπως αποθηκεύεται: σε mm, με τη διάσταση-πηγή της (ίχνος ελέγχου). */

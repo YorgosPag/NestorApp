@@ -17,7 +17,7 @@ const text = (id: string, raw: string, kind: PlanTextKind, score: number, correc
   ({ id, raw, kind, rect: RECT, confidence: { score, factors: { reading: score } }, ...(correctedFrom ? { correctedFrom } : {}) });
 
 const fused = (textId: string, valueMm: number, status: FusedDimensionStatus, w: number | null, measuredMm: number | null): FusedDimension => ({
-  textId, valueMm, precisionMm: 10, binding: null, measuredMm, adjustedMm: measuredMm, w, redundancy: null,
+  textId, valueMm, precisionMm: 10, sigmaMm: 4, binding: null, measuredMm, adjustedMm: measuredMm, w, redundancy: null,
   detectableErrorMm: null, status, confidence: { score: 0.9, factors: {} }, rect: RECT,
 });
 

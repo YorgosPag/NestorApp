@@ -23,6 +23,7 @@
 import { ApiClientError } from '@/lib/api/api-client-types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { CALIBRATION_STALE_ERROR_CODE, type BackgroundTransform, type CalibrationData, type FloorplanBackground } from '../providers/types';
+import type { CalibrationSnapshot } from '../geometry/calibration-snapshot';
 import { getFloorBackground, useFloorplanBackgroundStore, type AdoptedPlacement } from '../stores/floorplanBackgroundStore';
 import { FloorplanBackgroundApiClient } from './floorplan-background-api-client';
 import {
@@ -43,28 +44,32 @@ export interface CalibrationCommitResult {
   readonly overlaysSkipped: number;
 }
 
+
+/** Η κατάσταση που επαναφέρεται σε αποτυχία: θέση + βαθμονόμηση + κλίμακα συλλογής, όπως ήταν. */
 function placementOf(bg: FloorplanBackground): AdoptedPlacement {
-  return { transform: { ...bg.transform }, calibration: bg.calibration };
+  return { transform: { ...bg.transform }, calibration: bg.calibration, scale: bg.scale ?? null };
+}
+
+/**
+ * Το αίτημα προς τον server. ADR-929 §6.24: `calibration: null` ⇒ ρητή πρόθεση `uncalibrate` (η αναίρεση μιας πρώτης
+ * βαθμονόμησης), με την κλίμακα συλλογής όπως ήταν πριν· αλλιώς η συνήθης εγγραφή (ο server ξαναϋπολογίζει το `scale`).
+ */
+function patchPlacement(backgroundId: string, oldTransform: BackgroundTransform, next: CalibrationSnapshot) {
+  return next.calibration === null
+    ? FloorplanBackgroundApiClient.patchUncalibrate(backgroundId, { oldTransform, newTransform: next.transform, scale: next.scale })
+    : FloorplanBackgroundApiClient.patchCalibration(backgroundId, { oldTransform, newTransform: next.transform, calibration: next.calibration });
 }
 
 /** Η πραγματική εγγραφή — τρέχει μέσα στην ουρά του ορόφου. */
-async function writeCalibration(
-  floorId: string,
-  backgroundId: string,
-  fallbackOld: BackgroundTransform,
-  next: AdoptedPlacement & { calibration: CalibrationData },
-): Promise<CalibrationCommitResult> {
+async function writePlacement(backgroundId: string, fallbackOld: BackgroundTransform, next: CalibrationSnapshot): Promise<CalibrationCommitResult> {
+  const { floorId } = next;
   const oldTransform = getCommittedBackground(floorId)?.transform ?? fallbackOld;
-  const response = await FloorplanBackgroundApiClient.patchCalibration(backgroundId, {
-    oldTransform,
-    newTransform: next.transform,
-    calibration: next.calibration,
-  });
+  const response = await patchPlacement(backgroundId, oldTransform, next);
   const saved = response.background;
   useFloorplanBackgroundStore.getState()._adoptPlacement(floorId, {
     transform: saved.transform,
     calibration: saved.calibration,
-    scale: saved.scale,
+    scale: saved.scale ?? null,
     updatedAt: saved.updatedAt,
     updatedBy: saved.updatedBy,
   });
@@ -84,23 +89,27 @@ function isStale(err: unknown): boolean {
   return err instanceof ApiClientError && err.statusCode === 409 && err.errorCode === CALIBRATION_STALE_ERROR_CODE;
 }
 
+/** Αισιόδοξα στο store: η βαθμονόμηση κλείνει και τη συνεδρία του διαλόγου· η επιστροφή σε «χωρίς» φέρνει και το `scale`. */
+function applyOptimistically(next: CalibrationSnapshot): void {
+  const store = useFloorplanBackgroundStore.getState();
+  if (next.calibration !== null) store.applyCalibration(next.floorId, next.transform, next.calibration);
+  else store._adoptPlacement(next.floorId, { transform: next.transform, calibration: null, scale: next.scale });
+}
+
 /**
- * Γράφει τη βαθμονόμηση ενός ορόφου. Εφαρμόζεται αμέσως (αισιόδοξα) και κλείνει τη συνεδρία· το
- * αποτέλεσμα λέει αν έμεινε.
+ * ADR-929 §6.24 — **η μία** εγγραφή βαθμονομημένης κατάστασης: νέα βαθμονόμηση **ή** επιστροφή σε «χωρίς» (αναίρεση).
+ * Εφαρμόζεται αμέσως (αισιόδοξα)· το αποτέλεσμα λέει αν έμεινε. Τη χρησιμοποιεί η εντολή αναίρεσης
+ * (`calibration-command.ts`) για το «πριν» και το «μετά».
  */
-export async function commitCalibration(
-  floorId: string,
-  transform: BackgroundTransform,
-  calibration: CalibrationData,
-): Promise<CalibrationCommitResult> {
+export async function commitPlacement(next: CalibrationSnapshot): Promise<CalibrationCommitResult> {
+  const { floorId } = next;
   const bg = getFloorBackground(floorId);
   if (!bg) return { status: 'failed', overlaysSkipped: 0 };
   const previous = placementOf(bg);
   setCalibrationPending(floorId, true);
-  useFloorplanBackgroundStore.getState().applyCalibration(floorId, transform, calibration);
+  applyOptimistically(next);
   try {
-    return await enqueueBackgroundWrite(floorId, () =>
-      writeCalibration(floorId, bg.id, previous.transform, { transform, calibration }));
+    return await enqueueBackgroundWrite(floorId, () => writePlacement(bg.id, previous.transform, next));
   } catch (err) {
     logger.error('Calibration commit failed', { floorId, backgroundId: bg.id, err });
     if (isStale(err)) {
@@ -112,4 +121,16 @@ export async function commitCalibration(
   } finally {
     setCalibrationPending(floorId, false);
   }
+}
+
+/**
+ * Γράφει μια **νέα** βαθμονόμηση ορόφου (η κλίμακα συλλογής υπολογίζεται στον server). Για εγγραφή που πρέπει να
+ * αναιρείται με Ctrl+Z, ο καλών περνά από το `changeCalibration` (`calibration-command.ts`).
+ */
+export function commitCalibration(
+  floorId: string,
+  transform: BackgroundTransform,
+  calibration: CalibrationData,
+): Promise<CalibrationCommitResult> {
+  return commitPlacement({ floorId, transform, calibration, scale: null });
 }

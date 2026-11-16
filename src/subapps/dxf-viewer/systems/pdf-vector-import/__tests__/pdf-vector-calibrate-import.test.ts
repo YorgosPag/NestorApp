@@ -16,9 +16,11 @@ jest.mock('../../../floorplan-background/stores/floorplanBackgroundStore', () =>
 }));
 jest.mock('../../../floorplan-background/services/commit-calibration', () => ({
   commitCalibration: (...args: unknown[]) => mockCommitCalibration(...args),
+  commitPlacement: jest.fn(),
 }));
 
 import { calibrateAndImportFloorPdfVectors } from '../pdf-vector-import-commit';
+import { getGlobalCommandHistory } from '../../../core/commands/CommandHistory';
 
 const TRANSFORM = { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotation: 0 };
 const BACKGROUND: Pick<FloorplanBackground, 'id' | 'transform'> = { id: 'bg_1', transform: TRANSFORM };
@@ -64,5 +66,19 @@ describe('calibrateAndImportFloorPdfVectors', () => {
     expect(mockGetFloorProvider).toHaveBeenCalledWith('flr_1'); // η εισαγωγή ξεκίνησε μετά τη βαθμονόμηση
     expect(outcome).toEqual({ kind: 'not-vector' }); // χωρίς provider στο test
     expect(mockCommitCalibration.mock.invocationCallOrder[0]).toBeLessThan(mockGetFloorProvider.mock.invocationCallOrder[0]);
+  });
+
+  it('ADR-929 §6.24: σωσμένη βαθμονόμηση ⇒ ΒΗΜΑ του ιστορικού αναίρεσης, και όταν η εισαγωγή δεν γίνει', async () => {
+    const history = getGlobalCommandHistory();
+    history.clear();
+    const calibrated = { ...BACKGROUND, transform: PROPOSAL.solution.transform, calibration: { calibratedAt: 9, method: 'two-point', realDistance: 2050 } };
+    mockCommitCalibration.mockImplementation(async () => {
+      mockGetFloorBackground.mockReturnValue(calibrated); // ό,τι υιοθέτησε το store από τον server
+      return { status: 'saved', overlaysSkipped: 0 };
+    });
+    await calibrateAndImportFloorPdfVectors(TARGET, PROPOSAL, 'Εισαγωγή PDF');
+    expect(history.getLastCommand()?.type).toBe('floorplan-calibration-change');
+    expect(history.getLastCommand()?.name).toBe('Εισαγωγή PDF');
+    history.clear();
   });
 });

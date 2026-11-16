@@ -27,6 +27,7 @@
 
 import 'server-only';
 
+import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore, type Firestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -41,7 +42,7 @@ import {
 } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
 import { galleryScaleForCalibration } from '@/subapps/dxf-viewer/floorplan-background/geometry/raster-pixel-scale';
 import { BackgroundLockedError, CalibrationStaleError, txReadOwnedRow } from './background-ownership';
-import type { OverlayGeometry } from '@/types/floorplan-overlays';
+import type { BackgroundScale, OverlayGeometry } from '@/types/floorplan-overlays';
 // ADR-929 Φ0 — ΕΝΑΣ ορισμός του T·R·S του υποβάθρου: ο ίδιος που ζωγραφίζει την εικόνα και που ρωτά η αναγνώριση
 // κάτοψης. Ως τώρα ήταν γραμμένος εδώ με το χέρι (μαζί με τον αντίστροφο) και, ξεχωριστά, ως `ctx.rotate/scale`.
 import { applyAffine, invertAffine } from '@/lib/geometry/affine-2x3';
@@ -53,18 +54,26 @@ const logger = createModuleLogger('CalibrationRemapService');
 // TYPES
 // ============================================================================
 
-export interface RemapInput {
+interface RemapBase {
   companyId: string;
   backgroundId: string;
   /** Pre-calibration transform (current value in store / Firestore). */
   oldTransform: BackgroundTransform;
   /** Post-calibration transform (the new partial merged on top). */
   newTransform: BackgroundTransform;
-  /** Calibration record to persist on the background. */
-  calibration: CalibrationData;
   /** User performing calibration — recorded as updatedBy on background. */
   updatedBy: string;
 }
+
+/**
+ * Ο στόχος της εγγραφής: νέα βαθμονόμηση, **ή** (ADR-929 §6.24) επιστροφή σε «χωρίς βαθμονόμηση» — η αναίρεση της πρώτης
+ * βαθμονόμησης. Στη δεύτερη το `scale` της συλλογής γίνεται **ό,τι ήταν πριν** (`null` ⇒ σβήνεται): για εικόνες μετρά μόνο
+ * του ως γνωστή κλίμακα (`fromGalleryScale`), άρα αν έμενε, ο όροφος θα έμοιαζε ακόμη βαθμονομημένος.
+ */
+export type RemapInput = RemapBase & (
+  | { calibration: CalibrationData }
+  | { calibration: null; scale: BackgroundScale | null }
+);
 
 export interface RemapResult {
   /** Overlays whose geometry was actually rewritten. Excludes skipped docs. */
@@ -335,8 +344,20 @@ function assertCalibratable(row: BackgroundRow, input: RemapInput): void {
   if (!transformsEqual(row.transform, input.oldTransform)) throw new CalibrationStaleError(input.backgroundId);
 }
 
+/** §6.24 — επιστροφή σε «χωρίς βαθμονόμηση»: θέση + κενή βαθμονόμηση + η κλίμακα συλλογής όπως ήταν πριν. */
+function uncalibratedUpdate(input: RemapBase, scale: BackgroundScale | null, now: number): Record<string, unknown> {
+  return {
+    transform: input.newTransform,
+    calibration: null,
+    scale: scale ?? FieldValue.delete(),
+    updatedAt: now,
+    updatedBy: input.updatedBy,
+  };
+}
+
 /** Τι γράφεται στο background: θέση + βαθμονόμηση + (για εικόνες) η ίδια κλίμακα για τη συλλογή. */
 function backgroundUpdate(row: BackgroundRow, input: RemapInput, now: number): Record<string, unknown> {
+  if (input.calibration === null) return uncalibratedUpdate(input, input.scale, now);
   // `calibratedBy` από την ταυτότητα του αιτήματος — ποτέ ό,τι έστειλε ο πελάτης.
   const calibration: CalibrationData = { ...input.calibration, calibratedBy: input.updatedBy };
   const gallery = row.providerId && row.naturalBounds

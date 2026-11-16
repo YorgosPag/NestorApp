@@ -20,6 +20,7 @@ import type {
   ProviderId,
   ProviderMetadata,
 } from '../providers/types';
+import type { BackgroundScale } from '@/types/floorplan-overlays';
 
 // ---------------------------------------------------------------------------
 // Response shapes
@@ -87,6 +88,13 @@ export interface PatchCalibrationInput {
   calibration: CalibrationData;
 }
 
+/** ADR-929 §6.24 — η αναίρεση μιας πρώτης βαθμονόμησης: πίσω σε «χωρίς», με την κλίμακα συλλογής όπως ήταν πριν. */
+export interface PatchUncalibrateInput {
+  oldTransform: BackgroundTransform;
+  newTransform: BackgroundTransform;
+  scale: BackgroundScale | null;
+}
+
 // ---------------------------------------------------------------------------
 // Client
 // ---------------------------------------------------------------------------
@@ -125,6 +133,15 @@ export const FloorplanBackgroundApiClient = {
       oldTransform: input.oldTransform,
       newTransform: input.newTransform,
       calibration: input.calibration,
+    });
+  },
+
+  async patchUncalibrate(id: string, input: PatchUncalibrateInput): Promise<PatchCalibrationResponse> {
+    return apiClient.patch<PatchCalibrationResponse>(`${BASE}/${encodeURIComponent(id)}`, {
+      kind: 'uncalibrate',
+      oldTransform: input.oldTransform,
+      newTransform: input.newTransform,
+      scale: input.scale,
     });
   },
 

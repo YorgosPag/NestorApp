@@ -326,6 +326,10 @@
     "upToDate": "Every grid segment already has a beam.",
     "insufficientGuides": "At least 2 grid axes per direction are required (X and Y)."
   },
+  "calibrationHistory": {
+    "changedMeanwhile": "Undoing or redoing the calibration did not happen: the background changed in the meantime (another tab or another user). Nothing was written over that change.",
+    "failed": "Undoing or redoing the calibration was not saved — the background stayed as it was. Please try again."
+  },
   "slabGrid": {
     "built": "{created, plural, one {Created # slab from the grid.} other {Created # slabs from the grid.}}",
     "builtWithSkipped": "{created, plural, one {Created # slab} other {Created # slabs}}; {skipped, plural, one {# already existed.} other {# already existed.}}",
@@ -478,7 +482,10 @@
         "calibrationStale": "The background changed since the scale was computed; nothing was written. Try again.",
         "calibrationFailed": "The calibration was not saved; nothing was imported. Try again."
       },
-      "calibrated": "The background was calibrated from the written values. Ctrl+Z undoes the import, not the calibration.",
+      "calibrated": "The background was calibrated from the written values. One Ctrl+Z undoes both the import and the calibration.",
+      "undo": "Undo import",
+      "undoWithCalibration": "Undo import and calibration",
+      "undoNotLast": "Other changes were made after the import; undo them first with Ctrl+Z.",
       "scale": {
         "proposal": "{count, plural, one {# written value gives} other {# written values give}} a scale of 1 px = {mmPerPixel} mm, max deviation {deviation}.",
         "reference": "{raw}: deviation {deviation}",
@@ -682,6 +689,20 @@
         "applying": "Applying…",
         "manual": "Calibrate manually",
         "confirmed": "The calibration agrees with {count, plural, one {# dimension} other {# dimensions}} (largest deviation {deviation}).",
+        "agreementWithin": "The differences are explained by the precision of the written values (χ² test, 95%): changing the scale would not improve the measurement.",
+        "agreementBeyond": "The differences exceed the precision of the written values (χ² test, 95%): aligning with the dimensions is worthwhile.",
+        "agreementLabel": "Dimensions against the calibration",
+        "agreementItem": "{value} mm · drawing − written {misfit} mm · written precision ±{half} mm",
+        "origin": {
+          "manual": "The calibration was made by hand (points on the image).",
+          "plan-dimensions": "The calibration came from the dimensions read on the image.",
+          "pdf-vector-dimensions": "The calibration came from the written values of the vector PDF (exact geometry); the image measures to pixel precision."
+        },
+        "refine": "Align with the dimensions…",
+        "refineTitle": "Align with the dimensions",
+        "refineClose": "Close",
+        "refineWithin": "The current calibration already agrees within the precision of the written values: replacing it does not improve the measurement. It happens only if you want it, and can be undone with Ctrl+Z or from the message that will appear.",
+        "undoName": "Scale from the dimensions",
         "stale": "The scale was not applied: the recognition or the image position changed in the meantime. Look at the card again.",
         "failed": {
           "degenerate-placement": "The image's placement in the scene does not allow a solution. Calibrate manually.",

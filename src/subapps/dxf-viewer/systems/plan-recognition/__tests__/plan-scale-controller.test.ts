@@ -15,6 +15,7 @@ import type { BackgroundTransform, CalibrationData, FloorplanBackground } from '
 import type { CalibrationCommitResult } from '../../../floorplan-background/services/commit-calibration';
 import { planRecognitionStore, type PlanRecognitionRun } from '../plan-recognition-store';
 import { createPlanScaleController, type PlanScaleControllerDeps } from '../plan-scale-controller';
+import type { CalibrationChange } from '../../../floorplan-background/services/calibration-command';
 import { fusionInput, houseDimensions, houseSegments, reading } from '../../../bim/plan-recognition/fusion/__tests__/fusion-fixture';
 
 const FLOOR = 'flr_1';
@@ -34,14 +35,16 @@ function backgroundOf(transform: BackgroundTransform, calibration: CalibrationDa
   };
 }
 
+const UNDO = 'Κλίμακα από τις διαστάσεις';
 const START: BackgroundTransform = { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotation: 0 };
 
 function harness(commitResult: CalibrationCommitResult['status'] = 'saved') {
   let background = backgroundOf(START, null);
   const adopted: PlanFusionResult[] = [];
-  const commit = jest.fn(async (_floorId: string, transform: BackgroundTransform, data: CalibrationData): Promise<CalibrationCommitResult> => {
+  // §6.24: η πόρτα εγγραφής ΜΕ καταγραφή στο ιστορικό· η συμπεριφορά της εντολής ελέγχεται στο `calibration-command.test.ts`.
+  const commit = jest.fn(async (_floorId: string, transform: BackgroundTransform, data: CalibrationData, _undoName: string): Promise<CalibrationChange> => {
     if (commitResult !== 'failed') background = backgroundOf(transform, data);
-    return { status: commitResult, overlaysSkipped: 0 };
+    return { result: { status: commitResult, overlaysSkipped: 0 }, command: null };
   });
   const deps: PlanScaleControllerDeps<string> = {
     fuse: (run, r) => fusePlan({ ...BASE, reading: r, knownScale: run.knownScale }),
@@ -51,7 +54,7 @@ function harness(commitResult: CalibrationCommitResult['status'] = 'saved') {
       return `source-${adopted.length}`;
     },
     background: () => background,
-    commit,
+    change: commit,
     now: () => 42,
   };
   const controller = createPlanScaleController(() => deps);
@@ -73,13 +76,14 @@ describe('planScaleController.apply', () => {
   it('γράφει τη λύση της κάρτας από τη μία πόρτα, και η σύντηξη ακολουθεί τη νέα κλίμακα', async () => {
     const h = harness();
     const proposal = proposalOf(h);
-    const result = await h.controller.apply(proposal);
+    const result = await h.controller.apply(proposal, UNDO);
     expect(h.commit).toHaveBeenCalledTimes(1);
     const [floorId, transform, data] = h.commit.mock.calls[0];
     expect(floorId).toBe(FLOOR);
     expect(transform).toBe(proposal.solution.transform);
     expect(data.origin).toBe('plan-dimensions');
-    expect(result).toEqual({ status: 'saved', overlaysSkipped: 0, source: 'source-1' });
+    expect(h.commit.mock.calls[0][3]).toBe(UNDO); // §6.24: το βήμα αναίρεσης φέρει την ετικέτα του καλούντα
+    expect(result).toEqual({ status: 'saved', overlaysSkipped: 0, source: 'source-1', command: null });
     expect(planRecognitionStore.get().run?.knownScale).not.toBeNull();
     expect(h.controller.card(backgroundOf(transform, data), 'mm')?.kind).toBe('confirmed');
   });
@@ -88,7 +92,7 @@ describe('planScaleController.apply', () => {
     const h = harness();
     const proposal = proposalOf(h);
     h.moveImage({ ...START, translateX: 3 });
-    await expect(h.controller.apply(proposal)).resolves.toEqual({ status: 'stale', overlaysSkipped: 0, source: null });
+    await expect(h.controller.apply(proposal, UNDO)).resolves.toEqual({ status: 'stale', overlaysSkipped: 0, source: null, command: null });
     expect(h.commit).not.toHaveBeenCalled();
   });
 
@@ -96,15 +100,52 @@ describe('planScaleController.apply', () => {
     const h = harness();
     const proposal = proposalOf(h);
     planRecognitionStore.patch({ fusion: fusePlan(BASE) });
-    await expect(h.controller.apply(proposal)).resolves.toMatchObject({ status: 'stale' });
+    await expect(h.controller.apply(proposal, UNDO)).resolves.toMatchObject({ status: 'stale' });
     expect(h.commit).not.toHaveBeenCalled();
   });
 
   it('αποτυχία εγγραφής ⇒ καμία νέα πηγή γραμμών, η σύντηξη μένει ως είχε', async () => {
     const h = harness('failed');
     const before = planRecognitionStore.get().fusion;
-    await expect(h.controller.apply(proposalOf(h))).resolves.toEqual({ status: 'failed', overlaysSkipped: 0, source: null });
+    await expect(h.controller.apply(proposalOf(h), UNDO)).resolves.toEqual({ status: 'failed', overlaysSkipped: 0, source: null, command: null });
     expect(planRecognitionStore.get().fusion).toBe(before);
+  });
+});
+
+describe('planScaleController — §6.23 ευθυγράμμιση', () => {
+  /** Πρώτη εφαρμογή από την κάρτα ⇒ βαθμονομημένος όροφος με επιβεβαιωμένη κάρτα. */
+  async function calibrated(h: ReturnType<typeof harness>) {
+    await h.controller.apply(proposalOf(h), UNDO);
+    const [, transform, data] = h.commit.mock.calls[0];
+    return backgroundOf(transform, data);
+  }
+
+  it('επιβεβαιωμένη κάρτα ⇒ ευθυγράμμιση μόνο όταν ζητηθεί, με την υπάρχουσα τιμή δίπλα', async () => {
+    const h = harness();
+    const bg = await calibrated(h);
+    expect(h.controller.card(bg, 'mm')?.kind).toBe('confirmed');
+    const refinement = h.controller.refinement(bg, 'mm');
+    expect(refinement?.kind).toBe('proposal');
+    if (refinement?.kind !== 'proposal') return;
+    expect(refinement.replacesMmPerPixel).not.toBeNull();
+    expect(refinement.refines).not.toBeNull();
+  });
+
+  it('εφαρμογή ευθυγράμμισης ⇒ από την ίδια πόρτα, με τη λύση της ευθυγράμμισης και την ετικέτα αναίρεσης', async () => {
+    const h = harness();
+    const bg = await calibrated(h);
+    const refinement = h.controller.refinement(bg, 'mm');
+    if (refinement?.kind !== 'proposal') throw new Error('expected a proposal');
+    const result = await h.controller.apply(refinement, UNDO);
+    expect(result.status).toBe('saved');
+    expect(h.commit).toHaveBeenCalledTimes(2);
+    const [floorId, transform, , undoName] = h.commit.mock.calls[1];
+    expect([floorId, transform, undoName]).toEqual([FLOOR, refinement.solution.transform, UNDO]);
+  });
+
+  it('χωρίς βαθμονόμηση ⇒ καμία ευθυγράμμιση (η κάρτα ήδη προτείνει)', () => {
+    const h = harness();
+    expect(h.controller.refinement(backgroundOf(START, null), 'mm')).toBeNull();
   });
 });
 
@@ -113,7 +154,7 @@ describe('planScaleController.syncKnownScale', () => {
     const h = harness();
     expect(h.controller.syncKnownScale(FLOOR)).toBeNull();
     expect(h.controller.syncKnownScale('flr_other')).toBeNull();
-    await h.controller.apply(proposalOf(h));
+    await h.controller.apply(proposalOf(h), UNDO);
     expect(h.controller.syncKnownScale(FLOOR)).toBeNull();
     expect(h.adopted).toHaveLength(1);
   });

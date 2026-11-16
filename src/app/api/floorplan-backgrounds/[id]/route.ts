@@ -6,6 +6,7 @@
  * PATCH /api/floorplan-backgrounds/[id]
  *   body: { kind: 'transform', transform?, opacity?, visible?, locked? }
  *      or { kind: 'calibration', oldTransform, newTransform, calibration }
+ *      or { kind: 'uncalibrate', oldTransform, newTransform, scale: BackgroundScale | null }  (ADR-929 §6.24: αναίρεση πρώτης βαθμονόμησης)
  *
  * DELETE /api/floorplan-backgrounds/[id]
  *   - cascades floorplan_overlays linked to this background
@@ -27,7 +28,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FloorplanBackgroundService } from '@/services/floorplan-background/floorplan-background.service';
 import { FloorplanCascadeDeleteService } from '@/services/floorplan-background/floorplan-cascade-delete.service';
-import { CalibrationRemapService } from '@/services/floorplan-background/calibration-remap.service';
+import { CalibrationRemapService, type RemapInput } from '@/services/floorplan-background/calibration-remap.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { BackgroundLockedError } from '@/services/floorplan-background/background-ownership';
@@ -41,6 +42,7 @@ import type { BackgroundTransform, CalibrationData } from '@/subapps/dxf-viewer/
 import { isCalibrationData } from '@/subapps/dxf-viewer/floorplan-background/geometry/calibration-record-guard';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { isFiniteNumber } from '@/lib/type-guards';
+import { isBackgroundScale, type BackgroundScale } from '@/types/floorplan-overlays';
 
 const logger = createModuleLogger('FloorplanBackgroundIdRoute');
 
@@ -97,6 +99,67 @@ function withBackgroundTarget(
 }
 
 // ============================================================================
+// PATCH — calibration · uncalibrate (ADR-929 Φ5.2γ · §6.24)
+// ============================================================================
+
+/**
+ * Η εγγραφή βαθμονόμησης όπως ήρθε από το σύρμα, επικυρωμένη. `uncalibrate` = η **αναίρεση** μιας πρώτης βαθμονόμησης
+ * (ADR-929 §6.24): ρητή πρόθεση, όχι `calibration: null` κρυμμένο στο ίδιο `kind`.
+ */
+type CalibrationPatch = {
+  readonly kind: 'calibration' | 'uncalibrate';
+  readonly oldTransform: BackgroundTransform;
+  readonly newTransform: BackgroundTransform;
+} & ({ readonly calibration: CalibrationData } | { readonly calibration: null; readonly scale: BackgroundScale | null });
+
+function parseCalibrationPatch(kind: 'calibration' | 'uncalibrate', body: object): CalibrationPatch | string {
+  const { oldTransform, newTransform, calibration, scale } = body as {
+    oldTransform?: unknown; newTransform?: unknown; calibration?: unknown; scale?: unknown;
+  };
+  if (!isTransform(oldTransform)) return 'Invalid oldTransform';
+  if (!isTransform(newTransform)) return 'Invalid newTransform';
+  if (kind === 'calibration') {
+    return isCalibrationData(calibration) ? { kind, oldTransform, newTransform, calibration } : 'Invalid calibration data';
+  }
+  if (scale !== null && !isBackgroundScale(scale)) return 'Invalid scale';
+  return { kind, oldTransform, newTransform, calibration: null, scale };
+}
+
+const CALIBRATION_AUDIT_REASON: Readonly<Record<CalibrationPatch['kind'], string>> = {
+  calibration: 'Background calibration + overlay remap (ADR-929 Φ5.2γ)',
+  uncalibrate: 'Background calibration undone — back to uncalibrated + overlay remap (ADR-929 §6.24)',
+};
+
+/** Ο στόχος της αναπροσαρμογής, με τη διάκριση «βαθμονόμηση / χωρίς» ρητή (ο τύπος του service τη ζητά). */
+function remapInputOf(ctx: AuthContext, id: string, patch: CalibrationPatch): RemapInput {
+  const base = {
+    companyId: ctx.companyId, backgroundId: id, updatedBy: ctx.uid,
+    oldTransform: patch.oldTransform, newTransform: patch.newTransform,
+  };
+  return patch.calibration === null
+    ? { ...base, calibration: null, scale: patch.scale }
+    : { ...base, calibration: patch.calibration };
+}
+
+async function patchCalibration(ctx: AuthContext, id: string, patch: CalibrationPatch): Promise<NextResponse> {
+  const existing = await FloorplanBackgroundService.getById(id, ctx.companyId);
+  // `getById` είναι **σιωπηλό** (ADR-742): ξένο ≡ ανύπαρκτο. Άρα εδώ το
+  // `null` καλύπτει ήδη και τις δύο περιπτώσεις — μία απόκριση, καμία
+  // διαρροή. Το ίδιο σώμα με το `notFound` του catch, από την ίδια πηγή.
+  if (!existing) return backgroundNotFoundResponse(id);
+  if (existing.locked) {
+    const locked = new BackgroundLockedError(id);
+    return NextResponse.json({ error: locked.message, code: locked.code }, { status: 409 });
+  }
+  const remap = await CalibrationRemapService.applyCalibration(remapInputOf(ctx, id, patch));
+  await logAuditEvent(ctx, 'data_updated', id, 'api', {
+    metadata: { path: `/api/floorplan-backgrounds/${id} (PATCH ${patch.kind})`, reason: CALIBRATION_AUDIT_REASON[patch.kind] },
+  });
+  const updated = await FloorplanBackgroundService.getById(id, ctx.companyId);
+  return NextResponse.json({ background: updated, remap });
+}
+
+// ============================================================================
 // PATCH
 // ============================================================================
 
@@ -130,45 +193,12 @@ const handlePatch = withBackgroundTarget(async (request, ctx, id) => {
       return NextResponse.json({ background: updated });
     }
 
-    if (kind === 'calibration') {
-      const { oldTransform, newTransform, calibration } = body as {
-        oldTransform?: BackgroundTransform;
-        newTransform?: BackgroundTransform;
-        calibration?: CalibrationData;
-      };
-      if (!isTransform(oldTransform)) return badRequest('Invalid oldTransform');
-      if (!isTransform(newTransform)) return badRequest('Invalid newTransform');
-      if (!isCalibrationData(calibration)) return badRequest('Invalid calibration data');
-
-      const existing = await FloorplanBackgroundService.getById(id, ctx.companyId);
-      // `getById` είναι **σιωπηλό** (ADR-742): ξένο ≡ ανύπαρκτο. Άρα εδώ το
-      // `null` καλύπτει ήδη και τις δύο περιπτώσεις — μία απόκριση, καμία
-      // διαρροή. Το ίδιο σώμα με το `notFound` του catch, από την ίδια πηγή.
-      if (!existing) return backgroundNotFoundResponse(id);
-      if (existing.locked) {
-        const locked = new BackgroundLockedError(id);
-        return NextResponse.json({ error: locked.message, code: locked.code }, { status: 409 });
-      }
-
-      const remap = await CalibrationRemapService.applyCalibration({
-        companyId: ctx.companyId,
-        backgroundId: id,
-        oldTransform,
-        newTransform,
-        calibration,
-        updatedBy: ctx.uid,
-      });
-      await logAuditEvent(ctx, 'data_updated', id, 'api', {
-        metadata: {
-          path: `/api/floorplan-backgrounds/${id} (PATCH calibration)`,
-          reason: 'Background calibration + overlay remap (ADR-929 Φ5.2γ)',
-        },
-      });
-      const updated = await FloorplanBackgroundService.getById(id, ctx.companyId);
-      return NextResponse.json({ background: updated, remap });
+    if (kind === 'calibration' || kind === 'uncalibrate') {
+      const parsed = parseCalibrationPatch(kind, body);
+      return typeof parsed === 'string' ? badRequest(parsed) : await patchCalibration(ctx, id, parsed);
     }
 
-    return badRequest('Invalid kind: expected "transform" or "calibration"');
+    return badRequest('Invalid kind: expected "transform", "calibration" or "uncalibrate"');
   } catch (err) {
     const msg = getErrorMessage(err);
     // Το log κρατά **την αλήθεια** ακέραιη — τη μεταμφίεση τη βλέπει μόνο το σύρμα.

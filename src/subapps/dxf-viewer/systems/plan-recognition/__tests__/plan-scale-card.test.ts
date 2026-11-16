@@ -10,7 +10,7 @@ import type { PlanFusionInput } from '../../../bim/plan-recognition/fusion/plan-
 import { IDENTITY_HOMOGRAPHY } from '@/lib/geometry/homography';
 import type { RasterPlacement } from '../../../floorplan-background/geometry/raster-scene-mapping';
 import { isCalibrationData } from '../../../floorplan-background/geometry/calibration-record-guard';
-import { planScaleCard, planScaleSubject, scaleCardCalibration, type PlanScaleCardInput } from '../plan-scale-card';
+import { planScaleCard, planScaleRefinement, planScaleSubject, scaleCardCalibration, type PlanScaleCardInput } from '../plan-scale-card';
 import {
   KNOWN_SCALE,
   PX_PER_MM,
@@ -37,6 +37,7 @@ function inputFor(knownScale: PlanFusionInput['knownScale'], withReading = true)
     alignment: { originalToAligned: IDENTITY_HOMOGRAPHY, alignedToOriginal: IDENTITY_HOMOGRAPHY },
     placement: PLACEMENT,
     sceneUnits: 'mm',
+    origin: knownScale === null ? null : 'pdf-vector-dimensions',
     dimensionFusion: () => fusePlan({ ...base, knownScale: null }),
   };
 }
@@ -59,8 +60,11 @@ describe('planScaleCard — οι τρεις καταστάσεις', () => {
     const card = planScaleCard(inputFor(KNOWN_SCALE));
     expect(card?.kind).toBe('confirmed');
     if (card?.kind !== 'confirmed') return;
-    expect(card.agreeing).toBeGreaterThanOrEqual(2);
-    expect(card.maxDeviationRel).toBeLessThan(0.01);
+    expect(card.agreement.rows.length).toBeGreaterThanOrEqual(2);
+    expect(card.agreement.maxDeviationRel).toBeLessThan(0.01);
+    // §6.23: η αληθινή κλίμακα ⇒ οι διαφορές μέσα στην ακρίβεια των γραμμένων τιμών · η προέλευση φτάνει στην κάρτα.
+    expect(card.agreement.withinPrecision).toBe(true);
+    expect(card.origin).toBe('pdf-vector-dimensions');
   });
 
   it('🔴 λάθος βαθμονόμηση (5%) ⇒ πρόταση αντικατάστασης με ΚΑΙ τις δύο τιμές, στην κλίμακα των διαστάσεων', () => {
@@ -85,6 +89,38 @@ describe('planScaleCard — οι τρεις καταστάσεις', () => {
     expect(calls.n).toBe(0);
     planScaleCard(counted(inputFor(WRONG_SCALE)));
     expect(calls.n).toBe(1);
+  });
+});
+
+describe('planScaleRefinement — §6.23: ευθυγράμμιση πάνω σε επιβεβαιωμένη βαθμονόμηση', () => {
+  it('επιβεβαιωμένη ⇒ η λύση των διαστάσεων με την υπάρχουσα τιμή δίπλα και την ετυμηγορία του τεστ', () => {
+    const proposal = planScaleRefinement(inputFor(KNOWN_SCALE));
+    expect(proposal?.kind).toBe('proposal');
+    if (proposal?.kind !== 'proposal') return;
+    expect(proposal.replacesMmPerPixel).toBeCloseTo(TRUE_MM_PER_PX, 6);
+    expect(rel(proposal.solution.mmPerPixelX, TRUE_MM_PER_PX)).toBeLessThan(0.002);
+    expect(proposal.refines?.withinPrecision).toBe(true);
+  });
+
+  it('η σύντηξη χωρίς γνωστή κλίμακα ζητείται μόνο όταν ζητηθεί η ευθυγράμμιση (μία φορά)', () => {
+    const calls = { n: 0 };
+    const input = inputFor(KNOWN_SCALE);
+    const counted: PlanScaleCardInput = { ...input, dimensionFusion: () => { calls.n += 1; return input.dimensionFusion(); } };
+    planScaleCard(counted);
+    expect(calls.n).toBe(0);
+    planScaleRefinement(counted);
+    expect(calls.n).toBe(1);
+  });
+
+  it('χωρίς βαθμονόμηση ή στη διαφωνία ⇒ καμία ευθυγράμμιση (η κάρτα ήδη προτείνει)', () => {
+    expect(planScaleRefinement(inputFor(null))).toBeNull();
+    expect(planScaleRefinement(inputFor(WRONG_SCALE))).toBeNull();
+  });
+
+  it('η πρόταση της ευθυγράμμισης ΔΕΝ έχει `refines` στη συνηθισμένη κάρτα', () => {
+    const card = planScaleCard(inputFor(WRONG_SCALE));
+    if (card?.kind !== 'proposal') throw new Error('expected a proposal');
+    expect(card.refines).toBeNull();
   });
 });
 

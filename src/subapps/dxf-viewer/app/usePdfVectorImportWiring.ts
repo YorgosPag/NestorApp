@@ -6,7 +6,7 @@
  * τιμές για την κλίμακα (κάρτα, Δ15); τρέχει εισαγωγή; τι έγινε;
  *
  * Μέσο και κάρτα ξαναρωτιούνται όταν αλλάζει το υπόβαθρο ή η τοποθέτησή του· απάντηση για παλιά κατάσταση πετιέται. Οι
- * εγγραφές ζουν στο `pdf-vector-import-commit` (βαθμονόμηση μέσω `commitCalibration`, εισαγωγή = ένα Ctrl+Z)· εδώ μόνο
+ * εγγραφές ζουν στο `pdf-vector-import-commit` (βαθμονόμηση + εισαγωγή = ΕΝΑ Ctrl+Z, ADR-929 §6.24)· εδώ μόνο
  * κατάσταση οθόνης.
  *
  * @module subapps/dxf-viewer/app/usePdfVectorImportWiring
@@ -22,6 +22,8 @@ import {
 } from '../systems/pdf-vector-import/pdf-vector-import-commit';
 import type { PdfVectorScale } from '../systems/pdf-vector-import/pdf-vector-scale';
 import { readLiveScene } from '../systems/model-from-drawing/model-from-drawing-live';
+import { undoIfLast } from '../floorplan-background/services/calibration-command';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { PdfVectorImportView } from '../ui/panels/model-from-drawing/PdfVectorImportSection';
 
 export interface PdfVectorImportWiring {
@@ -29,6 +31,8 @@ export interface PdfVectorImportWiring {
   readonly onImport: () => void;
   /** Δ15: βαθμονόμηση από την κάρτα, μετά εισαγωγή. */
   readonly onCalibrateAndImport: () => void;
+  /** ADR-929 §6.24: αναίρεση της τελευταίας εισαγωγής (μαζί με τη βαθμονόμησή της). */
+  readonly onUndo: () => void;
 }
 
 /** Είναι το υπόβαθρο `backgroundId` του ορόφου `floorId` διανυσματικό; (`false` όσο δεν ξέρουμε.) */
@@ -97,7 +101,25 @@ export function usePdfVectorImportWiring(getDeps: () => ModelFromDrawingDeps): P
     if (scale?.kind !== 'proposal') return;
     run((target) => calibrateAndImportFloorPdfVectors(target, scale, undoName));
   }, [run, scale, undoName]);
+  const onUndo = useUndoImport(outcome, setOutcome);
 
   const view = React.useMemo((): PdfVectorImportView => ({ available, running, outcome, scale }), [available, running, outcome, scale]);
-  return { view, onImport, onCalibrateAndImport };
+  return { view, onImport, onCalibrateAndImport, onUndo };
+}
+
+/**
+ * ADR-929 §6.24 — «Αναίρεση» του αποτελέσματος = **το ίδιο** Ctrl+Z (εισαγωγή + βαθμονόμηση σε ένα βήμα), μόνο όσο είναι
+ * το τελευταίο του ιστορικού· αλλιώς το λέει, δεν αναιρεί εκτός σειράς.
+ */
+function useUndoImport(
+  outcome: PdfVectorImportView['outcome'],
+  setOutcome: (next: PdfVectorImportView['outcome']) => void,
+): () => void {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const notifications = useNotifications();
+  return React.useCallback(() => {
+    if (outcome?.kind !== 'imported' || outcome.undo === null) return;
+    if (undoIfLast(outcome.undo)) setOutcome(null);
+    else notifications.info(t('modelFromDrawing.pdfVector.undoNotLast'));
+  }, [outcome, setOutcome, notifications, t]);
 }

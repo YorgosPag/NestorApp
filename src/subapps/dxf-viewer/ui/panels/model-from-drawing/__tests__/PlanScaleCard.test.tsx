@@ -5,7 +5,7 @@
  *   · ποτέ σιωπηλή εφαρμογή: «Εφαρμογή» μόνο με κλικ, και η **αντικατάσταση** θέλει και δεύτερη επιβεβαίωση·
  *   · φαίνονται ποιες διαστάσεις ορίζουν την κλίμακα και ποιες έμειναν έξω, με λόγο·
  *   · hover σε γραμμή ⇒ επισήμανση στον καμβά (μέσω callback)·
- *   · επιβεβαίωση χωρίς κουμπί εφαρμογής· άρνηση «μπαγιάτικη» φαίνεται.
+ *   · επιβεβαίωση χωρίς κουμπί εφαρμογής, αλλά με ετυμηγορία χ², ευθυγράμμιση και χειροκίνητη (§6.23)· άρνηση «μπαγιάτικη» φαίνεται.
  */
 
 import React from 'react';
@@ -13,32 +13,41 @@ import { fireEvent, render } from '@testing-library/react';
 import { fusePlan } from '../../../../bim/plan-recognition/fusion/plan-fusion';
 import type { PlanFusionInput } from '../../../../bim/plan-recognition/fusion/plan-fusion-types';
 import { IDENTITY_HOMOGRAPHY } from '@/lib/geometry/homography';
-import { planScaleCard, type PlanScaleCard } from '../../../../systems/plan-recognition/plan-scale-card';
+import {
+  planScaleCard,
+  planScaleRefinement,
+  type PlanScaleCard,
+  type PlanScaleCardInput,
+} from '../../../../systems/plan-recognition/plan-scale-card';
 import { KNOWN_SCALE, fusionInput, houseDimensions, houseSegments, reading } from '../../../../bim/plan-recognition/fusion/__tests__/fusion-fixture';
-import { PlanScaleCardSection, type PlanScaleActions } from '../PlanScaleCard';
+import { PlanScaleCardSection, type PlanScaleActions, type PlanScaleView } from '../PlanScaleCard';
 
 const t = (key: string, params?: Record<string, string | number>): string => (params ? `${key}${JSON.stringify(params)}` : key);
 
-function cardFor(knownScale: PlanFusionInput['knownScale'], overrides: Parameters<typeof houseDimensions>[0] = {}): PlanScaleCard | null {
+function inputFor(knownScale: PlanFusionInput['knownScale'], overrides: Parameters<typeof houseDimensions>[0] = {}): PlanScaleCardInput {
   const { texts, dimensions } = houseDimensions(overrides);
   const read = { status: 'read' as const, reading: reading({ texts, dimensions }) };
   const base = fusionInput({ segments: houseSegments(), reading: read, knownScale });
-  return planScaleCard({
+  return {
     fusion: fusePlan(base), reading: read, sceneUnits: 'mm',
     alignment: { originalToAligned: IDENTITY_HOMOGRAPHY, alignedToOriginal: IDENTITY_HOMOGRAPHY },
     placement: { naturalBounds: { width: 500, height: 400 }, transform: { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotation: 0 } },
+    origin: knownScale === null ? null : 'pdf-vector-dimensions',
     dimensionFusion: () => fusePlan({ ...base, knownScale: null }),
-  });
+  };
 }
+
+const cardFor = (knownScale: PlanFusionInput['knownScale'], overrides: Parameters<typeof houseDimensions>[0] = {}): PlanScaleCard | null =>
+  planScaleCard(inputFor(knownScale, overrides));
 
 function actions(): jest.Mocked<PlanScaleActions> {
-  return { onApply: jest.fn(), onManual: jest.fn(), onHover: jest.fn() };
+  return { onApply: jest.fn(), onManual: jest.fn(), onRefine: jest.fn(), onCloseRefine: jest.fn(), onHover: jest.fn() };
 }
 
-function renderCard(card: PlanScaleCard | null, extra: { applying?: boolean; stale?: boolean } = {}) {
+function renderCard(card: PlanScaleCard | null, extra: Partial<Omit<PlanScaleView, 'card'>> = {}) {
   const a = actions();
-  const view = render(<PlanScaleCardSection view={{ card, applying: extra.applying ?? false, stale: extra.stale ?? false }} actions={a} t={t} />);
-  return { ...view, a };
+  const view: PlanScaleView = { card, refinement: extra.refinement ?? null, applying: extra.applying ?? false, stale: extra.stale ?? false };
+  return { ...render(<PlanScaleCardSection view={view} actions={a} t={t} />), a };
 }
 
 const WRONG = { ...KNOWN_SCALE, metresPerPixelX: KNOWN_SCALE.metresPerPixelX * 1.05, metresPerPixelY: KNOWN_SCALE.metresPerPixelY * 1.05 };
@@ -77,11 +86,32 @@ describe('PlanScaleCardSection (ADR-929 Φ5.3γ)', () => {
     expect(queryByTestId('mfd-scale-confirm')).toBeNull();
   });
 
-  it('επιβεβαίωση: κανένα κουμπί εφαρμογής ή χειροκίνητης βαθμονόμησης', () => {
-    const { getByTestId, queryByTestId } = renderCard(cardFor(KNOWN_SCALE));
+  it('§6.23 επιβεβαίωση: ετυμηγορία χ², γραμμή ανά διάσταση, προέλευση· χωρίς «Εφαρμογή», αλλά με ευθυγράμμιση ΚΑΙ χειροκίνητη', () => {
+    const { getByTestId, queryByTestId, a } = renderCard(cardFor(KNOWN_SCALE));
     expect(getByTestId('mfd-scale-confirmed')).not.toBeNull();
+    expect(getByTestId('mfd-scale-verdict').getAttribute('data-within')).toBe('true');
+    expect(getByTestId('mfd-scale-agreement-rows').querySelectorAll('li').length).toBeGreaterThanOrEqual(2);
+    expect(getByTestId('mfd-scale-origin').getAttribute('data-origin')).toBe('pdf-vector-dimensions');
     expect(queryByTestId('mfd-scale-apply')).toBeNull();
-    expect(queryByTestId('mfd-scale-manual')).toBeNull();
+    fireEvent.click(getByTestId('mfd-scale-refine'));
+    expect(a.onRefine).toHaveBeenCalledTimes(1);
+    fireEvent.click(getByTestId('mfd-scale-manual'));
+    expect(a.onManual).toHaveBeenCalledTimes(1);
+  });
+
+  it('§6.23 ανοιχτή ευθυγράμμιση: αντικατάσταση με δεύτερη επιβεβαίωση που λέει «δεν βελτιώνει», και «Κλείσιμο»', () => {
+    const input = inputFor(KNOWN_SCALE);
+    const refinement = planScaleRefinement(input);
+    const { getByTestId, queryByTestId, a } = renderCard(planScaleCard(input), { refinement });
+    expect(queryByTestId('mfd-scale-refine')).toBeNull();
+    expect(getByTestId('mfd-scale-refinement')).not.toBeNull();
+    fireEvent.click(getByTestId('mfd-scale-apply'));
+    expect(a.onApply).not.toHaveBeenCalled();
+    expect(getByTestId('mfd-scale-refine-within')).not.toBeNull();
+    fireEvent.click(getByTestId('mfd-scale-replace-yes'));
+    expect(a.onApply).toHaveBeenCalledWith(refinement);
+    fireEvent.click(getByTestId('mfd-scale-refine-close'));
+    expect(a.onCloseRefine).toHaveBeenCalledTimes(1);
   });
 
   it('σε εξέλιξη ⇒ κουμπί κλειστό· άρνηση «μπαγιάτικη» ⇒ μήνυμα', () => {

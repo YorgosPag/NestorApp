@@ -20,6 +20,7 @@ import { registerPerimeterBuildNotifications } from './notifications/perimeter-b
 import { registerMepCircuitNotifications } from './notifications/mep-circuit-notifications';
 import { registerMepAutoDesignNotifications } from './notifications/mep-autodesign-notifications';
 import { registerPrintFidelityNotifications } from './notifications/print-fidelity-notifications';
+import { registerCalibrationHistoryNotifications } from './notifications/calibration-history-notifications';
 
 export function useDxfViewerNotifications(): void {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -32,6 +33,7 @@ export function useDxfViewerNotifications(): void {
       ...registerMepCircuitNotifications(t),
       ...registerMepAutoDesignNotifications(t),
       ...registerPrintFidelityNotifications(t),
+      ...registerCalibrationHistoryNotifications(t),
     ];
 
     return () => unsubs.forEach((u) => u());

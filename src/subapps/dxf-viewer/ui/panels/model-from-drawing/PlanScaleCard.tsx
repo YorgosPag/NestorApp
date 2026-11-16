@@ -12,29 +12,34 @@
  */
 
 import * as React from 'react';
-import { AlertTriangle, CheckCircle2, Loader2, Ruler } from 'lucide-react';
+import { AlertTriangle, Loader2, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatNumber, formatPercentage } from '@/lib/intl-formatting';
 import { CALIBRATION_LIMITS } from '../../../floorplan-background/geometry/calibration-solve';
 import type {
-  PlanScaleConfirmed,
   PlanScaleCard as PlanScaleCardModel,
   PlanScaleFailed,
   PlanScaleProposal,
 } from '../../../systems/plan-recognition/plan-scale-card';
 import type { RejectedScaleDimension } from '../../../bim/plan-recognition/fusion/scale-references';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
+import { PlanScaleConfirmedBody } from './PlanScaleConfirmedBody';
 
 const KEY = 'modelFromDrawing.image.scale';
 
 export interface PlanScaleActions {
   readonly onApply: (proposal: PlanScaleProposal) => void;
   readonly onManual: () => void;
+  /** §6.23 — άνοιγμα / κλείσιμο της «Ευθυγράμμισης με τις διαστάσεις» σε επιβεβαιωμένη βαθμονόμηση. */
+  readonly onRefine: () => void;
+  readonly onCloseRefine: () => void;
   readonly onHover: (textId: string | null) => void;
 }
 
 export interface PlanScaleView {
   readonly card: PlanScaleCardModel | null;
+  /** §6.23 — η ευθυγράμμιση που ζήτησε ο άνθρωπος (`null` ⇒ κλειστή). */
+  readonly refinement: PlanScaleProposal | PlanScaleFailed | null;
   readonly applying: boolean;
   /** Η τελευταία «Εφαρμογή» αρνήθηκε: η βάση της κάρτας είχε αλλάξει. */
   readonly stale: boolean;
@@ -128,6 +133,9 @@ function ApplyControls({ proposal, applying, actions, t }: {
     return (
       <section className="flex flex-col gap-1" role="alertdialog" aria-label={t(`${KEY}.replace`)} data-testid="mfd-scale-confirm">
         <p className="m-0 text-[11px] text-foreground">{t(`${KEY}.replaceConfirm`)}</p>
+        {proposal.refines?.withinPrecision ? (
+          <p className="m-0 text-[11px] text-foreground" data-testid="mfd-scale-refine-within">{t(`${KEY}.refineWithin`)}</p>
+        ) : null}
         <footer className="flex flex-wrap gap-1.5">
           <Button type="button" size="xs" onClick={apply} data-testid="mfd-scale-replace-yes">{t(`${KEY}.replaceYes`)}</Button>
           <Button type="button" size="xs" variant="ghost" onClick={() => setConfirming(false)}>{t(`${KEY}.cancel`)}</Button>
@@ -169,18 +177,6 @@ function ProposalBody({ proposal, view, actions, t }: {
   );
 }
 
-function ConfirmedBody({ card, actions, t }: { readonly card: PlanScaleConfirmed; readonly actions: PlanScaleActions; readonly t: Translate }): React.ReactElement {
-  return (
-    <>
-      <p className="m-0 flex items-center gap-1.5 text-[11px] text-foreground" role="status" data-testid="mfd-scale-confirmed">
-        <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
-        <span>{t(`${KEY}.confirmed`, { count: card.agreeing, deviation: percent(card.maxDeviationRel) })}</span>
-      </p>
-      <RejectedList rejected={card.rejected} onHover={actions.onHover} t={t} />
-    </>
-  );
-}
-
 function FailedBody({ card, actions, t }: { readonly card: PlanScaleFailed; readonly actions: PlanScaleActions; readonly t: Translate }): React.ReactElement {
   return (
     <>
@@ -192,26 +188,52 @@ function FailedBody({ card, actions, t }: { readonly card: PlanScaleFailed; read
   );
 }
 
+/** §6.23 — η ευθυγράμμιση μιας επιβεβαιωμένης βαθμονόμησης: η ίδια πρόταση (ή αποτυχία) με τη διαφωνία, και «Κλείσιμο». */
+function RefinementBody({ refinement, view, actions, t }: {
+  readonly refinement: PlanScaleProposal | PlanScaleFailed;
+  readonly view: PlanScaleView;
+  readonly actions: PlanScaleActions;
+  readonly t: Translate;
+}): React.ReactElement {
+  return (
+    <section className="flex flex-col gap-1.5 border-t border-dashed border-border pt-2" data-testid="mfd-scale-refinement"
+      aria-label={t(`${KEY}.refineTitle`)}>
+      <h5 className={SECTION_TITLE}>{t(`${KEY}.refineTitle`)}</h5>
+      {refinement.kind === 'proposal'
+        ? <ProposalBody proposal={refinement} view={view} actions={actions} t={t} />
+        : <FailedBody card={refinement} actions={actions} t={t} />}
+      <Button type="button" variant="ghost" size="xs" onClick={actions.onCloseRefine} data-testid="mfd-scale-refine-close">
+        {t(`${KEY}.refineClose`)}
+      </Button>
+    </section>
+  );
+}
+
 /** Η κάρτα κλίμακας· `null` όταν η αναγνώριση δεν έχει τίποτα να πει για την κλίμακα. */
 export function PlanScaleCardSection({ view, actions, t }: {
   readonly view: PlanScaleView;
   readonly actions: PlanScaleActions;
   readonly t: Translate;
 }): React.ReactElement | null {
-  const { card } = view;
+  const { card, refinement } = view;
   if (card === null) return null;
   return (
     <section className="flex flex-col gap-1.5 border-t border-border pt-2" data-testid="mfd-scale" data-kind={card.kind}
       onMouseLeave={() => actions.onHover(null)}>
       <h4 className={SECTION_TITLE}>{t(`${KEY}.title`)}</h4>
       {card.kind === 'proposal' ? <ProposalBody proposal={card} view={view} actions={actions} t={t} /> : null}
-      {card.kind === 'confirmed' ? <ConfirmedBody card={card} actions={actions} t={t} /> : null}
+      {card.kind === 'confirmed' ? (
+        <>
+          <PlanScaleConfirmedBody card={card} refining={refinement !== null} onRefine={actions.onRefine} onHover={actions.onHover} t={t} />
+          <RejectedList rejected={card.rejected} onHover={actions.onHover} t={t} />
+          {refinement !== null ? <RefinementBody refinement={refinement} view={view} actions={actions} t={t} /> : null}
+        </>
+      ) : null}
       {card.kind === 'failed' ? <FailedBody card={card} actions={actions} t={t} /> : null}
-      {card.kind === 'confirmed' ? null : (
-        <Button type="button" variant="ghost" size="xs" onClick={actions.onManual} data-testid="mfd-scale-manual">
-          {t(`${KEY}.manual`)}
-        </Button>
-      )}
+      {/* Bluebeam: η επαναβαθμονόμηση με το χέρι δεν κρύβεται ποτέ — ούτε όταν η κάρτα επιβεβαιώνει (§6.23). */}
+      <Button type="button" variant="ghost" size="xs" onClick={actions.onManual} data-testid="mfd-scale-manual">
+        {t(`${KEY}.manual`)}
+      </Button>
     </section>
   );
 }

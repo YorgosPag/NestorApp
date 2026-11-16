@@ -10,7 +10,7 @@
  */
 
 import * as React from 'react';
-import { FileInput, Loader2 } from 'lucide-react';
+import { FileInput, Loader2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { PdfVectorImportOutcome } from '../../../systems/pdf-vector-import/pdf-vector-import-commit';
 import type { PdfVectorScale } from '../../../systems/pdf-vector-import/pdf-vector-scale';
@@ -30,6 +30,8 @@ export interface PdfVectorImportView {
 export interface PdfVectorImportActions {
   readonly onImport: () => void;
   readonly onCalibrateAndImport: () => void;
+  /** ADR-929 §6.24 — η «Αναίρεση» του αποτελέσματος = το ίδιο Ctrl+Z (εισαγωγή + βαθμονόμηση σε ένα βήμα). */
+  readonly onUndo: () => void;
 }
 
 /** Κάθε αποτυχία με το δικό της ρητό κλειδί (ορατό στο CHECK 3.8 — κανένα συναρμολογημένο κλειδί). */
@@ -41,7 +43,11 @@ const FAILURE_LABEL_KEY: Readonly<Record<Exclude<PdfVectorImportOutcome['kind'],
   'calibration-failed': 'modelFromDrawing.pdfVector.outcome.calibrationFailed',
 };
 
-function OutcomeMessage({ outcome, t }: { readonly outcome: PdfVectorImportOutcome; readonly t: Translate }): React.ReactElement {
+function OutcomeMessage({ outcome, onUndo, t }: {
+  readonly outcome: PdfVectorImportOutcome;
+  readonly onUndo: () => void;
+  readonly t: Translate;
+}): React.ReactElement {
   if (outcome.kind !== 'imported') {
     return <p className="m-0 text-[11px] text-destructive" role="status">{t(FAILURE_LABEL_KEY[outcome.kind])}</p>;
   }
@@ -65,6 +71,12 @@ function OutcomeMessage({ outcome, t }: { readonly outcome: PdfVectorImportOutco
       ) : null}
       {outcome.replaced > 0 ? <p className={MUTED}>{t('modelFromDrawing.pdfVector.replaced', { count: outcome.replaced })}</p> : null}
       {outcome.skippedFills > 0 ? <p className={MUTED}>{t('modelFromDrawing.pdfVector.skippedFills', { count: outcome.skippedFills })}</p> : null}
+      {outcome.undo !== null ? (
+        <Button type="button" variant="ghost" size="xs" className="self-start" onClick={onUndo} data-testid="mfd-pdf-vector-undo">
+          <Undo2 className="size-3.5" aria-hidden="true" />
+          {t(outcome.calibrated ? 'modelFromDrawing.pdfVector.undoWithCalibration' : 'modelFromDrawing.pdfVector.undo')}
+        </Button>
+      ) : null}
     </section>
   );
 }
@@ -115,7 +127,7 @@ export function PdfVectorImportSection({ view, actions, t }: {
       <p className={MUTED}>{t('modelFromDrawing.pdfVector.hint')}</p>
       {view.scale ? <PdfVectorScaleSummary scale={view.scale} t={t} /> : null}
       <RunControls view={view} actions={actions} t={t} />
-      {view.outcome ? <OutcomeMessage outcome={view.outcome} t={t} /> : null}
+      {view.outcome ? <OutcomeMessage outcome={view.outcome} onUndo={actions.onUndo} t={t} /> : null}
     </section>
   );
 }

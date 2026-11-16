@@ -29,7 +29,8 @@ import { setBackgroundScale } from '@/services/floorplan-background/floorplan-sc
 import { createModuleLogger } from '@/lib/telemetry';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { getErrorMessage } from '@/lib/error-utils';
-import type { BackgroundScale } from '@/types/floorplan-overlays';
+// ADR-929 §6.24 — ο ΕΝΑΣ έλεγχος κλίμακας (τον μοιράζεται και η αναίρεση βαθμονόμησης).
+import { isBackgroundScale } from '@/types/floorplan-overlays';
 import {
   backgroundErrorResponse,
   backgroundNotFoundResponse,
@@ -40,15 +41,6 @@ const logger = createModuleLogger('FloorplanBackgroundCalibrateRoute');
 
 interface RouteContext {
   params: Promise<{ id: string }>;
-}
-
-function isValidScale(v: unknown): v is BackgroundScale {
-  if (!v || typeof v !== 'object') return false;
-  const s = v as BackgroundScale;
-  if (typeof s.unitsPerMeter !== 'number' || !Number.isFinite(s.unitsPerMeter) || s.unitsPerMeter <= 0) {
-    return false;
-  }
-  return s.sourceUnit === 'mm' || s.sourceUnit === 'cm' || s.sourceUnit === 'm' || s.sourceUnit === 'pixel';
 }
 
 async function handlePost(
@@ -70,7 +62,7 @@ async function handlePost(
     }
 
     const scale = (body as { scale?: unknown }).scale;
-    if (!isValidScale(scale)) {
+    if (!isBackgroundScale(scale)) {
       return badRequest('Invalid scale payload — expected { unitsPerMeter > 0, sourceUnit ∈ {mm,cm,m,pixel} }', 422);
     }
 

@@ -108,7 +108,7 @@ function actionsMock(): jest.Mocked<ModelFromDrawingPanelActions> {
       onBegin: jest.fn(), onEnd: jest.fn(), onToggleAddRegion: jest.fn(),
       onReset: jest.fn(), onUndoReadingDrop: jest.fn(), onPrepare: jest.fn(), onSend: jest.fn(),
     },
-    scale: { onApply: jest.fn(), onManual: jest.fn(), onHover: jest.fn() },
+    scale: { onApply: jest.fn(), onManual: jest.fn(), onRefine: jest.fn(), onCloseRefine: jest.fn(), onHover: jest.fn() },
     ocr: { onCancel: jest.fn(), onRetry: jest.fn() },
     readValues: { onCorrect: jest.fn(), onMarkNotDimension: jest.fn(), onRevert: jest.fn(), onHover: jest.fn(), onConfirm: jest.fn(), onFocusSource: jest.fn(), previewCorrection: jest.fn(() => null) },
     drawingKind: { onSet: jest.fn() },
@@ -121,7 +121,7 @@ const NO_EXCLUSIONS: ImageSourceView['excludedFromWalls'] = { byRole: { dimensio
 /** Η πηγή «εικόνα» όπως τη δίνει ο host — προεπιλογή: όροφος χωρίς υπόβαθρο, πηγή το σχέδιο. */
 const NO_IMAGE: ImageSourceView = {
   available: false, phase: 'idle', failure: null, active: false, countsByTier: null, excludedFromWalls: NO_EXCLUSIONS, calibrated: false,
-  readingAvailable: false, readingAdopted: false, review: null, scale: { card: null, applying: false, stale: false },
+  readingAvailable: false, readingAdopted: false, review: null, scale: { card: null, refinement: null, applying: false, stale: false },
   ocr: { state: { status: 'idle' }, inUse: false, counts: null },
   readValues: null,
   readValueThumbnails: new Map(),
@@ -129,7 +129,7 @@ const NO_IMAGE: ImageSourceView = {
 };
 
 /** ADR-941 — χωρίς διανυσματικό υπόβαθρο το τμήμα εισαγωγής δεν αποδίδεται. */
-const NO_PDF_VECTOR = { view: { available: false, running: false, outcome: null, scale: null }, onImport: jest.fn(), onCalibrateAndImport: jest.fn() };
+const NO_PDF_VECTOR = { view: { available: false, running: false, outcome: null, scale: null }, onImport: jest.fn(), onCalibrateAndImport: jest.fn(), onUndo: jest.fn() };
 
 function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: ImageSourceView = NO_IMAGE) {
   const actions = actionsMock();
