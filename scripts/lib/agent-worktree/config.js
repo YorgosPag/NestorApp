@@ -14,6 +14,13 @@ const MAIN_BRANCH = 'main';
 const LAND_LOCK = 'agent-worktree-land.lock';
 
 /**
+ * Τα worktrees των υποπρακτόρων του Claude Code (`isolation: worktree`), σχετικά με το κύριο
+ * αντίγραφο. Δεν τα φτιάχνει το `wt:*`, αλλά μένουν στον δίσκο όταν το git τα ξεχάσει
+ * (μετρημένο 2026-11-16: 9 φάκελοι, ~1,2 GB). Τα καθαρίζει το `wt:prune` (ADR-925 §17).
+ */
+const HARNESS_WORKTREE_DIR = '.claude/worktrees';
+
+/**
  * Φάκελος των handoffs, σχετικός με τη ρίζα κάθε αντιγράφου. Τα handoffs του worktree
  * συλλέγονται στον ομώνυμο φάκελο του κύριου αντιγράφου, γιατί μόνο εκεί τα παίρνει το
  * backup και μόνο εκεί επιζούν το σβήσιμο του worktree (ADR-925 §9, 2026-11-11).
@@ -70,7 +77,7 @@ function assertDiskRoom(freeBytes, minimum = MIN_FREE_BYTES) {
     const toGb = (n) => (n / 1024 ** 3).toFixed(1);
     throw new Error(
       `Ο δίσκος έχει ${toGb(freeBytes)} GB ελεύθερα, χρειάζονται τουλάχιστον ${toGb(minimum)} GB. ` +
-        'Ελευθέρωσε χώρο ή σβήσε worktree που τελείωσε (npm run wt:list).',
+        'Ελευθέρωσε χώρο: ορφανοί φάκελοι worktree (npm run wt:prune) ή worktree που τελείωσε (npm run wt:list).',
     );
   }
 }
@@ -79,6 +86,7 @@ module.exports = {
   BRANCH_PREFIX,
   HANDOFF_DIR,
   HANDOFF_EXTENSION,
+  HARNESS_WORKTREE_DIR,
   LAND_LOCK,
   MAIN_BRANCH,
   MIN_FREE_BYTES,

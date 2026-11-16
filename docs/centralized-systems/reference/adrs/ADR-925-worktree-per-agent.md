@@ -5,7 +5,7 @@
 | **Status** | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ (2026-10-31)** · εντολές `wt:*` + CHECK 3.109 · η επιβολή (`enforce`) ενεργοποιείται στο καθαρό σημείο (§10) |
 | **Date** | 2026-10-30 |
 | **Category** | Tooling / Multi-agent workflow |
-| **Canonical Location** | `scripts/lib/agent-worktree/` (συλλογή handoffs: `handoffs.js`, §16) · `scripts/lib/fs/atomic-write.js` · `scripts/agent-worktree.js` · `scripts/check-agent-worktree-policy.js` · `.agent-worktree-policy.json` · `.claude/settings.json` (`worktree.baseRef`) |
+| **Canonical Location** | `scripts/lib/agent-worktree/` (συλλογή handoffs: `handoffs.js`, §16 · ορφανοί φάκελοι: `prune.js`, §17) · `scripts/lib/fs/atomic-write.js` · `scripts/agent-worktree.js` · `scripts/check-agent-worktree-policy.js` · `.agent-worktree-policy.json` · `.claude/settings.json` (`worktree.baseRef`) |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Σχετικά** | ADR-924 (οι πύλες κρίνουν το commit — η **άμυνα**, αυτό εδώ η **θεραπεία**) · `.claude-rules/fleet/` (κλειδώματα αρχείων/λωρίδων) · `heavy-mutex` (ένα βαρύ έργο τη φορά) · ADR-800 (μία έκδοση πακέτου) |
 
@@ -111,6 +111,7 @@
 
 | ημερομηνία | αλλαγή |
 |---|---|
+| 2026-11-16 | §17: νέα εντολή `wt:prune` (`prune.js`). Ορφανοί φάκελοι worktree (`.claude/worktrees/agent-*` του harness ~1,2 GB · υπολείμματα EPERM του `wt:remove`) έριξαν τον δίσκο στο 1,2 GB και το `wt:new` αρνιόταν. Ξερή εκτέλεση εξ ορισμού, σβήσιμο με `--yes`· πρώτα `git worktree prune`· σβήνεται μόνο άμεσο παιδί των δύο ριζών που το git δεν γνωρίζει, με φράχτες (junction · ανεξάρτητο repo · worktree άλλου repo · cwd · handoffs που δεν υπάρχουν στο κύριο αντίγραφο) και νέο έλεγχο του git πριν από κάθε φάκελο. Επαναχρησιμοποιεί `clearResidue` / `freeBytes` / `isInside` του `lifecycle.js`· νέο `gitReport` στο `git.js` (το `--verbose` γράφει στο stderr). Το μήνυμα του `wt:new` για λίγο δίσκο προτείνει `wt:prune`. Το `deny: Bash(rm -rf:*)` μένει. |
 | 2026-11-16 | §15.4: ο τίτλος του ενιαίου commit του `wt:land` γίνεται το **παλαιότερο** μη-handoff μήνυμα του κλαδιού (GitHub «Squash and merge»), όχι το νεότερο. Αιτία: το `fde89989` μπήκε με τίτλο `chore(native-tooltip)…` (διόρθωση baseline για την πύλη) ενώ περιείχε όλο το `feat(adr-929): §6.25`. `findIndex` → `findLastIndex` στο `composeLandMessage`· tests: καθαρή συνάρτηση `chore` πάνω από `feat` και ένταξη `feat → chore` πάνω σε κινημένο `main`. |
 | 2026-11-12 | Το `wt:land` κληρονομεί την **εμβέλεια εισόδων** του hook (ADR-924 §9), επειδή το `recommitThroughGates` ξαναδεσμεύει μέσα από τον ίδιο hook με το ίδιο ευρετήριο. Κλαδί μόνο με handoff (`HANDOFFS/*.md` · `docs/handoffs/*.md`): τρέχουν μόνο η σάρωση μυστικών (10) και η 3.109, άρα ~9–11 s αντί για 64–76 s, σε κάθε πέρασμα (commit **και** land). Η merge queue δεν αλλάζει. |
 | 2026-11-11 | §16: τα handoffs του worktree χάνονταν σιωπηλά στο `wt:remove` (αγνοημένα, άρα αόρατα στο `isDirty`) και δεν έμπαιναν ποτέ στο backup. Νέο `handoffs.js`: συλλογή μόνο των untracked `HANDOFFS/*.md` στο κύριο αντίγραφο, ιδεμποτική, ατομική, με σύγκρουση αντί για αντικατάσταση νεότερου ή tracked. `wt:land` συλλέγει μετά την ένταξη, `wt:remove` πριν το σβήσιμο (αρνείται σε σύγκρουση), νέα εντολή `wt:handoffs` (`--all`). Νέο SSoT `scripts/lib/fs/atomic-write.js`. |
@@ -381,3 +382,51 @@ Commit στο worktree `accounting-competitive-parity`. Μετά το pre-commit
 - Υπόλειμμα χωρίς καταχώρηση git (φάκελος που έμεινε μετά από μισό σβήσιμο) δεν συλλέγεται: το git δεν έχει τι να απαριθμήσει εκεί. Η συλλογή έχει ήδη γίνει στο πρώτο πέρασμα, πριν από το `unregister`.
 - Σύγκριση ηλικίας με mtime: αξιόπιστη στον ίδιο δίσκο και την ίδια μηχανή, όχι ως ρολόι μεταξύ μηχανών.
 - Το `scripts/lib/i18n-shell-slice/source-cache.js` κρατά ακόμη τη δική του `writeFileAtomic`. Η μεταφορά του στο νέο SSoT αλλάζει το αποτύπωμα toolchain του shell slice (ADR-744 §30, CHECK 3.34) και θέλει αναπαραγωγή του `src/i18n/generated/shell-slice.el.json`. Εκκρεμεί ως ξεχωριστή εργασία.
+
+## 17. `wt:prune`: ορφανοί φάκελοι worktree (2026-11-16)
+
+### 17.1 Το πρόβλημα (μετρημένο 2026-11-16)
+
+- Ο δίσκος C: έπεσε στα 1,2 GB και το `wt:new` αρνιόταν (όριο 1,5 GB, `MIN_FREE_BYTES`).
+- `C:\Nestor_Pagonis\.claude\worktrees\agent-*`: 9 φάκελοι, ~1,2 GB. Είναι worktrees υποπρακτόρων του Claude Code (`isolation: worktree`) που το git **δεν γνώριζε πια**. Το `wt:remove` ψάχνει μόνο στη δική του ρίζα (§13.4), άρα δεν τους έβλεπε κανείς.
+- Υπολείμματα του `wt:remove` με EPERM (`adr-929-undo-toast-and-pdf-undo`, `land-title-first-commit`): η καταχώρηση και το κλαδί είχαν σβηστεί, ο φάκελος έμενε.
+- Ο πράκτορας δεν μπορεί να σβήσει αναδρομικά: το `.claude/settings.local.json` έχει `deny: Bash(rm -rf:*)`. **Μένει**: η πρακτική είναι απαγόρευση του γενικού εργαλείου και ειδικό εργαλείο με κριτήριο.
+
+### 17.2 Απόφαση
+
+`npm run wt:prune` (ξερή εκτέλεση: λίστα + MB) · `npm run wt:prune -- --yes` (σβήσιμο). Πρότυπο: `git worktree prune`, `docker system prune`.
+
+| Βήμα | Κανόνας |
+|---|---|
+| 1 | `git worktree prune --verbose` (`--dry-run` στην ξερή εκτέλεση): καταχωρήσεις χωρίς φάκελο. Τα locked μένουν, τα κλαδιά δεν αγγίζονται. Η αναφορά του git βγαίνει στο **stderr**, γι' αυτό υπάρχει το `gitReport` |
+| 2 | Υποψήφιος = **άμεσο παιδί** της `worktreeRoot(env)` ή του `<κύριο>/.claude/worktrees` (`HARNESS_WORKTREE_DIR`), που **ούτε είναι ούτε περιέχει** καταχωρημένο worktree |
+| 3 | Φράχτες: παράλειψη με αιτία, ποτέ σβήσιμο (πίνακας 17.3) |
+| 4 | Πριν από **κάθε** σβήσιμο: ξανά λίστα του git και ξανά φράχτες. Άλλος πράκτορας μπορεί στο μεταξύ να έκανε `wt:new` με το ίδιο όνομα |
+| 5 | Σβήσιμο με το `clearResidue` της §12 (δικός του βρόχος αναμονής). Κρατημένος φάκελος ⇒ τιμή `residue`, συνέχεια με τους υπόλοιπους, έξοδος 1 |
+| 6 | Τέλος: **μετρημένη** μεταβολή ελεύθερου χώρου (`statfs` πριν και μετά, ανά δίσκο). Το άθροισμα αρχείων υπερεκτιμά, γιατί τα hard links του pnpm μετρούν ολόκληρα |
+
+Ιδεμπότητο: δεύτερη εκτέλεση = «Κανένας ορφανός φάκελος worktree». Το μήνυμα του `wt:new` για λίγο δίσκο προτείνει πλέον `wt:prune`.
+
+### 17.3 Φράχτες
+
+| Αιτία | Κρίση |
+|---|---|
+| `not-directory` | `lstat`: junction ή symlink. Ποτέ δεν ακολουθείται, ούτε στη μέτρηση |
+| `cwd` | Το cwd της εντολής είναι μέσα του |
+| `foreign-repo` | Φάκελος `.git`: ανεξάρτητο repo (ίδιο με το `assertNotForeignRepo`) |
+| `registered-elsewhere` | Αρχείο `.git` → φάκελος διαχείρισης που υπάρχει **και** δείχνει πίσω σε αυτόν τον φάκελο: worktree κάποιου repo, ίσως άλλου. Αν ο φάκελος διαχείρισης ανήκει πλέον σε άλλο worktree με το ίδιο όνομα, ο δικός μας είναι ορφανός. Ό,τι δεν διαβάζεται κρίνεται καταχωρημένο |
+| `handoffs` | `HANDOFFS/*.md` πρώτου επιπέδου που δεν υπάρχουν byte-ίδια στο κύριο αντίγραφο. Κρίνεται με fs, γιατί χωρίς καταχώρηση το git δεν μπορεί να τα απαριθμήσει (§16.3). Το prune **δεν αντιγράφει**, μόνο σβήνει· τα handoffs αναφέρονται ονομαστικά |
+
+### 17.4 Γιατί EPERM: τι ξέρουμε
+
+- **Δεν αποδείχθηκε.** Όταν ξεκίνησε η εργασία, ο `land-title-first-commit` είχε ήδη σβηστεί, και καμία διεργασία δεν είχε διαδρομή worktree στη γραμμή εντολών της (`Win32_Process`, 2026-11-16).
+- Το μοτίβο είναι ίδιο τρεις φορές (§12.5 · §13.4 · 2026-11-16): `wt:remove` αμέσως μετά από `ExitWorktree` ⇒ EPERM· σε νέα συνεδρία ο φάκελος σβήνεται κανονικά.
+- Υπόθεση: λαβή της διεργασίας του Claude Code πάνω στον φάκελο (cwd ή παρακολούθηση αρχείων όπως `.claude/`, `CLAUDE.md`), που δεν απελευθερώνεται πριν κλείσει η συνεδρία. Το `handle.exe` δεν υπάρχει στο μηχάνημα (§12.4), οπότε η υπόθεση δεν επαληθεύεται.
+- Πρακτική συνέπεια: το `wt:remove` στο τέλος της συνεδρίας θα αφήνει υπόλειμμα, και το `wt:prune -- --yes` από **επόμενη** συνεδρία το καθαρίζει.
+
+### 17.5 Όρια
+
+- Ορφανός φάκελος harness με **αδέσμευτη** δουλειά δεν αναγνωρίζεται: χωρίς καταχώρηση το git δεν έχει `status`. Γι' αυτό η προεπιλογή είναι ξερή εκτέλεση, και το `--yes` είναι απόφαση ανθρώπου πάνω στη λίστα.
+- Δεν καθαρίζει άλλα μεγάλα υπόλοιπα: `.next`, `node_modules\.cache`, `%TEMP%`.
+- Δεν σβήνει κλαδιά. Τα κλαδιά των worktrees του harness μένουν· θέλουν την κρίση της §13.2.
+- Tests: `scripts/__tests__/agent-worktree-prune.test.js`, με το κοινό `agent-worktree-fixture.js`.

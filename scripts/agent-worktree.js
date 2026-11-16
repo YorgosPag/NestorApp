@@ -8,6 +8,8 @@
  *   npm run wt:remove -- <εργασία>   σβήσιμο αντιγράφου (συλλέγει πρώτα τα handoffs· αρνείται αν δεν τα πάρει όλα)
  *   npm run wt:handoffs -- <εργασία> συλλογή των handoffs στο HANDOFFS/ του κύριου αντιγράφου
  *   npm run wt:handoffs -- --all     το ίδιο για κάθε ενεργό worktree πράκτορα
+ *   npm run wt:prune                 ορφανοί φάκελοι worktree: λίστα + MB, χωρίς αλλαγή
+ *   npm run wt:prune -- --yes        σβήσιμό τους (ADR-925 §17)
  */
 
 'use strict';
@@ -18,8 +20,20 @@ const { primaryDir } = require('./lib/agent-worktree/git');
 const { harvestHandoffs } = require('./lib/agent-worktree/handoffs');
 const { createWorkspace, listWorkspaces, removeWorkspace, requireWorkspace } = require('./lib/agent-worktree/lifecycle');
 const { land } = require('./lib/agent-worktree/land');
+const { findOrphans, pruneOrphans } = require('./lib/agent-worktree/prune');
 
 const ALL_FLAG = '--all';
+const YES_FLAG = '--yes';
+
+const SKIPS = {
+  gone: 'έφυγε στο μεταξύ',
+  'not-directory': 'δεν είναι φάκελος (junction ή symlink)',
+  cwd: 'τρέχεις μέσα του',
+  'foreign-repo': 'ανεξάρτητο repo (φάκελος .git)',
+  'registered-elsewhere': 'καταχωρημένο worktree κάποιου repo (το .git δείχνει σε ζωντανή καταχώρηση)',
+  registered: 'καταχωρήθηκε στο git στο μεταξύ',
+  handoffs: 'handoffs που δεν υπάρχουν στο κύριο αντίγραφο',
+};
 
 const REASONS = {
   tracked: 'το ομώνυμο του κύριου αντιγράφου είναι tracked στο git· δεν γράφεται',
@@ -100,6 +114,47 @@ function printHandoffs(task) {
   if (!complete) process.exitCode = 1;
 }
 
+const toMb = (bytes) => `${(bytes / 1024 ** 2).toFixed(0)} MB`;
+
+function describeOrphan(item, apply) {
+  if (item.skip) {
+    const detail = (item.skip.detail || []).map((name) => `\n      ${path.join(item.dir, HANDOFF_DIR, name)}`).join('');
+    return `  ⏭️ ${item.dir} · ${toMb(item.bytes)} · παραλείπεται: ${SKIPS[item.skip.reason] || item.skip.reason}${detail}`;
+  }
+  if (!apply) return `  🗑️ ${item.dir} · ${toMb(item.bytes)}`;
+  if (item.residue) return `  ⚠️ ${item.dir} · ${toMb(item.bytes)} · έμεινε (${item.residue})`;
+  return `  ✅ ${item.dir} · ${toMb(item.bytes)} · σβήστηκε`;
+}
+
+function printPruneSummary(result, apply) {
+  const pending = result.orphans.filter((item) => !item.skip);
+  if (!apply) {
+    const total = pending.reduce((sum, item) => sum + item.bytes, 0);
+    console.log(`${pending.length} για σβήσιμο, ${toMb(total)} σε αρχεία (με hard links του pnpm ο δίσκος κερδίζει λιγότερα).`);
+    if (pending.length > 0) console.log('Σβήσιμο: npm run wt:prune -- --yes');
+    return;
+  }
+  console.log(`Ελεύθερος χώρος: +${toMb(result.freedBytes)} (μετρημένο στον δίσκο).`);
+  if (pending.some((item) => item.residue)) {
+    console.error('⚠️ Κάποια διεργασία κρατά τους φακέλους που έμειναν, συνήθως συνεδρία ή τερματικό που δούλεψε εκεί.');
+    console.error('   Κλείσ\' την και ξανατρέξε: npm run wt:prune -- --yes');
+    process.exitCode = 1;
+  }
+}
+
+function printPruned(flag) {
+  if (flag !== undefined && flag !== YES_FLAG) throw new Error(`Άγνωστη επιλογή «${flag}». Δεκτή μόνο: ${YES_FLAG}.`);
+  const apply = flag === YES_FLAG;
+  const result = apply ? pruneOrphans() : findOrphans();
+  result.pruned.forEach((line) => console.log(`  git worktree prune: ${line}`));
+  if (result.orphans.length === 0) {
+    console.log('Κανένας ορφανός φάκελος worktree.');
+    return;
+  }
+  result.orphans.forEach((item) => console.log(describeOrphan(item, apply)));
+  printPruneSummary(result, apply);
+}
+
 function printCreated(task) {
   const result = createWorkspace(task);
   console.log(`✅ ${result.branch}\n   ${result.dir}`);
@@ -111,6 +166,7 @@ const COMMANDS = {
   land: printLanded,
   remove: printRemoved,
   handoffs: printHandoffs,
+  prune: printPruned,
 };
 
 function main([command, task]) {

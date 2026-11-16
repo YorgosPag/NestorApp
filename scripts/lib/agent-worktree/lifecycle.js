@@ -120,10 +120,15 @@ function requireWorkspace(cwd, target) {
 
 const samePath = (a, b) => path.relative(a, b) === '';
 
+/** Είναι το `candidate` ο ίδιος ο `dir` ή κάτι μέσα του; Χωρίς δίσκο. */
+function isInside(dir, candidate) {
+  const [first] = path.relative(dir, path.resolve(candidate)).split(path.sep);
+  return first !== '..' && !path.isAbsolute(first);
+}
+
 /** Το cwd κρατά τον φάκελο στα Windows: από μέσα του το σβήσιμο αποτυγχάνει πάντα. */
 function assertOutside(cwd, dir) {
-  const [first] = path.relative(dir, path.resolve(cwd)).split(path.sep);
-  if (first !== '..' && !path.isAbsolute(first)) {
+  if (isInside(dir, cwd)) {
     throw new Error(`Τρέχεις μέσα από το ${dir}. Βγες πρώτα (πράκτορας: ExitWorktree) και ξανατρέξε από το κύριο αντίγραφο.`);
   }
 }
@@ -196,4 +201,13 @@ function removeWorkspace(task, { cwd = process.cwd(), env = process.env, retry =
   };
 }
 
-module.exports = { clearResidue, createWorkspace, listWorkspaces, removeWorkspace, requireWorkspace };
+module.exports = {
+  clearResidue,
+  createWorkspace,
+  freeBytes,
+  isInside,
+  listWorkspaces,
+  nearestExisting,
+  removeWorkspace,
+  requireWorkspace,
+};

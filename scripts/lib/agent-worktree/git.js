@@ -5,7 +5,7 @@
  * `execFileSync` χωρίς κέλυφος: το όνομα εργασίας δεν φτάνει ποτέ σε shell.
  */
 
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 const path = require('node:path');
 // Μέσα σε hook το git εξάγει `GIT_DIR` / `GIT_INDEX_FILE`· χωρίς καθάρισμα κάθε κλήση εδώ θα
 // χτυπούσε το repo του hook αντί για εκείνο του `cwd`. Ο ορισμός ζει στο SSoT.
@@ -23,6 +23,19 @@ function git(cwd, args, { inherit = false } = {}) {
   const options = { cwd, env: cleanGitEnv(), encoding: 'utf8', stdio, maxBuffer: 1 << 28 };
   const out = execFileSync('git', [...EXACT_BYTES, ...args], options);
   return (out || '').trim();
+}
+
+/**
+ * Για εντολές που γράφουν την αναφορά τους στο stderr, όπως το `worktree prune --verbose`.
+ * Το `git` παραπάνω το πετά. Επιστρέφει stdout + stderr· αποτυχία = εξαίρεση.
+ */
+function gitReport(cwd, args) {
+  const options = { cwd, env: cleanGitEnv(), encoding: 'utf8', maxBuffer: 1 << 28 };
+  const result = spawnSync('git', [...EXACT_BYTES, ...args], options);
+  const report = `${result.stdout || ''}${result.stderr || ''}`.trim();
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`git ${args.join(' ')}: ${report}`);
+  return report;
 }
 
 /** Αποτυχία ως τιμή: ό,τι αρνείται το git είναι εδώ κανονική απάντηση, όχι κατάρρευση. */
@@ -85,6 +98,7 @@ module.exports = {
   branchExists,
   commitsAhead,
   git,
+  gitReport,
   isDirty,
   isTracked,
   primaryDir,
