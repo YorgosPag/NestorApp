@@ -14,6 +14,7 @@
  *    toast αναιρεί **πάντα** αυτό που γράφει.
  * 🔑 Κλειδί = `command.id` (σταθερή ταυτότητα της εντολής) ⇒ ένα toast ανά ενέργεια.
  * 🔑 `retireOnUnmount`: η οθόνη που ανακοίνωσε είναι ο κάτοχος της απόσυρσης — χωρίς κάτοχο, κανένα toast.
+ * 🔑 `useCommandStanding`: η ίδια ερώτηση («πού είναι η εντολή μου στο ιστορικό;») για «Αναίρεση» που ζει σε πάνελ.
  */
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
@@ -29,6 +30,26 @@ export interface CommandUndoToast extends Omit<UndoToast, 'key'> {
 
 const subscribeHistory = (notify: () => void): (() => void) => getGlobalCommandHistory().subscribe(() => notify());
 const topCommandId = (): string | null => getGlobalCommandHistory().getLastCommand()?.id ?? null;
+
+/**
+ * Πού βρίσκεται μια εντολή στο ιστορικό: `top` = αναιρείται τώρα · `undone` = αναιρέθηκε (στη στοίβα επανάληψης) ·
+ * `buried` = την κάλυψαν άλλες εντολές (ή βγήκε από το ιστορικό). Το ΕΝΑ κριτήριο για κάθε «Αναίρεση» του viewer που δεν
+ * είναι toast (π.χ. το πάνελ αποτελέσματος της εισαγωγής PDF) — ίδια αλήθεια με το `useCommandUndoToast`.
+ */
+export type CommandStanding = 'top' | 'undone' | 'buried';
+
+function standingOf(command: ICommand | null): CommandStanding | null {
+  if (command === null) return null;
+  const history = getGlobalCommandHistory();
+  if (history.getLastCommand() === command) return 'top';
+  return history.getRedoStack().includes(command) ? 'undone' : 'buried';
+}
+
+/** Η θέση της εντολής στο ιστορικό, ζωντανά (`null` ⇒ καμία εντολή). */
+export function useCommandStanding(command: ICommand | null): CommandStanding | null {
+  const read = useCallback(() => standingOf(command), [command]);
+  return useSyncExternalStore(subscribeHistory, read, read);
+}
 
 /** Δείχνει το toast «Αναίρεση» μιας εντολής και το αποσύρει μόλις η εντολή πάψει να είναι η κορυφή του ιστορικού. */
 export function useCommandUndoToast(scope: string): (toast: CommandUndoToast) => void {

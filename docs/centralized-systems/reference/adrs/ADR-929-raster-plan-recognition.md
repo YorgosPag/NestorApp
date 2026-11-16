@@ -3155,8 +3155,10 @@ Revit: το Scale είναι βήμα του undo. Για το Bluebeam δεν �
    `LazyRoutes.DXFViewer` σε διαδρομές του `(app)` (`/o/[workspace]/dxf/viewer` · `test-harness/dxf-perf`), που έχουν ήδη τον
    provider· το `(bare)/test-harness/dxf-canvas` **δεν** φορτώνει το `DxfViewerApp`.
 
-⚠️ **Δηλωμένο όριο**: το «Αναίρεση εισαγωγής και βαθμονόμησης» του **πάνελ** αποτελέσματος PDF (`usePdfVectorImportWiring`) έχει
-το ίδιο σχήμα (μένει ορατό μετά το Ctrl+Z)· **δεν** αγγίχτηκε — πρόταση προς τον Giorgio.
+5. **Πάνελ αποτελέσματος PDF** (`usePdfVectorImportWiring` → `useLiveOutcome`, εντολή Giorgio): ίδιο σχήμα — το «Αναίρεση
+   εισαγωγής και βαθμονόμησης» έμενε ορατό μετά το Ctrl+Z. Νέο `useCommandStanding(command)` **στο ίδιο αρχείο** με το (1)
+   (`top` · `undone` · `buried`, μία ερώτηση στο ένα ιστορικό): `undone` (Ctrl+Z · ribbon · κουμπί) ⇒ το αποτέλεσμα φεύγει
+   (ό,τι γράφει δεν ισχύει πια)· `buried` (νέα εντολή) ⇒ το μήνυμα μένει, το κουμπί όχι.
 ⏳ tests με έγκριση · ζωντανά μετά από push: Ευθυγράμμιση → Αντικατάσταση → Ctrl+Z ⇒ το toast φεύγει, **ένα** `[data-sonner-toast]`.
 ⚠️ **Δηλωμένο όριο**: το ιστορικό ζει στη μνήμη της καρτέλας (όπως κάθε εντολή του viewer)· μετά από ανανέωση η αναίρεση
 μιας βαθμονόμησης γίνεται με νέα βαθμονόμηση.
@@ -3363,3 +3365,4 @@ Revit: το Scale είναι βήμα του undo. Για το Bluebeam δεν �
 | 2026-11-16 | **§6.23 + §6.24 — ζωντανή επαλήθευση στην παραγωγή** (live `668f3b5` ⊇ `a7d83fab`, ΤΕΣΤ2 «2ος Όροφος»): κάρτα `confirmed` με ετυμηγορία χ² · −3/−1 mm · 0,06% · προέλευση PDF · πρόταση X 8,836 / Y 8,832 mm/px → «Αντικατάσταση» ⇒ raster 0/0 mm, PDF 0,06% → **Ctrl+Z** ⇒ PDF 0%, raster ξανά −3/−1 mm, προέλευση PDF. Tests 761 PASS. Παρατήρηση: το toast «Αναίρεση» μένει μετά το Ctrl+Z. ⏳ μένει η «Βαθμονόμηση και εισαγωγή» σε αβαθμονόμητο όροφο. |
 | 2026-11-16 | **§6.24.1 — το toast «Αναίρεση» της βαθμονόμησης δεμένο στο ιστορικό, και ΕΝΑ στο DOM**: νέο `dxf-viewer/hooks/notifications/useCommandUndoToast.ts` (ζωντανό = κορυφή της στοίβας αναίρεσης, πάνω στον **έναν** `useUndoToasts`) · `useAnnounceCalibration` το χρησιμοποιεί · `useUndoToasts` + προαιρετικό `type` · αφαίρεση του ένθετου `NotificationProvider` από το `DxfViewerApp` (δεύτερος `<Toaster>` ⇒ κάθε toast του viewer διπλό). ⏳ tests με έγκριση · ζωντανά μετά από push. |
 | 2026-11-16 | **§6.24 — ζωντανή επαλήθευση «Βαθμονόμηση και εισαγωγή» → Ctrl+Z** (ΔΟΚΙΜΗ Κτήριο Β «1ος Όροφος», νέο υπόβαθρο `ΤΕΣΤ3.pdf`): πριν `calibration: null` · 8797 οντότητες → μετά βαθμονόμηση (8,824/8,821 mm/px) · 8850 → **Ctrl+Z** ⇒ `calibration: null`, `transform` 1/1/0/0, κανένα `scale`, 8797 οντότητες, 17 layers. Κλείνει το ⏳ της §6.24. |
+| 2026-11-16 | **§6.24.1 (5) — το πάνελ αποτελέσματος της εισαγωγής PDF ακολουθεί το ιστορικό**: νέο `useCommandStanding` (`top`/`undone`/`buried`) στο `useCommandUndoToast.ts`· `usePdfVectorImportWiring.useLiveOutcome`: αναιρέθηκε ⇒ το αποτέλεσμα φεύγει, καλύφθηκε ⇒ μένει χωρίς «Αναίρεση». + ADR-866 changelog (`useUndoToasts.type`). ⏳ tests με έγκριση · ζωντανά μετά από push. |

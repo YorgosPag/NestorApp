@@ -24,6 +24,7 @@ import type { PdfVectorScale } from '../systems/pdf-vector-import/pdf-vector-sca
 import { readLiveScene } from '../systems/model-from-drawing/model-from-drawing-live';
 import { undoIfLast } from '../floorplan-background/services/calibration-command';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useCommandStanding } from '../hooks/notifications/useCommandUndoToast';
 import type { PdfVectorImportView } from '../ui/panels/model-from-drawing/PdfVectorImportSection';
 
 export interface PdfVectorImportWiring {
@@ -102,9 +103,27 @@ export function usePdfVectorImportWiring(getDeps: () => ModelFromDrawingDeps): P
     run((target) => calibrateAndImportFloorPdfVectors(target, scale, undoName));
   }, [run, scale, undoName]);
   const onUndo = useUndoImport(outcome, setOutcome);
+  const shown = useLiveOutcome(outcome, setOutcome);
 
-  const view = React.useMemo((): PdfVectorImportView => ({ available, running, outcome, scale }), [available, running, outcome, scale]);
+  const view = React.useMemo((): PdfVectorImportView => ({ available, running, outcome: shown, scale }), [available, running, shown, scale]);
   return { view, onImport, onCalibrateAndImport, onUndo };
+}
+
+/**
+ * ADR-929 §6.24.1 — το αποτέλεσμα ακολουθεί το **ένα** ιστορικό (ίδια αλήθεια με το toast, `useCommandStanding`):
+ * αναιρέθηκε με οποιονδήποτε δρόμο (Ctrl+Z · ribbon · κουμπί) ⇒ το αποτέλεσμα φεύγει, γιατί ό,τι γράφει δεν ισχύει πια·
+ * το κάλυψε νέα εντολή ⇒ το μήνυμα μένει (είναι αληθινό), το «Αναίρεση» όχι (δεν θα αναιρούσε αυτό που γράφει).
+ */
+function useLiveOutcome(
+  outcome: PdfVectorImportView['outcome'],
+  setOutcome: (next: PdfVectorImportView['outcome']) => void,
+): PdfVectorImportView['outcome'] {
+  const standing = useCommandStanding(outcome?.kind === 'imported' ? outcome.undo : null);
+  React.useEffect(() => { if (standing === 'undone') setOutcome(null); }, [standing, setOutcome]);
+  return React.useMemo(
+    () => (outcome?.kind === 'imported' && standing === 'buried' ? { ...outcome, undo: null } : outcome),
+    [outcome, standing],
+  );
 }
 
 /**
