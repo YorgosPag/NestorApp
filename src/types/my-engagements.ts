@@ -13,6 +13,7 @@
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { BallInCourtParty, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceLateness } from '@/lib/document-validity/issuance-delivery-due';
 import type { InspectionContactRole } from '@/lib/document-validity/issuance-inspection-contact';
 import type { QuoteTotals } from '@/lib/document-validity/issuance-quote';
 import type { ActingForView, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
@@ -35,6 +36,16 @@ export interface MyIssuanceCard {
   readonly stage: IssuanceStage | null;
   readonly ballInCourt: BallInCourtParty | null;
   readonly actingFor: ActingForView | null;
+  /**
+   * ADR-915 §45.18 Φ6 — η προθεσμία παράδοσης και η βαθμίδα της (ο ΙΔΙΟΣ κριτής με το μητρώο του γραφείου), **μόνο** σε
+   * αναληφθείσα ανάθεση με προθεσμία· αλλιώς `null`. Μόνο ημερομηνίες: καμία τιμή, κανένας ιδιοκτήτης (Ε-9′).
+   */
+  readonly delivery: IssuanceDeliveryGlance | null;
+}
+
+export interface IssuanceDeliveryGlance {
+  readonly dueOn: string;
+  readonly lateness: IssuanceLateness;
 }
 
 export type MyEngagementCard = MyCaseCard | MyIssuanceCard;
@@ -77,6 +88,8 @@ export interface IssuanceAgreementView {
   readonly totals: QuoteTotals | null;
   /** ISO ημέρα — `null` ⇒ καμία δέσμευση χρόνου. */
   readonly dueOn: string | null;
+  /** §45.18 Φ6 — η βαθμίδα της προθεσμίας σήμερα (ίδιο ρολόι με το μητρώο)· `no-due-date` όταν δεν υπάρχει. */
+  readonly lateness: IssuanceLateness;
   /** `null` ⇒ το γραφείο δεν όρισε ακόμη υπεύθυνο αυτοψίας. */
   readonly inspectionContact: InspectionContactView | null;
   /** `null` ⇒ οι ιδιοκτήτες δεν διαβάστηκαν τώρα· `[]` ⇒ το μητρώο δεν ξέρει ιδιοκτήτη. */

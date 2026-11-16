@@ -463,6 +463,7 @@
       "ownerLabel": "Ιδιοκτήτης",
       "agreedPriceLabel": "Συμφωνημένη τιμή",
       "dueLabel": "Προθεσμία παράδοσης",
+      "dueOnLine": "Παράδοση έως {date}",
       "notDeclared": "Δεν έχει δηλωθεί",
       "agreementContact": "Η επικοινωνία για την αυτοψία γίνεται μέσω του γραφείου.",
       "inspectionContactLabel": "Υπεύθυνος αυτοψίας",

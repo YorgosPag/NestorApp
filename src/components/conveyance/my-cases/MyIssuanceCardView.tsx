@@ -22,6 +22,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { caseHomeOf } from '@/lib/conveyance/acting-acceptance';
 import { myCaseHref, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import { cn } from '@/lib/utils';
+import { formatDate } from '@/lib/intl-formatting';
+import { DeliveryLatenessBadge } from '@/components/document-registry/RegistryIssuanceDeliveryCell';
 import { Link } from '@/lib/workspace/navigation';
 import type { MyIssuanceCard } from '@/types/my-engagements';
 import { ISSUANCE_SPACE_KEYS, PROFESSIONAL_BALL_KEYS, PROFESSIONAL_STAGE_KEYS } from './issuance-space-labels';
@@ -40,6 +42,9 @@ function IssuanceFacts({ card }: { readonly card: MyIssuanceCard }) {
       <span>{t(ISSUANCE_SPACE_KEYS.fromOffice, { office: card.hostName ?? t(ISSUANCE_SPACE_KEYS.unnamedOffice) })}</span>
       {card.stage && <span>{t(PROFESSIONAL_STAGE_KEYS[card.stage])}</span>}
       {card.ballInCourt && <span>{t(ISSUANCE_SPACE_KEYS.ballLine, { party: t(PROFESSIONAL_BALL_KEYS[card.ballInCourt]) })}</span>}
+      {/* §45.18 Φ6 — η προθεσμία με τη βαθμίδα της (ο ΙΔΙΟΣ κριτής και η ΙΔΙΑ λέξη με το μητρώο του γραφείου). */}
+      {card.delivery && <span>{t(ISSUANCE_SPACE_KEYS.dueOnLine, { date: formatDate(card.delivery.dueOn) })}</span>}
+      {card.delivery && <DeliveryLatenessBadge lateness={card.delivery.lateness} />}
       {card.actingFor && <ActingForLine actingFor={card.actingFor} />}
     </p>
   );

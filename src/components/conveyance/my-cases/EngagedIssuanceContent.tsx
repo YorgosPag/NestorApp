@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { DeliveryLatenessBadge } from '@/components/document-registry/RegistryIssuanceDeliveryCell';
 import { PrivatePageHeader } from '@/components/private-space/PrivatePageHeader';
 import { Card } from '@/components/ui/card';
 import { DOCUMENT_KIND_LABEL_KEYS, INSPECTION_ROLE_LABEL_KEYS } from '@/components/document-registry/document-registry-labels';
@@ -147,6 +148,8 @@ function Agreement({ agreement }: { readonly agreement: IssuanceAgreementView })
         <AgreementRow label={t(ISSUANCE_SPACE_KEYS.ownerLabel)} value={agreement.ownerName} />
         <AgreementRow label={t(ISSUANCE_SPACE_KEYS.agreedPriceLabel)} value={price} />
         <AgreementRow label={t(ISSUANCE_SPACE_KEYS.dueLabel)} value={agreement.dueOn === null ? null : formatDate(agreement.dueOn)} />
+        {/* §45.18 Φ6 — αύριο · σήμερα · καθυστερεί N: η ΙΔΙΑ βαθμίδα με το μητρώο του γραφείου. */}
+        {agreement.dueOn !== null && <dd className="col-start-2 m-0"><DeliveryLatenessBadge lateness={agreement.lateness} /></dd>}
         {agreement.inspectionContact && <InspectionContactRow contact={agreement.inspectionContact} />}
         <OwnersRow owners={agreement.owners} />
       </dl>

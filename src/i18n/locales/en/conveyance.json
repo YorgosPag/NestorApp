@@ -463,6 +463,7 @@
       "ownerLabel": "Owner",
       "agreedPriceLabel": "Agreed price",
       "dueLabel": "Delivery deadline",
+      "dueOnLine": "Delivery by {date}",
       "notDeclared": "Not declared",
       "agreementContact": "Contact for the site visit goes through the office.",
       "inspectionContactLabel": "Site visit contact",

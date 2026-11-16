@@ -23,9 +23,9 @@ import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import { ballInCourtOf, issuanceStageOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
-import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
+import { issuanceDeliveryOf, issuanceDeliveryStatusOf, issuanceLatenessOf } from '@/lib/document-validity/issuance-delivery-due';
 import { agreedQuoteOf, quoteTotalsOf } from '@/lib/document-validity/issuance-quote';
-import { nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
+import { conveyanceToday, nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
 import { trimmedStringOrNull } from '@/lib/type-guards';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
 import type {
@@ -45,7 +45,7 @@ import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.
 import type { EngagementHostLine } from '@/types/contact-professional-link';
 import { SCOPE_OF_SUBJECT, type IssuanceEngagement } from '@/types/engagement';
 import type { IssuanceEngagementInvitation } from '@/types/engagement-invitation';
-import type { IssuanceAgreementView, MyIssuanceCard } from '@/types/my-engagements';
+import type { IssuanceAgreementView, IssuanceDeliveryGlance, MyIssuanceCard } from '@/types/my-engagements';
 import { readIssuanceAgreementParties } from './issuance-agreement-parties.server';
 import { issuanceRecordOf, parseIssuanceAssignment, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
 
@@ -178,7 +178,17 @@ async function cardOf(db: Firestore, engagement: IssuanceEngagement, uid: string
     stage,
     ballInCourt: stage ? ballInCourtOf(stage) : null,
     actingFor,
+    delivery: assignment && stage ? deliveryGlanceOf(stage, assignment, nowMs) : null,
   };
+}
+
+/**
+ * §45.18 Φ6 — η προθεσμία με τη βαθμίδα της, από τον **ίδιο** κριτή με το μητρώο (`issuanceDeliveryStatusOf`)· χωρίς
+ * ημέρα υπογραφής: ο επαγγελματίας δεν βλέπει τη συναλλαγή του ιδιοκτήτη (Ε-9′).
+ */
+function deliveryGlanceOf(stage: IssuanceStage, assignment: DocumentIssuanceAssignment, nowMs: number): IssuanceDeliveryGlance | null {
+  const status = issuanceDeliveryStatusOf(stage, issuanceRecordOf(assignment), conveyanceToday(new Date(nowMs)), null);
+  return status?.due ? { dueOn: status.due.dueOn, lateness: status.lateness } : null;
 }
 
 async function listCards(db: Firestore, viewer: CasesViewer, history: readonly IssuanceEngagement[], nowMs: number) {
@@ -206,7 +216,9 @@ async function agreementOf(db: Firestore, assignment: DocumentIssuanceAssignment
     contactNameOf(db, assignment.companyId, assignment.decision.ownerContactId),
     readIssuanceAgreementParties(db, assignment, now),
   ]);
-  return { siteAddress, ownerName, totals: quote ? quoteTotalsOf(quote) : null, dueOn: issuanceDeliveryOf(record)?.dueOn ?? null, ...parties };
+  const dueOn = issuanceDeliveryOf(record)?.dueOn ?? null;
+  const lateness = issuanceLatenessOf(dueOn, conveyanceToday(now));
+  return { siteAddress, ownerName, totals: quote ? quoteTotalsOf(quote) : null, dueOn, lateness, ...parties };
 }
 
 async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEngagement, nowMs: number): Promise<EngagedViewOutcome> {

@@ -53,6 +53,7 @@ export const ISSUANCE_SPACE_KEYS = {
   ownerLabel: 'conveyance:engagement.issuance.ownerLabel',
   agreedPriceLabel: 'conveyance:engagement.issuance.agreedPriceLabel',
   dueLabel: 'conveyance:engagement.issuance.dueLabel',
+  dueOnLine: 'conveyance:engagement.issuance.dueOnLine',
   notDeclared: 'conveyance:engagement.issuance.notDeclared',
   agreementContact: 'conveyance:engagement.issuance.agreementContact',
   inspectionContactLabel: 'conveyance:engagement.issuance.inspectionContactLabel',
