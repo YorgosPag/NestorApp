@@ -28,6 +28,7 @@ import {
   previewEngagementInvitation,
   type EngagementInvitationPreviewOutcome,
 } from '@/server/engagement-invitations/engagement-invitation-preview';
+import { withOwnCredentialHint } from '@/server/engagement-invitations/engagement-invitation-own-credential';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +59,9 @@ async function acceptanceFor(outcome: EngagementInvitationPreviewOutcome, viewer
 export default async function CaseInvitePage({ params }: { params: Promise<{ token: string }> }): Promise<React.ReactElement> {
   const { token, viewerEmail, viewer } = await readInvitationPageRequest(params);
 
-  const outcome = await previewEngagementInvitation(getAdminFirestore(), { token, viewerEmail });
+  const db = getAdminFirestore();
+  // ADR-915 §45.13 — ο συνδεδεμένος παραλήπτης βρίσκει τη ΔΙΚΗ του τελευταία δήλωση (ίδια σειρά με το `/cases`).
+  const outcome = await withOwnCredentialHint(db, await previewEngagementInvitation(db, { token, viewerEmail }), viewer);
   // «Ανοίχτηκε» μετά την απόκριση · 404 · βήμα λογαριασμού (ADR-915 §39.6) — ο ΕΝΑΣ δρόμος όλων των σελίδων πρόσκλησης.
   // Βήμα και «για ποιο γραφείο» αποκλείονται αμοιβαία (μη-παραλήπτης vs παραλήπτης) ⇒ καμία σειριακή αναμονή.
   const account = await settleInvitationPage(outcome);
