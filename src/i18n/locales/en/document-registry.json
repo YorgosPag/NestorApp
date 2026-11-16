@@ -626,6 +626,47 @@
         "unitElectricalPlan": "Electrical drawings",
         "studyEnergyCertificate": "Previous energy certificate"
       }
+    },
+    "advance": {
+      "legend": "Advance payment",
+      "request": "I ask for an advance payment before I start",
+      "amountLabel": "Advance amount (€, incl. VAT)",
+      "amountHint": "Up to {percent}% of the total — up to {max}. The money is held by the payment provider and released to you after the site visit.",
+      "amountHintNoTotal": "Up to {percent}% of the quote total. Enter the quote amount first.",
+      "policyLegend": "Cancellation policy",
+      "policy": {
+        "flexible": "Flexible",
+        "moderate": "Moderate",
+        "strict": "Strict"
+      },
+      "policyHint": {
+        "flexible": "Flexible: cancelling even after the site visit ⇒ the whole advance is refunded.",
+        "moderate": "Moderate: cancelling after the site visit ⇒ half of the advance is refunded.",
+        "strict": "Strict: cancelling after the site visit ⇒ the advance is not refunded."
+      },
+      "inspectionLabel": "Value of the site visit (€, incl. VAT)",
+      "inspectionHint": "The cost of visiting and surveying the property. If the owner withdraws within 14 days of approval, you keep at most this amount (Greek Law 2251/1994, article 3i).",
+      "invalid": "The advance is not valid: check that the amount is within the limit, that you chose a policy and that the site visit value does not exceed the total.",
+      "state": {
+        "none": "No advance payment",
+        "awaitingPayment": "Awaiting payment",
+        "held": "Paid — held in escrow",
+        "releasePending": "Site visit declared — release pending",
+        "disputed": "Objection — the office decides",
+        "released": "Released to the professional",
+        "refunded": "Refunded"
+      },
+      "schedule": {
+        "heading": "If you cancel",
+        "summary": "Advance {amount} · policy: {policy} · site visit value {inspection}.",
+        "when": "When",
+        "refund": "Refunded",
+        "retained": "Kept",
+        "before-start": "Before the site visit",
+        "after-start-within-withdrawal": "After the site visit, within 14 days of approval",
+        "after-start-later": "After the site visit, after 14 days",
+        "escrow": "The money does not reach the professional before the site visit; a licensed payment provider holds it. Once the site visit is declared you have 48 hours to object."
+      }
     }
   },
   "factsDeclaration": {

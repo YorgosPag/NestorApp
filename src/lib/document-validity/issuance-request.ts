@@ -64,8 +64,8 @@ const quoteRevision = z.number().int().min(1);
 export const deliveryBusinessDaysSchema = z.number().int().min(QUOTE_DELIVERY_BUSINESS_DAYS.min).max(QUOTE_DELIVERY_BUSINESS_DAYS.max);
 const positiveMinor = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 
-/** ADR-943 — η προκαταβολή των όρων· κοινό με το σχήμα του δίσκου. */
-export const advanceTermsSchema = z.object({ amountMinor: positiveMinor, policy: z.enum(CANCELLATION_POLICIES) });
+/** ADR-943 — η προκαταβολή των όρων· κοινό με το σχήμα του δίσκου. Φ4 — `inspectionValueMinor`: η αξία της αυτοψίας, βάση του αναλογικού τιμήματος (ν.2251/1994 3ι §3). */
+export const advanceTermsSchema = z.object({ amountMinor: positiveMinor, policy: z.enum(CANCELLATION_POLICIES), inspectionValueMinor: positiveMinor });
 
 /**
  * §42 — οι όροι της προσφοράς (χωρίς τη σημείωση, που ταξιδεύει δίπλα τους). Το σχήμα κρίνει **μορφή**· το «ισχύει
@@ -80,7 +80,7 @@ export const quoteTermsBody = z.object({
   scope: z.array(z.enum(QUOTE_SCOPE_ITEMS)).min(1).max(QUOTE_SCOPE_ITEMS.length).transform((items) => [...new Set(items)]),
   /** §45 Φ2 — υποχρεωτικό σε κάθε νέα προσφορά: πρόσωπο + τιμή + **χρόνος** εγκρίνονται μαζί. */
   deliveryBusinessDays: deliveryBusinessDaysSchema,
-  /** ADR-943 Κ-3 — προκαταβολή + πολιτική ακύρωσης· `null` = καμία. Το «όχι πάνω από το σύνολο» το κρίνει ο μειωτής. */
+  /** ADR-943 Κ-3 — προκαταβολή + πολιτική + αξία αυτοψίας· `null` = καμία. Το «ως 50% του συνόλου» το κρίνει ο μειωτής. */
   advance: advanceTermsSchema.nullable().default(null),
 });
 

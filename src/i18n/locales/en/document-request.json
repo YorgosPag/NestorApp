@@ -42,7 +42,9 @@
     "quoteValid": "Valid until",
     "quoteScope": "Includes",
     "quoteNote": "Note from the professional",
-    "quoteDelivery": "Delivery"
+    "quoteDelivery": "Delivery",
+    "advance": "Advance payment",
+    "advanceValue": "{amount} · cancellation policy: {policy}"
   },
   "done": {
     "approved": "We recorded your approval.",

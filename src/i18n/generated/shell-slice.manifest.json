@@ -14,7 +14,7 @@
     "src/i18n/generated/routes/demands.el.json": "f15243c6529ea9be6b0a1a4d181ff19e7c5866fcc9953aa98635f63969f3d9e2",
     "src/i18n/generated/routes/demands__demandId.el.json": "4c206917e9429edff64b6d64d393521e17a6718fda664c1a7ca51d289f16a27a",
     "src/i18n/generated/routes/demands__new.el.json": "f85744543c4c75526818bd08771e4729c8a79fd26d564a081d9dc8eeb660a3ed",
-    "src/i18n/generated/routes/document-request.el.json": "a7d018d895da0ea1e067dc35850ea36a67fc30df0b43afa8f9e2a9e12a8679da",
+    "src/i18n/generated/routes/document-request.el.json": "fa22f536e7e2e602f060548457251a6c6c835e13aeebb371b4b74cf5a49b4266",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
     "src/i18n/generated/routes/email__preferences__token.el.json": "9b9351afdb668ca198c1946ac98a0f7aab81bbec24ce1adb7079c29c446217de",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "fe04ab8c32e9a689cd20e55097f177845a1cd6df87b7c5e192b3af4f5ba3fcf7",
+  "inputsSha256": "40596e61521573fd794719dfc95fdc262294513339af9775778a06a3108f6461",
   "languages": [
     "el"
   ],
@@ -2072,6 +2072,37 @@
         },
         "document-registry": {
           "keys": [
+            "issuance.advance.amountHint",
+            "issuance.advance.amountHintNoTotal",
+            "issuance.advance.amountLabel",
+            "issuance.advance.inspectionHint",
+            "issuance.advance.inspectionLabel",
+            "issuance.advance.invalid",
+            "issuance.advance.legend",
+            "issuance.advance.policy.flexible",
+            "issuance.advance.policy.moderate",
+            "issuance.advance.policy.strict",
+            "issuance.advance.policyHint.flexible",
+            "issuance.advance.policyHint.moderate",
+            "issuance.advance.policyHint.strict",
+            "issuance.advance.policyLegend",
+            "issuance.advance.request",
+            "issuance.advance.schedule.after-start-later",
+            "issuance.advance.schedule.after-start-within-withdrawal",
+            "issuance.advance.schedule.before-start",
+            "issuance.advance.schedule.escrow",
+            "issuance.advance.schedule.heading",
+            "issuance.advance.schedule.refund",
+            "issuance.advance.schedule.retained",
+            "issuance.advance.schedule.summary",
+            "issuance.advance.schedule.when",
+            "issuance.advance.state.awaitingPayment",
+            "issuance.advance.state.disputed",
+            "issuance.advance.state.held",
+            "issuance.advance.state.none",
+            "issuance.advance.state.refunded",
+            "issuance.advance.state.releasePending",
+            "issuance.advance.state.released",
             "issuance.delivery.ifApprovedToday",
             "issuance.delivery.missesSigning",
             "issuance.quoteForm.amountLabel",
@@ -2133,6 +2164,8 @@
             "done.officeTold",
             "done.quoted",
             "done.rejected",
+            "facts.advance",
+            "facts.advanceValue",
             "facts.credential",
             "facts.credentialWithNumber",
             "facts.document",
@@ -41006,7 +41039,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1342735
+    "sliceBytes": 1346411
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

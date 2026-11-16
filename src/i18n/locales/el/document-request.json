@@ -42,7 +42,9 @@
     "quoteValid": "Ισχύει έως",
     "quoteScope": "Περιλαμβάνει",
     "quoteNote": "Σημείωση του επαγγελματία",
-    "quoteDelivery": "Παράδοση"
+    "quoteDelivery": "Παράδοση",
+    "advance": "Προκαταβολή",
+    "advanceValue": "{amount} · πολιτική ακύρωσης: {policy}"
   },
   "done": {
     "approved": "Καταγράψαμε την έγκρισή σας.",

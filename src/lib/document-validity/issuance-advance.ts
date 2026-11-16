@@ -20,6 +20,8 @@
  * @module lib/document-validity/issuance-advance
  */
 
+import { addDaysToDateKey } from '@/lib/calendar/date-key';
+import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
 
 import { agreedQuoteOf, quoteTotalsOf, type QuoteAgreementFacts } from './issuance-quote';
@@ -34,7 +36,7 @@ export type CancellationPolicyId = (typeof CANCELLATION_POLICIES)[number];
 
 /**
  * Τι ποσοστό της προκαταβολής **κρατά** ο μηχανικός αν η ανάθεση ακυρωθεί **μετά** την έναρξη. Πριν την έναρξη: 0 για
- * όλες (Κ-5). ⚠️ Οι τιμές είναι πρόταση του ADR-943 §4 προς επιβεβαίωση Giorgio — ζουν **μόνο** εδώ.
+ * όλες (Κ-5). Κρατήθηκαν μετά από έρευνα (ADR-943 §5.5) — ζουν **μόνο** εδώ.
  */
 export const RETAINED_AFTER_START_PERCENT: Readonly<Record<CancellationPolicyId, number>> = {
   flexible: 0,
@@ -50,22 +52,50 @@ export const ADVANCE_POLICY = {
   objectionReasonMax: 500,
   /** Αμυντικό φρένο του ιστορικού γεγονότων — όχι πολιτική. */
   maxEvents: 30,
+  /**
+   * Φ4 — **ανώτατη προκαταβολή: 50% του συνόλου**. Πρακτική Airbnb «Pay part now, part later» (πρώτη δόση συνήθως 50%,
+   * αποδέσμευση στο check-in — το ΙΔΙΟ πρότυπο με την αποδέσμευση στην έναρξη, Κ-4)· το Upwork χρηματοδοτεί 100% αλλά
+   * αποδεσμεύει μόνο με την **έγκριση της παράδοσης**, όχι στην έναρξη. Κρατά την παρακράτηση μετά την έναρξη μέσα στο
+   * «αμοιβή − εξοικονόμηση» του ΑΚ 700 (ADR-943 §5.8).
+   */
+  maxPercentOfTotal: 50,
+  /** Φ4 — οι ημέρες υπαναχώρησης από τη σύναψη (ν.2251/1994 άρθρο 3ε · Οδηγία 2011/83 άρθρο 9). */
+  withdrawalDays: 14,
 } as const;
 
-/** Η προκαταβολή μέσα στους όρους της προσφοράς — ποσό σε λεπτά (μέρος του **συνόλου** με ΦΠΑ) και πολιτική. */
+/**
+ * Η προκαταβολή μέσα στους όρους της προσφοράς — ποσό σε λεπτά (μέρος του **συνόλου** με ΦΠΑ), πολιτική, και η **αξία
+ * της αυτοψίας**: ό,τι κοστίζει η υπηρεσία που έχει ήδη παρασχεθεί όταν δηλωθεί η έναρξη. Είναι η βάση του αναλογικού
+ * τιμήματος αν ο ιδιοκτήτης υπαναχωρήσει μέσα στις 14 ημέρες (ν.2251/1994 άρθρο 3ι §3), και ο ιδιοκτήτης τη βλέπει
+ * **πριν** εγκρίνει (3ι §4: χωρίς ενημέρωση δεν οφείλεται τίποτα).
+ */
 export interface AdvanceTerms {
   readonly amountMinor: MinorAmount;
   readonly policy: CancellationPolicyId;
+  readonly inspectionValueMinor: MinorAmount;
 }
 
 export function isCancellationPolicy(value: string): value is CancellationPolicyId {
   return (CANCELLATION_POLICIES as readonly string[]).includes(value);
 }
 
-/** Αποδεκτή προκαταβολή; — θετικό ακέραιο ποσό, **όχι** πάνω από το σύνολο της προσφοράς, γνωστή πολιτική. */
+/** Η μεγαλύτερη προκαταβολή που επιτρέπεται για αυτό το σύνολο — ακέραια λεπτά, η στρογγύλευση ευνοεί τον ιδιοκτήτη. */
+export function maxAdvanceMinorOf(totalMinor: MinorAmount): MinorAmount {
+  return Math.floor((totalMinor * ADVANCE_POLICY.maxPercentOfTotal) / 100);
+}
+
+function isPositiveMinor(value: number): boolean {
+  return isMinorAmount(value) && value > 0;
+}
+
+/**
+ * Αποδεκτή προκαταβολή; — θετικό ακέραιο ποσό **ως** το ανώτατο ({@link maxAdvanceMinorOf}), γνωστή πολιτική, αξία
+ * αυτοψίας θετική και όχι πάνω από το σύνολο.
+ */
 export function isAdvanceTermsValid(advance: AdvanceTerms, totalMinor: MinorAmount): boolean {
-  return isMinorAmount(advance.amountMinor) && advance.amountMinor > 0 && advance.amountMinor <= totalMinor
-    && isCancellationPolicy(advance.policy);
+  return isPositiveMinor(advance.amountMinor) && advance.amountMinor <= maxAdvanceMinorOf(totalMinor)
+    && isCancellationPolicy(advance.policy)
+    && isPositiveMinor(advance.inspectionValueMinor) && advance.inspectionValueMinor <= totalMinor;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,16 +214,76 @@ export function advanceCollectedMinor(state: AdvanceState): MinorAmount {
   }
 }
 
+/** Τα γεγονότα της ακύρωσης — και **πότε** εγκρίθηκε η προσφορά (η σύναψη της σύμβασης). */
+export interface CancellationFacts extends AdvanceFacts {
+  readonly decision: (NonNullable<QuoteAgreementFacts['decision']> & { readonly at: string }) | null;
+}
+
 /**
- * **Πόσο επιστρέφεται αν ακυρωθεί τώρα** (Κ-5): πριν από την έναρξη ό,τι εισπράχθηκε· μετά, ό,τι δεν κρατά η πολιτική.
- * Ακέραια λεπτά — η στρογγύλευση ευνοεί τον ιδιοκτήτη (καταναλωτή).
+ * Μέσα στην προθεσμία υπαναχώρησης; — η ημέρα ακύρωσης ως και την 14η μετά την έγκριση (ελληνικές ημέρες· η προθεσμία
+ * αρχίζει την επόμενη της σύναψης, Κανονισμός 1182/71). Χωρίς έγκριση ⇒ όχι (δεν υπάρχει σύμβαση).
  */
-export function refundDueOnCancelOf(state: AdvanceState, policy: CancellationPolicyId): MinorAmount {
+export function isWithinWithdrawalPeriod(facts: CancellationFacts, atIso: string): boolean {
+  if (facts.decision === null) return false;
+  const lastDay = addDaysToDateKey(conveyanceToday(new Date(facts.decision.at)), ADVANCE_POLICY.withdrawalDays);
+  return lastDay !== null && conveyanceToday(new Date(atIso)) <= lastDay;
+}
+
+/** Η παρακράτηση της πολιτικής πάνω σε ποσό — ακέραια λεπτά, η στρογγύλευση ευνοεί τον ιδιοκτήτη. */
+function retainedByPolicyMinor(policy: CancellationPolicyId, collected: MinorAmount): MinorAmount {
+  return Math.floor((collected * RETAINED_AFTER_START_PERCENT[policy]) / 100);
+}
+
+/**
+ * Πόσο **κρατά** ο μηχανικός μετά την έναρξη: η πολιτική (Κ-5)· μέσα στις 14 ημέρες **το πολύ** η αξία της αυτοψίας
+ * (ν.2251/1994 άρθρο 3ι §3 — αναλογικό τίμημα), και **τίποτα** χωρίς ρητό αίτημα έναρξης (3ι §4 α ii). Ισχύει για **κάθε**
+ * ιδιοκτήτη: όπως οι μεγάλες πλατφόρμες (Airbnb · Etsy κατατάσσουν μόνο τον πάροχο), δεν κατατάσσουμε τον αγοραστή.
+ */
+function retainedAfterStartMinor(terms: AdvanceTerms, collected: MinorAmount, withdrawal: 'outside' | 'waived' | 'not-waived'): MinorAmount {
+  const byPolicy = retainedByPolicyMinor(terms.policy, collected);
+  if (withdrawal === 'outside') return byPolicy;
+  return withdrawal === 'not-waived' ? 0 : Math.min(byPolicy, terms.inspectionValueMinor);
+}
+
+/**
+ * **Πόσο επιστρέφεται αν ακυρωθεί τη στιγμή `atIso`** (Κ-5 + υπαναχώρηση): πριν από την έναρξη ό,τι εισπράχθηκε· μετά, ό,τι
+ * δεν κρατά ο μηχανικός. Η ΜΙΑ κρίση — τη ρωτούν η ακύρωση (Φ5) και ο πίνακας της έγκρισης ({@link cancellationScheduleOf}).
+ */
+export function refundDueOnCancelOf(facts: CancellationFacts, atIso: string): MinorAmount {
+  const state = advanceStateOf(facts);
   const collected = advanceCollectedMinor(state);
   if (state.kind === 'held') return collected;
   if (state.kind !== 'release-pending' && state.kind !== 'disputed' && state.kind !== 'released') return 0;
-  const retained = Math.floor((collected * RETAINED_AFTER_START_PERCENT[policy]) / 100);
-  return collected - retained;
+  const terms = agreedQuoteOf(facts)?.advance ?? null;
+  // Αμυντικά: χρήματα χωρίς συμφωνημένο όρο (η αναθεώρηση μετά την πληρωμή απαγορεύεται) ⇒ ποτέ παρακράτηση.
+  if (terms === null) return collected;
+  const waived = lastOf(facts.advanceEvents, 'funded')?.withdrawalWaiverAt != null;
+  const withdrawal = !isWithinWithdrawalPeriod(facts, atIso) ? 'outside' : waived ? 'waived' : 'not-waived';
+  return collected - Math.min(collected, retainedAfterStartMinor(terms, collected, withdrawal));
+}
+
+/** Μία γραμμή του πίνακα ακύρωσης που βλέπει ο ιδιοκτήτης **πριν** εγκρίνει — ποσά, όχι κείμενο πολιτικής. */
+export interface CancellationScheduleRow {
+  readonly when: 'before-start' | 'after-start-within-withdrawal' | 'after-start-later';
+  readonly refundMinor: MinorAmount;
+  readonly retainedMinor: MinorAmount;
+}
+
+/**
+ * **Ο πίνακας ακύρωσης** των όρων — πέρα από τους μεγάλους: ο Airbnb δείχνει κείμενο πολιτικής, εδώ δείχνονται **ποσά**,
+ * από τους **ίδιους** κανόνες με την πραγματική επιστροφή ({@link retainedAfterStartMinor}). Προϋποθέτει το ρητό αίτημα
+ * έναρξης της πληρωμής (Κ-6) — χωρίς αυτό η εφαρμογή δεν ξεκινά πληρωμή.
+ */
+export function cancellationScheduleOf(terms: AdvanceTerms): readonly CancellationScheduleRow[] {
+  const collected = terms.amountMinor;
+  const row = (when: CancellationScheduleRow['when'], retainedMinor: MinorAmount): CancellationScheduleRow => (
+    { when, refundMinor: collected - retainedMinor, retainedMinor }
+  );
+  return [
+    row('before-start', 0),
+    row('after-start-within-withdrawal', retainedAfterStartMinor(terms, collected, 'waived')),
+    row('after-start-later', retainedAfterStartMinor(terms, collected, 'outside')),
+  ];
 }
 
 /** Το υπόλοιπο που απομένει για το τελικό παραστατικό: σύνολο συμφωνίας − ό,τι εισπράχθηκε ως προκαταβολή. */

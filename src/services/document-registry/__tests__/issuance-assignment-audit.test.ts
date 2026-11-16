@@ -92,3 +92,43 @@ describe('ADR-915 §45.21 — η απάντηση στο αίτημα νέας �
     expect(JSON.stringify(changes)).not.toContain('DeclineReason');
   });
 });
+
+describe('ADR-943 Φ4 — τα χρήματα της ανάθεσης στο ιστορικό (κλείνει και το κενό §42.6)', () => {
+  const ADVANCED: QuoteTerms = { ...TERMS, advance: { amountMinor: 4_000, policy: 'moderate', inspectionValueMinor: 1_500 } };
+  const DECIDE = SETUP[3];
+  const SYSTEM = (day: number): IssuanceActor => ({ kind: 'system', source: 'payments', nowIso: at(day) });
+
+  function quoted(): IssuanceAssignmentRecord {
+    const actions = SETUP.slice(0, 3).map((action) => (action.kind === 'quote' ? { kind: 'quote' as const, terms: ADVANCED } : action));
+    const record = actions.reduce<IssuanceAssignmentRecord | null>((current, action, i) => step(current, action, office(i + 2)), null);
+    if (record === null) throw new Error('no record');
+    return record;
+  }
+
+  async function transitionChanges(previous: IssuanceAssignmentRecord, next: IssuanceAssignmentRecord): Promise<unknown> {
+    EntityAuditService.recordChange.mockClear();
+    await recordIssuanceAudit(write(DECIDE), { previous, next, previousStage: 'quoted', nextStage: 'accepted' });
+    return EntityAuditService.recordChange.mock.calls[0]?.[0]?.changes;
+  }
+
+  it('η έγκριση γράφει σύνολο, προκαταβολή (ευρώ, ουδέτερα ως προς γλώσσα) και «αναμένεται πληρωμή»', async () => {
+    const before = quoted();
+    const changes = await transitionChanges(before, step(before, DECIDE, office(6)));
+    expect(changes).toEqual(expect.arrayContaining([
+      { field: 'energyCertificateIssuanceQuoteTotal', oldValue: null, newValue: '124.00' },
+      { field: 'energyCertificateIssuanceAdvanceAmount', oldValue: null, newValue: '40.00' },
+      { field: 'energyCertificateIssuanceAdvanceState', oldValue: null, newValue: 'awaiting-payment' },
+    ]));
+  });
+
+  it('η πληρωμή γράφει «σε κράτηση» και το ρητό αίτημα έναρξης (Κ-6)· ποτέ ξανά τα αμετάβλητα ποσά', async () => {
+    const approved = step(quoted(), DECIDE, office(6));
+    const funded = step(approved, { kind: 'advance-funded', amountMinor: 4_000, paymentReference: 'pmt_1', withdrawalWaiverAt: at(7) }, SYSTEM(7));
+    const changes = await transitionChanges(approved, funded);
+    expect(changes).toEqual(expect.arrayContaining([
+      { field: 'energyCertificateIssuanceAdvanceState', oldValue: 'awaiting-payment', newValue: 'held' },
+      { field: 'energyCertificateIssuanceWithdrawalWaiver', oldValue: null, newValue: at(7) },
+    ]));
+    expect(JSON.stringify(changes)).not.toContain('QuoteTotal');
+  });
+});

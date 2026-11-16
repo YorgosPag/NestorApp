@@ -19,6 +19,7 @@ import React, { useId, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 
 import { DOCUMENT_KIND_LABEL_KEYS, qualificationText } from '@/components/document-registry/document-registry-labels';
+import { IssuanceAdvanceSchedule } from '@/components/document-registry/IssuanceAdvanceSchedule';
 import { IssuanceQuoteFields } from '@/components/document-registry/IssuanceQuoteFields';
 import { emptyQuoteDraft, quoteTermsFromDraft, type QuoteDraft } from '@/components/document-registry/issuance-quote-draft';
 import { AuthCardSection } from '@/components/ui/auth-card-section';
@@ -200,6 +201,7 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
       </header>
       <p className="m-0 text-sm text-card-foreground">{texts.intro}</p>
       <RequestFacts view={view} />
+      {view.quote?.advance ? <IssuanceAdvanceSchedule terms={view.quote.advance} /> : null}
       {view.brief === null ? null : <QuoteBriefFacts brief={view.brief} />}
       {view.step === 'give-quote' ? <IssuanceQuoteFields draft={draft} onChange={setDraft} disabled={sending} /> : null}
       {view.owners !== null && view.owners.length > 0 ? (

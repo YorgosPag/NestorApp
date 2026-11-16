@@ -7,7 +7,10 @@
 import {
   advanceCollectedMinor,
   advanceStateOf,
+  cancellationScheduleOf,
   isAdvanceTermsValid,
+  isWithinWithdrawalPeriod,
+  maxAdvanceMinorOf,
   objectionUntilOf,
   refundDueOnCancelOf,
   type AdvanceState,
@@ -28,10 +31,10 @@ const ENGINEER: IssuanceActor = { kind: 'engagement', engagementId: 'eng_1', uid
 const at = (actor: IssuanceActor, nowIso: string): IssuanceActor => ({ ...actor, nowIso });
 
 const INSPECTOR = { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-123' } as const;
-/** 100,00 € + 24% = 124,00 € · προκαταβολή 40,00 €, μέτρια πολιτική. */
+/** 100,00 € + 24% = 124,00 € · προκαταβολή 40,00 €, μέτρια πολιτική, αξία αυτοψίας 15,00 €. */
 const TERMS: QuoteTerms = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31',
-  scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: { amountMinor: 4_000, policy: 'moderate' },
+  scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: { amountMinor: 4_000, policy: 'moderate', inspectionValueMinor: 1_500 },
 };
 const ASSIGNED: IssuanceAction[] = [
   { kind: 'propose', professionalContactId: 'cont_pro', credential: INSPECTOR },
@@ -40,6 +43,9 @@ const ASSIGNED: IssuanceAction[] = [
   { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null },
 ];
 const FUNDED: IssuanceAction = { kind: 'advance-funded', amountMinor: 4_000, paymentReference: 'pmt_1', withdrawalWaiverAt: T0 };
+/** Η έγκριση έγινε στο T0 (16/11)· η 14η ημέρα είναι η 30/11 (ώρα Ελλάδας). */
+const WITHIN_WITHDRAWAL = '2026-11-30T20:00:00.000Z';
+const AFTER_WITHDRAWAL = '2026-12-01T09:00:00.000Z';
 const START: IssuanceAction = { kind: 'start-work' };
 const MARK = '123456789012345';
 
@@ -69,16 +75,26 @@ const refusalOf = (record: IssuanceAssignmentRecord, action: IssuanceAction, act
 };
 
 describe('ADR-943 Κ-3 — οι όροι της προκαταβολής', () => {
-  it('θετικό ποσό, όχι πάνω από το σύνολο, γνωστή πολιτική', () => {
-    expect(isAdvanceTermsValid({ amountMinor: 12_400, policy: 'strict' }, 12_400)).toBe(true);
-    expect(isAdvanceTermsValid({ amountMinor: 12_401, policy: 'strict' }, 12_400)).toBe(false);
-    expect(isAdvanceTermsValid({ amountMinor: 0, policy: 'strict' }, 12_400)).toBe(false);
-    expect(isAdvanceTermsValid({ amountMinor: 10.5, policy: 'strict' }, 12_400)).toBe(false);
+  const advance = (amountMinor: number, inspectionValueMinor = 1_500) => ({ amountMinor, policy: 'strict' as const, inspectionValueMinor });
+
+  it('Φ4 — ανώτατο 50% του συνόλου, στρογγύλευση υπέρ του ιδιοκτήτη', () => {
+    expect(maxAdvanceMinorOf(12_400)).toBe(6_200);
+    expect(maxAdvanceMinorOf(12_401)).toBe(6_200);
+    expect(isAdvanceTermsValid(advance(6_200), 12_400)).toBe(true);
+    expect(isAdvanceTermsValid(advance(6_201), 12_400)).toBe(false);
   });
 
-  it('ο μειωτής αρνείται προσφορά με προκαταβολή πάνω από το σύνολο της (`terms-refused`)', () => {
+  it('θετικό ακέραιο ποσό, γνωστή πολιτική, αξία αυτοψίας θετική και ως το σύνολο', () => {
+    expect(isAdvanceTermsValid(advance(0), 12_400)).toBe(false);
+    expect(isAdvanceTermsValid(advance(10.5), 12_400)).toBe(false);
+    expect(isAdvanceTermsValid(advance(4_000, 0), 12_400)).toBe(false);
+    expect(isAdvanceTermsValid(advance(4_000, 12_400), 12_400)).toBe(true);
+    expect(isAdvanceTermsValid(advance(4_000, 12_401), 12_400)).toBe(false);
+  });
+
+  it('ο μειωτής αρνείται προσφορά με προκαταβολή πάνω από το όριο (`terms-refused`)', () => {
     const sent = runAll(ASSIGNED.slice(0, 2));
-    const tooMuch: IssuanceAction = { kind: 'quote', terms: { ...TERMS, advance: { amountMinor: 12_401, policy: 'flexible' } } };
+    const tooMuch: IssuanceAction = { kind: 'quote', terms: { ...TERMS, advance: advance(6_201) } };
     expect(act(sent, tooMuch, OFFICE)).toEqual({ ok: false, refusal: 'terms-refused' });
   });
 
@@ -148,20 +164,52 @@ describe('ADR-943 Κ-4 — έναρξη, παράθυρο αντίρρησης, 
 });
 
 describe('ADR-943 Κ-5 — πολιτικές ακύρωσης', () => {
+  /** Η ίδια συμφωνία με άλλη πολιτική — η αναθεώρηση μένει ίδια, άρα η έγκριση την καλύπτει. */
+  const withPolicy = (record: IssuanceAssignmentRecord, policy: 'flexible' | 'moderate' | 'strict'): IssuanceAssignmentRecord => {
+    if (record.quote === null || record.quote.advance === null) throw new Error('no advance');
+    return { ...record, quote: { ...record.quote, advance: { ...record.quote.advance, policy } } };
+  };
+  const withoutWaiver = (record: IssuanceAssignmentRecord): IssuanceAssignmentRecord => ({
+    ...record, advanceEvents: record.advanceEvents.map((event) => (event.kind === 'funded' ? { ...event, withdrawalWaiverAt: null } : event)),
+  });
+
   it('πριν από την έναρξη: πάντα ολόκληρο το εισπραχθέν', () => {
-    expect(refundDueOnCancelOf(stateOf(funded()), 'strict')).toBe(4_000);
+    expect(refundDueOnCancelOf(withPolicy(funded(), 'strict'), AFTER_WITHDRAWAL)).toBe(4_000);
   });
 
-  it('μετά την έναρξη: ευέλικτη 100% · μέτρια 50% · αυστηρή 0% επιστροφή', () => {
-    const state = stateOf(started());
-    expect(refundDueOnCancelOf(state, 'flexible')).toBe(4_000);
-    expect(refundDueOnCancelOf(state, 'moderate')).toBe(2_000);
-    expect(refundDueOnCancelOf(state, 'strict')).toBe(0);
+  it('μετά την έναρξη, μετά τις 14 ημέρες: ευέλικτη 100% · μέτρια 50% · αυστηρή 0% επιστροφή', () => {
+    expect(refundDueOnCancelOf(withPolicy(started(), 'flexible'), AFTER_WITHDRAWAL)).toBe(4_000);
+    expect(refundDueOnCancelOf(withPolicy(started(), 'moderate'), AFTER_WITHDRAWAL)).toBe(2_000);
+    expect(refundDueOnCancelOf(withPolicy(started(), 'strict'), AFTER_WITHDRAWAL)).toBe(0);
   });
 
-  it('η στρογγύλευση ευνοεί τον ιδιοκτήτη (μονό ποσό, μέτρια)', () => {
-    const state: AdvanceState = { kind: 'release-pending', fundedMinor: 4_001, objectionUntil: T0 };
-    expect(refundDueOnCancelOf(state, 'moderate')).toBe(2_001);
+  it('υπαναχώρηση (3ι §3): μέσα στις 14 ημέρες κρατείται το πολύ η αξία της αυτοψίας', () => {
+    expect(refundDueOnCancelOf(withPolicy(started(), 'strict'), WITHIN_WITHDRAWAL)).toBe(2_500);
+    expect(refundDueOnCancelOf(withPolicy(started(), 'moderate'), WITHIN_WITHDRAWAL)).toBe(2_500);
+    expect(refundDueOnCancelOf(withPolicy(started(), 'flexible'), WITHIN_WITHDRAWAL)).toBe(4_000);
+  });
+
+  it('υπαναχώρηση (3ι §4 α ii): χωρίς ρητό αίτημα έναρξης δεν κρατείται τίποτα', () => {
+    expect(refundDueOnCancelOf(withoutWaiver(withPolicy(started(), 'strict')), WITHIN_WITHDRAWAL)).toBe(4_000);
+    expect(refundDueOnCancelOf(withoutWaiver(withPolicy(started(), 'strict')), AFTER_WITHDRAWAL)).toBe(0);
+  });
+
+  it('η προθεσμία: ως και την 14η ημέρα μετά την έγκριση, σε ώρα Ελλάδας', () => {
+    expect(isWithinWithdrawalPeriod(assigned(), WITHIN_WITHDRAWAL)).toBe(true);
+    // 30/11 22:00 UTC = 1/12 00:00 Αθήνα ⇒ έξω.
+    expect(isWithinWithdrawalPeriod(assigned(), '2026-11-30T22:00:00.000Z')).toBe(false);
+    expect(isWithinWithdrawalPeriod({ ...assigned(), decision: null }, T0)).toBe(false);
+  });
+
+  it('ο πίνακας ακύρωσης = οι ίδιοι κανόνες· η στρογγύλευση ευνοεί τον ιδιοκτήτη', () => {
+    expect(cancellationScheduleOf({ amountMinor: 4_001, policy: 'moderate', inspectionValueMinor: 9_999 })).toEqual([
+      { when: 'before-start', refundMinor: 4_001, retainedMinor: 0 },
+      { when: 'after-start-within-withdrawal', refundMinor: 2_001, retainedMinor: 2_000 },
+      { when: 'after-start-later', refundMinor: 2_001, retainedMinor: 2_000 },
+    ]);
+    expect(cancellationScheduleOf({ amountMinor: 4_000, policy: 'strict', inspectionValueMinor: 1_500 })[1]).toEqual(
+      { when: 'after-start-within-withdrawal', refundMinor: 2_500, retainedMinor: 1_500 },
+    );
   });
 
   it('επιστροφή μετά από ακύρωση γράφεται· πάνω από το εισπραχθέν ⇒ `terms-refused`· ολική ⇒ `refunded`', () => {

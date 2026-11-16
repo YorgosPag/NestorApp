@@ -31,9 +31,10 @@ export function linkStepOf(audience: IssuanceAudience, record: IssuanceAssignmen
  * υπογραφής, ώστε η σελίδα να πει «η παράδοση πέφτει μετά την υπογραφή» πριν από την έγκριση.
  */
 export function quoteViewOf(quote: IssuanceQuote, signingDay: string | null): IssuanceQuoteView {
-  const { basis, amountMinor, vatRatePercent, vatIncluded, validUntil, scope, note, deliveryBusinessDays, revision, previous } = quote;
+  const { basis, amountMinor, vatRatePercent, vatIncluded, validUntil, scope, note, deliveryBusinessDays, advance, revision, previous } = quote;
   return {
-    basis, amountMinor, vatRatePercent, vatIncluded, validUntil, scope, note, deliveryBusinessDays, revision,
+    // ADR-943 Κ-3 — η προκαταβολή εγκρίνεται μαζί με την τιμή: ο υπεύθυνος τη βλέπει, με τον πίνακα ακύρωσης.
+    basis, amountMinor, vatRatePercent, vatIncluded, validUntil, scope, note, deliveryBusinessDays, advance, revision,
     previousTotalMinor: previous === null ? null : quoteTotalsOf(previous).totalMinor,
     signingDay,
   };

@@ -6,8 +6,10 @@
  */
 
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
+import { isAdvanceTermsValid, type AdvanceTerms, type CancellationPolicyId } from '@/lib/document-validity/issuance-advance';
 import {
   isQuoteDeliveryBusinessDays,
+  quoteTotalsOf,
   QUOTE_SCOPE_ITEMS,
   type QuoteBasis,
   type QuoteScopeItem,
@@ -27,7 +29,21 @@ export interface QuoteDraft {
   readonly scope: readonly QuoteScopeItem[];
   /** §45 Φ2 — «παράδοση σε N εργάσιμες», ως κείμενο· **καμία** προεπιλογή: τον χρόνο τον δεσμεύει ο επαγγελματίας. */
   readonly deliveryDays: string;
+  /**
+   * ADR-943 Φ4 — η προκαταβολή: ζητείται ή όχι · ποσό · πολιτική (καμία προεπιλογή — τη διαλέγει ο επαγγελματίας) · αξία
+   * αυτοψίας. Τα ποσά ως κείμενο, όπως το `amount`.
+   */
+  readonly advance: AdvanceDraft;
 }
+
+export interface AdvanceDraft {
+  readonly requested: boolean;
+  readonly amount: string;
+  readonly policy: CancellationPolicyId | null;
+  readonly inspectionValue: string;
+}
+
+export const EMPTY_ADVANCE_DRAFT: AdvanceDraft = { requested: false, amount: '', policy: null, inspectionValue: '' };
 
 const DEFAULT_VALIDITY_DAYS = 30;
 const DAY_MS = 86_400_000;
@@ -41,6 +57,7 @@ export function emptyQuoteDraft(now: Date = new Date()): QuoteDraft {
     validUntil: conveyanceToday(new Date(now.getTime() + DEFAULT_VALIDITY_DAYS * DAY_MS)),
     scope: QUOTE_SCOPE_ITEMS,
     deliveryDays: '',
+    advance: EMPTY_ADVANCE_DRAFT,
   };
 }
 
@@ -63,21 +80,37 @@ function amountMinorOf(amount: string): number | null {
   return minor !== null && minor > 0 && Math.abs(majorFromMinor(minor) - major) < 1e-9 ? minor : null;
 }
 
-/** Η φόρμα → οι όροι του σώματος· `null` όσο κάτι λείπει (το κουμπί μένει ανενεργό). */
+/**
+ * ADR-943 Φ4 — η προκαταβολή του προχείρου, κριμένη από την **ίδια** κρίση με τον μειωτή (`isAdvanceTermsValid`: ως 50%
+ * του συνόλου, αξία αυτοψίας ως το σύνολο). `null` = δεν ζητείται · `'invalid'` = ζητείται αλλά δεν στέκει (κουμπί ανενεργό).
+ */
+export function advanceTermsFromDraft(advance: AdvanceDraft, totalMinor: number): AdvanceTerms | null | 'invalid' {
+  if (!advance.requested) return null;
+  const amountMinor = amountMinorOf(advance.amount);
+  const inspectionValueMinor = amountMinorOf(advance.inspectionValue);
+  if (amountMinor === null || inspectionValueMinor === null || advance.policy === null) return 'invalid';
+  const terms: AdvanceTerms = { amountMinor, policy: advance.policy, inspectionValueMinor };
+  return isAdvanceTermsValid(terms, totalMinor) ? terms : 'invalid';
+}
+
+/** Η φόρμα → οι όροι του σώματος· `null` όσο κάτι λείπει ή δεν στέκει (το κουμπί μένει ανενεργό). */
 export function quoteTermsFromDraft(draft: QuoteDraft): QuoteTermsBody | null {
   const amountMinor = amountMinorOf(draft.amount);
   const deliveryBusinessDays = deliveryDaysOf(draft.deliveryDays);
   if (amountMinor === null || draft.basis === null || draft.scope.length === 0 || draft.validUntil === '' || deliveryBusinessDays === null) return null;
+  // «Άνευ ΦΠΑ» δεν έχει «με ή χωρίς» — μία αλήθεια και εδώ.
+  const vatIncluded = draft.vatRatePercent === 0 ? false : draft.vatIncluded;
+  const totalMinor = quoteTotalsOf({ amountMinor, vatRatePercent: draft.vatRatePercent, vatIncluded }).totalMinor;
+  const advance = advanceTermsFromDraft(draft.advance, totalMinor);
+  if (advance === 'invalid') return null;
   return {
     basis: draft.basis,
     amountMinor,
     vatRatePercent: draft.vatRatePercent,
-    // «Άνευ ΦΠΑ» δεν έχει «με ή χωρίς» — μία αλήθεια και εδώ.
-    vatIncluded: draft.vatRatePercent === 0 ? false : draft.vatIncluded,
+    vatIncluded,
     validUntil: draft.validUntil,
     scope: [...draft.scope],
     deliveryBusinessDays,
-    // ADR-943 Φ1: ο τομέας δέχεται προκαταβολή· τα πεδία της φόρμας έρχονται στη Φ4.
-    advance: null,
+    advance,
   };
 }

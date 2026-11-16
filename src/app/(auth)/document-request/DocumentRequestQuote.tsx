@@ -12,6 +12,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 
+import { policyText } from '@/components/document-registry/issuance-advance-labels';
 import { basisText, scopeText } from '@/components/document-registry/issuance-quote-labels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
@@ -88,6 +89,12 @@ export function QuoteFacts({ quote }: { readonly quote: IssuanceQuoteView }) {
       <Fact term={t('document-request:facts.quoteValid')}>{formatDate(quote.validUntil)}</Fact>
       <QuoteDeliveryFact quote={quote} />
       <Fact term={t('document-request:facts.quoteScope')}>{quote.scope.map((item) => scopeText(t, item)).join(' · ')}</Fact>
+      {/* ADR-943 Κ-3 — η προκαταβολή είναι μέρος αυτού που εγκρίνεται· ο πίνακας ακύρωσης ακολουθεί έξω από τη λίστα. */}
+      {quote.advance === null ? null : (
+        <Fact term={t('document-request:facts.advance')}>
+          {t('document-request:facts.advanceValue', { amount: formatMinor(quote.advance.amountMinor), policy: policyText(t, quote.advance.policy) })}
+        </Fact>
+      )}
       {quote.note === null ? null : <Fact term={t('document-request:facts.quoteNote')}>{quote.note}</Fact>}
     </>
   );

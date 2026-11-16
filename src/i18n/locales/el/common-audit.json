@@ -772,7 +772,19 @@
       "electricalInstallationIssuanceDocumentProvision": "Ανάθεση έκδοσης ΥΔΕ — έγγραφο που δόθηκε στον μηχανικό",
       "energyCertificateIssuanceDocumentAccess": "Ανάθεση έκδοσης ΠΕΑ — ο μηχανικός άνοιξε έγγραφο",
       "buildingIdentityIssuanceDocumentAccess": "Ανάθεση έκδοσης ΗΤΚ — ο μηχανικός άνοιξε έγγραφο",
-      "electricalInstallationIssuanceDocumentAccess": "Ανάθεση έκδοσης ΥΔΕ — ο μηχανικός άνοιξε έγγραφο"
+      "electricalInstallationIssuanceDocumentAccess": "Ανάθεση έκδοσης ΥΔΕ — ο μηχανικός άνοιξε έγγραφο",
+      "energyCertificateIssuanceQuoteTotal": "Ανάθεση έκδοσης ΠΕΑ — εγκεκριμένο σύνολο (€)",
+      "energyCertificateIssuanceAdvanceAmount": "Ανάθεση έκδοσης ΠΕΑ — προκαταβολή (€)",
+      "energyCertificateIssuanceAdvanceState": "Ανάθεση έκδοσης ΠΕΑ — κατάσταση προκαταβολής",
+      "energyCertificateIssuanceWithdrawalWaiver": "Ανάθεση έκδοσης ΠΕΑ — ρητό αίτημα έναρξης μέσα στην προθεσμία υπαναχώρησης",
+      "buildingIdentityIssuanceQuoteTotal": "Ανάθεση ταυτότητας κτιρίου — εγκεκριμένο σύνολο (€)",
+      "buildingIdentityIssuanceAdvanceAmount": "Ανάθεση ταυτότητας κτιρίου — προκαταβολή (€)",
+      "buildingIdentityIssuanceAdvanceState": "Ανάθεση ταυτότητας κτιρίου — κατάσταση προκαταβολής",
+      "buildingIdentityIssuanceWithdrawalWaiver": "Ανάθεση ταυτότητας κτιρίου — ρητό αίτημα έναρξης μέσα στην προθεσμία υπαναχώρησης",
+      "electricalInstallationIssuanceQuoteTotal": "Ανάθεση ΥΔΕ — εγκεκριμένο σύνολο (€)",
+      "electricalInstallationIssuanceAdvanceAmount": "Ανάθεση ΥΔΕ — προκαταβολή (€)",
+      "electricalInstallationIssuanceAdvanceState": "Ανάθεση ΥΔΕ — κατάσταση προκαταβολής",
+      "electricalInstallationIssuanceWithdrawalWaiver": "Ανάθεση ΥΔΕ — ρητό αίτημα έναρξης μέσα στην προθεσμία υπαναχώρησης"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

@@ -169,6 +169,10 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   energyCertificateIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
   buildingIdentityIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
   electricalInstallationIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
+  // ── ADR-943 Φ4 — πού είναι η προκαταβολή (`AdvanceStateKind`, ο ΙΔΙΟΣ κατάλογος με την κάρτα της ανάθεσης)
+  energyCertificateIssuanceAdvanceState: { ns: 'document-registry', path: 'issuance.advance.state' },
+  buildingIdentityIssuanceAdvanceState: { ns: 'document-registry', path: 'issuance.advance.state' },
+  electricalInstallationIssuanceAdvanceState: { ns: 'document-registry', path: 'issuance.advance.state' },
   // ── ADR-915 §39 · §45.21.2 — πρόσκληση στον χώρο της ανάθεσης: τιμή `invited:<email>` ⇒ «προσκλήθηκε · <email>»
   //    (ταυτότητα με είδος του resolver: το είδος από τον κατάλογο, η ουρά όπως είναι). Ένα πεδίο ανά είδος· το παλιό
   //    `issuanceSpaceInvitation` (ένα για όλα τα είδη) είναι αποσυρμένο (`audit-retired-fields.ts`) και διαβάζεται ίδια.

@@ -772,7 +772,19 @@
       "electricalInstallationIssuanceDocumentProvision": "Electrical installation issuance — document shared with the engineer",
       "energyCertificateIssuanceDocumentAccess": "Energy certificate issuance — the engineer opened a document",
       "buildingIdentityIssuanceDocumentAccess": "Building identity issuance — the engineer opened a document",
-      "electricalInstallationIssuanceDocumentAccess": "Electrical installation issuance — the engineer opened a document"
+      "electricalInstallationIssuanceDocumentAccess": "Electrical installation issuance — the engineer opened a document",
+      "energyCertificateIssuanceQuoteTotal": "Energy certificate issuance — approved total (€)",
+      "energyCertificateIssuanceAdvanceAmount": "Energy certificate issuance — advance payment (€)",
+      "energyCertificateIssuanceAdvanceState": "Energy certificate issuance — advance payment status",
+      "energyCertificateIssuanceWithdrawalWaiver": "Energy certificate issuance — express request to start within the withdrawal period",
+      "buildingIdentityIssuanceQuoteTotal": "Building identity issuance — approved total (€)",
+      "buildingIdentityIssuanceAdvanceAmount": "Building identity issuance — advance payment (€)",
+      "buildingIdentityIssuanceAdvanceState": "Building identity issuance — advance payment status",
+      "buildingIdentityIssuanceWithdrawalWaiver": "Building identity issuance — express request to start within the withdrawal period",
+      "electricalInstallationIssuanceQuoteTotal": "Electrical installation issuance — approved total (€)",
+      "electricalInstallationIssuanceAdvanceAmount": "Electrical installation issuance — advance payment (€)",
+      "electricalInstallationIssuanceAdvanceState": "Electrical installation issuance — advance payment status",
+      "electricalInstallationIssuanceWithdrawalWaiver": "Electrical installation issuance — express request to start within the withdrawal period"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

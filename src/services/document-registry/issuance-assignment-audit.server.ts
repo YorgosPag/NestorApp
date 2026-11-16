@@ -9,7 +9,10 @@
 
 import 'server-only';
 
+import { advanceStateOf } from '@/lib/document-validity/issuance-advance';
 import type { IssuanceAssignmentRecord, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import { agreedQuoteOf, quoteTotalsOf } from '@/lib/document-validity/issuance-quote';
+import { majorFromMinor, MONEY_MINOR_DECIMALS } from '@/lib/money/money';
 // §45.21 — η δήλωση των πεδίων ζει σε κοινό module: τη διαβάζει και η γραμμή Ιστορικού για να φορτώσει τα λεξιλόγια.
 import { ISSUANCE_AUDIT_FIELDS, type IssuanceAuditFields } from '@/lib/document-validity/issuance-audit-fields';
 import { lastAnsweredDeliveryChangeOf, pendingDeliveryChangeOf } from '@/lib/document-validity/issuance-delivery-change';
@@ -52,7 +55,42 @@ function auditChangesOf(fields: IssuanceAuditFields, t: IssuanceTransition, name
   const dueBefore = t.previous === null ? null : issuanceDeliveryOf(t.previous)?.dueOn ?? null;
   const dueAfter = issuanceDeliveryOf(t.next)?.dueOn ?? null;
   if (dueBefore !== dueAfter) changes.push({ field: fields.deliveryDue, oldValue: dueBefore, newValue: dueAfter });
-  return [...changes, ...inspectionAuditChangesOf(fields, t, names), ...deliveryChangeAuditOf(fields, t)];
+  return [...changes, ...inspectionAuditChangesOf(fields, t, names), ...deliveryChangeAuditOf(fields, t), ...moneyAuditChangesOf(fields, t)];
+}
+
+/** Ποσό σε λεπτά ⇒ ευρώ με δύο δεκαδικά (`"40.00"`) — ουδέτερο ως προς γλώσσα· `null` = δεν υπάρχει. */
+function eurosOf(minor: number | null): string | null {
+  return minor === null ? null : majorFromMinor(minor).toFixed(MONEY_MINOR_DECIMALS);
+}
+
+/** Τα γεγονότα χρημάτων μιας εγγραφής, όπως τα γράφει το ιστορικό. */
+function moneyFactsOf(record: IssuanceAssignmentRecord | null) {
+  if (record === null) return { total: null, advance: null, state: null, waiver: null };
+  const agreed = agreedQuoteOf(record);
+  const state = advanceStateOf(record).kind;
+  const funded = record.advanceEvents.find((event) => event.kind === 'funded');
+  return {
+    total: eurosOf(agreed === null ? null : quoteTotalsOf(agreed).totalMinor),
+    advance: eurosOf(agreed?.advance?.amountMinor ?? null),
+    state: state === 'none' ? null : state,
+    waiver: funded?.kind === 'funded' ? funded.withdrawalWaiverAt : null,
+  };
+}
+
+/**
+ * ADR-943 Φ4 — η συμφωνία σε χρήματα και η προκαταβολή: γράφεται **μόνο** ό,τι άλλαξε. Κλείνει και το κενό §42.6 (ποσά
+ * χωρίς πεδίο ιστορικού): η εγκεκριμένη τιμή φαίνεται πλέον στο Ιστορικό του ακινήτου.
+ */
+function moneyAuditChangesOf(fields: IssuanceAuditFields, t: IssuanceTransition): AuditChange[] {
+  const before = moneyFactsOf(t.previous);
+  const after = moneyFactsOf(t.next);
+  const pairs: readonly (readonly [string, string | null, string | null])[] = [
+    [fields.quoteTotal, before.total, after.total],
+    [fields.advanceAmount, before.advance, after.advance],
+    [fields.advanceState, before.state, after.state],
+    [fields.withdrawalWaiver, before.waiver, after.waiver],
+  ];
+  return pairs.filter(([, oldValue, newValue]) => oldValue !== newValue).map(([field, oldValue, newValue]) => ({ field, oldValue, newValue }));
 }
 
 /**

@@ -49,6 +49,25 @@ export interface IssuanceAuditFields {
   readonly documentProvision: string;
   /** ADR-942 Φ2 — **άνοιγμα** δοσμένου αρχείου από τον μηχανικό: `— → view | download` (κατάλογος `issuance.documentRequest.access`). */
   readonly documentAccess: string;
+  /**
+   * ADR-943 Φ4 — η **συμφωνία** σε χρήματα (κλείνει και το κενό §42.6): το σύνολο της εγκεκριμένης προσφοράς και η
+   * προκαταβολή της, σε ευρώ με δύο δεκαδικά (`"40.00"` — η μονάδα στο όνομα του πεδίου, ώστε το ιστορικό να μην παγώνει
+   * μορφή γλώσσας). Γράφονται όταν αλλάζει η **συμφωνημένη** τιμή (έγκριση · αναθεώρηση που την ακυρώνει).
+   */
+  readonly quoteTotal: string;
+  readonly advanceAmount: string;
+  /** ADR-943 Φ4 — πού είναι η προκαταβολή (`advanceStateOf`, κατάλογος `issuance.advance.state`). */
+  readonly advanceState: string;
+  /** ADR-943 Κ-6 — η στιγμή του ρητού αιτήματος έναρξης μέσα στις 14 ημέρες (ISO· ο αναγνώστης τη μορφοποιεί). */
+  readonly withdrawalWaiver: string;
+}
+
+/** Τα τέσσερα πεδία χρημάτων ενός είδους — από το πρόθεμά του, ώστε τα τρία είδη να μη γράφουν δώδεκα ονόματα με το χέρι. */
+function moneyFieldsOf(prefix: string): Pick<IssuanceAuditFields, 'quoteTotal' | 'advanceAmount' | 'advanceState' | 'withdrawalWaiver'> {
+  return {
+    quoteTotal: `${prefix}QuoteTotal`, advanceAmount: `${prefix}AdvanceAmount`,
+    advanceState: `${prefix}AdvanceState`, withdrawalWaiver: `${prefix}WithdrawalWaiver`,
+  };
 }
 
 /**
@@ -67,6 +86,7 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     documentRequest: 'energyCertificateIssuanceDocumentRequest',
     documentProvision: 'energyCertificateIssuanceDocumentProvision',
     documentAccess: 'energyCertificateIssuanceDocumentAccess',
+    ...moneyFieldsOf('energyCertificateIssuance'),
   },
   'building-identity': {
     stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
@@ -79,6 +99,7 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     documentRequest: 'buildingIdentityIssuanceDocumentRequest',
     documentProvision: 'buildingIdentityIssuanceDocumentProvision',
     documentAccess: 'buildingIdentityIssuanceDocumentAccess',
+    ...moneyFieldsOf('buildingIdentityIssuance'),
   },
   'tax-clearance': null,
   'insurance-clearance': null,
@@ -97,5 +118,6 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     documentRequest: 'electricalInstallationIssuanceDocumentRequest',
     documentProvision: 'electricalInstallationIssuanceDocumentProvision',
     documentAccess: 'electricalInstallationIssuanceDocumentAccess',
+    ...moneyFieldsOf('electricalInstallationIssuance'),
   },
 };

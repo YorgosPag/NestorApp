@@ -30,14 +30,20 @@ import {
 import { GREEK_STANDARD_VAT_RATE, GREEK_VAT_RATE_PERCENTS } from '@/subapps/accounting/services/config/vat-rates';
 
 import { ChoiceField } from './IssuanceChoiceField';
-import { quoteTermsFromDraft, type QuoteDraft } from './issuance-quote-draft';
+import { IssuanceAdvanceFields } from './IssuanceAdvanceFields';
+import { EMPTY_ADVANCE_DRAFT, quoteTermsFromDraft, type QuoteDraft } from './issuance-quote-draft';
 import { scopeText } from './issuance-quote-labels';
 
 const VAT_OPTIONS = GREEK_VAT_RATE_PERCENTS.map(String);
 
+/** Οι όροι της **τιμής** μόνο (χωρίς προκαταβολή) — τα σύνολα και το όριο της προκαταβολής δεν εξαρτώνται από αυτήν. */
+function priceTermsOf(draft: QuoteDraft) {
+  return quoteTermsFromDraft({ ...draft, basis: draft.basis ?? 'firm', advance: EMPTY_ADVANCE_DRAFT });
+}
+
 function QuoteTotalsLine({ draft }: { readonly draft: QuoteDraft }): React.ReactElement | null {
   const { t } = useTranslation(['document-registry']);
-  const terms = quoteTermsFromDraft({ ...draft, basis: draft.basis ?? 'firm' });
+  const terms = priceTermsOf(draft);
   if (terms === null) return null;
   const totals = quoteTotalsOf(terms);
   return (
@@ -48,6 +54,11 @@ function QuoteTotalsLine({ draft }: { readonly draft: QuoteDraft }): React.React
       {requiresElectronicPayment(totals) ? <p className="m-0 text-xs text-muted-foreground">{t('document-registry:issuance.quoteForm.electronicPayment')}</p> : null}
     </section>
   );
+}
+
+function totalMinorOf(draft: QuoteDraft): number | null {
+  const terms = priceTermsOf(draft);
+  return terms === null ? null : quoteTotalsOf(terms).totalMinor;
 }
 
 export interface IssuanceQuoteFieldsProps {
@@ -107,6 +118,8 @@ export function IssuanceQuoteFields({ draft, onChange, disabled = false }: Issua
         ))}
       </fieldset>
       <QuoteTotalsLine draft={draft} />
+      {/* ADR-943 Κ-3 — η προκαταβολή είναι μέρος των όρων: εγκρίνεται μαζί με τιμή και πρόσωπο. */}
+      <IssuanceAdvanceFields advance={draft.advance} totalMinor={totalMinorOf(draft)} onChange={(advance) => set({ advance })} />
       <p className="m-0 text-xs text-muted-foreground">{t('document-registry:issuance.quoteForm.oneTruth')}</p>
     </fieldset>
   );
