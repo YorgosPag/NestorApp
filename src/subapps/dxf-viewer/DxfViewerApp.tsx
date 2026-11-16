@@ -5,7 +5,6 @@ import { installProductionConsoleGuard } from './utils/production-console-guard'
 
 // Layer 1: Silence console.log/warn/debug in production builds
 installProductionConsoleGuard();
-import { NotificationProvider } from '../../providers/NotificationProvider';
 // CoordProvider removed - using only RulersGrid system now
 import { GripProvider } from './providers/GripProvider';
 import { SnapProvider } from './snapping/context/SnapContext';
@@ -46,8 +45,9 @@ import { EnterpriseDxfSettingsProvider as DxfSettingsProvider } from './settings
 // Default `true` ⇒ production behaviour is byte-for-byte what it was before the flag.
 export function DxfViewerApp({ enablePersistence = true, ...props }: DxfViewerAppProps) {
   // Debug logging removed for performance
+  // ADR-929 §6.24 — ΚΑΝΕΝΑΣ δικός του `NotificationProvider`: ο viewer ζει ΜΟΝΟ κάτω από το `(app)` layout, που έχει ήδη τον
+  // ΕΝΑ. Δεύτερος provider = δεύτερος `<Toaster>` ⇒ το sonner αποδίδει κάθε toast ΔΥΟ φορές (μετρημένο: 2 `[data-sonner-toast]`).
   return (
-    <NotificationProvider>
       <EnterpriseErrorBoundaryWithTour
         componentName="DxfViewer"
         enableRetry
@@ -93,7 +93,6 @@ export function DxfViewerApp({ enablePersistence = true, ...props }: DxfViewerAp
               </ProjectHierarchyProvider>
           {/* 🗑️ REMOVED: ConfigurationProvider closing tag */}
       </EnterpriseErrorBoundaryWithTour>
-    </NotificationProvider>
   );
 }
 

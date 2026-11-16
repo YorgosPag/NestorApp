@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { useNotifications } from '@/providers/NotificationProvider';
+import type { NotificationType } from '@/types/notifications';
 
 /** Το σταθερό `id` του toast — ένα ανά (εύρος, κλειδί). */
 export function undoToastId(scope: string, key: string): string {
@@ -31,6 +32,8 @@ export interface UndoToast {
   readonly message: string;
   readonly undoLabel: string;
   readonly onUndo: () => void;
+  /** Η σημασία του μηνύματος (ADR-929 §6.24: «αποθηκεύτηκε» = `success`). Προεπιλογή `info`. */
+  readonly type?: Extract<NotificationType, 'success' | 'info'>;
 }
 
 export interface UndoToastOptions {
@@ -68,12 +71,12 @@ export function useUndoToasts(scope: string, liveKeys: ReadonlySet<string>, opti
     };
   }, [retireOnUnmount]);
 
-  return useCallback(({ key, message, undoLabel, onUndo }: UndoToast) => {
+  return useCallback(({ key, message, undoLabel, onUndo, type = 'info' }: UndoToast) => {
     const id = undoToastId(scope, key);
     open.current.set(key, id);
     notifications.notify(message, {
       id,
-      type: 'info',
+      type,
       actions: [{ label: undoLabel, onClick: onUndo }],
       onCancel: () => { open.current.delete(key); },
     });
