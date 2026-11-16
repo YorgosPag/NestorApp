@@ -80,15 +80,31 @@ const full = (m: Homography): readonly number[] => [m.a, m.b, m.c, m.d, m.e, m.f
  * `null` όταν το σημείο πέφτει στην ευθεία του απείρου ή η Ιακωβιανή εκφυλίζεται.
  */
 export function homographyLocalScale(m: Homography, u: number, v: number): number | null {
+  const j = homographyJacobian(m, u, v);
+  if (j === null) return null;
+  const det = Math.abs(j.a * j.d - j.b * j.c);
+  return Number.isFinite(det) && det > DEGENERATE ? Math.sqrt(det) : null;
+}
+
+/**
+ * Η **Ιακωβιανή** της ομογραφίας στο `(u, v)`: η γραμμική απεικόνιση που στέλνει ένα μικρό διάνυσμα γύρω από το σημείο,
+ * ως {@link Affine2x3} **χωρίς μετατόπιση** (`e = f = 0`, σημασιολογία `ctx.transform`: στήλες `(a, b)` = ∂/∂u,
+ * `(c, d)` = ∂/∂v). Η `homographyLocalScale` είναι η `√|det|` της· όποιος χρειάζεται την κλίμακα **ανά διεύθυνση**
+ * (ADR-929 §6.22: απόσταση παράλληλων ευθειών υπό ανισοτροπική απεικόνιση) παίρνει ολόκληρο τον πίνακα από εδώ.
+ * `null` όταν το σημείο πέφτει στην ευθεία του απείρου.
+ */
+export function homographyJacobian(m: Homography, u: number, v: number): Affine2x3 | null {
   const w = m.g * u + m.h * v + 1;
   if (!Number.isFinite(w) || Math.abs(w) <= DEGENERATE) return null;
   const p = applyHomography(m, u, v);
-  const j00 = (m.a - p.x * m.g) / w;
-  const j01 = (m.b - p.x * m.h) / w;
-  const j10 = (m.d - p.y * m.g) / w;
-  const j11 = (m.e - p.y * m.h) / w;
-  const det = Math.abs(j00 * j11 - j01 * j10);
-  return Number.isFinite(det) && det > DEGENERATE ? Math.sqrt(det) : null;
+  return {
+    a: (m.a - p.x * m.g) / w,
+    b: (m.d - p.y * m.g) / w,
+    c: (m.b - p.x * m.h) / w,
+    d: (m.e - p.y * m.h) / w,
+    e: 0,
+    f: 0,
+  };
 }
 
 /**

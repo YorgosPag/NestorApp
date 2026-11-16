@@ -11,7 +11,8 @@
  * @module subapps/dxf-viewer/bim/plan-recognition/fusion/fusion-frame
  */
 
-import { applyHomography, homographyLocalScale, type Homography, type PlanePoint } from '@/lib/geometry/homography';
+import { IDENTITY_AFFINE, type Affine2x3 } from '@/lib/geometry/affine-2x3';
+import { applyHomography, homographyJacobian, homographyLocalScale, type Homography, type PlanePoint } from '@/lib/geometry/homography';
 import type { PlanAlignment } from '../alignment/plan-alignment-types';
 import type { RasterSegment } from '../plan-recognition-types';
 import type { FaceLine, PlanDirectionFamily, PlanFusionOptions } from './plan-fusion-types';
@@ -33,6 +34,11 @@ export interface FusionFrame {
   readonly lineOfSegment: ReadonlyMap<string, string>;
   /** Αρχικά px ανά ευθυγραμμισμένο px στο κέντρο του σχεδίου (τοπική κλίμακα της ομογραφίας). */
   readonly originalPerAlignedPx: number;
+  /**
+   * ADR-929 §6.22 — η Ιακωβιανή ευθυγραμμισμένα → αρχικά px στο **ίδιο** σημείο (κέντρο του σχεδίου): η `√|det|` της είναι
+   * το `originalPerAlignedPx`. Τη χρειάζεται η μετρική ανά διεύθυνση (`fusion-metric.ts`).
+   */
+  readonly alignedToOriginalJacobian: Affine2x3;
   readonly centreAligned: PlanePoint;
   /** Η μικρή πλευρά της περιοχής σχεδίου (ευθυγραμμισμένα px). */
   readonly drawingSpanPx: number;
@@ -162,7 +168,10 @@ function toFaceLine(group: readonly AlignedSegment[], id: string): FaceLine {
 /** Τα τμήματα της Φ2 ⇒ οικογένειες + ευθείες παρειών, στο ευθυγραμμισμένο πλαίσιο. */
 export function buildFusionFrame(segments: readonly RasterSegment[], alignment: FusionAlignment, o: PlanFusionOptions): FusionFrame {
   const box = drawingBox(alignment);
-  const originalPerAlignedPx = homographyLocalScale(alignment.alignedToOriginal, box.centre.x, box.centre.y) ?? 1;
+  const localScale = homographyLocalScale(alignment.alignedToOriginal, box.centre.x, box.centre.y);
+  const originalPerAlignedPx = localScale ?? 1;
+  // Εκφυλισμένη ομογραφία ⇒ η ίδια ταυτοτική υπόθεση με το `?? 1` παραπάνω: τα δύο δεν αποκλίνουν ποτέ.
+  const jacobian = localScale === null ? null : homographyJacobian(alignment.alignedToOriginal, box.centre.x, box.centre.y);
   const toleranceRad = (o.familyToleranceDeg * Math.PI) / 180;
   const { families, aligned } = alignSegments(segments, alignment.originalToAligned, toleranceRad);
   const tol = collinearTolerance(segments, originalPerAlignedPx, o);
@@ -180,6 +189,7 @@ export function buildFusionFrame(segments: readonly RasterSegment[], alignment: 
     lineById: new Map(lines.map((l) => [l.id, l])),
     lineOfSegment,
     originalPerAlignedPx,
+    alignedToOriginalJacobian: jacobian ?? IDENTITY_AFFINE,
     centreAligned: box.centre,
     drawingSpanPx: box.span,
     collinearTolPx: tol,

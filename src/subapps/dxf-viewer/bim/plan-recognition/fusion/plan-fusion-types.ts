@@ -19,6 +19,7 @@ import type { RasterRectPx } from '../../../types/coordinate-space';
 import type { RasterPixelScale } from '../../../floorplan-background/geometry/raster-pixel-scale';
 import type { SourceMedium } from '../../../floorplan-background/providers/types';
 import type { PlanAlignment } from '../alignment/plan-alignment-types';
+import type { FusionMetric } from './fusion-metric';
 import type { SegmentJunction } from './segment-junctions';
 import type {
   PlanConfidence,
@@ -270,7 +271,13 @@ export type PlanScaleSource = 'known-calibration' | 'dimension-consensus' | 'wri
 
 export interface PlanScaleEvidence {
   readonly source: PlanScaleSource;
+  /** Η βαθμωτή σύνοψη `√|det A|` της `metric` (εμβαδά, έλεγχος συνέπειας Δ4, κάρτα κλίμακας). */
   readonly mmPerAlignedPx: number;
+  /**
+   * ADR-929 §6.22 — η **πλήρης** μετρική της πηγής (ανά διεύθυνση): ανισοτροπική βαθμονόμηση X/Y και Ιακωβιανή της
+   * ευθυγράμμισης. Ο λύτης, η δέση και τα ευρήματα μετρούν **μόνο** με αυτή. Χτίζεται μόνο από `scaleEvidence`.
+   */
+  readonly metric: FusionMetric;
   /** Πόσες ανεξάρτητες ενδείξεις τη στηρίζουν (διαστάσεις, χώροι). */
   readonly support: number;
 }

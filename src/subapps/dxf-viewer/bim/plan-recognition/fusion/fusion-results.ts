@@ -15,6 +15,7 @@ import type { PlanConfidence, RasterSegment } from '../plan-recognition-types';
 import type { DimensionTarget } from './dimension-binding';
 import type { BoundDimension, NetworkOutcome } from './adjustment-network';
 import { familyNormal, type FusionFrame } from './fusion-frame';
+import type { FamilyPxPerMm } from './fusion-metric';
 import { closeSegmentJunctions, type JunctionAlignment, type SegmentJunction } from './segment-junctions';
 import { bindingFactor, composeConfidence, solverFactor } from './fusion-confidence';
 import type { DimensionBinding, FusedDimension, FusedDimensionStatus, PlanFusionOptions } from './plan-fusion-types';
@@ -123,17 +124,24 @@ function fuseOne(
   };
 }
 
+/** Px ανά mm **της δέσης**: κατά την κάθετο της οικογένειας των δύο παρειών της (§6.22). */
+function bindingPxPerMm(binding: DimensionBinding | null, frame: FusionFrame, pxPerMm: FamilyPxPerMm | null): number | null {
+  const line = binding === null ? undefined : frame.lineById.get(binding.lineA);
+  return line === undefined || pxPerMm === null ? null : pxPerMm(line.familyId);
+}
+
 /** Κάθε διάσταση με την κατάστασή της. `bound` είναι υποσύνολο των `targets` (ίδια αντικείμενα), με τη σειρά του δικτύου. */
 export function fuseDimensions(
   targets: readonly DimensionTarget[],
   bindings: readonly (DimensionBinding | null)[],
   bound: readonly BoundDimension[],
   network: NetworkOutcome | null,
-  pxPerMm: number | null,
+  frame: FusionFrame,
+  pxPerMm: FamilyPxPerMm | null,
   o: PlanFusionOptions,
 ): FusedDimension[] {
   const obsOf = new Map(bound.map((b, j) => [b.target, network?.dimensionObservation[j]]));
-  return targets.map((t, i) => fuseOne(t, bindings[i], network, obsOf.get(t), pxPerMm, o));
+  return targets.map((t, i) => fuseOne(t, bindings[i], network, obsOf.get(t), bindingPxPerMm(bindings[i], frame, pxPerMm), o));
 }
 
 /** Βεβαιότητα ανά τμήμα: γεωμετρία της Φ2 · λύτης (θέση της ευθείας του) · ανάγνωση (συνεπής διάσταση που το μετρά). */

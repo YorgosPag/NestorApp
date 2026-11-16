@@ -21,6 +21,7 @@ import { originalRectToAligned } from '../alignment/alignment-region';
 import type { PlanDimension, PlanInputKind, PlanReading, PlanText } from '../plan-recognition-types';
 import { dimensionSigmaMm, writtenPrecisionMm } from './dimension-precision';
 import { familyDirection, familyNormal, lineReachGap, type FusionFrame } from './fusion-frame';
+import type { FamilyPxPerMm } from './fusion-metric';
 import type { DimensionBinding, DimensionSpan, FaceLine, PlanFusionOptions } from './plan-fusion-types';
 
 export interface BindingCandidate {
@@ -211,9 +212,12 @@ export function dimensionTargets(
   });
 }
 
-/** Σχετική απόκλιση της απόστασης από την τιμή στην κλίμακα `pxPerMm`, σε λογαριθμικό χώρο (συμμετρική). */
-export const relativeMismatch = (c: BindingCandidate, valueMm: number, pxPerMm: number): number =>
-  Math.abs(Math.log(c.gapPx / (valueMm * pxPerMm)));
+/**
+ * Σχετική απόκλιση της απόστασης από την τιμή, σε λογαριθμικό χώρο (συμμετρική), στην κλίμακα **της οικογένειας** του
+ * ζεύγους (§6.22: με ανισοτροπική βαθμονόμηση η οριζόντια και η κατακόρυφη απόσταση έχουν άλλα px/mm).
+ */
+export const relativeMismatch = (c: BindingCandidate, valueMm: number, pxPerMm: FamilyPxPerMm): number =>
+  Math.abs(Math.log(c.gapPx / (valueMm * pxPerMm(c.lineA.familyId))));
 
 /**
  * ⚠️ Η ασάφεια μετρά **μόνο** στη βαθμίδα 1. Στη βαθμίδα 2 **κανένα** ζεύγος δεν δίνει την τιμή, οπότε το συμπέρασμα
@@ -248,7 +252,7 @@ function toBinding(best: BindingCandidate, pool: readonly BindingCandidate[], wi
  * δέση, μέσα ή έξω από την ανοχή. Καμία από τις βαθμίδες 1–2 δεν το αντικαθιστά: εκείνες επιλέγουν με την τιμή, και μια
  * λάθος τιμή θα έβρισκε «κατά σύμπτωση» άλλους τοίχους. Η ασυμφωνία πάει στον λύτη ⇒ σύγκρουση ⇒ ερώτηση.
  */
-export function selectBinding(target: DimensionTarget, pxPerMm: number, o: PlanFusionOptions): DimensionBinding | null {
+export function selectBinding(target: DimensionTarget, pxPerMm: FamilyPxPerMm, o: PlanFusionOptions): DimensionBinding | null {
   const valueMm = target.dimension.valueMm;
   const byScore = [...target.candidates].sort((a, b) => b.score - a.score);
   const anchored = byScore.filter((c) => c.extensionHits === 2);
@@ -259,7 +263,7 @@ export function selectBinding(target: DimensionTarget, pxPerMm: number, o: PlanF
   const within = byScore.filter((c) => relativeMismatch(c, valueMm, pxPerMm) <= target.toleranceRel && c.centring >= o.tier1CentringRel * bestCentring);
   if (within.length > 0) return toBinding(within[0], within, true, o);
   const plausible = byScore.filter((c) => {
-    const diffMm = Math.abs(c.gapPx / pxPerMm - valueMm);
+    const diffMm = Math.abs(c.gapPx / pxPerMm(c.lineA.familyId) - valueMm);
     return relativeMismatch(c, valueMm, pxPerMm) <= o.maxBlunderRel || diffMm <= o.maxBlunderMm;
   });
   return plausible.length > 0 ? toBinding(plausible[0], plausible, false, o) : null;

@@ -20,12 +20,13 @@ import { dimensionMarkTextIds, withoutDimensionMarks } from './dimension-marks';
 import { dimensionSpans } from './dimension-spans';
 import { resolveDrawingKind, type KnownScaleConsensus } from './drawing-kind';
 import { buildFusionFrame, type FusionFrame } from './fusion-frame';
+import { familyPxPerMm, isotropicMetric, type FamilyPxPerMm, type FusionMetric } from './fusion-metric';
 import { planQuestions } from './fusion-questions';
 import { adjustedOffsets, adjustedSegments, fuseDimensions, segmentConfidence } from './fusion-results';
 import { findSegmentJunctions } from './segment-junctions';
 import { createRoomAreaProbe, fusedRooms, measureRooms, type RoomMeasurement } from './room-areas';
 import { dimensionScaleConsensus } from './scale-consensus';
-import { chooseScale, knownScaleEvidence, metresPerOriginalPx, scaleConflicts, writtenScaleEvidence } from './scale-evidence';
+import { chooseScale, knownScaleEvidence, metresPerOriginalPx, scaleConflicts, scaleEvidence, writtenScaleEvidence } from './scale-evidence';
 import {
   DEFAULT_PLAN_FUSION,
   type AdjustmentSummary,
@@ -59,7 +60,8 @@ function resolveScale(
   const consensus = known.computed ? known.value : dimensionScaleConsensus(targets, o);
   const primary = [
     knownScaleEvidence(input.knownScale, frame),
-    consensus === null ? null : { source: 'dimension-consensus' as const, mmPerAlignedPx: 1 / consensus.pxPerMm, support: consensus.support },
+    // Η συναίνεση μετρήθηκε στο ευθυγραμμισμένο πλαίσιο, από διαστάσεις κάθε διεύθυνσης μαζί ⇒ ισοτροπική εκεί (§6.22).
+    consensus === null ? null : scaleEvidence('dimension-consensus', isotropicMetric(1 / consensus.pxPerMm), consensus.support),
     writtenScaleEvidence(reading?.writtenScale ?? null, input.sourceDpi, frame),
   ].filter(present);
   if (reading === null || reading.rooms.length === 0) return { evidence: primary, chosen: chooseScale(primary), rooms: null };
@@ -70,11 +72,12 @@ function resolveScale(
   return { evidence, chosen: chooseScale(evidence), rooms: measurement };
 }
 
-function bindAll(targets: readonly DimensionTarget[], chosen: PlanScaleEvidence | null, o: PlanFusionOptions): {
+function bindAll(targets: readonly DimensionTarget[], chosen: PlanScaleEvidence | null, frame: FusionFrame, o: PlanFusionOptions): {
   bindings: (DimensionBinding | null)[];
   bound: BoundDimension[];
 } {
-  const bindings = targets.map((t) => (chosen === null ? null : selectBinding(t, 1 / chosen.mmPerAlignedPx, o)));
+  const pxPerMm = chosen === null ? null : familyPxPerMm(chosen.metric, frame);
+  const bindings = targets.map((t) => (pxPerMm === null ? null : selectBinding(t, pxPerMm, o)));
   const bound = targets.flatMap((target, i) => {
     const binding = bindings[i];
     return binding !== null && !binding.ambiguous ? [{ target, binding }] : [];
@@ -98,7 +101,7 @@ function summary(network: NetworkOutcome | null): AdjustmentSummary | null {
 
 function suggestion(stage: ScaleStage, network: NetworkOutcome | null, frame: FusionFrame): PlanScaleSuggestion | null {
   if (stage.chosen === null) return null;
-  const mmPerAlignedPx = network === null ? stage.chosen.mmPerAlignedPx : 1 / network.pxPerMm;
+  const mmPerAlignedPx = network === null ? stage.chosen.mmPerAlignedPx : network.metric.mmPerAlignedPx;
   return {
     chosen: stage.chosen.source,
     mmPerAlignedPx,
@@ -106,6 +109,15 @@ function suggestion(stage: ScaleStage, network: NetworkOutcome | null, frame: Fu
     metresPerOriginalPx: metresPerOriginalPx(mmPerAlignedPx, frame),
     evidence: stage.evidence,
   };
+}
+
+/**
+ * §6.22 — η **τελική** μετρική (συνορθωμένη, ή η σταθερή της πηγής) ως «px/mm ανά οικογένεια»: ό,τι μετρά mm μετά τον
+ * λύτη (ευρήματα διαστάσεων, μετατοπισμένες παρειές) ρωτά την οικογένειά του, όχι έναν μέσο όρο.
+ */
+function finalPxPerMm(stage: ScaleStage, network: NetworkOutcome | null, frame: FusionFrame): FamilyPxPerMm | null {
+  const metric: FusionMetric | null = network?.metric ?? stage.chosen?.metric ?? null;
+  return metric === null ? null : familyPxPerMm(metric, frame);
 }
 
 /** Φ5.5: ποιες παρειές μετρά κάθε διάσταση, από τις γραμμές επέκτασης — και χωρίς ανάγνωση. */
@@ -152,12 +164,12 @@ export function fusePlan(input: PlanFusionInput): PlanFusionResult {
     reading === null ? [] : dimensionTargets(reading, frame, input.alignment.originalToAligned, kind, o, spans)
   ), o);
   const stage = resolveScale(input, reading, frame, targets, consensus, o);
-  const { bindings, bound } = bindAll(targets, stage.chosen, o);
+  const { bindings, bound } = bindAll(targets, stage.chosen, frame, o);
   const network = stage.chosen === null ? null
-    : adjustNetwork(frame, bound, { pxPerMm: 1 / stage.chosen.mmPerAlignedPx, free: stage.chosen.source !== 'known-calibration' }, drawingKind.kind, o);
+    : adjustNetwork(frame, bound, { metric: stage.chosen.metric, free: stage.chosen.source !== 'known-calibration' }, drawingKind.kind, o);
   const scale = suggestion(stage, network, frame);
-  const pxPerMm = scale === null ? null : 1 / scale.mmPerAlignedPx;
-  const dimensions = fuseDimensions(targets, bindings, bound, network, pxPerMm, o);
+  const pxPerMm = finalPxPerMm(stage, network, frame);
+  const dimensions = fuseDimensions(targets, bindings, bound, network, frame, pxPerMm, o);
   const rooms = stage.rooms === null ? [] : fusedRooms(stage.rooms, scale?.mmPerAlignedPx ?? null, o);
   const offsets = adjustedOffsets(network);
   const scaleQuestions: PlanQuestion[] = stage.chosen === null ? [] : scaleConflicts(stage.chosen, stage.evidence, o);

@@ -17,6 +17,7 @@ import { rasterBoundsOf } from '../alignment/alignment-region';
 import type { RasterSegment } from '../plan-recognition-types';
 import type { NetworkOutcome } from './adjustment-network';
 import type { FusionFrame } from './fusion-frame';
+import type { FamilyPxPerMm } from './fusion-metric';
 import type { FusedDimension, FusedRoom, PlanFusionOptions, PlanQuestion } from './plan-fusion-types';
 
 const AMBIGUOUS_SEVERITY = 0.6;
@@ -38,7 +39,7 @@ function displacedFaces(
   frame: FusionFrame,
   network: NetworkOutcome | null,
   segments: ReadonlyMap<string, RasterSegment>,
-  pxPerMm: number | null,
+  pxPerMm: FamilyPxPerMm | null,
   o: PlanFusionOptions,
 ): PlanQuestion[] {
   if (network === null || pxPerMm === null || network.adjustment.solution.singular) return [];
@@ -52,7 +53,7 @@ function displacedFaces(
     });
     const shiftPx = network.adjustment.solution.x[network.lineIndex.get(lineId) ?? 0] - line.offsetPx;
     const severity = Math.abs(verdict.w ?? o.baardaCritical) / o.baardaCritical;
-    return points.length === 0 ? [] : [{ kind: 'face-displaced', lineId, shiftMm: Math.abs(shiftPx) / pxPerMm, segmentIds: line.segmentIds, severity, rect: rasterBoundsOf(points) }];
+    return points.length === 0 ? [] : [{ kind: 'face-displaced', lineId, shiftMm: Math.abs(shiftPx) / pxPerMm(line.familyId), segmentIds: line.segmentIds, severity, rect: rasterBoundsOf(points) }];
   });
 }
 
@@ -71,7 +72,8 @@ export interface QuestionSources {
   readonly dimensions: readonly FusedDimension[];
   readonly rooms: readonly FusedRoom[];
   readonly scaleQuestions: readonly PlanQuestion[];
-  readonly pxPerMm: number | null;
+  /** §6.22 — px ανά mm ανά οικογένεια (η μετατόπιση μιας παρειάς μετριέται κατά την κάθετό της). */
+  readonly pxPerMm: FamilyPxPerMm | null;
 }
 
 /** Όλες οι ερωτήσεις, η σοβαρότερη πρώτη (ντετερμινιστικά: ισοβαθμία ⇒ σειρά παραγωγής). */

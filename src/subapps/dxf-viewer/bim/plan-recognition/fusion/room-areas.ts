@@ -18,7 +18,9 @@ import { originalRectToAligned } from '../alignment/alignment-region';
 import type { PlanReading } from '../plan-recognition-types';
 import type { RasterRectPx } from '../../../types/coordinate-space';
 import { median } from '../../../utils/statistics';
+import { isotropicMetric } from './fusion-metric';
 import type { FusedRoom, PlanFusionOptions, PlanScaleEvidence, RoomAreaProbe } from './plan-fusion-types';
+import { scaleEvidence } from './scale-evidence';
 
 /** Υπόθεση εκκίνησης όταν τίποτα άλλο δεν δίνει κλίμακα: η μικρή πλευρά του σχεδίου ≈ 12 m (κατοικία). */
 const SEED_SPAN_MM = 12_000;
@@ -93,7 +95,8 @@ export function measureRooms(
     areasPx2 = measureAt(seeds, probe, mmPerPx);
     implied = impliedMmPerPx(seeds, areasPx2);
   }
-  const evidence = implied === null ? null : { source: 'room-area' as const, mmPerAlignedPx: implied.value, support: implied.support };
+  // §6.22 — ένα εμβαδόν μετρά μόνο `|det A|`: δεν φέρει πληροφορία διεύθυνσης, άρα η ένδειξή του είναι ισοτροπική.
+  const evidence = implied === null ? null : scaleEvidence('room-area', isotropicMetric(implied.value), implied.support);
   return { measurement: { seeds, areasPx2 }, evidence };
 }
 

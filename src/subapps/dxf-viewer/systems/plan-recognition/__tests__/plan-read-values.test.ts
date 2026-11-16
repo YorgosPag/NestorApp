@@ -6,6 +6,8 @@
 import type {
   FusedDimension, FusedDimensionStatus, PlanDrawingKindDecision, PlanScaleSuggestion,
 } from '../../../bim/plan-recognition/fusion/plan-fusion-types';
+import { isotropicMetric } from '../../../bim/plan-recognition/fusion/fusion-metric';
+import { scaleEvidence } from '../../../bim/plan-recognition/fusion/scale-evidence';
 import type { PlanReading, PlanText, PlanTextKind } from '../../../bim/plan-recognition/plan-recognition-types';
 import { isHumanChecked, planReadThumbRect, planReadValueRows, planReadValuesProgress } from '../plan-read-values';
 
@@ -46,7 +48,7 @@ const READING: PlanReading = {
 /** Δ3 — μια κλίμακα στη σύντηξη (εδώ: συναίνεση διαστάσεων)· χωρίς αυτήν καμία πρόταση. */
 const SCALE: PlanScaleSuggestion = {
   chosen: 'dimension-consensus', mmPerAlignedPx: 10, sigmaRel: 0.005, metresPerOriginalPx: 0.01,
-  evidence: [{ source: 'dimension-consensus', mmPerAlignedPx: 10, support: 4 }],
+  evidence: [scaleEvidence('dimension-consensus', isotropicMetric(10), 4)],
 };
 
 /** Δ7 Γ — το είδος σχεδίου της σύντηξης: υπό κλίμακα (οι διαστάσεις συμφωνούν) ή σκίτσο (μόνο με ανοχή σκίτσου). */
