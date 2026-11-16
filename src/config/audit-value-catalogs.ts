@@ -165,6 +165,10 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   energyCertificateIssuanceInspectionRole: { ns: 'document-registry', path: 'issuance.inspectionRole' },
   buildingIdentityIssuanceInspectionRole: { ns: 'document-registry', path: 'issuance.inspectionRole' },
   electricalInstallationIssuanceInspectionRole: { ns: 'document-registry', path: 'issuance.inspectionRole' },
+  // ── ADR-915 §45.20 Φ6γ — η απάντηση του γραφείου στο αίτημα νέας ημερομηνίας (ο ΙΔΙΟΣ κατάλογος με το πάνελ)
+  energyCertificateIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
+  buildingIdentityIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
+  electricalInstallationIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
 
   // ── Property: ADR-915 §35 — απόφαση μόνιμης υποχρέωσης (ένα πεδίο ανά είδος). Οι ΙΔΙΟΙ κατάλογοι με την ενότητα
   //    «Μόνιμες υποχρεώσεις» (μόνο camelCase· ο resolver κανονικοποιεί `not-required` → `notRequired`).

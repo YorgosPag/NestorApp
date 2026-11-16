@@ -43,6 +43,10 @@ export const DELIVERY_CHANGE_KEYS = {
   declineTitle: `${K}change.declineTitle`,
   declineDescription: `${K}change.declineDescription`,
   declineSubmit: `${K}change.declineSubmit`,
+  /** Η αιτιολογία του επαγγελματία ως **υπόδειξη** στη φόρμα αποδοχής — ποτέ προσυμπληρωμένη ως δική του γραφείου. */
+  requesterReason: `${K}change.requesterReason`,
+  /** Το ίχνος της απόρριψης στο πάνελ του γραφείου (η αποδοχή φαίνεται ήδη στο ιστορικό καταχωρίσεων). */
+  declinedLine: `${K}change.declinedLine`,
 } as const;
 
 /** Η λέξη κάθε βαθμίδας — οι αριθμητικές παίρνουν `{count}` με πληθυντικό ICU. */
@@ -75,9 +79,13 @@ export const DELIVERY_REMINDER_REFUSAL_KEYS: Readonly<Record<string, string>> = 
   generic: `${K}reminder.refusals.generic`,
 };
 
-/** Από πού ήρθε η τρέχουσα προθεσμία. */
-export const DELIVERY_SOURCE_KEYS: Readonly<Record<IssuanceDueSource, string>> = {
+/**
+ * Από πού ήρθε η τρέχουσα προθεσμία. `null` ⇒ **καμία** γραμμή προέλευσης: η αλλαγή με αιτιολογία έχει ΕΝΑΝ ιδιοκτήτη,
+ * το ιστορικό καταχωρίσεων («Προθεσμία … — άλλαξε στις …: …»). Μια δεύτερη γραμμή «Άλλαξε: …» την έλεγε δύο φορές
+ * (ζωντανή επαλήθευση §45.20, 16/11/2026).
+ */
+export const DELIVERY_SOURCE_KEYS: Readonly<Record<IssuanceDueSource, string | null>> = {
   quote: `${K}source.quote`,
   office: `${K}source.office`,
-  rescheduled: `${K}source.rescheduled`,
+  rescheduled: null,
 };

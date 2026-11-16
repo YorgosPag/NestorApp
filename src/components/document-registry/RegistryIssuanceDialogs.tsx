@@ -173,12 +173,13 @@ export function IssuanceDeliveryDialog({ view, professionalName, currentDueOn }:
 
 /**
  * §45.20 Φ6γ — «Αποδοχή» αιτήματος νέας ημερομηνίας: η **ίδια** φόρμα προθεσμίας, προσυμπληρωμένη με τη ζητούμενη
- * ημέρα και την αιτιολογία του αιτήματος· η αποθήκευση (`schedule-delivery`) απαντά και το αίτημα.
+ * ημέρα· η αιτιολογία του αιτήματος φαίνεται ως υπόδειξη (όχι ως κείμενο του γραφείου). Η αποθήκευση (`schedule-delivery`)
+ * απαντά και το αίτημα.
  */
 export function IssuanceAcceptDeliveryChangeDialog({ view, currentDueOn, request }: {
   readonly view: RegistryIssuanceView;
   readonly currentDueOn: string | null;
-  readonly request: { readonly dueOn: string; readonly reason: string };
+  readonly request: { readonly dueOn: string; readonly requesterReason: string };
 }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   return (

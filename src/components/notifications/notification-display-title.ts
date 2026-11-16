@@ -47,6 +47,8 @@
  */
 
 import { isUnresolvedTranslation } from '@/i18n/unresolved-key';
+import { isDateKey } from '@/lib/calendar/date-key';
+import { formatCalendarDate } from '@/lib/intl-formatting';
 
 /**
  * Ό,τι χρειάζεται η απόφαση από την ειδοποίηση — **και τίποτα άλλο**.
@@ -134,13 +136,24 @@ export function notificationDisplayTitle(
  * 🔴 Ο έλεγχος ζει στο SSoT (ADR-798 §13) — ποτέ `rendered !== key`: όταν αστοχεί κλειδί **με πρόθεμα**
  * (`quotes:…`), το i18next γυρίζει το κλειδί **χωρίς** το πρόθεμα, και η αφελής σύγκριση το κρίνει επιτυχία.
  */
+/**
+ * **Οι ημερομηνίες στη γλώσσα του ΑΝΑΓΝΩΣΤΗ** (ADR-915 §45.20, ζωντανή επαλήθευση 16/11/2026): ο παραγωγός αποθηκεύει
+ * την ημερολογιακή ημέρα **ακατέργαστη** (`YYYY-MM-DD`) και τη μορφοποιεί ο αποδότης, με το ΕΝΑ `formatCalendarDate`
+ * (UTC-noon — κανείς δεν βλέπει την προηγούμενη μέρα). Αλλιώς η αγγλική κάρτα έγραφε «28 Νοεμβρίου 2026».
+ * 🔑 Ο κριτής είναι το SSoT `isDateKey` (έγκυρη ημέρα, όχι απλό μοτίβο)· οτιδήποτε άλλο — και οι παλιές ειδοποιήσεις
+ *    με ήδη μορφοποιημένο κείμενο — περνά **αυτούσιο**, χωρίς μετάπτωση δεδομένων.
+ */
+function localizedParams(params: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(params).map(([name, value]) => [name, isDateKey(value) ? formatCalendarDate(value) : value]));
+}
+
 function renderKeyed(
   t: TranslateForTitle,
   key: string,
   params: Record<string, string>,
   fallback: string | undefined,
 ): string {
-  const rendered = t(key, params);
+  const rendered = t(key, localizedParams(params));
   return isUnresolvedTranslation(rendered, key) ? fallback ?? '' : rendered;
 }
 

@@ -6,7 +6,7 @@
  * @module components/contacts/tabs/contact-history-helpers
  */
 
-import { formatDate, formatRelativeTime } from '@/lib/intl-utils';
+import { formatDate } from '@/lib/intl-utils';
 import type { EntityAuditEntry, AuditAction } from '@/types/audit-trail';
 import type { PhotoShareRecord } from '@/types/photo-share';
 import type {
@@ -139,12 +139,12 @@ export function computeContactStats(entries: ContactTimelineEntry[]): ContactHis
     }
   }
 
-  // Last change relative time (from most recent entry of either kind)
-  let lastChangeRelative: string | null = null;
+  // Last change instant (from most recent entry of either kind) — formatted at render time (AuditStatsPanel)
+  let lastChangeAt: Date | null = null;
   if (entries.length > 0) {
     const newest = entries[0]; // already sorted descending
     if (!isNaN(newest.timestamp.getTime())) {
-      lastChangeRelative = formatRelativeTime(newest.timestamp);
+      lastChangeAt = newest.timestamp;
     }
   }
 
@@ -153,7 +153,7 @@ export function computeContactStats(entries: ContactTimelineEntry[]): ContactHis
     auditCount,
     photoShareCount,
     byAction,
-    lastChangeRelative,
+    lastChangeAt,
     uniqueFieldsChanged: fieldSet.size,
     uniqueUsers: userSet.size,
   };

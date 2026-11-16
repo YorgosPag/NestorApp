@@ -753,7 +753,13 @@
       "electricalInstallationIssuanceInspectionRole": "Ανάθεση ΥΔΕ — ιδιότητα υπευθύνου αυτοψίας",
       "energyCertificateIssuanceDeliveryChangeRequest": "Ανάθεση έκδοσης ΠΕΑ — αίτημα αλλαγής προθεσμίας",
       "buildingIdentityIssuanceDeliveryChangeRequest": "Ανάθεση ταυτότητας κτιρίου — αίτημα αλλαγής προθεσμίας",
-      "electricalInstallationIssuanceDeliveryChangeRequest": "Ανάθεση ΥΔΕ — αίτημα αλλαγής προθεσμίας"
+      "electricalInstallationIssuanceDeliveryChangeRequest": "Ανάθεση ΥΔΕ — αίτημα αλλαγής προθεσμίας",
+      "energyCertificateIssuanceDeliveryChangeAnswer": "Ανάθεση έκδοσης ΠΕΑ — απάντηση στο αίτημα αλλαγής προθεσμίας",
+      "energyCertificateIssuanceDeliveryChangeDeclineReason": "Ανάθεση έκδοσης ΠΕΑ — αιτιολογία απόρριψης αιτήματος αλλαγής προθεσμίας",
+      "buildingIdentityIssuanceDeliveryChangeAnswer": "Ανάθεση ταυτότητας κτιρίου — απάντηση στο αίτημα αλλαγής προθεσμίας",
+      "buildingIdentityIssuanceDeliveryChangeDeclineReason": "Ανάθεση ταυτότητας κτιρίου — αιτιολογία απόρριψης αιτήματος αλλαγής προθεσμίας",
+      "electricalInstallationIssuanceDeliveryChangeAnswer": "Ανάθεση ΥΔΕ — απάντηση στο αίτημα αλλαγής προθεσμίας",
+      "electricalInstallationIssuanceDeliveryChangeDeclineReason": "Ανάθεση ΥΔΕ — αιτιολογία απόρριψης αιτήματος αλλαγής προθεσμίας"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

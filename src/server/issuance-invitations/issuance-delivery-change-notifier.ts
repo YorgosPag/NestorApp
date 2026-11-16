@@ -62,6 +62,14 @@ async function send(input: Parameters<typeof dispatchNotification>[0]): Promise<
   }
 }
 
+/**
+ * Το αποθηκευμένο κείμενο (εφεδρεία · push · παλιοί αναγνώστες) μένει ελληνικό με μορφοποιημένη ημέρα, ενώ οι
+ * `bodyParams` κρατούν την ημέρα ακατέργαστη για τον αποδότη (ADR-915 §45.20).
+ */
+function storedBodyParams(params: Readonly<Record<string, string>>): Record<string, string> {
+  return params.date ? { ...params, date: formatCalendarDate(params.date, NOTICE_LOCALE) } : { ...params };
+}
+
 function titleParamsOf(subject: DeliveryChangeSubject) {
   return { title: subject.registry.properties[subject.propertyId]?.name ?? subject.assignmentId };
 }
@@ -71,7 +79,8 @@ async function announceRequested(subject: DeliveryChangeSubject, request: Extrac
   const { record, registry } = subject;
   const titleParams = titleParamsOf(subject);
   const name = registry.people[record.professionalContactId]?.name ?? null;
-  const date = formatCalendarDate(request.dueOn, NOTICE_LOCALE);
+  // Η ημέρα μένει ΑΚΑΤΕΡΓΑΣΤΗ στις παραμέτρους: τη μορφοποιεί ο αποδότης στη γλώσσα του αναγνώστη (notification-display-title).
+  const date = request.dueOn;
   const bodyKey = name === null ? 'documentIssuanceDelivery.changeRequestedBodyUnnamed' : 'documentIssuanceDelivery.changeRequestedBody';
   const bodyParams = name === null ? { date, reason: request.reason } : { date, reason: request.reason, name };
   const destination = viewDestination(documentExpiryHref(undefined, { doc: issuanceKeyOf(subject.propertyId, subject.documentKind) }), orgWorkspace(subject.companyId));
@@ -83,7 +92,7 @@ async function announceRequested(subject: DeliveryChangeSubject, request: Extrac
     title: noticeT('documentIssuanceDelivery.changeRequested', titleParams),
     titleKey: 'documentIssuanceDelivery.changeRequested',
     titleParams,
-    body: noticeT(bodyKey, bodyParams),
+    body: noticeT(bodyKey, storedBodyParams(bodyParams)),
     bodyKey,
     bodyParams,
     eventId: eventIdOf(subject.assignmentId, request.at, 'requested', recipientUid),
@@ -102,7 +111,7 @@ async function announceAnswered(db: Firestore, subject: DeliveryChangeSubject, r
   const accepted = answer.outcome === 'accepted';
   const titleKey = accepted ? 'documentIssuanceDelivery.changeAccepted' : 'documentIssuanceDelivery.changeDeclined';
   const bodyKey = accepted ? 'documentIssuanceDelivery.changeAcceptedBody' : 'documentIssuanceDelivery.changeDeclinedBody';
-  const bodyParams = accepted ? { date: answer.dueOn === null ? '' : formatCalendarDate(answer.dueOn, NOTICE_LOCALE) } : { reason: answer.reason ?? '' };
+  const bodyParams = accepted ? { date: answer.dueOn ?? '' } : { reason: answer.reason ?? '' };
   const titleParams = titleParamsOf(subject);
   await send({
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_CHANGE_ANSWERED,
@@ -111,7 +120,7 @@ async function announceAnswered(db: Firestore, subject: DeliveryChangeSubject, r
     title: noticeT(titleKey, titleParams),
     titleKey,
     titleParams,
-    body: noticeT(bodyKey, bodyParams),
+    body: noticeT(bodyKey, storedBodyParams(bodyParams)),
     bodyKey,
     bodyParams,
     eventId: eventIdOf(subject.assignmentId, request.at, answer.outcome, engagement.uid),

@@ -43,7 +43,11 @@ export interface ContactHistoryStats {
   auditCount: number;
   photoShareCount: number;
   byAction: Partial<Record<AuditAction, number>>;
-  lastChangeRelative: string | null;
+  /**
+   * Η στιγμή της τελευταίας αλλαγής — **όχι** έτοιμο κείμενο: το «πριν από 4 λεπτά» το γράφει το `AuditStatsPanel` κατά
+   * την απόδοση, στη γλώσσα της στιγμής. Ψημένο εδώ, μέσα σε `useMemo([entries])`, έμενε στη γλώσσα που υπολογίστηκε.
+   */
+  lastChangeAt: Date | null;
   uniqueFieldsChanged: number;
   uniqueUsers: number;
 }

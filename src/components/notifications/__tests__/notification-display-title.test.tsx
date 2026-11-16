@@ -50,6 +50,14 @@ jest.mock('@/i18n/lazy-config', () => ({
   CRITICAL_NAMESPACES: [],
 }));
 
+// ADR-915 §45.21 — η γλώσσα του θεατή για τις ημερομηνίες (το `formatCalendarDate` τη διαβάζει από εδώ).
+let mockViewerLocale = 'el';
+// Το `getCurrentLocale` διαβάζει το `language` του `@/i18n/config` (μία φορά, με αναφορά) — ο getter το κρατά ζωντανό.
+jest.mock('@/i18n/config', () => ({
+  __esModule: true,
+  default: { get language() { return mockViewerLocale; } },
+}));
+
 const KEY = 'demandInterest.notificationTitle';
 
 /** Το κείμενο που γράφει **σήμερα** ο διακομιστής στο `title` (θέμα του email). */
@@ -244,5 +252,36 @@ describe('Θ3 🔴 Η ΠΑΛΙΝΔΡΟΜΗΣΗ ΠΟΥ ΘΑ ΗΤΑΝ ΑΟΡΑΤΗ
 
     expect(drawer).toContain('notificationDisplayTitle(t, n)');
     expect(drawer).not.toContain('resolveDisplayTitle');
+  });
+});
+
+describe('Θ5 🔴 ADR-915 §45.21 — Η ΗΜΕΡΟΜΗΝΙΑ ΣΤΗ ΓΛΩΣΣΑ ΤΟΥ ΑΝΑΓΝΩΣΤΗ', () => {
+  const BODY_KEY = 'documentIssuanceDelivery.changeAcceptedBody';
+  afterEach(async () => {
+    mockViewerLocale = 'el';
+    await instance.changeLanguage('el');
+  });
+
+  it('Θ5α — ακατέργαστη ημέρα ⇒ ελληνικά για τον Έλληνα αναγνώστη', () => {
+    const out = notificationDisplayBody(drawerT(), { body: 'Χ', bodyKey: BODY_KEY, bodyParams: { date: '2026-11-28' } });
+    expect(out).toBe('Το γραφείο όρισε νέα προθεσμία παράδοσης: 28 Νοεμβρίου 2026.');
+  });
+
+  it('Θ5β 🔴 — η ΙΔΙΑ ειδοποίηση στα αγγλικά: αγγλικός μήνας (ήταν «28 Νοεμβρίου 2026»)', async () => {
+    mockViewerLocale = 'en';
+    await instance.changeLanguage('en');
+    const out = notificationDisplayBody(drawerT(), { body: 'Χ', bodyKey: BODY_KEY, bodyParams: { date: '2026-11-28' } });
+    expect(out).toBe('The office set a new delivery date: November 28, 2026.');
+    expect(out).not.toMatch(/[Α-Ωα-ω]/);
+  });
+
+  it('Θ5γ — παλιά ειδοποίηση με ήδη μορφοποιημένη ημέρα ⇒ αυτούσια (καμία μετάπτωση)', () => {
+    const out = notificationDisplayBody(drawerT(), { body: 'Χ', bodyKey: BODY_KEY, bodyParams: { date: '28 Νοεμβρίου 2026' } });
+    expect(out).toContain('28 Νοεμβρίου 2026');
+  });
+
+  it('Θ5δ — μοτίβο που ΔΕΝ είναι έγκυρη ημέρα δεν «μεταφράζεται»', () => {
+    const out = notificationDisplayBody(drawerT(), { body: 'Χ', bodyKey: BODY_KEY, bodyParams: { date: '2026-13-40' } });
+    expect(out).toContain('2026-13-40');
   });
 });

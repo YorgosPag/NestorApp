@@ -28,7 +28,7 @@ import {
 } from '../issuance-labels';
 import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
 import { formatDate } from '@/lib/intl-formatting';
-import { DELIVERY_KEYS, DELIVERY_SOURCE_KEYS, DELIVERY_TIER_KEYS } from '../issuance-delivery-labels';
+import { DELIVERY_CHANGE_KEYS, DELIVERY_KEYS, DELIVERY_SOURCE_KEYS, DELIVERY_TIER_KEYS } from '../issuance-delivery-labels';
 import { INSPECTION_KEYS } from '../issuance-inspection-labels';
 import { OWNER_VAT_KEYS } from '../issuance-owner-vat-labels';
 import { INSPECTION_ROLE_LABEL_KEYS } from '../document-registry-labels';
@@ -649,6 +649,54 @@ describe('ADR-915 §45 Φ2 — προθεσμία παράδοσης: κελί �
     expect(await within(dialog).findByText(startsWith(DELIVERY_KEYS.ifApprovedToday))).toBeTruthy();
     // Η υπογραφή του p6 είναι «σήμερα» του μητρώου (15/10)· κάθε έγκριση από σήμερα και μετά πέφτει αργότερα.
     expect(within(dialog).getByRole('alert').textContent?.startsWith(DELIVERY_KEYS.missesSigning)).toBe(true);
+  });
+
+  // ── ADR-915 §45.21 — διορθώσεις από τη ζωντανή επαλήθευση της Φ6γ ─────────────────────────────────────────────
+  const ENGAGEMENT_ACTOR = { kind: 'engagement', engagementId: 'eng_1', uid: 'uid_pro', nowIso: '2026-10-11T09:00:00.000Z' } as const;
+  const REQUEST_REASON = 'Καθυστέρηση πρόσβασης';
+  const withPendingRequest = (): IssuanceAssignmentRecord => {
+    const reduced = reduceIssuance('energy-certificate', recordOf(ACCEPTED), null, { kind: 'request-delivery-change', dueOn: '2026-10-30', reason: REQUEST_REASON }, ENGAGEMENT_ACTOR);
+    if (!reduced.ok) throw new Error(reduced.refusal);
+    return reduced.record;
+  };
+  const officeStep = (record: IssuanceAssignmentRecord, action: IssuanceAction): IssuanceAssignmentRecord => {
+    const reduced = reduceIssuance('energy-certificate', record, null, action, { ...ACTOR, nowIso: '2026-10-12T09:00:00.000Z' });
+    if (!reduced.ok) throw new Error(reduced.refusal);
+    return reduced.record;
+  };
+
+  it('🔴 §45.21 (1) — αλλαγή με αιτιολογία ⇒ η αιτιολογία φαίνεται ΜΙΑ φορά (στο ιστορικό), καμία γραμμή «Άλλαξε: …»', () => {
+    renderWith(officeStep(recordOf(ACCEPTED), { kind: 'schedule-delivery', dueOn: '2026-10-30', reason: 'αυτοψία μετατέθηκε' }));
+    const card = article();
+    expect(DELIVERY_SOURCE_KEYS.rescheduled).toBeNull();
+    expect(within(card).getAllByText((text) => text.includes('αυτοψία μετατέθηκε'))).toHaveLength(1);
+    expect(within(card).getByText(startsWith(DELIVERY_KEYS.rescheduledLine))).toBeTruthy();
+  });
+
+  it('🔴 §45.21 (2) — «Αποδοχή»: η ημέρα προσυμπληρώνεται, η αιτιολογία του γραφείου ξεκινά ΚΕΝΗ· του επαγγελματία = υπόδειξη', async () => {
+    renderWith(withPendingRequest());
+    await userEvent.setup().click(within(article()).getByRole('button', { name: DELIVERY_CHANGE_KEYS.accept }));
+    const dialog = await screen.findByRole('dialog');
+    expect((await within(dialog).findByLabelText(DELIVERY_KEYS.dateLabel) as HTMLInputElement).value).toBe('2026-10-30');
+    const reason = within(dialog).getByLabelText(DELIVERY_KEYS.reasonLabel) as HTMLTextAreaElement;
+    expect(reason.value).toBe('');
+    const hint = within(dialog).getByText(`${DELIVERY_CHANGE_KEYS.requesterReason} ${JSON.stringify({ reason: REQUEST_REASON })}`);
+    expect(reason.getAttribute('aria-describedby')).toContain(hint.id);
+    expect(within(dialog).getByRole('button', { name: DELIVERY_KEYS.submit }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('🔴 §45.21 (3) — απόρριψη ⇒ ίχνος στο πάνελ: «Απορρίφθηκε αίτημα για … στις …: …»· το πλαίσιο εκκρεμούς φεύγει', () => {
+    renderWith(officeStep(withPendingRequest(), { kind: 'decline-delivery-change', reason: 'Δεσμεύει τον ιδιοκτήτη' }));
+    const card = article();
+    expect(within(card).getByText(`${DELIVERY_CHANGE_KEYS.declinedLine} ${JSON.stringify({
+      requested: formatDate('2026-10-30'), at: formatDate('2026-10-12T09:00:00.000Z'), reason: 'Δεσμεύει τον ιδιοκτήτη',
+    })}`)).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: DELIVERY_CHANGE_KEYS.accept })).toBeNull();
+  });
+
+  it('§45.21 (3) — αποδοχή ⇒ ΚΑΜΙΑ γραμμή απόρριψης', () => {
+    renderWith(officeStep(withPendingRequest(), { kind: 'schedule-delivery', dueOn: '2026-10-28', reason: 'Συμφωνήθηκε' }));
+    expect(within(article()).queryByText(startsWith(DELIVERY_CHANGE_KEYS.declinedLine))).toBeNull();
   });
 });
 

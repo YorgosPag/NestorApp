@@ -21,7 +21,7 @@ import type { IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-
 import type { IssuanceDeliveryStatus } from '@/lib/document-validity/issuance-delivery-due';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import { DELIVERY_CHANGE_KEYS, DELIVERY_KEYS, DELIVERY_REMINDER_KEYS, DELIVERY_SOURCE_KEYS } from '@/components/document-registry/issuance-delivery-labels';
-import { pendingDeliveryChangeOf } from '@/lib/document-validity/issuance-delivery-change';
+import { lastAnsweredDeliveryChangeOf, pendingDeliveryChangeOf } from '@/lib/document-validity/issuance-delivery-change';
 import { DeliveryLatenessBadge, MissesSigning } from '@/components/document-registry/RegistryIssuanceDeliveryCell';
 import { DeliveryReminderButton, type DeliveryReminderTarget } from '@/components/document-registry/RegistryDeliveryReminder';
 import { lastDeliveryReminderAt, type IssuanceDeliveryReminders } from '@/lib/document-validity/issuance-delivery-reminder';
@@ -34,13 +34,13 @@ import type { RegistryIssuanceView } from '@/components/document-registry/regist
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-/** Από πού ήρθε η προθεσμία — από την προσφορά λέει και τις εργάσιμες, σε αλλαγή και την αιτιολογία. */
+/** Από πού ήρθε η προθεσμία — από την προσφορά λέει και τις εργάσιμες· η αλλαγή φαίνεται **μόνο** στο ιστορικό. */
 function sourceText(t: Translate, status: IssuanceDeliveryStatus, record: IssuanceAssignmentRecord): string | null {
   const { due } = status;
   if (due === null) return null;
-  if (due.source === 'quote') return t(DELIVERY_SOURCE_KEYS.quote, { count: record.quote?.deliveryBusinessDays ?? 0 });
-  if (due.source === 'rescheduled') return t(DELIVERY_SOURCE_KEYS.rescheduled, { reason: due.reason ?? '' });
-  return t(DELIVERY_SOURCE_KEYS.office);
+  const key = DELIVERY_SOURCE_KEYS[due.source];
+  if (key === null) return null;
+  return due.source === 'quote' ? t(key, { count: record.quote?.deliveryBusinessDays ?? 0 }) : t(key);
 }
 
 /** Το ιστορικό των καταχωρίσεων του γραφείου — κάθε αλλαγή με ημέρα και αιτιολογία (ποτέ σιωπηλή αντικατάσταση). */
@@ -96,11 +96,26 @@ function PendingDeliveryChange({ view, record, currentDueOn, canAct }: {
       <p className="m-0 text-muted-foreground">{t(DELIVERY_CHANGE_KEYS.reason, { reason: pending.reason })}</p>
       {canAct ? (
         <footer className="flex flex-wrap gap-2">
-          <IssuanceAcceptDeliveryChangeDialog view={view} currentDueOn={currentDueOn} request={{ dueOn: pending.dueOn, reason: pending.reason }} />
+          <IssuanceAcceptDeliveryChangeDialog view={view} currentDueOn={currentDueOn} request={{ dueOn: pending.dueOn, requesterReason: pending.reason }} />
           <IssuanceDeclineDeliveryChangeDialog view={view} />
         </footer>
       ) : null}
     </aside>
+  );
+}
+
+/**
+ * §45.20 Φ6γ — **το ίχνος της απόρριψης**: «Απορρίφθηκε αίτημα για … στις …: …». Η ΙΔΙΑ πηγή με την κάρτα του μηχανικού
+ * (`lastAnsweredDeliveryChangeOf`)· η αποδοχή δεν χρειάζεται γραμμή — φαίνεται ήδη ως καταχώριση στο ιστορικό.
+ */
+function DeclinedDeliveryChange({ record }: { readonly record: IssuanceAssignmentRecord }): React.ReactElement | null {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const last = lastAnsweredDeliveryChangeOf(record);
+  if (last?.answer?.outcome !== 'declined') return null;
+  return (
+    <p className="m-0 text-xs text-muted-foreground">
+      {t(DELIVERY_CHANGE_KEYS.declinedLine, { requested: formatDate(last.dueOn), at: formatDate(last.answer.at), reason: last.answer.reason ?? '' })}
+    </p>
   );
 }
 
@@ -129,6 +144,7 @@ export function RegistryIssuanceDelivery({ view, status, record, professionalNam
       ) : null}
       <PendingDeliveryChange view={view} record={record} currentDueOn={due?.dueOn ?? null} canAct={canAct} />
       <ScheduleHistory record={record} />
+      <DeclinedDeliveryChange record={record} />
       <DeliveryReminderLine target={view} reminders={record.deliveryReminders} />
       {canAct ? <IssuanceDeliveryDialog view={view} professionalName={professionalName} currentDueOn={due?.dueOn ?? null} /> : null}
     </section>

@@ -18,6 +18,7 @@ import { BarChart3, Clock, FileEdit, Users } from "lucide-react";
 import { StatsCard } from "@/components/property-management/dashboard/StatsCard";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
 import { COMMON_NAMESPACES } from "@/i18n/namespace-bundles";
+import { formatRelativeTime } from "@/lib/intl-utils";
 import type { Stats } from "./activity-tab-helpers";
 
 /** Η τέταρτη κάρτα, όταν ο καταναλωτής έχει κάτι πιο σημαντικό από «Χρήστες». */
@@ -40,7 +41,7 @@ export function AuditStatsPanel({ stats, fourthCard }: AuditStatsPanelProps) {
       <StatsCard title={t("audit.totalLabel")} value={stats.total} icon={BarChart3} color="gray" />
       <StatsCard
         title={t("audit.stats.lastChange")}
-        value={stats.lastChangeRelative ?? "—"}
+        value={stats.lastChangeAt === null ? "—" : formatRelativeTime(stats.lastChangeAt)}
         icon={Clock}
         color="gray"
       />

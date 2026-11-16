@@ -753,7 +753,13 @@
       "electricalInstallationIssuanceInspectionRole": "Electrical installation issuance — site visit contact capacity",
       "energyCertificateIssuanceDeliveryChangeRequest": "Energy certificate issuance — delivery date change request",
       "buildingIdentityIssuanceDeliveryChangeRequest": "Building identity issuance — delivery date change request",
-      "electricalInstallationIssuanceDeliveryChangeRequest": "Electrical installation issuance — delivery date change request"
+      "electricalInstallationIssuanceDeliveryChangeRequest": "Electrical installation issuance — delivery date change request",
+      "energyCertificateIssuanceDeliveryChangeAnswer": "Energy certificate issuance — answer to the delivery date change request",
+      "energyCertificateIssuanceDeliveryChangeDeclineReason": "Energy certificate issuance — reason for declining the delivery date change request",
+      "buildingIdentityIssuanceDeliveryChangeAnswer": "Building identity issuance — answer to the delivery date change request",
+      "buildingIdentityIssuanceDeliveryChangeDeclineReason": "Building identity issuance — reason for declining the delivery date change request",
+      "electricalInstallationIssuanceDeliveryChangeAnswer": "Electrical installation issuance — answer to the delivery date change request",
+      "electricalInstallationIssuanceDeliveryChangeDeclineReason": "Electrical installation issuance — reason for declining the delivery date change request"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

@@ -13,7 +13,7 @@
  */
 
 import { safeJsonParse } from "@/lib/json-utils";
-import { formatDate, formatRelativeTime } from "@/lib/intl-utils";
+import { formatDate } from "@/lib/intl-utils";
 import { calendarDayLabel, groupByCalendarDay } from "@/lib/audit/calendar-day-groups";
 import type { AuditAction, EntityAuditEntry } from "@/types/audit-trail";
 import type { QuantitySpec } from "@/constants/quantity-specs";
@@ -26,7 +26,11 @@ import { storageObjectFromUrl } from "@/lib/storage/storage-object-url";
 export interface Stats {
   total: number;
   byAction: Partial<Record<AuditAction, number>>;
-  lastChangeRelative: string | null;
+  /**
+   * Η στιγμή της τελευταίας αλλαγής — **όχι** έτοιμο κείμενο: το «πριν από 4 λεπτά» το γράφει το `AuditStatsPanel` κατά
+   * την απόδοση, στη γλώσσα της στιγμής. Ψημένο εδώ, μέσα σε `useMemo([entries])`, έμενε στη γλώσσα που υπολογίστηκε.
+   */
+  lastChangeAt: Date | null;
   uniqueFieldsChanged: number;
   uniqueUsers: number;
 }
@@ -390,8 +394,8 @@ export function computeStats(entries: EntityAuditEntry[]): Stats {
     }
   }
 
-  // Last change relative time
-  let lastChangeRelative: string | null = null;
+  // Last change instant (formatted at render time — AuditStatsPanel)
+  let lastChangeAt: Date | null = null;
   if (entries.length > 0) {
     const newest = entries[0];
     const ts = newest.timestamp;
@@ -400,7 +404,7 @@ export function computeStats(entries: EntityAuditEntry[]): Stats {
         ? (ts as { toDate(): Date }).toDate()
         : new Date(ts as string | number);
       if (!isNaN(date.getTime())) {
-        lastChangeRelative = formatRelativeTime(date);
+        lastChangeAt = date;
       }
     }
   }
@@ -408,7 +412,7 @@ export function computeStats(entries: EntityAuditEntry[]): Stats {
   return {
     total: entries.length,
     byAction,
-    lastChangeRelative,
+    lastChangeAt,
     uniqueFieldsChanged: fieldSet.size,
     uniqueUsers: userSet.size,
   };

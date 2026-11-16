@@ -484,8 +484,7 @@
       },
       "source": {
         "quote": "{count, plural, one {From the approved quote: # business day from approval.} other {From the approved quote: # business days from approval.}}",
-        "office": "Set by the office.",
-        "rescheduled": "Changed: {reason}"
+        "office": "Set by the office."
       },
       "reminder": {
         "button": "Remind",
@@ -512,7 +511,13 @@
         "decline": "Decline",
         "declineTitle": "Decline the new-date request",
         "declineDescription": "The current deadline stays. The professional is notified with your reason.",
-        "declineSubmit": "Decline request"
+        "declineSubmit": "Decline request",
+        "requesterReason": "The professional’s reason: “{reason}”",
+        "declinedLine": "Request for {requested} declined on {at}: {reason}",
+        "outcome": {
+          "accepted": "accepted",
+          "declined": "declined"
+        }
       }
     },
     "ownerVat": {

@@ -11,7 +11,7 @@ import 'server-only';
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { IssuanceAssignmentRecord, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
-import { pendingDeliveryChangeOf } from '@/lib/document-validity/issuance-delivery-change';
+import { lastAnsweredDeliveryChangeOf, pendingDeliveryChangeOf } from '@/lib/document-validity/issuance-delivery-change';
 import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
 import { currentInspectionContactOf } from '@/lib/document-validity/issuance-inspection-contact';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -34,6 +34,12 @@ export interface IssuanceAuditFields {
   readonly inspectionRole: string;
   /** §45.20 Φ6γ — το αίτημα αλλαγής προθεσμίας του μηχανικού: «— → ημέρα» όταν ζητείται · «ημέρα → —» όταν απαντηθεί. */
   readonly deliveryChangeRequest: string;
+  /**
+   * §45.20 Φ6γ — **η απάντηση** του γραφείου («— → έγινε δεκτό | απορρίφθηκε», κατάλογος `issuance.delivery.change.outcome`)
+   * και, στην απόρριψη, η αιτιολογία του. Χωρίς αυτά αποδοχή και απόρριψη γράφονταν ΙΔΙΑ («ημέρα → —»).
+   */
+  readonly deliveryChangeAnswer: string;
+  readonly deliveryChangeDeclineReason: string;
 }
 
 export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditFields | null>> = {
@@ -42,12 +48,16 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryDue: 'energyCertificateIssuanceDeliveryDue',
     inspectionContact: 'energyCertificateIssuanceInspectionContact', inspectionRole: 'energyCertificateIssuanceInspectionRole',
     deliveryChangeRequest: 'energyCertificateIssuanceDeliveryChangeRequest',
+    deliveryChangeAnswer: 'energyCertificateIssuanceDeliveryChangeAnswer',
+    deliveryChangeDeclineReason: 'energyCertificateIssuanceDeliveryChangeDeclineReason',
   },
   'building-identity': {
     stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
     deliveryDue: 'buildingIdentityIssuanceDeliveryDue',
     inspectionContact: 'buildingIdentityIssuanceInspectionContact', inspectionRole: 'buildingIdentityIssuanceInspectionRole',
     deliveryChangeRequest: 'buildingIdentityIssuanceDeliveryChangeRequest',
+    deliveryChangeAnswer: 'buildingIdentityIssuanceDeliveryChangeAnswer',
+    deliveryChangeDeclineReason: 'buildingIdentityIssuanceDeliveryChangeDeclineReason',
   },
   'tax-clearance': null,
   'insurance-clearance': null,
@@ -60,6 +70,8 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     inspectionContact: 'electricalInstallationIssuanceInspectionContact',
     inspectionRole: 'electricalInstallationIssuanceInspectionRole',
     deliveryChangeRequest: 'electricalInstallationIssuanceDeliveryChangeRequest',
+    deliveryChangeAnswer: 'electricalInstallationIssuanceDeliveryChangeAnswer',
+    deliveryChangeDeclineReason: 'electricalInstallationIssuanceDeliveryChangeDeclineReason',
   },
 };
 
@@ -100,11 +112,22 @@ function auditChangesOf(fields: IssuanceAuditFields, t: IssuanceTransition, name
   return [...changes, ...inspectionAuditChangesOf(fields, t, names), ...deliveryChangeAuditOf(fields, t)];
 }
 
-/** §45.20 Φ6γ — το εκκρεμές αίτημα αλλαγής προθεσμίας: γράφεται όταν ανοίγει ή κλείνει (η νέα προθεσμία γράφεται χωριστά). */
+/**
+ * §45.20 Φ6γ — το εκκρεμές αίτημα αλλαγής προθεσμίας: γράφεται όταν ανοίγει ή κλείνει (η νέα προθεσμία γράφεται χωριστά).
+ * Όταν **κλείνει**, γράφεται και **πώς** (αποδοχή/απόρριψη) και, στην απόρριψη, **γιατί** — αλλιώς τα δύο φαίνονταν ίδια.
+ */
 function deliveryChangeAuditOf(fields: IssuanceAuditFields, t: IssuanceTransition): AuditChange[] {
   const before = t.previous === null ? null : pendingDeliveryChangeOf(t.previous)?.dueOn ?? null;
   const after = pendingDeliveryChangeOf(t.next)?.dueOn ?? null;
-  return before === after ? [] : [{ field: fields.deliveryChangeRequest, oldValue: before, newValue: after }];
+  if (before === after) return [];
+  const changes: AuditChange[] = [{ field: fields.deliveryChangeRequest, oldValue: before, newValue: after }];
+  const answer = before !== null && after === null ? lastAnsweredDeliveryChangeOf(t.next)?.answer ?? null : null;
+  if (answer === null) return changes;
+  changes.push({ field: fields.deliveryChangeAnswer, oldValue: null, newValue: answer.outcome });
+  if (answer.outcome === 'declined' && answer.reason !== null) {
+    changes.push({ field: fields.deliveryChangeDeclineReason, oldValue: null, newValue: answer.reason });
+  }
+  return changes;
 }
 
 /** §45.15 — ο υπεύθυνος αυτοψίας: γράφεται ό,τι άλλαξε (πρόσωπο · ιδιότητα), ποτέ «Χ → Χ». */

@@ -34,17 +34,20 @@ export interface DeliveryScheduleFormProps {
   /** Η τρέχουσα προθεσμία — `null` ⇒ ορισμός (η αιτιολογία προαιρετική). */
   readonly currentDueOn: string | null;
   /**
-   * §45.20 Φ6γ — «Αποδοχή» αιτήματος του επαγγελματία: η φόρμα ξεκινά με τη **ζητούμενη** ημερομηνία και την αιτιολογία
-   * του αιτήματος. Το γραφείο μπορεί να ορίσει και άλλη (Procore) — η ίδια πράξη `schedule-delivery` απαντά το αίτημα.
+   * §45.20 Φ6γ — «Αποδοχή» αιτήματος του επαγγελματία: η φόρμα ξεκινά με τη **ζητούμενη** ημερομηνία. Το γραφείο μπορεί
+   * να ορίσει και άλλη (Procore) — η ίδια πράξη `schedule-delivery` απαντά το αίτημα.
+   * 🔑 Η αιτιολογία του γραφείου ξεκινά **κενή**: η αιτιολογία του επαγγελματία φαίνεται ως υπόδειξη, ώστε το ιστορικό να
+   *    μη γράφει ποτέ λόγια του επαγγελματία ως λόγια του γραφείου (ζωντανή επαλήθευση, 16/11/2026).
    */
-  readonly prefill?: { readonly dueOn: string; readonly reason: string };
+  readonly prefill?: { readonly dueOn: string; readonly requesterReason: string };
 }
 
 export function DeliveryScheduleForm({ view, close, currentDueOn, prefill }: DeliveryScheduleFormProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
   const [dueOn, setDueOn] = useState(prefill?.dueOn ?? currentDueOn ?? '');
-  const [reason, setReason] = useState(prefill?.reason ?? '');
+  const [reason, setReason] = useState('');
+  const requesterId = useId();
   const dateId = useId();
   const reasonId = useId();
   const hintId = useId();
@@ -63,9 +66,15 @@ export function DeliveryScheduleForm({ view, close, currentDueOn, prefill }: Del
       <Label htmlFor={reasonId} className="text-sm font-medium">{t(DELIVERY_KEYS.reasonLabel)}</Label>
       <Textarea
         id={reasonId} value={reason} maxLength={ISSUANCE_NOTE_MAX} required={change}
-        aria-describedby={change ? hintId : undefined} onChange={(event) => setReason(event.target.value)}
+        aria-describedby={[change ? hintId : null, prefill ? requesterId : null].filter(Boolean).join(' ') || undefined}
+        onChange={(event) => setReason(event.target.value)}
       />
       {change ? <p id={hintId} className="m-0 text-xs text-muted-foreground">{t(DELIVERY_KEYS.reasonRequired)}</p> : null}
+      {prefill ? (
+        <p id={requesterId} className="m-0 text-xs text-muted-foreground">
+          {t(DELIVERY_CHANGE_KEYS.requesterReason, { reason: prefill.requesterReason })}
+        </p>
+      ) : null}
       <DialogActionFooter
         cancelLabel={t(PROPOSE_KEYS.cancel)} confirmLabel={t(DELIVERY_KEYS.submit)} busyLabel={t(ISSUANCE_KEYS.saving)}
         onCancel={close} onConfirm={submit} isSubmitting={false} canSubmit={valid}
