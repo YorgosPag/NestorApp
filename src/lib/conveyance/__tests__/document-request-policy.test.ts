@@ -225,7 +225,7 @@ describe('Α31 — το «εκκρεμεί» παράγεται και το αί
   });
 
   const stored = (requesterRole: 'host' | LegalProfessionalRole, requesterUid: string, recipient: 'host' | LegalProfessionalRole) => ({
-    checklistItemId: 'buyer_mortgage_approval', requesterRole, requesterUid, recipient, requestedAt: '2026-10-03T08:00:00.000Z', dayKey: '2026-10-03',
+    itemId: 'buyer_mortgage_approval', requesterRole, requesterUid, recipient, requestedAt: '2026-10-03T08:00:00.000Z', dayKey: '2026-10-03',
   });
 
   it('🔴 ο οικοδεσπότης ΔΕΝ βλέπει αίτημα συμβολαιογράφου → δικηγόρου αγοραστή (μετάλλαξη: όλα τα αιτήματα σε όλους)', () => {

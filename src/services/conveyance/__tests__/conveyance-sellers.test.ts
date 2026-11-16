@@ -33,18 +33,18 @@ describe('συλλογή τεκμηρίων — κάθε πωλητής', () => 
 });
 
 describe('αιτήματα εγγράφων — παλιό κλειδί γραμμής πωλητή', () => {
-  const stored = (id: string, checklistItemId: string) => ({
-    id, companyId: 'comp_a', caseId: 'cvc_1', projectId: null, checklistItemId, requesterRole: 'notary', requesterUid: 'u_n',
-    recipient: 'host', dayKey: '2026-10-01', requestedAt: '2026-10-01T09:00:00Z', notifiedAt: null,
-  });
+  const common = { companyId: 'comp_a', projectId: null, requesterRole: 'notary', requesterUid: 'u_n', recipient: 'host', dayKey: '2026-10-01', requestedAt: '2026-10-01T09:00:00Z', notifiedAt: null };
+  /** ADR-942 Φ0 — η ΜΙΑ συλλογή, με πολυμορφική υπόθεση. */
+  const stored = (id: string, itemId: string) => ({ ...common, id, subject: { kind: 'conveyance_case', id: 'cvc_1' }, itemId });
 
   async function readWith(parties: ConveyanceCaseParties): Promise<readonly string[]> {
     const fake = new FakeFirestore();
-    fake.seed(COLLECTIONS.CONVEYANCE_DOCUMENT_REQUESTS, 'r1', stored('r1', 'seller_enfia_certificate'));
-    fake.seed(COLLECTIONS.CONVEYANCE_DOCUMENT_REQUESTS, 'r2', stored('r2', 'title_deed'));
+    fake.seed(COLLECTIONS.DOCUMENT_REQUESTS, 'r1', stored('r1', 'seller_enfia_certificate'));
+    fake.seed(COLLECTIONS.DOCUMENT_REQUESTS, 'r2', stored('r2', 'title_deed'));
     const requests = await readCaseDocumentRequests(fake as unknown as Firestore, { id: 'cvc_1', companyId: 'comp_a', parties });
-    return (requests ?? []).map((request) => request.checklistItemId).sort();
+    return (requests ?? []).map((request) => request.itemId).sort();
   }
+
 
   it('ένας πωλητής ⇒ το αίτημα δένεται στη γραμμή του · της υπόθεσης δεν αγγίζεται', async () => {
     await expect(readWith({ sellers: [sellerParty('cont_a', 'legal_entity', 'principal')], buyers: [] }))

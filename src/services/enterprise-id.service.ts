@@ -59,7 +59,7 @@ export {
   generateDeterministicFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
   generatePipelineAuditId, generateEntityAuditId, generateContractId, generateConveyanceCaseId, generateEngagementId, generateEngagementInvitationId,
   generateConveyanceContributionId,
-  generateDeterministicConveyanceDocumentRequestId,
+  generateDeterministicDocumentRequestId,
   generateDeterministicConveyanceViewSignalId,
   generateDeterministicDocumentObligorDesignationId,
   generateDeterministicDocumentIssuanceAssignmentId,

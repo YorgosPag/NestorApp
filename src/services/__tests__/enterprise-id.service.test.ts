@@ -295,7 +295,7 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicPublicUnitId',
       // ADR-901 Φ4.5 — ΕΝΑ αίτημα εγγράφου ανά (υπόθεση, γραμμή, αιτών, ημέρα): η ταυτότητα ΕΙΝΑΙ το anti-spam·
       // τυχαίο id = δεύτερη ειδοποίηση για το ίδιο πάτημα την ίδια μέρα.
-      'generateDeterministicConveyanceDocumentRequestId',
+      'generateDeterministicDocumentRequestId',
       // ADR-901 §14.8 — ΕΝΑ σήμα ανά όψη: ο listener του client ΥΠΟΛΟΓΙΖΕΙ το id (χωρίς ερώτημα)· τυχαίο id =
       // ο γραφέας και ο listener σε δύο διαφορετικά έγγραφα, δηλαδή καμία ζωντανή ενημέρωση.
       'generateDeterministicConveyanceViewSignalId',
@@ -458,7 +458,7 @@ describe('EnterpriseIdService', () => {
       generateDeterministicPublicUnitId: 'punit_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicCompanyId: 'comp_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-901 Φ4.5 — ΕΝΑ αίτημα εγγράφου ανά (υπόθεση, γραμμή, αιτών, ημέρα).
-      generateDeterministicConveyanceDocumentRequestId: 'cdr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicDocumentRequestId: 'cdr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-901 §14.8 — ΕΝΑ σήμα ανά όψη.
       generateDeterministicConveyanceViewSignalId: 'cvs_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicDocumentObligorDesignationId: 'dobd_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',

@@ -1028,8 +1028,9 @@ export const COLLECTIONS = {
   ENGAGEMENT_INVITATIONS: process.env.NEXT_PUBLIC_ENGAGEMENT_INVITATIONS_COLLECTION || 'engagement_invitations',
   // ADR-901 Φ4.4 — transmittal: ποια έκδοση προσωπικού αρχείου στάλθηκε στην υπόθεση, από ποιον ρόλο (αμετάβλητο · server-only, deny-all)
   CONVEYANCE_CONTRIBUTIONS: process.env.NEXT_PUBLIC_CONVEYANCE_CONTRIBUTIONS_COLLECTION || 'conveyance_contributions',
-  // ADR-901 Φ4.5 — «Ζήτησε έγγραφο»: αμετάβλητο γεγονός ανά (υπόθεση, γραμμή, αιτών, ημέρα)· deny-all, μόνο server.
-  CONVEYANCE_DOCUMENT_REQUESTS: process.env.NEXT_PUBLIC_CONVEYANCE_DOCUMENT_REQUESTS_COLLECTION || 'conveyance_document_requests',
+  // ADR-942 Φ0 — «Ζήτησε έγγραφο» για ΚΑΘΕ είδος υπόθεσης (`subject: {kind, id}`): αμετάβλητο γεγονός ανά
+  // (υπόθεση, γραμμή, αιτών, ημέρα)· deny-all, μόνο server. ΜΙΑ συλλογή — απόφαση «Α» του Giorgio.
+  DOCUMENT_REQUESTS: process.env.NEXT_PUBLIC_DOCUMENT_REQUESTS_COLLECTION || 'document_requests',
   // ADR-901 §14.8 — σήμα αλλαγής ανά ΟΨΗ (αριθμός, κανένα περιεχόμενο)· get μόνο από το ακροατήριο της όψης, γράφει μόνο ο server.
   CONVEYANCE_VIEW_SIGNALS: process.env.NEXT_PUBLIC_CONVEYANCE_VIEW_SIGNALS_COLLECTION || 'conveyance_view_signals',
   // ADR-915 Φ5α — ημερολόγιο ακμών του μητρώου λήξεων: τι ΕΧΕΙ ΗΔΗ ειπωθεί ανά γραμμή. Κλειδί `companyId`·

@@ -16,6 +16,10 @@
  * 🔑 Α31: το «εκκρεμεί» **παράγεται** (`pendingRequestOf`) — αιτήματα **μετά** το νεότερο τεκμήριο της γραμμής, όσο η
  *    γραμμή είναι ακόμη αιτήσιμη. Κανένα «κλείσιμο» με το χέρι.
  *
+ * ADR-942 Φ0: ό,τι **δεν** εξαρτάται από τον κατάλογο της μεταβίβασης (σπόρος ταυτότητας, όψεις ανά θεατή, πυρήνας
+ * του «εκκρεμεί») ζει στο `lib/document-requests/request-core.ts` και επανεξάγεται εδώ — εδώ μένει **μόνο** ο κριτής
+ * της μεταβίβασης.
+ *
  * **Layering**: leaf — καθαρές συναρτήσεις, χωρίς I/O.
  *
  * @module lib/conveyance/document-request-policy
@@ -23,6 +27,11 @@
 
 import type { ChecklistItem } from '@/config/conveyance-checklist/types';
 import { fulfilmentOf } from '@/config/engagement-policy';
+import {
+  pendingFromLog,
+  requestedTodayByViewer,
+  type RequestParty as CoreRequestParty,
+} from '@/lib/document-requests/request-core';
 import type { CaseActorRole, ChecklistRow, ChecklistRowStatus, ConveyanceCaseState } from '@/types/conveyance-case';
 import type {
   DocumentRequestTarget,
@@ -33,6 +42,8 @@ import type { LegalProfessionalRole } from '@/types/legal-contracts';
 import { acceptsEngagements } from './case-state';
 import { contributionEntryPointIds } from './contribution-policy';
 import { viewerSeesItem } from './derive-checklist';
+
+export { documentRequestSeed, documentRequestViewsFor, requesterKeyOf } from '@/lib/document-requests/request-core';
 
 /**
  * Οι καταστάσεις όπου κάτι **οφείλεται**: λείπει · επιστράφηκε · έληξε · λήγει (ζήτα την ανανέωση **πριν**) · άλλαξε
@@ -103,63 +114,11 @@ function newestEvidenceAt(row: ChecklistRow): string {
  */
 export function pendingRequestOf(row: ChecklistRow, log: readonly DocumentRequestView[], today: string): PendingDocumentRequest | null {
   if (!isRequestableRow(row)) return null;
-  const mine = log.filter((entry) => entry.itemId === row.itemId);
-  const since = newestEvidenceAt(row);
-  const open = mine.filter((entry) => entry.requestedAt > since);
-  if (open.length === 0) return null;
-  const latest = open.reduce((a, b) => (b.requestedAt > a.requestedAt ? b : a));
-  return {
-    recipient: latest.recipient,
-    lastRequestedAt: latest.requestedAt,
-    requestedTodayByViewer: mine.some((entry) => entry.byViewer && entry.dayKey === today),
-    askedOfViewerBy: latest.byViewer ? null : latest.requester,
-  };
+  return pendingFromLog(log, row.itemId, newestEvidenceAt(row), today);
 }
 
-/**
- * **Ποιος** ζητά/κοιτά: ο λογαριασμός με τον ρόλο του. Ο οικοδεσπότης είναι **χώρος** (δημιουργός + διαχειριστές):
- * ό,τι ζήτησε ένας, το ζήτησε η πλευρά — ένα αίτημα ανά γραμμή/ημέρα για όλο τον χώρο, όχι ένα ανά διαχειριστή.
- */
-export interface RequestParty {
-  readonly role: CaseActorRole;
-  readonly uid: string;
-}
-
-/** Το κλειδί του αιτούντος στην ταυτότητα του αιτήματος — η πλευρά για τον οικοδεσπότη, ο άνθρωπος για τον επαγγελματία. */
-export function requesterKeyOf(party: RequestParty): string {
-  return party.role === 'host' ? 'host' : party.uid;
-}
-
-/** Ο σπόρος της ντετερμινιστικής ταυτότητας: ΕΝΑ αίτημα ανά (υπόθεση, γραμμή, αιτών, ημέρα). */
-export function documentRequestSeed(caseId: string, itemId: string, party: RequestParty, dayKey: string): string {
-  return `${caseId}|${itemId}|${requesterKeyOf(party)}|${dayKey}`;
-}
-
-interface StoredRequestFields {
-  readonly checklistItemId: string;
-  readonly requesterRole: CaseActorRole;
-  readonly requesterUid: string;
-  readonly recipient: CaseActorRole;
-  readonly requestedAt: string;
-  readonly dayKey: string;
-}
-
-function isRequester(entry: StoredRequestFields, viewer: RequestParty): boolean {
-  return viewer.role === 'host' ? entry.requesterRole === 'host' : entry.requesterUid === viewer.uid;
-}
-
-/**
- * Α31 — τα αιτήματα που **αυτός** ο θεατής δικαιούται να δει: μόνο όσα ζήτησε ή όσα του ζητήθηκαν. Κανένα αίτημα
- * ανάμεσα σε τρίτους (ο οικοδεσπότης δεν μαθαίνει τι ζήτησε ο συμβολαιογράφος από τον δικηγόρο του αγοραστή).
- */
-export function documentRequestViewsFor(requests: readonly StoredRequestFields[], viewer: RequestParty): readonly DocumentRequestView[] {
-  return requests
-    .filter((entry) => isRequester(entry, viewer) || entry.recipient === viewer.role)
-    .map((entry): DocumentRequestView => {
-      const base = { itemId: entry.checklistItemId, recipient: entry.recipient, requestedAt: entry.requestedAt, dayKey: entry.dayKey };
-      return isRequester(entry, viewer) ? { ...base, byViewer: true } : { ...base, byViewer: false, requester: entry.requesterRole };
-    });
-}
+/** Ο αιτών/θεατής της μεταβίβασης — ο γενικός `RequestParty` (ADR-942) στενεμένος στους ρόλους της υπόθεσης. */
+export type RequestParty = CoreRequestParty<CaseActorRole>;
 
 /** Οι γραμμές που **μπορεί** να ζητήσει τώρα με ένα πάτημα («Ζήτησε όλα τα ελλείποντα») — όχι όσες ζήτησε ήδη σήμερα. */
 export function requestableNow(
@@ -170,6 +129,6 @@ export function requestableNow(
 ): readonly ChecklistRow[] {
   return rows.filter((row) => {
     if (!isRequestableRow(row) || targets[row.itemId]?.ok !== true) return false;
-    return !log.some((entry) => entry.itemId === row.itemId && entry.byViewer && entry.dayKey === today);
+    return !requestedTodayByViewer(log, row.itemId, today);
   });
 }

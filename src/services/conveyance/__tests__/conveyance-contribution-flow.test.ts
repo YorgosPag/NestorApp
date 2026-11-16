@@ -432,7 +432,7 @@ describe('ADR-901 Φ4.5 — «Ζήτησε έγγραφο» (Α29 · Α30 · Α3
     return requestCaseDocuments(db(), { requester: { kind: 'engaged', engagement }, record, context: await contextOf(record), itemIds, nowMs: NOW });
   }
 
-  const storedRequests = async () => (await fake.collection(COLLECTIONS.CONVEYANCE_DOCUMENT_REQUESTS).get()).size;
+  const storedRequests = async () => (await fake.collection(COLLECTIONS.DOCUMENT_REQUESTS).get()).size;
   const requestAudits = () => recordChange.mock.calls.map(([e]) => e).filter((e) => e.action === 'document_requested');
 
   it('ο οικοδεσπότης ζητά το σχέδιο ⇒ ο ΣΥΜΒΟΛΑΙΟΓΡΑΦΟΣ ειδοποιείται · ίχνος με ρόλους · «εκκρεμεί» και στις δύο πλευρές', async () => {

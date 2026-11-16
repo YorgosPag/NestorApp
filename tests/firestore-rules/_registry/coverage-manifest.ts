@@ -308,12 +308,12 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
-    // ADR-901 Φ4.5 — «Ζήτησε έγγραφο». `deny_all` επειδή ο παραλήπτης = πάροχος γραμμής × ενεργοί ρόλοι ×
-    // `visibleTo` (τίποτα σε κανόνα — Α29), το αίτημα το βλέπουν ΜΟΝΟ αιτών και παραλήπτης (Α31), και η
-    // ταυτότητα ανά ημέρα είναι το anti-spam (εγγραφή από client θα την παρέκαμπτε).
-    collection: 'conveyance_document_requests',
+    // ADR-942 Φ0 (διάδοχος της `conveyance_document_requests` του ADR-901 Φ4.5) — «Ζήτησε έγγραφο» για κάθε είδος
+    // υπόθεσης (`subject: {kind, id}`). `deny_all` επειδή ο παραλήπτης = κριτής του είδους (τίποτα σε κανόνα — Α29),
+    // το αίτημα το βλέπουν ΜΟΝΟ αιτών και παραλήπτης (Α31), και η ταυτότητα ανά ημέρα είναι το anti-spam.
+    collection: 'document_requests',
     pattern: 'deny_all',
-    testFile: 'tests/firestore-rules/suites/conveyance-document-requests.rules.test.ts',
+    testFile: 'tests/firestore-rules/suites/document-requests.rules.test.ts',
     ...denyAllMatrix(),
   },
   {

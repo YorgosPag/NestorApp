@@ -120,6 +120,9 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // `firestore.rules` χωρίς αυτή την άγκυρα — πιθανότατα `968ee82f` ADR-931 · `f79d01ae` ADR-930, δεν επαληθεύτηκε ανά commit).
   // +2 (ADR-923 §5.5.2 Β5 — `catalog_import_label_memory`: read/write `if false`) ⇒ 879, μετρημένο με τη μηχανή.
   // +4 (ADR-934 §5.2.2 Μ-β3 — `catalog_media_sources` · `catalog_import_asset_fetches`: read/write `if false`) ⇒ 883.
+  // +2 (ADR-942 Φ0 — `document_requests`: read/write `if false`) −2 (ADR-942 Φ0 contract — σβήστηκε το
+  // `conveyance_document_requests`) ⇒ 883. ⚠️ Μετρημένο 2026-11-16: το δέντρο είχε ΗΔΗ 891 (όχι 883) πριν από
+  // το ADR-942 — απόκλιση +8 από αλλαγές που δεν ενημέρωσαν την άγκυρα· ΔΕΝ αποδόθηκε εδώ.
   it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (883 + 72 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
