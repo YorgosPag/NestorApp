@@ -8,6 +8,8 @@
  *    αρχείο μπαίνει στη **σωστή** θέση του φακέλου, και το «υπάρχει» το ξαναβρίσκει ο server με τον ίδιο σκοπό.
  * 🔑 Μετά το ανέβασμα ο server **κρίνει μόνος του** το αρχείο και ειδοποιεί τον μηχανικό (ιδεμποτικά)· η λίστα
  *    ξαναδιαβάζεται — το «εκκρεμεί» σβήνει γιατί **παράγεται**, όχι γιατί το σβήσαμε εδώ.
+ * 🔑 ADR-942 Φ2 — ό,τι ανεβαίνει **ως απάντηση** δίνεται στον μηχανικό· ό,τι **υπήρχε** δίνεται μόνο με ρητό «Δώσε από τον
+ *    φάκελο». Η δήλωση σκοπού (ΓΚΠΔ άρθρο 13) φαίνεται **πριν** από κάθε πράξη, στην κεφαλίδα και στην επιβεβαίωση.
  *
  * @module components/document-registry/RegistryIssuanceDocumentRequests
  */
@@ -34,6 +36,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { IssuanceRequestItemView } from '@/types/issuance-document-request';
 import { IssuanceDocumentRequestList } from './IssuanceDocumentRequestList';
 import { ISSUANCE_REQUEST_KEYS } from './issuance-request-labels';
+import { GiveExistingAction, GivenFilesOffice, useProvisionActions, useRetentionNotice } from './RegistryIssuanceProvisions';
 import type { RegistryIssuanceView } from './registry-issuance';
 
 interface UploadContext {
@@ -89,25 +92,35 @@ function ReadyRequests({ view, panel, target, canAct, onUploaded }: UploadContex
   const { t } = useTranslation(['document-registry']);
   const colors = useSemanticColors();
   const { uploading, upload } = useItemUpload({ view, target, onUploaded });
+  const actions = useProvisionActions(view, onUploaded);
+  const notice = useRetentionNotice(panel);
   const asked = panel.log.length > 0;
   return (
     <section aria-labelledby="registry-issuance-requests-title" className="flex flex-col gap-2 border-t border-border pt-2">
-      <header>
+      <header className="space-y-1">
         <h3 id="registry-issuance-requests-title" className="m-0 text-sm font-medium">{t(ISSUANCE_REQUEST_KEYS.title)}</h3>
         <p className={cn('m-0 text-xs', colors.text.muted)}>{t(asked ? ISSUANCE_REQUEST_KEYS.leadOffice : ISSUANCE_REQUEST_KEYS.noneRequested)}</p>
+        <p className={cn('m-0 text-xs', colors.text.muted)}>{t(ISSUANCE_REQUEST_KEYS.sharingLead)}</p>
+        {notice !== null && <p className={cn('m-0 text-xs', colors.text.muted)}>{notice}</p>}
       </header>
       <IssuanceDocumentRequestList
         panel={panel}
         log={panel.log}
-        action={(item) => (item.providedAt !== null || !canAct ? null : (
-          <FileUploadButton
-            onFileSelect={(file) => void upload(item, file)}
-            accept="application/pdf,image/*"
-            buttonText={t(uploading === item.itemId ? ISSUANCE_REQUEST_KEYS.uploading : ISSUANCE_REQUEST_KEYS.upload)}
-            loading={uploading === item.itemId}
-            disabled={uploading !== null}
-          />
+        action={(item) => (!canAct ? null : (
+          <span className="flex flex-wrap items-center gap-2">
+            {item.providedAt === null && (
+              <FileUploadButton
+                onFileSelect={(file) => void upload(item, file)}
+                accept="application/pdf,image/*"
+                buttonText={t(uploading === item.itemId ? ISSUANCE_REQUEST_KEYS.uploading : ISSUANCE_REQUEST_KEYS.upload)}
+                loading={uploading === item.itemId}
+                disabled={uploading !== null}
+              />
+            )}
+            <GiveExistingAction item={item} notice={notice} actions={actions} />
+          </span>
         ))}
+        files={(item) => <GivenFilesOffice item={item} actions={actions} canAct={canAct} />}
       />
     </section>
   );

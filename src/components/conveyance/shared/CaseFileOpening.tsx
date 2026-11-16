@@ -11,16 +11,15 @@
 import React, { useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useCaseFileOpener, type CaseFileTarget } from '@/hooks/useCaseFileOpener';
+import { useCaseFileOpener, type CaseFileTarget, type OpenableCaseFile } from '@/hooks/useCaseFileOpener';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import { useNotifications } from '@/providers/NotificationProvider';
-import type { EvidenceFile } from '@/types/conveyance-case';
 
 /** Ο προεπισκοπητής φορτώνεται **μόνο** στο κλικ: είναι βαρύς και δεν ανήκει στο πρώτο καρέ (ADR-744). */
 const CaseFilePreviewDialog = dynamic(() => import('@/components/conveyance/my-cases/CaseFilePreviewDialog'), { ssr: false });
 
 export interface CaseFileOpening {
-  readonly openFile: (file: EvidenceFile, mode: CaseFileMode) => void;
+  readonly openFile: (file: OpenableCaseFile, mode: CaseFileMode) => void;
   /** Ο διάλογος προεπισκόπησης — τοποθετείται μία φορά από την όψη. */
   readonly previewDialog: React.ReactElement;
 }
@@ -29,7 +28,7 @@ export function useCaseFileOpening(target: CaseFileTarget): CaseFileOpening {
   const { t } = useTranslation(['conveyance']);
   const { error: notifyError } = useNotifications();
   const opener = useCaseFileOpener(target);
-  const openFile = useCallback((file: EvidenceFile, mode: CaseFileMode) => {
+  const openFile = useCallback((file: OpenableCaseFile, mode: CaseFileMode) => {
     void opener.open(file, mode).then((outcome) => { if (outcome === 'unavailable') notifyError(t('files.unavailable')); });
   }, [notifyError, opener, t]);
   const downloadPreviewed = useCallback(() => {

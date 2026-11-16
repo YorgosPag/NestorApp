@@ -42,6 +42,13 @@ export interface IssuanceAuditFields {
    * `issuance.documentRequest.items` ⇒ «Τίτλος ιδιοκτησίας»). Μία γραμμή ανά νέο αίτημα του ίδιου πατήματος.
    */
   readonly documentRequest: string;
+  /**
+   * ADR-942 Φ2 — **δόσιμο** αρχείου στον μηχανικό: `— → <είδος>` όταν δίνεται · `<είδος> → —` όταν ανακαλείται (κατάλογος
+   * `issuance.documentRequest.items`)· `label` = το όνομα του αρχείου.
+   */
+  readonly documentProvision: string;
+  /** ADR-942 Φ2 — **άνοιγμα** δοσμένου αρχείου από τον μηχανικό: `— → view | download` (κατάλογος `issuance.documentRequest.access`). */
+  readonly documentAccess: string;
 }
 
 /**
@@ -58,6 +65,8 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeDeclineReason: 'energyCertificateIssuanceDeliveryChangeDeclineReason',
     spaceInvitation: 'energyCertificateIssuanceSpaceInvitation',
     documentRequest: 'energyCertificateIssuanceDocumentRequest',
+    documentProvision: 'energyCertificateIssuanceDocumentProvision',
+    documentAccess: 'energyCertificateIssuanceDocumentAccess',
   },
   'building-identity': {
     stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
@@ -68,6 +77,8 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeDeclineReason: 'buildingIdentityIssuanceDeliveryChangeDeclineReason',
     spaceInvitation: 'buildingIdentityIssuanceSpaceInvitation',
     documentRequest: 'buildingIdentityIssuanceDocumentRequest',
+    documentProvision: 'buildingIdentityIssuanceDocumentProvision',
+    documentAccess: 'buildingIdentityIssuanceDocumentAccess',
   },
   'tax-clearance': null,
   'insurance-clearance': null,
@@ -84,5 +95,7 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeDeclineReason: 'electricalInstallationIssuanceDeliveryChangeDeclineReason',
     spaceInvitation: 'electricalInstallationIssuanceSpaceInvitation',
     documentRequest: 'electricalInstallationIssuanceDocumentRequest',
+    documentProvision: 'electricalInstallationIssuanceDocumentProvision',
+    documentAccess: 'electricalInstallationIssuanceDocumentAccess',
   },
 };

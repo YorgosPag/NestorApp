@@ -35,6 +35,8 @@ interface IssuanceDocumentRequestListProps {
   /** Το ίχνος του θεατή (του server + τα αισιόδοξα τοπικά). */
   readonly log: readonly IssuanceRequestView[];
   readonly action: IssuanceRequestAction;
+  /** ADR-942 Φ2 — τα αρχεία του στοιχείου κάτω από την κατάσταση (μηχανικός: άνοιγμα · γραφείο: ανάκληση). */
+  readonly files?: (item: IssuanceRequestItemView) => React.ReactNode;
 }
 
 /** «Υπάρχει στον φάκελο · 3/10» · «Εκκρεμεί από το γραφείο · 3/10» · «Το ζήτησε ο μηχανικός · 3/10». */
@@ -85,6 +87,7 @@ function TierSection({ tier, items, props }: {
                 <ItemStatus item={item} pending={pending} />
               </span>
               {props.action(item, pending)}
+              {props.files?.(item)}
             </li>
           );
         })}

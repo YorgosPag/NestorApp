@@ -35,7 +35,7 @@ import {
 const TODAY = '2026-11-17';
 
 function item(itemId: IssuanceRequestItemView['itemId'], providedAt: string | null = null): IssuanceRequestItemView {
-  return { itemId, tier: 'A', providedAt };
+  return { itemId, tier: 'A', providedAt, given: [], candidates: [] };
 }
 
 function asked(itemId: string, dayKey: string, byViewer: boolean): IssuanceRequestView {

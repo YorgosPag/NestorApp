@@ -766,7 +766,13 @@
       "issuanceSpaceInvitation": "Issuance assignment — invitation to the collaboration space",
       "energyCertificateIssuanceDocumentRequest": "Energy certificate issuance — document request from the engineer",
       "buildingIdentityIssuanceDocumentRequest": "Building identity issuance — document request from the engineer",
-      "electricalInstallationIssuanceDocumentRequest": "Electrical installation issuance — document request from the engineer"
+      "electricalInstallationIssuanceDocumentRequest": "Electrical installation issuance — document request from the engineer",
+      "energyCertificateIssuanceDocumentProvision": "Energy certificate issuance — document shared with the engineer",
+      "buildingIdentityIssuanceDocumentProvision": "Building identity issuance — document shared with the engineer",
+      "electricalInstallationIssuanceDocumentProvision": "Electrical installation issuance — document shared with the engineer",
+      "energyCertificateIssuanceDocumentAccess": "Energy certificate issuance — the engineer opened a document",
+      "buildingIdentityIssuanceDocumentAccess": "Building identity issuance — the engineer opened a document",
+      "electricalInstallationIssuanceDocumentAccess": "Electrical installation issuance — the engineer opened a document"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

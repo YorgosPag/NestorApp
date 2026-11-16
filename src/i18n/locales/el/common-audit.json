@@ -766,7 +766,13 @@
       "issuanceSpaceInvitation": "Ανάθεση έκδοσης — πρόσκληση στον χώρο συνεργασίας",
       "energyCertificateIssuanceDocumentRequest": "Ανάθεση έκδοσης ΠΕΑ — αίτημα εγγράφου από τον μηχανικό",
       "buildingIdentityIssuanceDocumentRequest": "Ανάθεση έκδοσης ΗΤΚ — αίτημα εγγράφου από τον μηχανικό",
-      "electricalInstallationIssuanceDocumentRequest": "Ανάθεση έκδοσης ΥΔΕ — αίτημα εγγράφου από τον μηχανικό"
+      "electricalInstallationIssuanceDocumentRequest": "Ανάθεση έκδοσης ΥΔΕ — αίτημα εγγράφου από τον μηχανικό",
+      "energyCertificateIssuanceDocumentProvision": "Ανάθεση έκδοσης ΠΕΑ — έγγραφο που δόθηκε στον μηχανικό",
+      "buildingIdentityIssuanceDocumentProvision": "Ανάθεση έκδοσης ΗΤΚ — έγγραφο που δόθηκε στον μηχανικό",
+      "electricalInstallationIssuanceDocumentProvision": "Ανάθεση έκδοσης ΥΔΕ — έγγραφο που δόθηκε στον μηχανικό",
+      "energyCertificateIssuanceDocumentAccess": "Ανάθεση έκδοσης ΠΕΑ — ο μηχανικός άνοιξε έγγραφο",
+      "buildingIdentityIssuanceDocumentAccess": "Ανάθεση έκδοσης ΗΤΚ — ο μηχανικός άνοιξε έγγραφο",
+      "electricalInstallationIssuanceDocumentAccess": "Ανάθεση έκδοσης ΥΔΕ — ο μηχανικός άνοιξε έγγραφο"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

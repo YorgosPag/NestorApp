@@ -755,7 +755,9 @@
       "document_accessed": "Άνοιγμα αποδεικτικού",
       "evidence_retention_scheduled": "Κλείδωμα διατήρησης αποδεικτικού",
       "evidence_disposed": "Διάθεση αποδεικτικού μετά την προθεσμία",
-      "document_requested": "Αίτημα εγγράφου"
+      "document_requested": "Αίτημα εγγράφου",
+      "document_shared": "Δόθηκε έγγραφο",
+      "document_unshared": "Ανάκληση εγγράφου"
     },
     "filters": {
       "all": "Όλα",

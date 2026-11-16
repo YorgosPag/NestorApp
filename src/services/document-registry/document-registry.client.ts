@@ -237,7 +237,7 @@ export async function fetchIssuanceDocumentRequests(propertyId: string, document
   }
 }
 
-/** Μετά το ανέβασμα: ο server κρίνει το αρχείο **μόνος του** και ειδοποιεί όσους το ζήτησαν (ιδεμποτικό). */
+/** Μετά το ανέβασμα: ο server κρίνει το αρχείο **μόνος του**, το **δίνει** στον μηχανικό (ADR-942 Φ2) και ειδοποιεί όσους το ζήτησαν (ιδεμποτικό). */
 export async function announceIssuanceDocumentProvided(
   body: { readonly propertyId: string; readonly documentKind: DocumentKind; readonly fileId: string },
 ): Promise<IssuanceMessageResult<{ readonly notified: number }>> {
@@ -245,5 +245,30 @@ export async function announceIssuanceDocumentProvided(
     return { kind: 'ok', data: await apiClient.post(`${ISSUANCE_DOCUMENT_REQUESTS_URL}/provided`, body) };
   } catch (cause) {
     return { kind: 'failed', code: logActionFailure('Η ειδοποίηση «ανέβηκε έγγραφο» δεν στάλθηκε', cause, { documentKind: body.documentKind }) };
+  }
+}
+
+/** ADR-942 Φ2 — «Δώσε από τον φάκελο» · «Ανάκληση»: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_DOCUMENT_PROVISIONS_URL = `${ISSUANCE_DOCUMENT_REQUESTS_URL}/provisions`;
+
+/** Το γραφείο **δίνει** στον μηχανικό αρχείο που υπήρχε ήδη στον φάκελο — ρητά, αφού είδε τη δήλωση σκοπού. */
+export async function giveIssuanceDocument(
+  body: { readonly propertyId: string; readonly documentKind: DocumentKind; readonly fileId: string },
+): Promise<IssuanceMessageResult<{ readonly outcome: 'given' | 'already-given'; readonly notified: number }>> {
+  try {
+    return { kind: 'ok', data: await apiClient.post(ISSUANCE_DOCUMENT_PROVISIONS_URL, { action: 'give', ...body }) };
+  } catch (cause) {
+    return { kind: 'failed', code: logActionFailure('Το αρχείο δεν δόθηκε στον μηχανικό', cause, { documentKind: body.documentKind }) };
+  }
+}
+
+/** Το γραφείο **ανακαλεί** ένα δόσιμο — το αρχείο δεν ανοίγει πια για τον μηχανικό. */
+export async function revokeIssuanceProvision(
+  body: { readonly propertyId: string; readonly documentKind: DocumentKind; readonly provisionId: string },
+): Promise<IssuanceMessageResult<{ readonly outcome: 'revoked' | 'already-revoked' }>> {
+  try {
+    return { kind: 'ok', data: await apiClient.post(ISSUANCE_DOCUMENT_PROVISIONS_URL, { action: 'revoke', ...body }) };
+  } catch (cause) {
+    return { kind: 'failed', code: logActionFailure('Η πρόσβαση του μηχανικού δεν ανακλήθηκε', cause, { documentKind: body.documentKind }) };
   }
 }

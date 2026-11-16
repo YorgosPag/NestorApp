@@ -755,7 +755,9 @@
       "document_accessed": "Evidence opened",
       "evidence_retention_scheduled": "Evidence retention locked",
       "evidence_disposed": "Evidence disposed after retention period",
-      "document_requested": "Document requested"
+      "document_requested": "Document requested",
+      "document_shared": "Document shared",
+      "document_unshared": "Document access revoked"
     },
     "filters": {
       "all": "All",

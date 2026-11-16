@@ -18,28 +18,25 @@
 
 import 'server-only';
 
-import type { DocumentData, Firestore } from 'firebase-admin/firestore';
+import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CASE_ACCESS_FIELD, CASE_DOCUMENT_FIELD, encodeCaseAccess, type CaseFileMode } from '@/lib/conveyance/case-activity';
 import { parseContribution } from '@/lib/conveyance/contribution-schema';
-import { fileDownloadName } from '@/lib/files/file-download-name';
-import { signedDownloadUrl } from '@/lib/storage/signed-download-url';
-import { createModuleLogger } from '@/lib/telemetry';
+import {
+  openableFileOf,
+  signAndRecordOpening,
+  type EngagedFileOpening,
+  type OpenableFile,
+} from '@/server/engagement-files/engaged-file-opening.server';
 import { EntityAuditService } from '@/services/entity-audit.service';
-import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import type { CaseActorRole, ConveyanceCase, DerivedChecklist, EvidenceFile } from '@/types/conveyance-case';
-import type { EngagementVerdict } from '@/types/engagement';
 import { contributionsCollection } from './conveyance-contribution-store.server';
 import { checklistForRole, engagedChecklistOf, HOST_CHECKLIST_VIEWER, resolveEngagedCase } from './conveyance-engagement-access.service';
 import { loadConveyanceSubject } from './conveyance-subject.server';
 
-const logger = createModuleLogger('conveyance-case-file-access');
-
-export type CaseFileOpening =
-  | { readonly ok: true; readonly url: string; readonly expiresAt: number; readonly fileName: string; readonly contentType: string }
-  | { readonly ok: false; readonly rejection: 'denied'; readonly verdict: EngagementVerdict }
-  | { readonly ok: false; readonly rejection: 'not-found' | 'unknown' | 'failed' };
+/** Το λεξιλόγιο του ανοίγματος ζει στον κοινό πυρήνα (ADR-942 Φ2)· εδώ μόνο το όνομα που ξέρει η μεταβίβαση. */
+export type CaseFileOpening = EngagedFileOpening;
 
 interface FileOpenRequest {
   readonly uid: string;
@@ -55,13 +52,6 @@ export interface CaseFileRequest extends FileOpenRequest {
 
 export interface HostCaseFileRequest extends FileOpenRequest {
   readonly record: ConveyanceCase;
-}
-
-interface StoredFile {
-  readonly storagePath: string;
-  readonly fileName: string;
-  readonly contentType: string;
-  readonly placement: { readonly storagePlacement?: unknown };
 }
 
 /** Ο θεατής, όπως τον ξέρει ο πυρήνας: ποιος, με ποιον ρόλο, σε ποια υπόθεση, με ποιον κατάλογο. */
@@ -81,43 +71,33 @@ function visibleEvidence(checklist: DerivedChecklist, fileId: string): EvidenceF
   return null;
 }
 
-function storedFileOf(data: DocumentData | undefined, fileId: string): StoredFile | null {
-  if (!data || data.isDeleted === true || typeof data.storagePath !== 'string' || data.storagePath === '') return null;
-  return {
-    storagePath: data.storagePath,
-    fileName: fileDownloadName(data, fileId),
-    contentType: typeof data.contentType === 'string' ? data.contentType : 'application/octet-stream',
-    placement: { storagePlacement: data.storagePlacement },
-  };
-}
-
 /** Αρχείο του μισθωτή-οικοδεσπότη — μόνο του μισθωτή της υπόθεσης. */
-async function readOwnedFile(db: Firestore, companyId: string, fileId: string): Promise<StoredFile | null> {
+async function readOwnedFile(db: Firestore, companyId: string, fileId: string): Promise<OpenableFile | null> {
   const data = (await db.collection(COLLECTIONS.FILES).doc(fileId).get()).data();
-  return data && data.companyId === companyId ? storedFileOf(data, fileId) : null;
+  return data && data.companyId === companyId ? openableFileOf(data, fileId) : null;
 }
 
 /**
  * Σταλμένη έκδοση — μέσω **του transmittal**: της ίδιας υπόθεσης, μη αποσυρμένου, και το αρχείο **του συντάκτη**.
  * Ο κάδος του συντάκτη **δεν** κόβει (σιωπηλή δέσμευση: ό,τι στάλθηκε μένει ανοίξιμο ως την απόσυρση).
  */
-async function readTransmittedFile(db: Firestore, record: ConveyanceCase, contributionId: string, fileId: string): Promise<StoredFile | null> {
+async function readTransmittedFile(db: Firestore, record: ConveyanceCase, contributionId: string, fileId: string): Promise<OpenableFile | null> {
   const contribution = parseContribution((await contributionsCollection(db).doc(contributionId).get()).data());
   if (!contribution || contribution.caseId !== record.id || contribution.withdrawnAt !== null || contribution.file.fileId !== fileId) return null;
   const data = (await db.collection(COLLECTIONS.FILES_PERSONAL).doc(fileId).get()).data();
   if (!data || data.userId !== contribution.authorUid) return null;
   // Ο κάδος του συντάκτη αγνοείται επίτηδες (`isDeleted: false`): κάδος ≠ απόσυρση.
-  return storedFileOf({ ...data, isDeleted: false }, fileId);
+  return openableFileOf({ ...data, isDeleted: false }, fileId);
 }
 
-function readStoredFile(db: Firestore, record: ConveyanceCase, evidence: EvidenceFile): Promise<StoredFile | null> {
+function readStoredFile(db: Firestore, record: ConveyanceCase, evidence: EvidenceFile): Promise<OpenableFile | null> {
   return evidence.source.kind === 'transmittal'
     ? readTransmittedFile(db, record, evidence.source.contributionId, evidence.fileId)
     : readOwnedFile(db, record.companyId, evidence.fileId);
 }
 
 /** Α20 — ένα άνοιγμα, ένα γεγονός, στο βιβλίο της υπόθεσης. */
-async function recordCaseDocumentAccess(opening: OpeningContext, request: FileOpenRequest, file: StoredFile): Promise<void> {
+async function recordCaseDocumentAccess(opening: OpeningContext, request: FileOpenRequest, file: OpenableFile): Promise<void> {
   await EntityAuditService.recordChange({
     entityType: 'conveyance_case',
     entityId: opening.record.id,
@@ -133,27 +113,16 @@ async function recordCaseDocumentAccess(opening: OpeningContext, request: FileOp
   });
 }
 
-/** Ο ΕΝΑΣ πυρήνας: κρίνε στον κατάλογο του θεατή → διάβασε → υπόγραψε → κατέγραψε. */
+/** Κρίνε στον κατάλογο του θεατή → διάβασε → (κοινός πυρήνας) υπόγραψε → κατέγραψε. */
 async function openVisibleFile(db: Firestore, opening: OpeningContext, request: FileOpenRequest): Promise<CaseFileOpening> {
   const evidence = visibleEvidence(opening.checklist, request.fileId);
   const file = evidence ? await readStoredFile(db, opening.record, evidence) : null;
-  if (!file) return { ok: false, rejection: 'not-found' };
-  try {
-    const signed = await signedDownloadUrl({
-      bucket: fileRecordBucket(file.placement),
-      storagePath: file.storagePath,
-      ...(request.mode === 'download' ? { downloadFileName: file.fileName } : {}),
-    });
-    if (signed.outcome !== 'signed') return { ok: false, rejection: 'failed' };
-    await recordCaseDocumentAccess(opening, request, file);
-    return { ok: true, url: signed.url, expiresAt: signed.expiresAt, fileName: file.fileName, contentType: file.contentType };
-  } catch (error) {
-    logger.error('Το τεκμήριο της υπόθεσης δεν υπογράφηκε', {
-      data: { caseId: opening.record.id, fileId: request.fileId },
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return { ok: false, rejection: 'failed' };
-  }
+  return signAndRecordOpening({
+    file,
+    mode: request.mode,
+    record: (opened) => recordCaseDocumentAccess(opening, request, opened),
+    logData: { caseId: opening.record.id, fileId: request.fileId },
+  });
 }
 
 /** Ο επαγγελματίας ανοίγει/κατεβάζει ένα τεκμήριο της υπόθεσης. */

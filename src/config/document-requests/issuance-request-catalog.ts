@@ -76,6 +76,30 @@ export const ISSUANCE_REQUEST_CATALOG: Readonly<Record<DocumentKind, readonly Is
   'enfia-certificate': [],
 };
 
+// =============================================================================
+// ADR-942 Φ2 (Ε4) — η πρόσβαση του μηχανικού σε ό,τι του δόθηκε
+// =============================================================================
+
+/** Μετά την ολοκλήρωση της ανάθεσης (νέο έγγραφο στο μητρώο) ο μηχανικός ανοίγει τα δοσμένα για τόσες ημέρες (διορθώσεις). */
+export const ISSUANCE_FILE_ACCESS_GRACE_DAYS = 30;
+
+/**
+ * Γιατί ο εκδότης **κρατά** αντίγραφο — η δήλωση σκοπού (ΓΚΠΔ άρθρο 13) που βλέπει το γραφείο **πριν** δώσει αρχείο.
+ * Ολικός: είδος με στοιχεία χωρίς βάση **δεν** μεταγλωττίζεται ως σιωπή — `null` μόνο όπου δεν ζητείται τίποτα.
+ * ⚠️ Το κείμενο (`issuance.documentRequest.purposeNotice.<βάση>`) ελέγχεται από νομικό πριν την παραγωγή (ADR-942 §9.4).
+ */
+export const ISSUANCE_RETENTION_BASES = ['totee-20701-4'] as const;
+export type IssuanceRetentionBasis = (typeof ISSUANCE_RETENTION_BASES)[number];
+
+export const ISSUANCE_RETENTION_BASIS: Readonly<Record<DocumentKind, IssuanceRetentionBasis | null>> = {
+  'energy-certificate': 'totee-20701-4',
+  'building-identity': null,
+  'electrical-installation': null,
+  'tax-clearance': null,
+  'insurance-clearance': null,
+  'enfia-certificate': null,
+};
+
 /** Τα αιτήσιμα στοιχεία ενός είδους. */
 export function issuanceRequestItemsOf(kind: DocumentKind): readonly IssuanceRequestItem[] {
   return ISSUANCE_REQUEST_CATALOG[kind];

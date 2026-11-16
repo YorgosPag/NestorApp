@@ -365,6 +365,8 @@ export class EnterpriseIdService extends SubcontractIdGenerators {
   generateConveyanceContributionId(): string { return this.generateId(P.CONVEYANCE_CONTRIBUTION).id; }
   /** ADR-901 Φ4.5 — ΕΝΑ αίτημα εγγράφου ανά (υπόθεση, γραμμή, αιτών, ημέρα): το `create` του δεύτερου αποτυγχάνει (anti-spam). */
   generateDeterministicDocumentRequestId(seed: string): string { return this.mintDeterministicV4Id(P.DOCUMENT_REQUEST, seed); }
+  /** ADR-942 Φ2 — ΕΝΑ δόσιμο ανά (υπόθεση, στοιχείο, αρχείο): δεύτερο δόσιμο του ίδιου αρχείου = ίδιο έγγραφο (ιδεμποτικό). */
+  generateDeterministicDocumentRequestProvisionId(seed: string): string { return this.mintDeterministicV4Id(P.DOCUMENT_REQUEST_PROVISION, seed); }
   /** ADR-901 §14.8 — ΕΝΑ σήμα ανά όψη: ο γραφέας και ο listener βρίσκουν το ίδιο έγγραφο χωρίς ερώτημα. */
   generateDeterministicConveyanceViewSignalId(seed: string): string { return this.mintDeterministicV4Id(P.CONVEYANCE_VIEW_SIGNAL, seed); }
   generatePipelineQueueId(): string { return this.generateId(P.PIPELINE_QUEUE).id; }

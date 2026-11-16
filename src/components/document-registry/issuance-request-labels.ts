@@ -9,7 +9,7 @@
  *    ιστορικό (ADR-195) διαβάζει την ΙΔΙΑ διαδρομή (`issuance.documentRequest.items`).
  */
 
-import type { IssuanceRequestItemId, IssuanceRequestTier } from '@/config/document-requests/issuance-request-catalog';
+import type { IssuanceRequestItemId, IssuanceRequestTier, IssuanceRetentionBasis } from '@/config/document-requests/issuance-request-catalog';
 
 export const ISSUANCE_REQUEST_ITEM_KEYS: Readonly<Record<IssuanceRequestItemId, string>> = {
   'study-admin-title-deed': 'document-registry:issuance.documentRequest.items.studyAdminTitleDeed',
@@ -55,4 +55,33 @@ export const ISSUANCE_REQUEST_KEYS = {
   uploading: 'document-registry:issuance.documentRequest.uploading',
   uploaded: 'document-registry:issuance.documentRequest.uploaded',
   uploadFailed: 'document-registry:issuance.documentRequest.uploadFailed',
+  // ── ADR-942 Φ2 — δόσιμο · άνοιγμα · ανάκληση
+  sharingLead: 'document-registry:issuance.documentRequest.sharingLead',
+  givenToEngineer: 'document-registry:issuance.documentRequest.givenToEngineer',
+  givenToYou: 'document-registry:issuance.documentRequest.givenToYou',
+  open: 'document-registry:issuance.documentRequest.open',
+  download: 'document-registry:issuance.documentRequest.download',
+  giveExisting: 'document-registry:issuance.documentRequest.giveExisting',
+  giveExistingPlaceholder: 'document-registry:issuance.documentRequest.giveExistingPlaceholder',
+  giveConfirmTitle: 'document-registry:issuance.documentRequest.giveConfirm.title',
+  giveConfirmConfirm: 'document-registry:issuance.documentRequest.giveConfirm.confirm',
+  giveConfirmCancel: 'document-registry:issuance.documentRequest.giveConfirm.cancel',
+  given: 'document-registry:issuance.documentRequest.given',
+  giveFailed: 'document-registry:issuance.documentRequest.giveFailed',
+  revoke: 'document-registry:issuance.documentRequest.revoke',
+  revokeConfirmTitle: 'document-registry:issuance.documentRequest.revokeConfirm.title',
+  revokeConfirmDescription: 'document-registry:issuance.documentRequest.revokeConfirm.description',
+  revokeConfirmConfirm: 'document-registry:issuance.documentRequest.revokeConfirm.confirm',
+  revokeConfirmCancel: 'document-registry:issuance.documentRequest.revokeConfirm.cancel',
+  revoked: 'document-registry:issuance.documentRequest.revoked',
+  revokeFailed: 'document-registry:issuance.documentRequest.revokeFailed',
+  accessUntil: 'document-registry:issuance.documentRequest.accessUntil',
+  accessLapsed: 'document-registry:issuance.documentRequest.accessLapsed',
+  accessClosed: 'document-registry:issuance.documentRequest.accessClosed',
+  accessUnknown: 'document-registry:issuance.documentRequest.accessUnknown',
 } as const;
+
+/** ADR-942 Φ2 — η δήλωση σκοπού ανά βάση τήρησης (ΓΚΠΔ άρθρο 13). Ολικός: νέα βάση δεν μεταγλωττίζεται χωρίς κείμενο. */
+export const ISSUANCE_RETENTION_NOTICE_KEYS: Readonly<Record<IssuanceRetentionBasis, string>> = {
+  'totee-20701-4': 'document-registry:issuance.documentRequest.purposeNotice.toteeRetention',
+};

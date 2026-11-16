@@ -60,6 +60,7 @@ export {
   generatePipelineAuditId, generateEntityAuditId, generateContractId, generateConveyanceCaseId, generateEngagementId, generateEngagementInvitationId,
   generateConveyanceContributionId,
   generateDeterministicDocumentRequestId,
+  generateDeterministicDocumentRequestProvisionId,
   generateDeterministicConveyanceViewSignalId,
   generateDeterministicDocumentObligorDesignationId,
   generateDeterministicDocumentIssuanceAssignmentId,

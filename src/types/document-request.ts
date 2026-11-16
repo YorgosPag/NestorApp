@@ -87,3 +87,32 @@ export interface PendingDocumentRequest<Role extends string> {
 export type DocumentRequestItemOutcome<Role extends string> =
   | { readonly itemId: string; readonly kind: 'requested' | 'already-requested'; readonly recipient: Role }
   | { readonly itemId: string; readonly kind: 'refused'; readonly refusal: DocumentRequestRefusal | 'not-found' };
+
+// =============================================================================
+// ADR-942 Φ2 — «ΔΟΘΗΚΕ ΣΤΟΝ ΕΠΑΓΓΕΛΜΑΤΙΑ»
+// =============================================================================
+
+/** Πώς δόθηκε: ανέβηκε **ως απάντηση** στο αίτημα (η απάντηση είναι η συναίνεση) · ή δόθηκε **ρητά** αρχείο που υπήρχε ήδη. */
+export const DOCUMENT_PROVISION_ROUTES = ['upload', 'existing'] as const;
+export type DocumentProvisionRoute = (typeof DOCUMENT_PROVISION_ROUTES)[number];
+
+/**
+ * Το αποθηκευμένο δόσιμο (`document_request_provisions`, deny-all, μόνο ο server). **Ένα** ανά (υπόθεση, στοιχείο, αρχείο):
+ * δεύτερο δόσιμο του ίδιου αρχείου = το ίδιο έγγραφο. Ανάκληση = `revokedAt`, ποτέ διαγραφή· νέο δόσιμο μετά από
+ * ανάκληση ξαναγράφει το ίδιο έγγραφο (το ιστορικό του ακινήτου κρατά τη σειρά).
+ *
+ * 🔑 Από **αυτό** παράγεται η πρόσβαση του επαγγελματία σε κάθε ανάγνωση — καμία αποθηκευμένη λήξη.
+ */
+export interface StoredDocumentProvision {
+  readonly id: string;
+  readonly companyId: string;
+  readonly subject: DocumentRequestSubject;
+  /** Το στοιχείο του καταλόγου της υπόθεσης στο οποίο απαντά το αρχείο. */
+  readonly itemId: string;
+  readonly fileId: string;
+  readonly via: DocumentProvisionRoute;
+  readonly givenBy: string;
+  readonly givenAt: string;
+  readonly revokedAt: string | null;
+  readonly revokedBy: string | null;
+}

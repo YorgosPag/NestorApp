@@ -264,6 +264,9 @@ export interface IssuanceEngagement extends EngagementBase {
  */
 export type Engagement = ConveyanceEngagement | IssuanceEngagement;
 
+/** Η συμμετοχή ενός **συγκεκριμένου** είδους υπόθεσης — για τα ολικά μητρώα ανά είδος (`{[K in EngagementSubjectKind]}`). */
+export type EngagementOfKind<K extends EngagementSubjectKind> = Extract<Engagement, { readonly subject: { readonly kind: K } }>;
+
 /** Στενεύει στη μεταβίβαση — ο ΕΝΑΣ φρουρός, στο σύνορο όπου διαβάζεται ο δίσκος (ποτέ `as`). */
 export function isConveyanceEngagement(engagement: Engagement): engagement is ConveyanceEngagement {
   return engagement.subject.kind === 'conveyance_case';

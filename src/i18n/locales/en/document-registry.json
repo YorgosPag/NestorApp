@@ -580,6 +580,40 @@
       "uploading": "Uploading…",
       "uploaded": "The document was uploaded to the property file.",
       "uploadFailed": "The document was not uploaded. Please try again.",
+      "sharingLead": "Whatever you upload here in reply, or share from the folder, the engineer on this assignment can view and download. Every opening is recorded in the property history.",
+      "purposeNotice": {
+        "toteeRetention": "Under TOTEE 20701-4 the energy inspector must keep a copy of the inspection data and hand it to the supervising authorities on request. The documents are used only to issue the certificate."
+      },
+      "givenToEngineer": "Shared with the engineer · {date}",
+      "givenToYou": "Shared with you · {date}",
+      "open": "Open",
+      "download": "Download",
+      "giveExisting": "Share from the folder",
+      "giveExistingPlaceholder": "Choose a file",
+      "giveConfirm": {
+        "title": "Share “{name}” with the engineer?",
+        "confirm": "Share",
+        "cancel": "Cancel"
+      },
+      "given": "The file was shared with the engineer.",
+      "giveFailed": "The file was not shared. Please try again.",
+      "revoke": "Revoke",
+      "revokeConfirm": {
+        "title": "Revoke access?",
+        "description": "The engineer will no longer be able to open “{name}”. A copy already downloaded is not deleted.",
+        "confirm": "Revoke",
+        "cancel": "Cancel"
+      },
+      "revoked": "Access was revoked.",
+      "revokeFailed": "Access was not revoked. Please try again.",
+      "accessUntil": "You can open the documents until {date}.",
+      "accessLapsed": "Access to the documents ended 30 days after issue.",
+      "accessClosed": "The assignment is not in progress; the documents cannot be opened.",
+      "accessUnknown": "Access to the documents could not be checked. Refresh the page.",
+      "access": {
+        "view": "view",
+        "download": "download"
+      },
       "items": {
         "studyAdminTitleDeed": "Title deed",
         "studyAdminCadastre": "Land registry (KAEK)",

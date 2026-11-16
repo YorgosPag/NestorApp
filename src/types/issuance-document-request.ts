@@ -8,10 +8,12 @@
  * @module types/issuance-document-request
  */
 
-import type { IssuanceRequestItemId, IssuanceRequestTier } from '@/config/document-requests/issuance-request-catalog';
+import type { IssuanceRequestItemId, IssuanceRequestTier, IssuanceRetentionBasis } from '@/config/document-requests/issuance-request-catalog';
 import type { ENTITY_TYPES } from '@/config/domain-constants';
+import type { IssuanceFileAccessWindow } from '@/lib/document-requests/issuance-file-access-window';
 import type { HOST_REQUEST_ROLE } from '@/lib/document-requests/request-core';
 import type {
+  DocumentProvisionRoute,
   DocumentRequestItemOutcome,
   DocumentRequestPanel,
   DocumentRequestTarget,
@@ -32,12 +34,35 @@ export type IssuanceRequestView = DocumentRequestView<IssuanceRequestRole>;
 export type IssuancePendingRequest = PendingDocumentRequest<IssuanceRequestRole>;
 export type IssuanceRequestOutcome = DocumentRequestItemOutcome<IssuanceRequestRole>;
 
+/** Ένα ζωντανό αρχείο του φακέλου του κατόχου που απαντά σε στοιχείο (ADR-942 Φ2). */
+export interface IssuanceFolderFile {
+  readonly fileId: string;
+  readonly fileName: string;
+  readonly createdAt: string;
+}
+
+/** Ένα αρχείο που **δόθηκε** στον μηχανικό για ένα στοιχείο — ζωντανό δόσιμο **και** ζωντανό αρχείο στο σημερινό δοχείο. */
+export interface IssuanceGivenFile {
+  readonly provisionId: string;
+  readonly fileId: string;
+  readonly fileName: string;
+  readonly givenAt: string;
+  readonly via: DocumentProvisionRoute;
+}
+
 /** Ένα στοιχείο του καταλόγου όπως το βλέπει ο θεατής: βαθμίδα + αν ο φάκελος του κατόχου το έχει **τώρα**. */
 export interface IssuanceRequestItemView {
   readonly itemId: IssuanceRequestItemId;
   readonly tier: IssuanceRequestTier;
   /** Το νεότερο ζωντανό αρχείο αυτού του είδους στον φάκελο του κατόχου — `null` ⇒ λείπει. */
   readonly providedAt: string | null;
+  /**
+   * Φ2 — ό,τι δόθηκε για το στοιχείο. Μηχανικός: **μόνο** όσο το παράθυρο πρόσβασης είναι ανοιχτό (αλλιώς κενό).
+   * Γραφείο: πάντα, για να ανακαλεί.
+   */
+  readonly given: readonly IssuanceGivenFile[];
+  /** Φ2 — **μόνο για το γραφείο**: αρχεία του είδους στον φάκελο που **δεν** δόθηκαν ακόμη («Δώσε υπάρχον»). Μηχανικός: κενό. */
+  readonly candidates: readonly IssuanceFolderFile[];
 }
 
 /**
@@ -48,4 +73,11 @@ export interface IssuanceDocumentRequests extends DocumentRequestPanel<IssuanceR
   readonly items: readonly IssuanceRequestItemView[];
   /** Ε5 — η απόδοση σε βαθμίδα δεν έχει επιβεβαιωθεί από επιθεωρητή· η οθόνη το λέει. */
   readonly tiersVerified: boolean;
+  /**
+   * Φ2 (Ε4) — πότε ανοίγει ο μηχανικός τα δοσμένα. `null` ⇒ δεν χρειάστηκε κρίση (κανένα ζωντανό δόσιμο) ή θεατής το γραφείο·
+   * `'unknown'` ⇒ το μητρώο δεν διαβάστηκε (τα δοσμένα **δεν** δείχνονται — «δεν ξέρω» ≠ «ανοιχτό»).
+   */
+  readonly access: IssuanceFileAccessWindow | 'unknown' | null;
+  /** Φ2 — η δήλωση σκοπού που βλέπει το γραφείο πριν δώσει αρχείο (ΓΚΠΔ άρθρο 13)· `null` ⇒ καμία βάση τήρησης. */
+  readonly retentionBasis: IssuanceRetentionBasis | null;
 }

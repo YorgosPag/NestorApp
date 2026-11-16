@@ -5,7 +5,7 @@
  * τα ελλείποντα» με **ένα** αίτημα (μία ειδοποίηση στο γραφείο).
  *
  * Ο παραλήπτης δεν διαλέγεται: είναι **πάντα** το γραφείο της ανάθεσης (Α29). Ό,τι υπάρχει ήδη στον φάκελο του κατόχου
- * δεν ζητείται — φαίνεται «Υπάρχει στον φάκελο» (η πρόσβαση στο ίδιο το αρχείο είναι η Φ2, ADR-916 Φ-Ε1).
+ * δεν ζητείται — φαίνεται «Υπάρχει στον φάκελο». Ό,τι του **δόθηκε** το ανοίγει/κατεβάζει εδώ (ADR-942 Φ2).
  *
  * @module components/conveyance/my-cases/EngagedIssuanceDocumentRequests
  */
@@ -15,6 +15,7 @@ import { BellRing, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useCaseFileOpening } from '@/components/conveyance/shared/CaseFileOpening';
 import { IssuanceDocumentRequestList } from '@/components/document-registry/IssuanceDocumentRequestList';
 import { ISSUANCE_REQUEST_KEYS } from '@/components/document-registry/issuance-request-labels';
 import { useDocumentRequestSend } from '@/hooks/document-requests/useDocumentRequestSend';
@@ -25,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { requestIssuanceDocumentsRequest } from '@/services/conveyance/conveyance-document-request-gateway';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { IssuanceDocumentRequests, IssuancePendingRequest, IssuanceRequestItemView } from '@/types/issuance-document-request';
+import { GivenFilesAccessNote, GivenFilesEngaged } from './EngagedIssuanceGivenFiles';
 
 interface Props {
   readonly engagementId: string;
@@ -89,12 +91,15 @@ export function EngagedIssuanceDocumentRequests({ engagementId, panel, onChanged
   const post = useCallback((itemIds: readonly string[]) => requestIssuanceDocumentsRequest(engagementId, itemIds), [engagementId]);
   const { log, requestingIds, send } = useDocumentRequestSend(post, panel.log, panel.today, onChanged);
   const requestable = useMemo(() => issuanceRequestableNow(panel.items, panel.targets, log, panel.today), [panel.items, panel.targets, log, panel.today]);
+  const fileTarget = useMemo(() => ({ kind: 'engagement' as const, engagementId }), [engagementId]);
+  const { openFile, previewDialog } = useCaseFileOpening(fileTarget);
   return (
     <Card asChild className="space-y-4 p-4">
       <section aria-labelledby="issuance-requests-title">
         <header className="space-y-1">
           <h2 id="issuance-requests-title" className="text-sm font-semibold">{t(ISSUANCE_REQUEST_KEYS.title)}</h2>
           <p className={cn('text-xs', colors.text.muted)}>{t(ISSUANCE_REQUEST_KEYS.leadEngaged)}</p>
+          <GivenFilesAccessNote access={panel.access} />
         </header>
         <IssuanceDocumentRequestList
           panel={panel}
@@ -102,7 +107,9 @@ export function EngagedIssuanceDocumentRequests({ engagementId, panel, onChanged
           action={(item, pending) => (
             <RequestAction item={item} pending={pending} panel={panel} busy={requestingIds.has(item.itemId)} onRequest={() => { void send([item.itemId]); }} />
           )}
+          files={(item) => <GivenFilesEngaged item={item} openFile={openFile} />}
         />
+        {previewDialog}
         <RequestAllBar count={requestable.length} onConfirm={() => { void send(requestable.map((item) => item.itemId)); }} />
       </section>
     </Card>

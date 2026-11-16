@@ -13,7 +13,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
-import type { CaseFileOpening } from '@/services/conveyance/conveyance-case-file-access.service';
+import type { EngagedFileOpening as CaseFileOpening } from '@/server/engagement-files/engaged-file-opening.server';
 
 const STATUS: Readonly<Record<Exclude<Extract<CaseFileOpening, { ok: false }>['rejection'], 'denied'>, number>> = {
   'not-found': 404,

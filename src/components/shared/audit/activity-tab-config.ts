@@ -33,6 +33,8 @@ import {
   FileDown,
   Lock,
   FileX,
+  Share2,
+  ShieldOff,
 } from "lucide-react";
 import type { AuditAction } from "@/types/audit-trail";
 
@@ -207,6 +209,19 @@ export const ACTION_MAP: Record<AuditAction, ActionConfig> = {
     labelKey: "audit.actions.document_requested",
     color: "text-[hsl(var(--text-info))]",
     bgColor: "bg-[hsl(var(--bg-info))]/20",
+  },
+  // ADR-942 Φ2 — ο κάτοχος έδωσε / ανακάλεσε την ανάγνωση ενός αρχείου σε επαγγελματία (το «Shared» του Drive).
+  document_shared: {
+    icon: Share2,
+    labelKey: "audit.actions.document_shared",
+    color: "text-[hsl(var(--text-info))]",
+    bgColor: "bg-[hsl(var(--bg-info))]/20",
+  },
+  document_unshared: {
+    icon: ShieldOff,
+    labelKey: "audit.actions.document_unshared",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
   },
 };
 

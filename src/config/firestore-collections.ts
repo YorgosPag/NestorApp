@@ -1031,6 +1031,9 @@ export const COLLECTIONS = {
   // ADR-942 Φ0 — «Ζήτησε έγγραφο» για ΚΑΘΕ είδος υπόθεσης (`subject: {kind, id}`): αμετάβλητο γεγονός ανά
   // (υπόθεση, γραμμή, αιτών, ημέρα)· deny-all, μόνο server. ΜΙΑ συλλογή — απόφαση «Α» του Giorgio.
   DOCUMENT_REQUESTS: process.env.NEXT_PUBLIC_DOCUMENT_REQUESTS_COLLECTION || 'document_requests',
+  // ADR-942 Φ2 — «δόθηκε στον επαγγελματία»: αρχείο του κατόχου ως απάντηση σε αίτημα· ΕΝΑ ανά (υπόθεση, στοιχείο,
+  // αρχείο), ανάκληση = σημάδι (ποτέ διαγραφή). deny-all, μόνο server — η πρόσβαση ΠΑΡΑΓΕΤΑΙ από εδώ σε κάθε ανάγνωση.
+  DOCUMENT_REQUEST_PROVISIONS: process.env.NEXT_PUBLIC_DOCUMENT_REQUEST_PROVISIONS_COLLECTION || 'document_request_provisions',
   // ADR-901 §14.8 — σήμα αλλαγής ανά ΟΨΗ (αριθμός, κανένα περιεχόμενο)· get μόνο από το ακροατήριο της όψης, γράφει μόνο ο server.
   CONVEYANCE_VIEW_SIGNALS: process.env.NEXT_PUBLIC_CONVEYANCE_VIEW_SIGNALS_COLLECTION || 'conveyance_view_signals',
   // ADR-915 Φ5α — ημερολόγιο ακμών του μητρώου λήξεων: τι ΕΧΕΙ ΗΔΗ ειπωθεί ανά γραμμή. Κλειδί `companyId`·

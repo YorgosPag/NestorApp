@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * ADR-901 Φ4 · Φ4.4 — ανοίγει/κατεβάζει ένα τεκμήριο της υπόθεσης: ο επαγγελματίας (μέσω της συμμετοχής του) **ή**
- * ο οικοδεσπότης (μέσω της υπόθεσής του — και ό,τι του στάλθηκε). Ίδια συμπεριφορά, άλλη πόρτα.
+ * ADR-901 Φ4 · Φ4.4 · ADR-942 Φ2 — ανοίγει/κατεβάζει ένα αρχείο της υπόθεσης: ο επαγγελματίας (μέσω της συμμετοχής
+ * του, **κάθε** είδους — τεκμήριο μεταβίβασης ή αρχείο που του δόθηκε σε ανάθεση έκδοσης) **ή** ο οικοδεσπότης (μέσω της
+ * υπόθεσής του — και ό,τι του στάλθηκε). Ίδια συμπεριφορά, άλλη πόρτα.
  *
  * 🔑 Ο server δίνει σύνδεσμο 15′ και γράφει το ίχνος. Η **λήψη** πλοηγεί στον σύνδεσμο (`navigateDocument`):
  *    φέρει ήδη `Content-Disposition: attachment`, άρα η σελίδα **μένει** και το αρχείο κατεβαίνει, χωρίς blob
@@ -17,9 +18,13 @@ import { useCallback, useRef, useState } from 'react';
 import { navigateDocument } from '@/lib/browser/document-navigation';
 import { openEngagedCaseFile, openHostCaseFile, type CaseFileLink } from '@/services/conveyance/conveyance-engagement-gateway';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
-import type { EvidenceFile } from '@/types/conveyance-case';
 
 export type CaseFileOpenOutcome = 'opened' | 'unavailable';
+
+/** Ό,τι χρειάζεται το άνοιγμα από ένα αρχείο — **μόνο** η ταυτότητά του· τα υπόλοιπα τα αποφασίζει ο server. */
+export interface OpenableCaseFile {
+  readonly fileId: string;
+}
 
 /** **Μέσω τίνος** ανοίγει: της δικής μου συμμετοχής ή της υπόθεσης του χώρου μου (οικοδεσπότης). */
 export type CaseFileTarget =
@@ -34,7 +39,7 @@ function requestLink(target: CaseFileTarget, fileId: string, mode: CaseFileMode)
 
 /** Το τεκμήριο σε προεπισκόπηση **και** ο σύνδεσμός του: η «Λήψη» από τον διάλογο ξέρει ρητά ποιο αρχείο είναι. */
 export interface CaseFilePreview {
-  readonly file: EvidenceFile;
+  readonly file: OpenableCaseFile;
   readonly link: CaseFileLink;
 }
 
@@ -42,7 +47,7 @@ interface UseCaseFileOpenerReturn {
   /** `null` ⇒ κλειστός διάλογος. */
   readonly preview: CaseFilePreview | null;
   readonly busyFileId: string | null;
-  readonly open: (file: EvidenceFile, mode: CaseFileMode) => Promise<CaseFileOpenOutcome>;
+  readonly open: (file: OpenableCaseFile, mode: CaseFileMode) => Promise<CaseFileOpenOutcome>;
   readonly closePreview: () => void;
 }
 
@@ -52,7 +57,7 @@ export function useCaseFileOpener(target: CaseFileTarget): UseCaseFileOpenerRetu
   const [busyFileId, setBusyFileId] = useState<string | null>(null);
   const inFlight = useRef<string | null>(null);
 
-  const open = useCallback(async (file: EvidenceFile, mode: CaseFileMode): Promise<CaseFileOpenOutcome> => {
+  const open = useCallback(async (file: OpenableCaseFile, mode: CaseFileMode): Promise<CaseFileOpenOutcome> => {
     if (inFlight.current !== null) return 'opened';
     inFlight.current = file.fileId;
     setBusyFileId(file.fileId);
