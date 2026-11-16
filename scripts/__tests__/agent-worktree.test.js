@@ -292,7 +292,7 @@ describe('ένταξη', () => {
     commitIn(dir, 'b.txt', 'b\n', 'δεύτερο');
     commitIn(primary, 'other.txt', 'o\n');
     expect(land('task-one', options()).reverified).toBe(true);
-    expect(git(primary, ['log', '-1', '--format=%B'])).toMatch(/δεύτερο[\s\S]*πρώτο/);
+    expect(git(primary, ['log', '-1', '--format=%B'])).toMatch(/^πρώτο[\s\S]*δεύτερο/); // τίτλος = το παλαιότερο (§15.4)
     expect(git(primary, ['rev-list', '--count', 'HEAD'])).toBe('3');
     ['a.txt', 'b.txt', 'other.txt'].forEach((name) => expect(fs.existsSync(path.join(primary, name))).toBe(true));
   });
@@ -305,6 +305,16 @@ describe('ένταξη', () => {
     land('task-one', options());
     expect(git(primary, ['log', '-1', '--format=%s'])).toBe('feat: η πραγματική αλλαγή');
     expect(git(primary, ['log', '-1', '--format=%B'])).toContain('docs(handoff): προηγούμενη συνεδρία');
+  });
+
+  it('🔴 κλαδί feat → chore πάνω σε κινημένο main: τίτλος το feat, όχι η διόρθωση πύλης', () => {
+    const { dir } = open('task-one');
+    commitIn(dir, 'a.txt', 'a\n', 'feat: η πραγματική αλλαγή');
+    commitIn(dir, 'b.txt', 'b\n', 'chore: baseline πύλης');
+    commitIn(primary, 'other.txt', 'o\n');
+    land('task-one', options());
+    expect(git(primary, ['log', '-1', '--format=%s'])).toBe('feat: η πραγματική αλλαγή');
+    expect(git(primary, ['log', '-1', '--format=%B'])).toContain('chore: baseline πύλης');
   });
 
   it('🔴 οι πύλες κρίνουν ΟΛΗ την αλλαγή μετά το rebase, και η απόρριψη αφήνει το κλαδί ως είχε', () => {
@@ -365,10 +375,16 @@ describe('ένταξη', () => {
 });
 
 describe('μήνυμα ένταξης (καθαρή συνάρτηση)', () => {
-  it('τίτλος = το νεότερο που δεν είναι handoff· το σώμα κρατά όλα τα άλλα, νεότερο πρώτο', () => {
+  it('τίτλος = το παλαιότερο που δεν είναι handoff· το σώμα κρατά όλα τα άλλα, νεότερο πρώτο', () => {
     const message = composeLandMessage(['docs(handoff): νέο', 'feat: Β\n\nσώμα Β', 'feat: Α', 'docs(handoff): παλιό']);
-    expect(message.split('\n')[0]).toBe('feat: Β');
-    expect(message).toBe('feat: Β\n\nσώμα Β\n\ndocs(handoff): νέο\n\nfeat: Α\n\ndocs(handoff): παλιό');
+    expect(message.split('\n')[0]).toBe('feat: Α');
+    expect(message).toBe('feat: Α\n\ndocs(handoff): νέο\n\nfeat: Β\n\nσώμα Β\n\ndocs(handoff): παλιό');
+  });
+
+  it('🔴 η μεταγενέστερη διόρθωση πύλης ΔΕΝ παίρνει τον τίτλο της αλλαγής (fde89989)', () => {
+    const message = composeLandMessage(['chore(native-tooltip): baseline 38 → 31', 'feat(adr-929): §6.25 οδηγός']);
+    expect(message.split('\n')[0]).toBe('feat(adr-929): §6.25 οδηγός');
+    expect(message).toContain('chore(native-tooltip): baseline 38 → 31');
   });
 
   it('όλα handoff: εφεδρεία το νεότερο', () => {

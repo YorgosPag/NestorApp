@@ -49,14 +49,15 @@ const HANDOFF_SUBJECT = /^docs\(handoff\)/;
 
 /**
  * Μήνυμα του ενιαίου commit. `messages` = νεότερο πρώτο.
- * Τίτλος: το νεότερο που ΔΕΝ είναι `docs(handoff)` — αλλιώς το νεότερο. Το παλαιότερο
- * commit ενός κλαδιού είναι συχνά το handoff της προηγούμενης συνεδρίας, και έδινε
- * στο `main` τίτλο άσχετο με την αλλαγή (21474786). Το σώμα κρατά ΟΛΑ τα μηνύματα.
+ * Τίτλος: το ΠΑΛΑΙΟΤΕΡΟ που ΔΕΝ είναι `docs(handoff)` — αλλιώς το νεότερο (GitHub
+ * «Squash and merge»). Το πρώτο commit ενός κλαδιού είναι η αλλαγή· τα επόμενα είναι
+ * συνήθως διορθώσεις για τις πύλες (fde89989: τίτλος `chore` πάνω από το `feat`). Το
+ * handoff της προηγούμενης συνεδρίας παρακάμπτεται (21474786). Το σώμα κρατά ΟΛΑ τα μηνύματα.
  */
 function composeLandMessage(messages) {
   const clean = messages.map((text) => text.trim()).filter(Boolean);
   if (clean.length === 0) throw new Error('Κανένα μήνυμα commit για ένωση.');
-  const lead = clean.findIndex((text) => !HANDOFF_SUBJECT.test(text));
+  const lead = clean.findLastIndex((text) => !HANDOFF_SUBJECT.test(text));
   const chosen = lead === -1 ? 0 : lead;
   return [clean[chosen], ...clean.filter((_, index) => index !== chosen)].join('\n\n');
 }
