@@ -13,6 +13,7 @@
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { BallInCourtParty, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import type { InspectionContactRole } from '@/lib/document-validity/issuance-inspection-contact';
 import type { QuoteTotals } from '@/lib/document-validity/issuance-quote';
 import type { ActingForView, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
 import type { DeclaredCredential, EngagementState, EngagementVerdict } from '@/types/engagement';
@@ -39,10 +40,30 @@ export interface MyIssuanceCard {
 export type MyEngagementCard = MyCaseCard | MyIssuanceCard;
 
 /**
+ * ADR-915 §45.15 — ο υπεύθυνος επικοινωνίας αυτοψίας που **όρισε ρητά** το γραφείο. Όνομα και τηλέφωνο είναι της
+ * επαφής **τώρα** (κανένα αντίγραφο)· `phone: null` = η επαφή δεν έχει τηλέφωνο.
+ */
+export interface InspectionContactView {
+  readonly name: string | null;
+  readonly phone: string | null;
+  readonly role: InspectionContactRole;
+  readonly roleOther: string | null;
+}
+
+/** ADR-915 §45.15 — ένας ιδιοκτήτης του ακινήτου όπως τον ξέρει το γραφείο (όνομα · ΑΦΜ), για το έντυπο του εγγράφου. */
+export interface IssuanceOwnerView {
+  readonly name: string | null;
+  /** `null` ⇒ το γραφείο δεν έχει ΑΦΜ για αυτόν — η όψη το λέει, ποτέ κενό σιωπηλά. */
+  readonly vatNumber: string | null;
+}
+
+/**
  * ADR-915 §45.10 — **τα στοιχεία της εκτέλεσης**, μόνο όσο η ανάθεση είναι αναληφθείσα (`accepted`, μετά την έγκριση):
  * πού (η αυτοψία), για ποιον (ο ιδιοκτήτης που ενέκρινε — το όνομα μπαίνει και στο ΠΕΑ), πόσο (η συμφωνημένη
  * αναθεώρηση) και ως πότε (η τρέχουσα προθεσμία). Κάθε πεδίο `null` = «δεν δηλώθηκε / δεν διαβάστηκε», ποτέ μαντεψιά.
- * 🔒 Ε-9′: **κανένα** τηλέφωνο ή email — η πλατφόρμα δεν αποκαλύπτει ποτέ μόνη της κανάλι επικοινωνίας.
+ * §45.15 — και **με ποιον** κλείνει την αυτοψία + **όλοι** οι ιδιοκτήτες με ΑΦΜ.
+ * 🔒 Ε-9′: η πλατφόρμα δεν αποκαλύπτει ποτέ **μόνη της** κανάλι επικοινωνίας. Το μόνο τηλέφωνο εδώ είναι του υπευθύνου
+ *    αυτοψίας, που το γραφείο **όρισε ρητά** για αυτόν τον σκοπό· κανένα email, κανένα κανάλι του γραφείου.
  */
 export interface IssuanceAgreementView {
   readonly siteAddress: string | null;
@@ -51,6 +72,10 @@ export interface IssuanceAgreementView {
   readonly totals: QuoteTotals | null;
   /** ISO ημέρα — `null` ⇒ καμία δέσμευση χρόνου. */
   readonly dueOn: string | null;
+  /** `null` ⇒ το γραφείο δεν όρισε ακόμη υπεύθυνο αυτοψίας. */
+  readonly inspectionContact: InspectionContactView | null;
+  /** `null` ⇒ οι ιδιοκτήτες δεν διαβάστηκαν τώρα· `[]` ⇒ το μητρώο δεν ξέρει ιδιοκτήτη. */
+  readonly owners: readonly IssuanceOwnerView[] | null;
 }
 
 /**

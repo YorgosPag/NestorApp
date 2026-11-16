@@ -39,6 +39,7 @@ import {
   type IssuanceQuote, type IssuanceReceipt, type QuoteSubmission, type QuoteTerms,
 } from './issuance-quote';
 import type { IssuanceDeliveryReminders } from './issuance-delivery-reminder';
+import { inspectionContactSet, type IssuanceInspectionContactEntry, type IssuanceSetInspectionContactAction } from './issuance-inspection-contact';
 import type { IssuanceReminders } from './issuance-reminder';
 import { ballInCourtOf, isLegacyIssuance, issuanceStageOf, type BallInCourtParty, type IssuanceStage } from './issuance-stage';
 
@@ -163,6 +164,8 @@ export interface IssuanceAssignmentRecord {
    * Τηλεμετρία, όπως οι `reminders` των μηνυμάτων: ο μειωτής **δεν** την κρίνει. `null` = καμία.
    */
   readonly deliveryReminders: IssuanceDeliveryReminders | null;
+  /** §45.15 — οι ορισμοί υπευθύνου αυτοψίας από το γραφείο, με τη σειρά τους· ο τρέχων = ο νεότερος. Κενό = κανείς. */
+  readonly inspectionContacts: readonly IssuanceInspectionContactEntry[];
   readonly cancellation: { readonly at: string; readonly byUid: string } | null;
 }
 
@@ -231,6 +234,8 @@ export type IssuanceAction =
   | { readonly kind: 'record-receipt'; readonly mark: string; readonly issuedOn: string; readonly totalMinor: number }
   /** §45 Φ2 — ορισμός ή αλλαγή (με αιτιολογία) της προθεσμίας παράδοσης· μόνο το γραφείο, μόνο μετά την ανάθεση. */
   | IssuanceScheduleDeliveryAction
+  /** §45.15 — ορισμός ή αλλαγή του υπευθύνου αυτοψίας· μόνο το γραφείο, σε κάθε στάδιο πριν την παράδοση. */
+  | IssuanceSetInspectionContactAction
   | { readonly kind: 'cancel' };
 
 export type IssuanceActionKind = IssuanceAction['kind'];
@@ -245,6 +250,7 @@ const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose'>, read
   quote: ['sent', 'accepted'],
   'record-receipt': ['accepted'],
   'schedule-delivery': ['accepted'],
+  'set-inspection-contact': ['proposed', 'ownerApproved', 'sent', 'quoted', 'accepted'],
   cancel: ['proposed', 'ownerApproved', 'sent', 'quoted', 'accepted', 'declined'],
 };
 
@@ -275,7 +281,8 @@ export type IssuanceReduction =
   | { readonly ok: true; readonly record: IssuanceAssignmentRecord; readonly changed: boolean }
   | { readonly ok: false; readonly refusal: IssuanceRefusalReason };
 
-function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: string, nowIso: string): IssuanceAssignmentRecord {
+/** Νέα πρόταση· ο υπεύθυνος αυτοψίας του ίδιου ανοιχτού κύκλου μένει (γεγονός του ακινήτου, όχι του επαγγελματία). */
+function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: string, nowIso: string, inspectionContacts: readonly IssuanceInspectionContactEntry[]): IssuanceAssignmentRecord {
   return {
     professionalContactId: action.professionalContactId,
     credential: action.credential,
@@ -289,6 +296,7 @@ function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: str
     receipt: null,
     deliverySchedule: [],
     deliveryReminders: null,
+    inspectionContacts,
     cancellation: null,
   };
 }
@@ -330,7 +338,7 @@ function responseBasisOf(record: IssuanceAssignmentRecord, actor: IssuanceActor)
 }
 
 /** Οι πράξεις που κάνει **μόνο** το γραφείο — ο έλεγχος actor έγινε ήδη. */
-function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<AdvancingAction, { kind: 'decide' | 'respond' | 'quote' | 'record-receipt' | 'schedule-delivery' }>, uid: string, at: string): IssuanceAssignmentRecord {
+function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<AdvancingAction, { kind: 'decide' | 'respond' | 'quote' | 'record-receipt' | 'schedule-delivery' | 'set-inspection-contact' }>, uid: string, at: string): IssuanceAssignmentRecord {
   switch (action.kind) {
     case 'request-approval': return {
       ...record,
@@ -408,6 +416,7 @@ function advanced(record: IssuanceAssignmentRecord, stage: IssuanceStage, action
   if (actor.kind !== 'office') return { ok: false, refusal: 'actor-refused' };
   if (action.kind === 'record-receipt') return receipted(record, action, actor.uid, actor.nowIso);
   if (action.kind === 'schedule-delivery') return scheduledDelivery(record, action, actor.uid, actor.nowIso);
+  if (action.kind === 'set-inspection-contact') return inspectionContactSet(record, action, actor.uid, actor.nowIso);
   return { ok: true, record: officeAdvanced(record, action, actor.uid, actor.nowIso), changed: true };
 }
 
@@ -469,7 +478,8 @@ export function reduceIssuance(
     if (!qualifiesFor(kind, action.credential.qualification)) return { ok: false, refusal: 'unqualified' };
     if (sameProposal(state, action) && current !== null) return { ok: true, record: current, changed: false };
     if (!canProposeIssuance(state)) return { ok: false, refusal: 'transition-refused' };
-    return { ok: true, record: proposed(action, actor.uid, actor.nowIso), changed: true };
+    const carried = state.kind === 'open' ? state.record.inspectionContacts : [];
+    return { ok: true, record: proposed(action, actor.uid, actor.nowIso, carried), changed: true };
   }
   // «Ποιος» πριν από «από πού»: ο σύνδεσμος δεν κάνει πράξη του γραφείου, σε **κανένα** στάδιο.
   if (actor.kind === 'link' && !LINK_ACTIONS.has(action.kind)) return { ok: false, refusal: 'actor-refused' };

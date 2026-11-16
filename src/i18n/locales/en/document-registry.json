@@ -259,6 +259,13 @@
       "cancelled": "Cancelled",
       "quoted": "Quote received — awaiting the owner's approval"
     },
+    "inspectionRole": {
+      "owner": "Owner",
+      "manager": "Property manager",
+      "tenant": "Tenant",
+      "technical": "Technical manager",
+      "other": "Other"
+    },
     "rowAction": {
       "proposed": "Request a quote",
       "ownerApproved": "Notify the professional",

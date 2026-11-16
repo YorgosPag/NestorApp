@@ -27,6 +27,7 @@ import {
   REGISTRY_NUMBER_MAX,
   type IssuanceAction,
 } from './issuance-assignment';
+import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from './issuance-inspection-contact';
 import {
   MYDATA_MARK_PATTERN,
   QUOTE_BASES,
@@ -113,6 +114,17 @@ export const issuanceAssignmentBody = z.discriminatedUnion('action', [
    * υποχρεωτική στην αλλαγή — την κρίνει ο μειωτής, που ξέρει αν υπάρχει ήδη προθεσμία.
    */
   z.object({ action: z.literal('schedule-delivery'), ...target, dueOn: isoDay, reason: optionalText(ISSUANCE_NOTE_MAX) }),
+  /**
+   * §45.15 — ο υπεύθυνος επικοινωνίας αυτοψίας: **επαφή του γραφείου** + ιδιότητα. Το «Άλλο» θέλει κείμενο — το κρίνει
+   * ο μειωτής, που ξέρει και αν είναι ίδιος με τον τρέχοντα.
+   */
+  z.object({
+    action: z.literal('set-inspection-contact'),
+    ...target,
+    contactId: z.string().trim().min(1),
+    role: z.enum(INSPECTION_CONTACT_ROLES),
+    roleOther: optionalText(INSPECTION_CONTACT_POLICY.roleOtherMax),
+  }),
   z.object({ action: z.literal('cancel'), ...target }),
 ]);
 
@@ -235,6 +247,7 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
     case 'record-quote': return { kind: 'quote', terms: quoteTermsOf(request.terms, request.note) };
     case 'record-receipt': return { kind: 'record-receipt', mark: request.mark, issuedOn: request.issuedOn, totalMinor: request.totalMinor };
     case 'schedule-delivery': return { kind: 'schedule-delivery', dueOn: request.dueOn, reason: request.reason };
+    case 'set-inspection-contact': return { kind: 'set-inspection-contact', contactId: request.contactId, role: request.role, roleOther: request.roleOther };
     case 'cancel': return { kind: 'cancel' };
   }
 }

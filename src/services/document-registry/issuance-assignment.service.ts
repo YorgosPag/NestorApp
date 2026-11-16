@@ -37,7 +37,7 @@ export interface IssuanceRequester {
  * Κάθε άρνηση λέει στον άνθρωπο κάτι διαφορετικό:
  * - `absent`              — η γραμμή δεν θέλει ανάθεση (ή το ακίνητο δεν είναι του γραφείου)
  * - `unavailable`         — ο κατάλογος αναθέσεων δεν διαβάστηκε τώρα
- * - `contact-unavailable` — ο επαγγελματίας δεν είναι επαφή του γραφείου
+ * - `contact-unavailable` — ο επαγγελματίας (ή ο υπεύθυνος αυτοψίας, §45.15) δεν είναι επαφή του γραφείου
  * - `lead-undesignated` · `lead-changed` — η απόφαση δεν έχει (πια) τον ίδιο υπεύθυνο
  * - `stale` · `transition-refused` · `unqualified` · `actor-refused` — από τον γραφέα / τον μειωτή
  */
@@ -74,13 +74,21 @@ export function leadRefusalFor(
   return lead.contactId === expectedOwnerContactId ? null : 'lead-changed';
 }
 
-/** Ονόματα για το ιστορικό: όσα ξέρει το μητρώο + ο νέος επαγγελματίας (ελεγμένος ως επαφή του μισθωτή). */
+/** Η **νέα** επαφή που φέρνει η πράξη — ο επαγγελματίας (§27) ή ο υπεύθυνος αυτοψίας (§45.15)· `null` = καμία. */
+function contactBroughtBy(body: IssuanceAssignmentBody): string | null {
+  if (body.action === 'propose') return body.professionalContactId;
+  if (body.action === 'set-inspection-contact') return body.contactId;
+  return null;
+}
+
+/** Ονόματα για το ιστορικό: όσα ξέρει το μητρώο + η νέα επαφή της πράξης (ελεγμένη ως επαφή του μισθωτή). */
 async function namesFor(db: Firestore, actor: IssuanceRequester, body: IssuanceAssignmentBody, registry: DocumentRegistryResponse) {
   const names: Record<string, string | null> = Object.fromEntries(Object.entries(registry.people).map(([id, person]) => [id, person.name]));
-  if (body.action !== 'propose') return names;
-  const contact = (await readOwnedContactDocs(db, actor.companyId, [body.professionalContactId])).get(body.professionalContactId);
+  const contactId = contactBroughtBy(body);
+  if (contactId === null) return names;
+  const contact = (await readOwnedContactDocs(db, actor.companyId, [contactId])).get(contactId);
   if (contact === undefined) return null;
-  return { ...names, [body.professionalContactId]: trimmedStringOrNull(extractContactDisplayName(contact)) };
+  return { ...names, [contactId]: trimmedStringOrNull(extractContactDisplayName(contact)) };
 }
 
 export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequester, body: IssuanceAssignmentBody, now: Date): Promise<IssuanceResult> {

@@ -36,6 +36,7 @@ import type { ExpirySource } from '@/lib/document-validity/document-expiry';
 import type { FactsDeclarationServiceRefusal } from '@/lib/document-validity/facts-declaration';
 import type { RegistryRowState } from '@/lib/document-validity/document-registry';
 import type { ObligorLeadBasis, ObligorUndesignatedReason } from '@/lib/document-validity/obligor-lead';
+import type { InspectionContactRole } from '@/lib/document-validity/issuance-inspection-contact';
 import type { RegistryPickerView } from '@/lib/document-validity/document-registry-view';
 import type {
   DependentImpact,
@@ -230,6 +231,15 @@ export const OBLIGOR_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
 /** «Τον ορίζει …» — πλήρης πρόταση ανά υπόχρεο (ποτέ συναρμολόγηση άρθρου/πτώσης από κομμάτια). */
 export const APPOINTED_BY_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
   owner: `${K}issuer.appointedBy.owner`,
+};
+
+/** ADR-915 §45.15 — η ιδιότητα του υπευθύνου αυτοψίας: ο ΙΔΙΟΣ κατάλογος για το πάνελ, τον χώρο και το ιστορικό. */
+export const INSPECTION_ROLE_LABEL_KEYS: Readonly<Record<InspectionContactRole, string>> = {
+  owner: `${K}issuance.inspectionRole.owner`,
+  manager: `${K}issuance.inspectionRole.manager`,
+  tenant: `${K}issuance.inspectionRole.tenant`,
+  technical: `${K}issuance.inspectionRole.technical`,
+  other: `${K}issuance.inspectionRole.other`,
 };
 
 /** ADR-915 §26 — ο ΕΝΑΣ υπεύθυνος των εγγράφων ακινήτου με πολλούς ιδιοκτήτες (`obligor-lead.ts`). */

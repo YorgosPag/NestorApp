@@ -2,7 +2,7 @@
  * 🏢 SSoT — ανάγνωση πεδίων επαφής **από ωμό έγγραφο Firestore** (Admin SDK).
  *
  * Ό,τι διαβάζει μια διαδρομή Admin SDK από έγγραφο επαφής και θα το έγραφε
- * αλλιώς δεύτερη φορά, ζει εδώ: όνομα εμφάνισης, λίστα email.
+ * αλλιώς δεύτερη φορά, ζει εδώ: όνομα εμφάνισης, λίστα email, κύριο τηλέφωνο, ΑΦΜ.
  *
  * ⚠️ Γιατί δεν είναι το `getContactDisplayName` του `types/contacts/helpers`:
  *
@@ -51,6 +51,28 @@ export function extractContactDisplayName(data: FirebaseFirestore.DocumentData):
   const first = String(data.firstName ?? '');
   const last = String(data.lastName ?? '');
   return `${first} ${last}`.trim();
+}
+
+/** Μη κενό κείμενο, αλλιώς `null`. */
+function textOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+}
+
+/**
+ * Το **κύριο** τηλέφωνο της επαφής από το ωμό έγγραφο — ίδια σειρά με το τυποποιημένο `getPrimaryPhone`
+ * (`types/contacts/helpers`): το σημειωμένο κύριο → το πρώτο → τα παλιά πεδία υπηρεσίας. `null` = κανένα.
+ */
+export function extractContactPrimaryPhone(data: FirebaseFirestore.DocumentData): string | null {
+  const phones: readonly Record<string, unknown>[] = Array.isArray(data.phones) ? data.phones : [];
+  const numbers = phones.filter((p) => textOrNull(p?.number) !== null);
+  const chosen = numbers.find((p) => p.isPrimary === true) ?? numbers[0];
+  if (chosen) return textOrNull(chosen.number);
+  return textOrNull(data.phone) ?? textOrNull(data.telephone) ?? textOrNull(data.centralPhone);
+}
+
+/** Ο ΑΦΜ της επαφής από το ωμό έγγραφο — `vatNumber`, αλλιώς το παλιό `taxNumber` (`@deprecated`). `null` = κανένας. */
+export function extractContactVatNumber(data: FirebaseFirestore.DocumentData): string | null {
+  return textOrNull(data.vatNumber) ?? textOrNull(data.taxNumber);
 }
 
 /** Μια εγγραφή email επαφής, κανονικοποιημένη από ωμό `DocumentData`. */

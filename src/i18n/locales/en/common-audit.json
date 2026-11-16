@@ -744,7 +744,13 @@
       },
       "energyCertificateIssuanceDeliveryDue": "Energy certificate issuance — delivery deadline",
       "buildingIdentityIssuanceDeliveryDue": "Building identity issuance — delivery deadline",
-      "electricalInstallationIssuanceDeliveryDue": "Electrical installation issuance — delivery deadline"
+      "electricalInstallationIssuanceDeliveryDue": "Electrical installation issuance — delivery deadline",
+      "energyCertificateIssuanceInspectionContact": "Energy certificate issuance — site visit contact",
+      "buildingIdentityIssuanceInspectionContact": "Building identity issuance — site visit contact",
+      "electricalInstallationIssuanceInspectionContact": "Electrical installation issuance — site visit contact",
+      "energyCertificateIssuanceInspectionRole": "Energy certificate issuance — site visit contact capacity",
+      "buildingIdentityIssuanceInspectionRole": "Building identity issuance — site visit contact capacity",
+      "electricalInstallationIssuanceInspectionRole": "Electrical installation issuance — site visit contact capacity"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

@@ -744,7 +744,13 @@
       },
       "energyCertificateIssuanceDeliveryDue": "Ανάθεση έκδοσης ΠΕΑ — προθεσμία παράδοσης",
       "buildingIdentityIssuanceDeliveryDue": "Ανάθεση ταυτότητας κτιρίου — προθεσμία παράδοσης",
-      "electricalInstallationIssuanceDeliveryDue": "Ανάθεση ΥΔΕ — προθεσμία παράδοσης"
+      "electricalInstallationIssuanceDeliveryDue": "Ανάθεση ΥΔΕ — προθεσμία παράδοσης",
+      "energyCertificateIssuanceInspectionContact": "Ανάθεση έκδοσης ΠΕΑ — υπεύθυνος επικοινωνίας αυτοψίας",
+      "buildingIdentityIssuanceInspectionContact": "Ανάθεση ταυτότητας κτιρίου — υπεύθυνος επικοινωνίας αυτοψίας",
+      "electricalInstallationIssuanceInspectionContact": "Ανάθεση ΥΔΕ — υπεύθυνος επικοινωνίας αυτοψίας",
+      "energyCertificateIssuanceInspectionRole": "Ανάθεση έκδοσης ΠΕΑ — ιδιότητα υπευθύνου αυτοψίας",
+      "buildingIdentityIssuanceInspectionRole": "Ανάθεση ταυτότητας κτιρίου — ιδιότητα υπευθύνου αυτοψίας",
+      "electricalInstallationIssuanceInspectionRole": "Ανάθεση ΥΔΕ — ιδιότητα υπευθύνου αυτοψίας"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

@@ -9,7 +9,8 @@ import 'server-only';
  *    αποδοχή της πρόσκλησης αρνείται `case-closed`, το ίδιο λεξιλόγιο με τη μεταβίβαση).
  * 🔑 **Το μητρώο το παράγει το προσόν** (`qualificationRegistryAuthority`): ενεργειακός επιθεωρητής ⇒ ΥΠΕΝ (εθνικό,
  *    χωρίς σύλλογο). Ο άνθρωπος δηλώνει μόνο αριθμό.
- * 🔒 **Ε-9′**: η όψη του επαγγελματία **δεν** φέρει τηλέφωνο ή email του γραφείου — μόνο ονόματα και γεγονότα.
+ * 🔒 **Ε-9′**: η όψη του επαγγελματία **δεν** φέρει τηλέφωνο ή email του γραφείου — μόνο ονόματα και γεγονότα. Μόνη
+ *    εξαίρεση (§45.15): το τηλέφωνο του υπευθύνου αυτοψίας που το γραφείο **όρισε ρητά**, μόνο σε `accepted`.
  * ⚠️ **Χωρίς ζωντανή όψη στο μητρώο λήξεων**: η κάρτα του γραφείου ξαναδιαβάζεται στο άνοιγμα/ανανέωση (δεν υπάρχει
  *    υποδομή σήματος όψεων εκεί — ADR-915 §39). Το σήμα του γραφέα είναι γι' αυτό **ρητά** άδειο, όχι ξεχασμένο.
  */
@@ -45,6 +46,7 @@ import type { EngagementHostLine } from '@/types/contact-professional-link';
 import { SCOPE_OF_SUBJECT, type IssuanceEngagement } from '@/types/engagement';
 import type { IssuanceEngagementInvitation } from '@/types/engagement-invitation';
 import type { IssuanceAgreementView, MyIssuanceCard } from '@/types/my-engagements';
+import { readIssuanceAgreementParties } from './issuance-agreement-parties.server';
 import { issuanceRecordOf, parseIssuanceAssignment, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
 
 /** Το στάδιο όπου ο χώρος δέχεται είσοδο — μετά το «Αναλαμβάνω», πριν από ακύρωση/παράδοση. */
@@ -195,15 +197,16 @@ async function listCards(db: Firestore, viewer: CasesViewer, history: readonly I
  * ADR-915 §45.10 — ό,τι υποσχέθηκε η σελίδα προσφοράς «μετά την έγκριση» (Π-7): **μόνο** σε αναληφθείσα ανάθεση.
  * Πριν (προσφορά · απόφαση) ή μετά (ακύρωση) ⇒ `null`: ο φάκελος προσφοράς δεν διευρύνεται σιωπηλά.
  */
-async function agreementOf(db: Firestore, assignment: DocumentIssuanceAssignment, stage: IssuanceStage): Promise<IssuanceAgreementView | null> {
+async function agreementOf(db: Firestore, assignment: DocumentIssuanceAssignment, stage: IssuanceStage, now: Date): Promise<IssuanceAgreementView | null> {
   if (stage !== SPACE_OPEN_STAGE || assignment.decision === null) return null;
   const record = issuanceRecordOf(assignment);
   const quote = agreedQuoteOf(record);
-  const [siteAddress, ownerName] = await Promise.all([
+  const [siteAddress, ownerName, parties] = await Promise.all([
     readPropertySiteAddress(db, assignment.companyId, assignment.propertyId),
     contactNameOf(db, assignment.companyId, assignment.decision.ownerContactId),
+    readIssuanceAgreementParties(db, assignment, now),
   ]);
-  return { siteAddress, ownerName, totals: quote ? quoteTotalsOf(quote) : null, dueOn: issuanceDeliveryOf(record)?.dueOn ?? null };
+  return { siteAddress, ownerName, totals: quote ? quoteTotalsOf(quote) : null, dueOn: issuanceDeliveryOf(record)?.dueOn ?? null, ...parties };
 }
 
 async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEngagement, nowMs: number): Promise<EngagedViewOutcome> {
@@ -217,7 +220,7 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
   const [propertyName, hostName, agreement] = await Promise.all([
     propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
     hostNameOf(engagement.hostCompanyId),
-    agreementOf(db, assignment, stage),
+    agreementOf(db, assignment, stage, new Date(nowMs)),
   ]);
   return {
     ok: true,

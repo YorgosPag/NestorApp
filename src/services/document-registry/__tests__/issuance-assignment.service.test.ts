@@ -223,3 +223,39 @@ describe('ο κατάλογος του γραφείου γυρίζει ως «ξ
     }]);
   });
 });
+
+describe('actOnIssuanceAssignment — §45.15 υπεύθυνος αυτοψίας', () => {
+  const SET_CONTACT = {
+    action: 'set-inspection-contact', ...TARGET, expectedStage: 'proposed', contactId: 'cont_b', role: 'owner', roleOther: null,
+  } as const satisfies IssuanceAssignmentBody;
+
+  it('επαφή του γραφείου ⇒ γράφεται, με ίχνος «πρόσωπο + ιδιότητα»· το στάδιο δεν αλλάζει', async () => {
+    await act(PROPOSE);
+    EntityAuditService.recordChange.mockClear();
+    expect(await act(SET_CONTACT)).toMatchObject({ ok: true, outcome: 'changed', stage: 'proposed' });
+    expect(stored()).toMatchObject({ inspectionContacts: [{ contactId: 'cont_b', role: 'owner', roleOther: null, byUid: 'user_1' }] });
+    expect(EntityAuditService.recordChange).toHaveBeenCalledWith(expect.objectContaining({
+      changes: [
+        expect.objectContaining({ field: 'energyCertificateIssuanceInspectionContact', oldValue: null, newValue: 'cont_b', newValueLabel: 'Βήτα Συνθετικός' }),
+        { field: 'energyCertificateIssuanceInspectionRole', oldValue: null, newValue: 'owner' },
+      ],
+    }));
+  });
+
+  it('μόνο αλλαγή ιδιότητας ⇒ ίχνος μόνο της ιδιότητας', async () => {
+    await act(PROPOSE);
+    await act(SET_CONTACT);
+    EntityAuditService.recordChange.mockClear();
+    await act({ ...SET_CONTACT, role: 'tenant' });
+    expect(EntityAuditService.recordChange).toHaveBeenCalledWith(expect.objectContaining({
+      changes: [{ field: 'energyCertificateIssuanceInspectionRole', oldValue: 'owner', newValue: 'tenant' }],
+    }));
+  });
+
+  it('επαφή ΑΛΛΟΥ γραφείου ⇒ `contact-unavailable`, τίποτα δεν γράφεται', async () => {
+    await act(PROPOSE);
+    seedContact('cont_foreign', 'Ξένος', OTHER);
+    expect(await act({ ...SET_CONTACT, contactId: 'cont_foreign' })).toEqual({ ok: false, refusal: 'contact-unavailable' });
+    expect(stored()).toMatchObject({ inspectionContacts: [] });
+  });
+});

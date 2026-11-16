@@ -27,6 +27,7 @@ import { ISSUANCE_DELIVERY_OUTCOMES } from '@/lib/document-validity/issuance-del
 import { MYDATA_MARK_PATTERN, QUOTE_BASES, QUOTE_MAX_REVISION, QUOTE_SCOPE_ITEMS } from '@/lib/document-validity/issuance-quote';
 import { ISSUANCE_DELIVERY_POLICY } from '@/lib/document-validity/issuance-delivery-due';
 import { ISSUANCE_DELIVERY_REMINDER_POLICY } from '@/lib/document-validity/issuance-delivery-reminder';
+import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from '@/lib/document-validity/issuance-inspection-contact';
 import { deliveryBusinessDaysSchema, isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
 import { generateDeterministicDocumentIssuanceAssignmentId } from '@/services/enterprise-id.service';
 import { REGISTRY_PROPERTY_SCOPES, type RegistryPropertyScope } from './document-registry.types';
@@ -103,6 +104,15 @@ const deliveryRemindersSchema = z.object({
   manual: z.array(z.object({ at: nonEmpty, byUid: nonEmpty })).max(ISSUANCE_DELIVERY_REMINDER_POLICY.maxManual),
 }).nullable().default(null);
 
+/** §45.15 — έγγραφα πριν από το 1β δεν είχαν υπεύθυνο αυτοψίας: «κανείς», που ήταν και η αλήθεια τους. */
+const inspectionContactsSchema = z.array(z.object({
+  contactId: nonEmpty,
+  role: z.enum(INSPECTION_CONTACT_ROLES),
+  roleOther: z.string().min(1).max(INSPECTION_CONTACT_POLICY.roleOtherMax).nullable(),
+  at: nonEmpty,
+  byUid: nonEmpty,
+})).max(INSPECTION_CONTACT_POLICY.maxEntries).default([]);
+
 const responseSchema = z.discriminatedUnion('basis', [
   z.object({ basis: z.literal('recorded'), recordedByUid: nonEmpty }),
   z.object({ basis: z.literal('professional-link'), invitationId: nonEmpty, verifiedBy: verification }),
@@ -136,6 +146,7 @@ const assignmentSchema = z.object({
   receipt: receiptSchema,
   deliverySchedule: deliveryScheduleSchema,
   deliveryReminders: deliveryRemindersSchema,
+  inspectionContacts: inspectionContactsSchema,
   cancellation: z.object({ byUid: nonEmpty, at: nonEmpty }).nullable(),
   updatedAt: nonEmpty,
 });
@@ -150,11 +161,11 @@ export function parseIssuanceAssignment(raw: unknown): DocumentIssuanceAssignmen
 export function issuanceRecordOf(assignment: DocumentIssuanceAssignment): IssuanceAssignmentRecord {
   const {
     professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
-    deliverySchedule, deliveryReminders, cancellation,
+    deliverySchedule, deliveryReminders, inspectionContacts, cancellation,
   } = assignment;
   return {
     professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
-    deliverySchedule, deliveryReminders, cancellation,
+    deliverySchedule, deliveryReminders, inspectionContacts, cancellation,
   };
 }
 

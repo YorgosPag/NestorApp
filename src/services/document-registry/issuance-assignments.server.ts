@@ -42,6 +42,7 @@ import {
 } from '@/lib/document-validity/issuance-delivery';
 import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
 import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
+import { currentInspectionContactOf } from '@/lib/document-validity/issuance-inspection-contact';
 import {
   withDeliveryReminderPlan,
   withDeliveryReminderSent,
@@ -81,16 +82,21 @@ export interface IssuanceAuditFields {
   readonly approvalRequest: string;
   /** §45 Φ2 — η προθεσμία παράδοσης (ISO ημέρα· ο αναγνώστης του ιστορικού τη μορφοποιεί ως ημερομηνία). */
   readonly deliveryDue: string;
+  /** §45.15 — ο υπεύθυνος αυτοψίας (επαφή + όνομα της στιγμής) και η ιδιότητά του (κατάλογος `issuance.inspectionRole`). */
+  readonly inspectionContact: string;
+  readonly inspectionRole: string;
 }
 
 export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditFields | null>> = {
   'energy-certificate': {
     stage: 'energyCertificateIssuanceStage', professional: 'energyCertificateIssuer', approvalRequest: 'energyCertificateIssuanceApprovalRequest',
     deliveryDue: 'energyCertificateIssuanceDeliveryDue',
+    inspectionContact: 'energyCertificateIssuanceInspectionContact', inspectionRole: 'energyCertificateIssuanceInspectionRole',
   },
   'building-identity': {
     stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
     deliveryDue: 'buildingIdentityIssuanceDeliveryDue',
+    inspectionContact: 'buildingIdentityIssuanceInspectionContact', inspectionRole: 'buildingIdentityIssuanceInspectionRole',
   },
   'tax-clearance': null,
   'insurance-clearance': null,
@@ -100,6 +106,8 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     professional: 'electricalInstallationIssuer',
     approvalRequest: 'electricalInstallationIssuanceApprovalRequest',
     deliveryDue: 'electricalInstallationIssuanceDeliveryDue',
+    inspectionContact: 'electricalInstallationIssuanceInspectionContact',
+    inspectionRole: 'electricalInstallationIssuanceInspectionRole',
   },
 };
 
@@ -186,6 +194,17 @@ function auditChangesOf(fields: IssuanceAuditFields, t: Transition, names: Issua
   const dueBefore = t.previous === null ? null : issuanceDeliveryOf(t.previous)?.dueOn ?? null;
   const dueAfter = issuanceDeliveryOf(t.next)?.dueOn ?? null;
   if (dueBefore !== dueAfter) changes.push({ field: fields.deliveryDue, oldValue: dueBefore, newValue: dueAfter });
+  return [...changes, ...inspectionAuditChangesOf(fields, t, names)];
+}
+
+/** §45.15 — ο υπεύθυνος αυτοψίας: γράφεται ό,τι άλλαξε (πρόσωπο · ιδιότητα), ποτέ «Χ → Χ». */
+function inspectionAuditChangesOf(fields: IssuanceAuditFields, t: Transition, names: IssuanceWrite['names']): AuditChange[] {
+  const before = t.previous === null ? null : currentInspectionContactOf(t.previous);
+  const after = currentInspectionContactOf(t.next);
+  if (after === null) return [];
+  const changes: AuditChange[] = [];
+  if (before?.contactId !== after.contactId) changes.push(contactChange(fields.inspectionContact, before?.contactId ?? null, after.contactId, names));
+  if (before?.role !== after.role) changes.push({ field: fields.inspectionRole, oldValue: before?.role ?? null, newValue: after.role });
   return changes;
 }
 
