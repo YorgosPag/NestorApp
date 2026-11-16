@@ -21,7 +21,7 @@ const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };
 const QUOTE: IssuanceAction = { kind: 'quote', terms: TERMS };
 const decide = (outcome: 'approved' | 'rejected', quoteRevision: number): IssuanceAction =>
-  ({ kind: 'decide', outcome, channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision });
+  ({ kind: 'decide', outcome, channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision, ownerAttestation: null });
 const DECLINE: IssuanceAction = { kind: 'respond', outcome: 'declined', note: null };
 const CANCEL: IssuanceAction = { kind: 'cancel' };
 
@@ -68,7 +68,7 @@ describe('ADR-915 §45 Φ1 — issuanceStageSinceOf (παλιά ροή §27)', (
       ...run([PROPOSE]),
       decision: {
         basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'uid_agent', outcome: 'approved',
-        quoteRevision: null, ownerContactId: 'cont_lead', note: null, at: at(1),
+        quoteRevision: null, ownerContactId: 'cont_lead', ownerAttestation: null, note: null, at: at(1),
       },
       ...extra,
     };

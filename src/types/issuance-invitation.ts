@@ -34,7 +34,8 @@ export interface IssuanceInvitation extends InvitationRecordCore {
 
 /**
  * **Η δημόσια όψη του συνδέσμου** (§28 Η-Β11) — ό,τι χρειάζεται ο άνθρωπος για να αποφασίσει, τίποτα παραπάνω: ονόματα,
- * ποτέ email/τηλέφωνο/ΑΦΜ τρίτων. Ο επαγγελματίας **δεν** βλέπει τον ιδιοκτήτη (το έργο του το κανονίζει το γραφείο).
+ * ποτέ email/τηλέφωνο τρίτων, και ΑΦΜ τρίτων **μόνο** ως τελευταία ψηφία (§45.15, μόνο στον υπεύθυνο). Ο επαγγελματίας
+ * **δεν** βλέπει τον ιδιοκτήτη (το έργο του το κανονίζει το γραφείο).
  */
 export interface IssuanceLinkView {
   readonly audience: IssuanceAudience;
@@ -60,7 +61,29 @@ export interface IssuanceLinkView {
   readonly brief: IssuanceQuoteBrief | null;
   /** §42 — η προσφορά προς έγκριση· **μόνο** για τον υπεύθυνο. */
   readonly quote: IssuanceQuoteView | null;
+  /**
+   * §45.15 — οι ιδιοκτήτες για επιβεβαίωση· **μόνο** στο `approve-quote`. `null` = δεν ζητείται (άλλο βήμα) ή δεν
+   * διαβάστηκαν τώρα — η σελίδα τότε δεν ζητά τεκμήριο, ποτέ δεν λέει «κανένας ιδιοκτήτης».
+   */
+  readonly owners: readonly IssuanceLinkOwnerView[] | null;
 }
+
+/**
+ * §45.15 — ένας ιδιοκτήτης όπως τον βλέπει ο υπεύθυνος στη σελίδα έγκρισης. Το ΑΦΜ **τρίτου** φτάνει μόνο ως τα
+ * τελευταία ψηφία (ιδιωτικότητα εκ σχεδιασμού)· ολόκληρο μόνο το δικό του (`self`).
+ */
+export interface IssuanceLinkOwnerView {
+  readonly contactId: string;
+  readonly name: string | null;
+  /** Είναι ο ίδιος ο παραλήπτης του συνδέσμου. */
+  readonly self: boolean;
+  readonly vat: IssuanceLinkOwnerVat;
+}
+
+export type IssuanceLinkOwnerVat =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'masked'; readonly tail: string }
+  | { readonly kind: 'full'; readonly value: string };
 
 export type IssuanceLinkStep = 'give-quote' | 'approve-quote' | 'legacy-accept';
 
@@ -110,8 +133,9 @@ export type IssuanceLinkLanding =
  * - `lead-changed` — ο υπεύθυνος ιδιοκτήτης άλλαξε από την αποστολή·
  * - `answer-mismatch` — απάντηση άλλου ακροατηρίου (π.χ. «αποδέχομαι» σε σύνδεσμο έγκρισης)·
  * - `code-required` · `code-wrong` · `code-locked` — §29: λείπει ο κωδικός · λάθος (μετρά) · κλείδωσε μετά από 5 λάθη.
+ * - `owners-changed` — §45.15: οι ιδιοκτήτες άλλαξαν ανάμεσα στην όψη και την έγκριση· καμία βεβαίωση για όσους δεν είδε.
  */
-export const ISSUANCE_LINK_REFUSALS = ['superseded', 'lead-changed', 'answer-mismatch', 'code-required', 'code-wrong', 'code-locked'] as const;
+export const ISSUANCE_LINK_REFUSALS = ['superseded', 'lead-changed', 'answer-mismatch', 'code-required', 'code-wrong', 'code-locked', 'owners-changed'] as const;
 export type IssuanceLinkRefusal = (typeof ISSUANCE_LINK_REFUSALS)[number];
 
 /**

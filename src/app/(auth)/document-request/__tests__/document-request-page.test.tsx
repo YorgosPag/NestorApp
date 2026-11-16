@@ -4,7 +4,7 @@
  *   μία απάντηση με `Idempotency-Key` · κάθε άρνηση με όνομα. Ψεύτικο μόνο το δίκτυο.
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -22,7 +22,7 @@ const VIEW = {
   professional: { name: 'Επιθεωρητής Συνθετικός', qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
   note: null, expiresAt: '2026-10-24T09:00:00.000Z',
   // §42 — ο υπεύθυνος κρίνει την ΠΡΟΣΦΟΡΑ (πρόσωπο και τιμή μαζί) και στέλνει την αναθεώρηση που είδε.
-  step: 'approve-quote', brief: null,
+  step: 'approve-quote', brief: null, owners: null,
   quote: {
     basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31',
     scope: ['issuance'], note: null, deliveryBusinessDays: 5, revision: 1, previousTotalMinor: null, signingDay: null,
@@ -84,7 +84,7 @@ describe('ADR-915 §28 — /document-request', () => {
     const headers = answers[0]?.init.headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer tok.secret-1');
     expect(headers['Idempotency-Key']).toEqual(expect.any(String));
-    expect(JSON.parse(String(answers[0]?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: null, quoteRevision: 1 });
+    expect(JSON.parse(String(answers[0]?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: null, quoteRevision: 1, ownerAttestation: null });
   });
 
   it('ο υπεύθυνος βλέπει την ΠΡΟΣΦΟΡΑ (σύνολο, ισχύ, τι περιλαμβάνει) πριν από το κουμπί — και «Δεν εγκρίνω» στέλνει την ίδια αναθεώρηση', async () => {
@@ -207,7 +207,7 @@ describe('ADR-915 §29 — /document-request με κωδικό πρόσβαση�
     await user.click(await screen.findByRole('button', { name: 'document-request:owner.approveQuote' }));
     expect(await screen.findByText('document-request:done.approved')).toBeTruthy();
     const answer = calls.find((call) => call.url.endsWith('/answer'));
-    expect(JSON.parse(String(answer?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: '042917', quoteRevision: 1 });
+    expect(JSON.parse(String(answer?.init.body))).toEqual({ answer: 'approve', note: null, accessCode: '042917', quoteRevision: 1, ownerAttestation: null });
     expect(window.location.href).not.toContain('042917');
     expect(JSON.stringify({ ...window.sessionStorage })).not.toContain('042917');
     expect(JSON.stringify({ ...window.localStorage })).not.toContain('042917');
@@ -218,5 +218,78 @@ describe('ADR-915 §29 — /document-request με κωδικό πρόσβαση�
     render(<DocumentRequestGate />);
     expect(await screen.findByText('document-request:failure.locked.title')).toBeTruthy();
     expect(screen.queryByLabelText('document-request:code.label')).toBeNull();
+  });
+});
+
+describe('ADR-915 §45.15 — οι ιδιοκτήτες στη σελίδα έγκρισης', () => {
+  /** Ο ίδιος (ολόκληρο ΑΦΜ) · συνιδιοκτήτης με μάσκα · συνιδιοκτήτης χωρίς ΑΦΜ. */
+  const OWNERS = [
+    { contactId: 'cont_self', name: 'Άλφα Συνθετικός', self: true, vat: { kind: 'full', value: '090000045' } },
+    { contactId: 'cont_co', name: 'Βήτα Συνθετική', self: false, vat: { kind: 'masked', tail: '666' } },
+    { contactId: 'cont_none', name: 'Γάμμα Συνθετικός', self: false, vat: { kind: 'none' } },
+  ];
+  const WITH_OWNERS = { access: 'open', view: { ...VIEW, owners: OWNERS } };
+  const approveButton = () => screen.getByRole('button', { name: 'document-request:owner.approveQuote' });
+
+  it('🔴 ΑΦΜ τρίτου ΜΟΝΟ με μάσκα· «Εγκρίνω» ανενεργό μέχρι να κριθεί ΚΑΘΕ πρόσωπο· λάθος ψηφίο ⇒ ειδοποίηση, όχι αποστολή', async () => {
+    mockNetwork(respond(200, { success: true, data: WITH_OWNERS }));
+    render(<DocumentRequestGate />);
+    expect(await screen.findByText('document-request:owners.heading')).toBeTruthy();
+    expect(screen.getByText(`document-request:owners.vatFull ${JSON.stringify({ vat: '090000045' })}`)).toBeTruthy();
+    expect(screen.getByText(`document-request:owners.vatMasked ${JSON.stringify({ tail: '666' })}`)).toBeTruthy();
+    expect(approveButton()).toHaveProperty('disabled', true);
+    const user = userEvent.setup();
+    const groups = screen.getAllByRole('radiogroup');
+    await user.click(within(groups[0]).getByRole('radio', { name: 'document-request:owners.confirm' }));
+    await user.click(within(groups[1]).getByRole('radio', { name: 'document-request:owners.correct' }));
+    await user.click(within(groups[2]).getByRole('radio', { name: 'document-request:owners.confirmNoVat' }));
+    await user.type(screen.getByLabelText('document-request:owners.newVatLabel'), '123456789');
+    expect(screen.getByRole('alert').textContent).toBe('document-request:owners.vatInvalid');
+    expect(approveButton()).toHaveProperty('disabled', true);
+    expect(calls.filter((call) => call.url.endsWith('/answer'))).toHaveLength(0);
+  });
+
+  it('έγκυρες κρίσεις ⇒ ΕΝΑ «Εγκρίνω» με την κρίση ανά πρόσωπο (ποτέ το ΑΦΜ που μόνο επιβεβαιώθηκε) + «λείπει κάποιος»', async () => {
+    mockNetwork(respond(200, { success: true, data: WITH_OWNERS }));
+    render(<DocumentRequestGate />);
+    await screen.findByText('document-request:owners.heading');
+    const user = userEvent.setup();
+    const groups = screen.getAllByRole('radiogroup');
+    await user.click(within(groups[0]).getByRole('radio', { name: 'document-request:owners.confirm' }));
+    await user.click(within(groups[1]).getByRole('radio', { name: 'document-request:owners.correct' }));
+    await user.click(within(groups[2]).getByRole('radio', { name: 'document-request:owners.supply' }));
+    const vatFields = screen.getAllByLabelText('document-request:owners.newVatLabel');
+    await user.type(vatFields[0], '998877666');
+    await user.type(vatFields[1], '123456783');
+    await user.type(screen.getByLabelText('document-request:owners.missingLabel'), 'Δέλτα Συνθετικός');
+    await user.click(approveButton());
+    expect(await screen.findByText('document-request:done.approved')).toBeTruthy();
+    const answer = calls.find((call) => call.url.endsWith('/answer'));
+    expect(JSON.parse(String(answer?.init.body))).toEqual({
+      answer: 'approve', note: null, accessCode: null, quoteRevision: 1,
+      ownerAttestation: {
+        owners: [
+          { contactId: 'cont_self', verdict: 'confirmed', vatNumber: null },
+          { contactId: 'cont_co', verdict: 'corrected', vatNumber: '998877666' },
+          { contactId: 'cont_none', verdict: 'corrected', vatNumber: '123456783' },
+        ],
+        missingNote: 'Δέλτα Συνθετικός',
+      },
+    });
+  });
+
+  it('η σελίδα δεν διάβασε ιδιοκτήτες (`owners: null`) ⇒ καμία ενότητα, «Εγκρίνω» όπως πριν', async () => {
+    mockNetwork(respond(200, { success: true, data: OPEN }));
+    render(<DocumentRequestGate />);
+    await screen.findByRole('button', { name: 'document-request:owner.approveQuote' });
+    expect(screen.queryByText('document-request:owners.heading')).toBeNull();
+    expect(approveButton()).toHaveProperty('disabled', false);
+  });
+
+  it('οι ιδιοκτήτες άλλαξαν στο μεταξύ ⇒ ονομασμένη άρνηση `owners-changed`', async () => {
+    mockNetwork(respond(200, { success: true, data: OPEN }), respond(409, { success: false, error: 'owners-changed' }));
+    render(<DocumentRequestGate />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'document-request:owner.approveQuote' }));
+    expect(await screen.findByText('document-request:failure.ownersChanged.title')).toBeTruthy();
   });
 });

@@ -197,14 +197,14 @@ describe('Γ — η έγκριση της προσφοράς ⇒ πρόσκλη�
   it('Γ1 — έγκριση με σύνδεσμο ⇒ ακριβώς ΜΙΑ πρόσκληση, δεμένη στη διεύθυνση της προσφοράς· δεύτερο κλικ ⇒ `already-used`, καμία δεύτερη', async () => {
     await quoteWithProfessionalLink();
     const ownerToken = await ownerLinkToken();
-    const answer = await answerIssuanceLink(db(), ownerToken, { answer: 'approve', note: null, accessCode: null, quoteRevision: 1 }, LATER);
+    const answer = await answerIssuanceLink(db(), ownerToken, { answer: 'approve', note: null, accessCode: null, quoteRevision: 1, ownerAttestation: null }, LATER);
     expect(answer).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
     expect(assignment()).toMatchObject({ decision: { basis: 'owner-link-approval', outcome: 'approved', quoteRevision: 1 } });
     const [invitation, ...rest] = spaceInvitations();
     expect(rest).toEqual([]);
     expect(invitation?.data).toMatchObject(SPACE_INVITATION);
     expect(sent.filter((message) => message.kind === 'engagement').map((message) => message.to)).toEqual([PRO_EMAIL]);
-    expect(await answerIssuanceLink(db(), ownerToken, { answer: 'approve', note: null, accessCode: null, quoteRevision: 1 }, LATER)).toMatchObject({ kind: 'refused', reason: 'already-used' });
+    expect(await answerIssuanceLink(db(), ownerToken, { answer: 'approve', note: null, accessCode: null, quoteRevision: 1, ownerAttestation: null }, LATER)).toMatchObject({ kind: 'refused', reason: 'already-used' });
     expect(spaceInvitations()).toHaveLength(1);
   });
 
@@ -238,7 +238,7 @@ describe('Γ — η έγκριση της προσφοράς ⇒ πρόσκλη�
     // Απόφαση για το πρόσωπο, χωρίς αναθεώρηση προσφοράς — όπως γράφονταν πριν από τον §42.
     fake.seed(COLLECTIONS.DOCUMENT_ISSUANCE_ASSIGNMENTS, ASSIGNMENT_ID, {
       ...assignment(),
-      decision: { basis: 'recorded-instruction', channel: 'phone', recordedByUid: OFFICE.uid, outcome: 'approved', quoteRevision: null, ownerContactId: 'cont_a', note: null, at: NOW.toISOString() },
+      decision: { basis: 'recorded-instruction', channel: 'phone', recordedByUid: OFFICE.uid, outcome: 'approved', quoteRevision: null, ownerContactId: 'cont_a', ownerAttestation: null, note: null, at: NOW.toISOString() },
     });
     const linkToken = await professionalLinkToken('ownerApproved');
     const answer = await answerIssuanceLink(db(), linkToken, { answer: 'accept', note: null, accessCode: null }, LATER);

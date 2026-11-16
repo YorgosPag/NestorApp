@@ -39,6 +39,7 @@ import {
   type IssuanceQuote, type IssuanceReceipt, type QuoteSubmission, type QuoteTerms,
 } from './issuance-quote';
 import type { IssuanceDeliveryReminders } from './issuance-delivery-reminder';
+import type { IssuanceOwnerAttestation } from './issuance-owner-attestation';
 import { INSPECTION_CONTACT_STAGES, inspectionContactSet, type IssuanceInspectionContactEntry, type IssuanceSetInspectionContactAction } from './issuance-inspection-contact';
 import type { IssuanceReminders } from './issuance-reminder';
 import { ballInCourtOf, isLegacyIssuance, issuanceStageOf, type BallInCourtParty, type IssuanceStage } from './issuance-stage';
@@ -96,6 +97,8 @@ export type IssuanceDecision = IssuanceDecisionBasis & {
   readonly quoteRevision: number | null;
   /** Ο υπεύθυνος ιδιοκτήτης (§26) **τη στιγμή της απόφασης** — παράγεται στον διακομιστή, ποτέ από τον πελάτη. */
   readonly ownerContactId: string;
+  /** §45.15 — τι βεβαίωσε ο ιδιοκτήτης για τους ιδιοκτήτες (στιγμιότυπο, κριμένο στον διακομιστή)· μόνο σύνδεσμος που εγκρίνει. */
+  readonly ownerAttestation: IssuanceOwnerAttestation | null;
   readonly note: string | null;
   readonly at: string;
 };
@@ -223,6 +226,7 @@ export type IssuanceAction =
       readonly ownerContactId: string;
       /** §42 — η αναθεώρηση που **είδε** όποιος αποφασίζει· άλλη τρέχουσα ⇒ `terms-refused` (ποτέ «ναι» σε τιμή που δεν είδε). */
       readonly quoteRevision: number;
+      readonly ownerAttestation: IssuanceOwnerAttestation | null;
     }
   /** `invitationId` ≠ `null` ⇔ στάλθηκε μήνυμα με σύνδεσμο (επιτρέπεται και ξανά, από `sent`). */
   | { readonly kind: 'notify'; readonly channel: NoticeChannel; readonly invitationId: string | null; readonly note: string | null; readonly verification: LinkVerification | null }
@@ -393,8 +397,9 @@ function decided(record: IssuanceAssignmentRecord, action: Extract<AdvancingActi
   if (record.quote === null || record.quote.revision !== action.quoteRevision) return { ok: false, refusal: 'terms-refused' };
   const basis = decisionBasisOf(record, action, actor);
   if (basis === null) return { ok: false, refusal: 'actor-refused' };
+  const ownerAttestation = basis.basis === 'owner-link-approval' && action.outcome === 'approved' ? action.ownerAttestation : null;
   const decision: IssuanceDecision = {
-    ...basis, outcome: action.outcome, quoteRevision: action.quoteRevision, ownerContactId: action.ownerContactId, note: action.note, at: actor.nowIso,
+    ...basis, outcome: action.outcome, quoteRevision: action.quoteRevision, ownerContactId: action.ownerContactId, ownerAttestation, note: action.note, at: actor.nowIso,
   };
   return { ok: true, record: { ...record, decision }, changed: true };
 }

@@ -92,6 +92,10 @@
     "locked": {
       "title": "This link is locked",
       "body": "A wrong code was entered too many times. For your security the link no longer accepts an answer; the office has been told and can send you a new one."
+    },
+    "ownersChanged": {
+      "title": "The owners of the property changed",
+      "body": "The office updated the owners in the meantime. Nothing was recorded. Open the link again to see the current details."
     }
   },
   "code": {
@@ -116,5 +120,23 @@
     "energyClassOnly": "Class {grade}",
     "unknown": "Not declared",
     "privacy": "The owner's name and the exact address appear in your space once the quote is approved; contact for the site visit goes through the office."
+  },
+  "owners": {
+    "heading": "Owners of the property",
+    "intro": "Please confirm each owner and their tax ID (AFM). The professional needs them for the form. Other owners’ tax IDs show only their last digits.",
+    "selfName": "{name} (you)",
+    "vatFull": "Tax ID: {vat}",
+    "vatMasked": "Tax ID ending in {tail}",
+    "vatNone": "No tax ID on file",
+    "confirm": "Correct",
+    "confirmNoVat": "Right person, I don’t know the tax ID",
+    "correct": "Correct the tax ID",
+    "supply": "Add the tax ID",
+    "newVatLabel": "Tax ID (9 digits)",
+    "vatInvalid": "This tax ID is not valid. Please check the digits.",
+    "correctionGoesToOffice": "A correction goes to the office, which applies it to its records.",
+    "missingLabel": "Is an owner missing?",
+    "missingHint": "Full name and, if you know it, tax ID. The office will add them to the owners.",
+    "incomplete": "To approve, answer for each owner."
   }
 }

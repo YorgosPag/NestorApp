@@ -116,7 +116,7 @@ const QUOTE_TERMS: QuoteTermsBody = {
   deliveryBusinessDays: 5,
 };
 /** §42 — οι απαντήσεις του υπευθύνου κρίνουν **την αναθεώρηση που είδε** (εδώ: την πρώτη). */
-const approveWith = (accessCode: string | null = null): IssuanceLinkAnswerBody => ({ answer: 'approve', note: null, accessCode, quoteRevision: 1 });
+const approveWith = (accessCode: string | null = null): IssuanceLinkAnswerBody => ({ answer: 'approve', note: null, accessCode, quoteRevision: 1, ownerAttestation: null });
 const rejectWith = (accessCode: string | null = null): IssuanceLinkAnswerBody => ({ answer: 'reject', note: null, accessCode, quoteRevision: 1 });
 
 /** §42 — αίτημα προσφοράς (καταγεγραμμένο) → προσφορά του γραφείου ⇒ `quoted`, εκεί όπου αποφασίζει ο υπεύθυνος. */

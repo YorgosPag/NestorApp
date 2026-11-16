@@ -33,7 +33,7 @@ const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };
 const quote = (terms: QuoteTerms = TERMS): IssuanceAction => ({ kind: 'quote', terms });
 const approve = (quoteRevision: number): IssuanceAction =>
-  ({ kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision });
+  ({ kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision, ownerAttestation: null });
 const schedule = (dueOn: string, reason: string | null): IssuanceAction => ({ kind: 'schedule-delivery', dueOn, reason });
 
 /** Ένα βήμα ανά ημέρα από τη Δευτέρα 2026-11-02 (11:00 ώρα Ελλάδας). */

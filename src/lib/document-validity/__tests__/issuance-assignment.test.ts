@@ -31,7 +31,7 @@ const INDICATIVE_TERMS: QuoteTerms = { ...FIRM_TERMS, basis: 'indicative' };
 const QUOTE: IssuanceAction = { kind: 'quote', terms: FIRM_TERMS };
 const QUOTE_INDICATIVE: IssuanceAction = { kind: 'quote', terms: INDICATIVE_TERMS };
 const approve = (quoteRevision: number): IssuanceAction =>
-  ({ kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision });
+  ({ kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision, ownerAttestation: null });
 const APPROVE = approve(1);
 const REJECT: IssuanceAction = { ...approve(1), outcome: 'rejected' } as IssuanceAction;
 const RESPOND_DECLINED: IssuanceAction = { kind: 'respond', outcome: 'declined', note: null };
@@ -62,7 +62,7 @@ function legacy(extra: Partial<IssuanceAssignmentRecord> = {}): IssuanceAssignme
     ...run([PROPOSE]),
     decision: {
       basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'uid_agent', outcome: 'approved',
-      quoteRevision: null, ownerContactId: 'cont_lead', note: null, at: ACTOR.nowIso,
+      quoteRevision: null, ownerContactId: 'cont_lead', ownerAttestation: null, note: null, at: ACTOR.nowIso,
     },
     ...extra,
   };
@@ -100,7 +100,7 @@ describe('ADR-915 §42 — ο μειωτής', () => {
   it('η απόφαση γράφει ΠΟΙΟΝ ιδιοκτήτη, ΠΩΣ, ΠΟΤΕ και ΠΟΙΑ αναθεώρηση — βάση «καταγραφή εντολής»', () => {
     expect(run(ASSIGNED).decision).toEqual({
       outcome: 'approved', ownerContactId: 'cont_lead', basis: 'recorded-instruction', channel: 'phone', note: null,
-      recordedByUid: 'uid_agent', at: ACTOR.nowIso, quoteRevision: 1,
+      recordedByUid: 'uid_agent', at: ACTOR.nowIso, quoteRevision: 1, ownerAttestation: null,
     });
   });
 

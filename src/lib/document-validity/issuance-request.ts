@@ -17,6 +17,7 @@ import { z } from 'zod';
 
 import { ISSUER_QUALIFICATIONS } from '@/config/document-validity/document-issuers';
 import { DOCUMENT_KINDS } from '@/config/document-validity/document-validity';
+import { isValidGreekVat } from '@/lib/validation/greek-vat-number';
 import { GREEK_VAT_RATE_PERCENTS, type GreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 
 import {
@@ -28,6 +29,7 @@ import {
   type IssuanceAction,
 } from './issuance-assignment';
 import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from './issuance-inspection-contact';
+import { OWNER_ATTESTATION_POLICY, OWNER_VERDICTS, type IssuanceOwnerAttestation } from './issuance-owner-attestation';
 import {
   MYDATA_MARK_PATTERN,
   QUOTE_BASES,
@@ -179,9 +181,26 @@ const linkAnswerCommon = {
   accessCode: typedAccessCode.nullable().default(null),
 };
 
+/**
+ * §45.15 — η κρίση του ιδιοκτήτη για κάθε ιδιοκτήτη: «σωστό» ή «διόρθωση» με νέο ΑΦΜ (ψηφίο ελέγχου **ήδη** στο
+ * σύνορο). Το «ίδιο σύνολο» το κρίνει ο διακομιστής (`ownerAttestationOf`), με τους ιδιοκτήτες του μητρώου.
+ */
+export const ownerAttestationBody = z.object({
+  owners: z.array(z.object({
+    contactId: z.string().trim().min(1),
+    verdict: z.enum(OWNER_VERDICTS),
+    vatNumber: z.string().trim().max(32).nullable().default(null),
+  }).refine((owner) => owner.verdict === 'confirmed' || (owner.vatNumber !== null && isValidGreekVat(owner.vatNumber))))
+    .max(OWNER_ATTESTATION_POLICY.maxOwners),
+  missingNote: optionalText(OWNER_ATTESTATION_POLICY.missingNoteMax).default(null),
+});
+
 export const issuanceLinkAnswerBody = z.discriminatedUnion('answer', [
-  /** §42 — ο υπεύθυνος κρίνει **την αναθεώρηση που είδε**. */
-  z.object({ answer: z.literal('approve'), ...linkAnswerCommon, quoteRevision }),
+  /**
+   * §42 — ο υπεύθυνος κρίνει **την αναθεώρηση που είδε**. §45.15 — μαζί, ό,τι βεβαιώνει για τους ιδιοκτήτες· `null` =
+   * η σελίδα δεν έδειξε ιδιοκτήτες (δεν διαβάστηκαν · παλιά σελίδα).
+   */
+  z.object({ answer: z.literal('approve'), ...linkAnswerCommon, quoteRevision, ownerAttestation: ownerAttestationBody.nullable().default(null) }),
   z.object({ answer: z.literal('reject'), ...linkAnswerCommon, quoteRevision }),
   z.object({ answer: z.literal('accept'), ...linkAnswerCommon }),
   z.object({ answer: z.literal('decline'), ...linkAnswerCommon }),
@@ -206,9 +225,10 @@ export const LINK_ANSWER_AUDIENCE: Readonly<Record<IssuanceLinkAnswer, IssuanceA
 
 /**
  * Η απάντηση του συνδέσμου → η πράξη του **ίδιου** μειωτή. Ο υπεύθυνος είναι αυτός **στον οποίο στάλθηκε** το αίτημα
- * (ο μειωτής το ξανακρίνει)· `channel: null` = αποφασίζει ο ίδιος, όχι καταγραφή.
+ * (ο μειωτής το ξανακρίνει)· `channel: null` = αποφασίζει ο ίδιος, όχι καταγραφή. `ownerAttestation` = το τεκμήριο
+ * **ήδη κριμένο** από τον διακομιστή (§45.15) — ποτέ το ωμό σώμα του πελάτη.
  */
-export function linkAnswerActionOf(answer: IssuanceLinkAnswerBody, ownerContactId: string): IssuanceAction {
+export function linkAnswerActionOf(answer: IssuanceLinkAnswerBody, ownerContactId: string, ownerAttestation: IssuanceOwnerAttestation | null): IssuanceAction {
   switch (answer.answer) {
     case 'approve':
     case 'reject': return {
@@ -218,6 +238,7 @@ export function linkAnswerActionOf(answer: IssuanceLinkAnswerBody, ownerContactI
       note: answer.note,
       ownerContactId,
       quoteRevision: answer.quoteRevision,
+      ownerAttestation: answer.answer === 'approve' ? ownerAttestation : null,
     };
     case 'accept': return { kind: 'respond', outcome: 'accepted', note: answer.note };
     case 'decline': return { kind: 'respond', outcome: 'declined', note: answer.note };
@@ -240,6 +261,8 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
       note: request.note,
       ownerContactId: request.expectedOwnerContactId,
       quoteRevision: request.quoteRevision,
+      // Καταγραφή του γραφείου: κανένα τεκμήριο ιδιοκτητών — το βεβαιώνει μόνο ο ίδιος ο ιδιοκτήτης (§45.15).
+      ownerAttestation: null,
     };
     // Καταγραφή του γραφείου: χωρίς μήνυμα της εφαρμογής (το μήνυμα με σύνδεσμο το γράφει η αποστολή, §28).
     case 'notify': return { kind: 'notify', channel: request.channel, invitationId: null, note: null, verification: null };

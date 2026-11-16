@@ -16,6 +16,7 @@ import { quoteTotalsOf, type IssuanceQuote } from '@/lib/document-validity/issua
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
 import type { IssuanceLinkStep, IssuanceQuoteView } from '@/types/issuance-invitation';
 
+import { linkOwnersOf } from './issuance-link-owners';
 import { readIssuanceQuoteBrief } from './issuance-quote-brief';
 import type { ResolvedLink } from './issuance-invitation-answer';
 
@@ -38,7 +39,7 @@ export function quoteViewOf(quote: IssuanceQuote, signingDay: string | null): Is
   };
 }
 
-/** Τα §42 πεδία της όψης: βήμα · φάκελος (μόνο επαγγελματίας) · προσφορά (μόνο υπεύθυνος). */
+/** Τα §42 πεδία της όψης: βήμα · φάκελος (μόνο επαγγελματίας) · προσφορά + (§45.15) ιδιοκτήτες (μόνο υπεύθυνος). */
 export async function quoteFacetsOf(db: Firestore, link: ResolvedLink) {
   const { invitation, record, label, registry } = link;
   const step = linkStepOf(invitation.audience, record);
@@ -48,5 +49,6 @@ export async function quoteFacetsOf(db: Firestore, link: ResolvedLink) {
   // §45 — από το ΙΔΙΟ μητρώο που ήδη διαβάστηκε για τον σύνδεσμο (καμία δεύτερη ανάγνωση).
   const signingDay = issuanceSigningDayOf(registry.rows, invitation.propertyId, invitation.documentKind, registry.asOf);
   const quote = step === 'approve-quote' && record.quote !== null ? quoteViewOf(record.quote, signingDay) : null;
-  return { step, brief, quote } as const;
+  const owners = step === 'approve-quote' ? await linkOwnersOf(db, link) : null;
+  return { step, brief, quote, owners } as const;
 }

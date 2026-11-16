@@ -27,6 +27,7 @@ import {
   type IssuanceStage,
   type LinkVerification,
 } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceOwnerAttestation } from '@/lib/document-validity/issuance-owner-attestation';
 import {
   LINK_ANSWER_AUDIENCE,
   linkAnswerActionOf,
@@ -57,6 +58,7 @@ import { announceIssuanceAnswer, type IssuanceLinkEvent } from './issuance-answe
 import { sendIssuanceAnswerReceipt } from './issuance-answer-receipt';
 import { ISSUANCE_INVITATION_LOCATOR, isIssuanceLinkLocked, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
 import { checkIssuanceAccessCode, issuanceGateViewOf, type IssuanceAccessCheck } from './issuance-link-access';
+import { resolveOwnerAttestation } from './issuance-link-owners';
 import { quoteFacetsOf } from './issuance-link-view';
 import { engageApprovedProfessional } from './issuance-space-invite';
 import {
@@ -258,9 +260,13 @@ function linkKind(
   db: Firestore,
   link: ResolvedLink,
   answer: IssuanceLinkAnswerBody,
-  verification: { readonly verifiedBy: LinkVerification; readonly nowIso: string; readonly space: IssuanceSpacePlan | null },
+  verification: {
+    readonly verifiedBy: LinkVerification; readonly nowIso: string; readonly space: IssuanceSpacePlan | null;
+    /** §45.15 — το τεκμήριο ιδιοκτητών, κριμένο **πριν** από τη συναλλαγή. */
+    readonly ownerAttestation: IssuanceOwnerAttestation | null;
+  },
 ): InvitationLinkKind<InvitationDocumentCore, IssuanceInvitation, LinkRefusal, LinkUnavailable, StagedAnswer> {
-  const { verifiedBy, nowIso } = verification;
+  const { verifiedBy, nowIso, ownerAttestation } = verification;
   return {
     ...ISSUANCE_INVITATION_LOCATOR,
     secretMissing: 'secret-missing',
@@ -274,7 +280,7 @@ function linkKind(
         property: { id: invitation.propertyId, scope: link.label.scope, name: link.label.name },
         documentKind: invitation.documentKind,
         latestIssuedOn: link.latestIssuedOn,
-        action: linkAnswerActionOf(answer, invitation.contactId),
+        action: linkAnswerActionOf(answer, invitation.contactId, ownerAttestation),
         names: Object.fromEntries(Object.entries(link.registry.people).map(([id, person]) => [id, person.name])),
         nowIso,
       });
@@ -314,9 +320,13 @@ export async function answerIssuanceLink(db: Firestore, token: string, answer: I
   if (LINK_ANSWER_AUDIENCE[answer.answer] !== link.invitation.audience) return { kind: 'refused', reason: 'answer-mismatch' };
   const check = await guardAccess(db, link, answer.accessCode, now.toISOString());
   if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
+  // §45.15 — ό,τι βεβαιώνει για τους ιδιοκτήτες κρίνεται απέναντι σε όσους υπάρχουν **τώρα** (ποτέ για όσους δεν είδε).
+  const attested = await resolveOwnerAttestation(db, link, answer);
+  if (attested.kind === 'unavailable') return { kind: 'unavailable' };
+  if (attested.kind === 'refused') return { kind: 'refused', reason: attested.refusal === 'owners-changed' ? 'owners-changed' : 'answer-mismatch' };
   const target = answer.answer === 'reject' || answer.answer === 'decline' ? 'declined' : 'accepted';
   const space = await spacePlanOf(db, link, answer, now);
-  const kind = linkKind(db, link, answer, { verifiedBy: check.verifiedBy, nowIso: now.toISOString(), space });
+  const kind = linkKind(db, link, answer, { verifiedBy: check.verifiedBy, nowIso: now.toISOString(), space, ownerAttestation: attested.attestation });
   const outcome = await redeemInvitationByLink(db, kind, { token, target, nowValue: now.toISOString() });
   if (outcome.kind === 'unavailable') {
     logger.error('Ο σύνδεσμος ανάθεσης δεν εξαργυρώθηκε', { invitationId: link.invitation.id, reason: outcome.reason });

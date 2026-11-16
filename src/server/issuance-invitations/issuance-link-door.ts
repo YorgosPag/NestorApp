@@ -44,6 +44,8 @@ const STATUS: Readonly<Record<LinkRefusal | DoorFailure, number>> = {
   'wrong-recipient': 403,
   superseded: 410,
   'lead-changed': 409,
+  // §45.15 — οι ιδιοκτήτες άλλαξαν από την όψη: η σελίδα ξαναφορτώνει και ο άνθρωπος βεβαιώνει όσους **βλέπει**.
+  'owners-changed': 409,
   'answer-mismatch': 400,
   // §29 — ο κωδικός: λείπει · λάθος (μετρά) · κλείδωσε (μόνιμα για αυτόν τον σύνδεσμο — το γραφείο ξαναστέλνει).
   'code-required': 401,

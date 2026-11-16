@@ -155,13 +155,13 @@ describe('ADR-915 §31 — η σάρωση', () => {
     expect(fresh).not.toBe(original);
     expect(await viewIssuanceLink(db(), original, FIRST_DUE)).toMatchObject({ kind: 'view' });
     expect(await viewIssuanceLink(db(), fresh, FIRST_DUE)).toMatchObject({ kind: 'view' });
-    expect(await answerIssuanceLink(db(), fresh, { answer: 'approve', note: null, accessCode: code, quoteRevision: 1 }, FIRST_DUE)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
+    expect(await answerIssuanceLink(db(), fresh, { answer: 'approve', note: null, accessCode: code, quoteRevision: 1, ownerAttestation: null }, FIRST_DUE)).toEqual({ kind: 'answered', answer: 'approve', space: { kind: 'none' } });
     expect(await answerIssuanceLink(db(), original, { answer: 'reject', note: null, accessCode: code, quoteRevision: 1 }, FIRST_DUE)).toMatchObject({ kind: 'refused', reason: 'already-used' });
   });
 
   it('απάντησε ⇒ η επόμενη αποσύρεται, κανένα email', async () => {
     const { token, code } = await send();
-    await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code, quoteRevision: 1 }, SENT_AT);
+    await answerIssuanceLink(db(), token, { answer: 'approve', note: null, accessCode: code, quoteRevision: 1, ownerAttestation: null }, SENT_AT);
     expect(await sweepIssuanceInvitationReminders(db(), FIRST_DUE)).toMatchObject({ considered: 1, retired: 1, reminded: 0 });
     expect(reminders()?.dueAt).toBeNull();
     expect(reminderEmails()).toEqual([]);

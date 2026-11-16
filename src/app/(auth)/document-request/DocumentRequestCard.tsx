@@ -37,6 +37,8 @@ import type { IssuanceLinkView, IssuanceSpaceView } from '@/types/issuance-invit
 
 import { DocumentRequestFailureState } from './DocumentRequestFailureState';
 import { Fact } from './DocumentRequestFact';
+import { emptyOwnersDraft, ownerAttestationFromDraft, type OwnersDraft } from './document-request-owners-draft';
+import { DocumentRequestOwners } from './DocumentRequestOwners';
 import { QuoteBriefFacts, QuoteFacts } from './DocumentRequestQuote';
 import { answerDocumentRequest, type DocumentRequestFailure } from './document-request-api';
 
@@ -133,13 +135,21 @@ function SpaceNextStep({ space }: { readonly space: IssuanceSpaceView }) {
   );
 }
 
+/** §45.15 — το «Εγκρίνω» με το τεκμήριο ιδιοκτητών· `null` όσο λείπει κρίση για κάποιον (ή ΑΦΜ είναι άκυρο). */
+function approveBodyOf(view: IssuanceLinkView, owners: OwnersDraft, note: string | null, accessCode: string | null): IssuanceLinkAnswerBody | null {
+  const attestation = ownerAttestationFromDraft(view.owners, owners);
+  if (view.quote === null || attestation === null) return null;
+  return { answer: 'approve', note, accessCode, quoteRevision: view.quote.revision, ownerAttestation: attestation === 'none' ? null : attestation };
+}
+
 /**
  * Το σώμα του «ναι» για κάθε βήμα — `null` όσο η προσφορά δεν είναι πλήρης (το κουμπί μένει ανενεργό). Ο υπεύθυνος
  * στέλνει την αναθεώρηση που **βλέπει**.
  */
-function yesBodyOf(view: IssuanceLinkView, draft: QuoteDraft, note: string | null, accessCode: string | null): IssuanceLinkAnswerBody | null {
+function yesBodyOf(view: IssuanceLinkView, drafts: { readonly quote: QuoteDraft; readonly owners: OwnersDraft }, note: string | null, accessCode: string | null): IssuanceLinkAnswerBody | null {
+  const draft = drafts.quote;
   switch (view.step) {
-    case 'approve-quote': return view.quote === null ? null : { answer: 'approve', note, accessCode, quoteRevision: view.quote.revision };
+    case 'approve-quote': return approveBodyOf(view, drafts.owners, note, accessCode);
     case 'legacy-accept': return { answer: 'accept', note, accessCode };
     case 'give-quote': {
       const terms = quoteTermsFromDraft(draft);
@@ -158,6 +168,7 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
   const { t } = useTranslation(['document-request']);
   const [note, setNote] = useState('');
   const [draft, setDraft] = useState<QuoteDraft>(() => emptyQuoteDraft());
+  const [owners, setOwners] = useState<OwnersDraft>(() => emptyOwnersDraft());
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const noteId = useId();
   const texts = stepTexts(t, view);
@@ -179,7 +190,7 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
   }
   const sending = phase.kind === 'sending';
   const trimmed = note.trim() || null;
-  const yesBody = yesBodyOf(view, draft, trimmed, accessCode);
+  const yesBody = yesBodyOf(view, { quote: draft, owners }, trimmed, accessCode);
   return (
     <AuthCardSection gap={4}>
       <header className="flex flex-col gap-1">
@@ -191,6 +202,9 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
       <RequestFacts view={view} />
       {view.brief === null ? null : <QuoteBriefFacts brief={view.brief} />}
       {view.step === 'give-quote' ? <IssuanceQuoteFields draft={draft} onChange={setDraft} disabled={sending} /> : null}
+      {view.owners !== null && view.owners.length > 0 ? (
+        <DocumentRequestOwners owners={view.owners} draft={owners} onChange={setOwners} disabled={sending} complete={yesBody !== null} />
+      ) : null}
       <Label htmlFor={noteId} className="text-sm font-medium">{t('document-request:page.noteLabel')}</Label>
       <Textarea id={noteId} value={note} maxLength={ISSUANCE_NOTE_MAX} onChange={(event) => setNote(event.target.value)} disabled={sending} />
       <p className="m-0 text-xs text-muted-foreground">{t('document-request:page.recordedOnly')}</p>

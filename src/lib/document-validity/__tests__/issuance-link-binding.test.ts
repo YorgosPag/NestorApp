@@ -22,8 +22,8 @@ const PROPOSE: IssuanceAction = {
   kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: null },
 };
 const REQUEST = (invitationId: string): IssuanceAction => ({ kind: 'request-approval', invitationId, ownerContactId: 'cont_lead', note: 'σημείωση', verification: 'link' });
-const LINK_APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: null, note: null, ownerContactId: 'cont_lead', quoteRevision: 1 };
-const OFFICE_APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1 };
+const LINK_APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: null, note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null };
+const OFFICE_APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null };
 const SEND = (invitationId: string | null): IssuanceAction => ({ kind: 'notify', channel: invitationId === null ? 'phone' : 'email', invitationId, note: null, verification: invitationId === null ? null : 'link' });
 const LINK_DECLINE: IssuanceAction = { kind: 'respond', outcome: 'declined', note: 'δεν αναλαμβάνω' };
 /** §42 — η προσφορά που ανοίγει το στάδιο `quoted`, όπου μόνο ζητείται έγκριση από τον υπεύθυνο. */
@@ -60,7 +60,7 @@ describe('ADR-915 §28 — αίτημα έγκρισης με σύνδεσμο',
   it('ο υπεύθυνος αποφασίζει με τον σύνδεσμο ⇒ βάση `owner-link-approval` + `invitationId` — ΠΟΤΕ uid γραφείου', () => {
     const reduced = step(run([...QUOTED, [REQUEST('diin_1')]]), LINK_APPROVE, link('diin_1'));
     expect(reduced.ok && reduced.record.decision).toEqual({
-      basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'link', outcome: 'approved', ownerContactId: 'cont_lead', quoteRevision: 1, note: null, at: NOW,
+      basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'link', outcome: 'approved', ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null, note: null, at: NOW,
     });
     expect(reduced.ok && issuanceStageOf(reduced.record)).toBe('accepted');
   });

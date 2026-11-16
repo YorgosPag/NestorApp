@@ -97,7 +97,7 @@ function recordOf(actions: readonly IssuanceAction[]): IssuanceAssignmentRecord 
 }
 
 const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_client', credential: INSPECTOR };
-const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha', quoteRevision: 1 };
+const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha', quoteRevision: 1, ownerAttestation: null };
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null };
 const FIRM_TERMS: QuoteTerms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5 };
 const QUOTE: IssuanceAction = { kind: 'quote', terms: FIRM_TERMS };
@@ -270,7 +270,7 @@ describe('ADR-915 §42 — η προσφορά πάνω στην κάρτα: μ�
   it('παλιά ανάθεση (§27) στο `sent` ⇒ ο παλιός δρόμος «Αναλαμβάνει / Αρνήθηκε», χωρίς καταγραφή προσφοράς', () => {
     const legacy: IssuanceAssignmentRecord = {
       ...recordOf([PROPOSE, NOTIFY]),
-      decision: { basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'uid_agent', outcome: 'approved', quoteRevision: null, ownerContactId: 'cont_alpha', note: null, at: ACTOR.nowIso },
+      decision: { basis: 'recorded-instruction', channel: 'phone', recordedByUid: 'uid_agent', outcome: 'approved', quoteRevision: null, ownerContactId: 'cont_alpha', ownerAttestation: null, note: null, at: ACTOR.nowIso },
     };
     registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: legacy }]);
     render(<DocumentRegistryContent />);
@@ -454,7 +454,7 @@ describe('ADR-915 §29 — κωδικός πρόσβασης: ο διακόπτ�
     const requested = recordOf([...QUOTED, { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_alpha', note: null, verification: 'access-code' }]);
     const decided: IssuanceAssignmentRecord = {
       ...requested,
-      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'access-code', outcome: 'approved', quoteRevision: 1, ownerContactId: 'cont_alpha', note: null, at: '2026-10-11T09:00:00.000Z' },
+      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'access-code', outcome: 'approved', quoteRevision: 1, ownerContactId: 'cont_alpha', ownerAttestation: null, note: null, at: '2026-10-11T09:00:00.000Z' },
     };
     registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: decided }]);
     render(<DocumentRegistryContent />);
@@ -527,7 +527,7 @@ describe('ADR-915 §31 — αυτόματες υπενθυμίσεις: ο δι�
 
     const answered: IssuanceAssignmentRecord = {
       ...requestWithReminders(true),
-      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'link', outcome: 'approved', quoteRevision: 1, ownerContactId: 'cont_alpha', note: null, at: '2026-10-11T09:00:00.000Z' },
+      decision: { basis: 'owner-link-approval', invitationId: 'diin_1', verifiedBy: 'link', outcome: 'approved', quoteRevision: 1, ownerContactId: 'cont_alpha', ownerAttestation: null, note: null, at: '2026-10-11T09:00:00.000Z' },
     };
     registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: answered }]);
     render(<DocumentRegistryContent />);

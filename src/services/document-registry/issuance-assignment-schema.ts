@@ -28,6 +28,7 @@ import { MYDATA_MARK_PATTERN, QUOTE_BASES, QUOTE_MAX_REVISION, QUOTE_SCOPE_ITEMS
 import { ISSUANCE_DELIVERY_POLICY } from '@/lib/document-validity/issuance-delivery-due';
 import { ISSUANCE_DELIVERY_REMINDER_POLICY } from '@/lib/document-validity/issuance-delivery-reminder';
 import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from '@/lib/document-validity/issuance-inspection-contact';
+import { OWNER_ATTESTATION_POLICY, OWNER_VERDICTS } from '@/lib/document-validity/issuance-owner-attestation';
 import { deliveryBusinessDaysSchema, isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
 import { generateDeterministicDocumentIssuanceAssignmentId } from '@/services/enterprise-id.service';
 import { REGISTRY_PROPERTY_SCOPES, type RegistryPropertyScope } from './document-registry.types';
@@ -60,6 +61,12 @@ const decisionSchema = z.discriminatedUnion('basis', [
   /** §42 — έγγραφα πριν από την προσφορά δεν το έγραφαν: διαβάζονται ως παλιά ανάθεση (`null`), που ήταν και η αλήθεια τους. */
   quoteRevision: z.number().int().min(1).nullable().default(null),
   ownerContactId: nonEmpty,
+  /** §45.15 — αποφάσεις πριν από το 1β-γ δεν έγραφαν τεκμήριο ιδιοκτητών: «δεν ζητήθηκε», που ήταν και η αλήθεια τους. */
+  ownerAttestation: z.object({
+    owners: z.array(z.object({ contactId: nonEmpty, verdict: z.enum(OWNER_VERDICTS), vatNumber: nonEmpty.nullable() }))
+      .max(OWNER_ATTESTATION_POLICY.maxOwners),
+    missingNote: z.string().min(1).max(OWNER_ATTESTATION_POLICY.missingNoteMax).nullable(),
+  }).nullable().default(null),
   note,
   at: nonEmpty,
 }));

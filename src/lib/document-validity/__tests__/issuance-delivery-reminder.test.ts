@@ -34,7 +34,7 @@ const TERMS: QuoteTerms = {
 const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_pro', credential: INSPECTOR };
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };
 const QUOTE: IssuanceAction = { kind: 'quote', terms: TERMS };
-const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1 };
+const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null };
 
 /** Ένα βήμα ανά ημέρα από τη Δευτέρα 2026-11-02· η έγκριση (βήμα 3) την Πέμπτη 2026-11-05 ⇒ προθεσμία Πέμπτη 2026-11-12. */
 const at = (i: number): string => `2026-11-${String(i + 2).padStart(2, '0')}T09:00:00.000Z`;
