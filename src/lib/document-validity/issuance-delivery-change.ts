@@ -157,3 +157,35 @@ export function deliveryChangeTransitionAt(written: ChangeRecord, nowIso: string
   if (last.answer === null) return last.at === nowIso ? { kind: 'requested', request: last } : null;
   return last.answer.at === nowIso ? { kind: 'answered', request: { ...last, answer: last.answer } } : null;
 }
+
+/**
+ * §45.20 Φ6γ — «Νέα ημερομηνία» **από τη θέση του επαγγελματία**. 🔒 Ε-9′: μόνο ημερομηνίες και αιτιολογίες — ποιος
+ * απάντησε στο γραφείο (`byUid`) **δεν** ταξιδεύει. Μόνο αιτήματα της **δικής του** συμμετοχής.
+ */
+export interface DeliveryChangeGlance {
+  /** Το εκκρεμές αίτημα — όσο υπάρχει, νέο αίτημα δεν γίνεται (ένα τη φορά). */
+  readonly pending: { readonly dueOn: string; readonly reason: string; readonly at: string } | null;
+  /** Η απάντηση στο τελευταίο απαντημένο αίτημα — `null` όταν δεν υπάρχει ή όταν εκκρεμεί νεότερο. */
+  readonly lastAnswer: {
+    readonly requestedDueOn: string;
+    readonly outcome: DeliveryChangeOutcome;
+    /** `accepted` ⇒ η ημερομηνία που **όρισε** το γραφείο (μπορεί να διαφέρει από τη ζητούμενη). */
+    readonly dueOn: string | null;
+    readonly reason: string | null;
+    readonly at: string;
+  } | null;
+}
+
+/** Η όψη για **μία** συμμετοχή — από τους ίδιους κριτές (`pending…` / `lastAnswered…`) με τη μείωση. */
+export function deliveryChangeGlanceOf(record: ChangeRecord, engagementId: string): DeliveryChangeGlance {
+  const own = { deliveryChangeRequests: record.deliveryChangeRequests.filter((r) => r.engagementId === engagementId) };
+  const pending = pendingDeliveryChangeOf(own);
+  const answered = lastAnsweredDeliveryChangeOf(own);
+  return {
+    pending: pending === null ? null : { dueOn: pending.dueOn, reason: pending.reason, at: pending.at },
+    lastAnswer: answered === null || answered.answer === null ? null : {
+      requestedDueOn: answered.dueOn, outcome: answered.answer.outcome,
+      dueOn: answered.answer.dueOn, reason: answered.answer.reason, at: answered.answer.at,
+    },
+  };
+}

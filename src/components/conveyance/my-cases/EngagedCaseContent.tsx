@@ -106,7 +106,7 @@ function CaseState({ engagementId, home }: { readonly engagementId: string; read
   if (state.kind === 'failed' || state.kind === 'moved') return <p className={cn('text-sm', colors.text.error)}>{t('engagement.case.loadError')}</p>;
   // ADR-862 §5.3.11 — ένα URL για κάθε είδος· η σελίδα διαλέγει περιεχόμενο **μόνο** από το `kind` της όψης.
   // ADR-744 §27.4 — τεμπέλικη επιφάνεια: το λεξιλόγιο του μητρώου εγγράφων μόνο όταν η υπόθεση είναι ανάθεση έκδοσης.
-  if (state.view.kind === 'document_issuance') return <IssuanceSurfaces.EngagedIssuanceContent view={state.view} />;
+  if (state.view.kind === 'document_issuance') return <IssuanceSurfaces.EngagedIssuanceContent view={state.view} onChanged={reload} />;
   return <CaseView view={state.view} onChanged={reload} />;
 }
 

@@ -13,6 +13,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { formatFileSize } from '@/utils/file-validation';
+import { externalMapSearchUrl } from '@/lib/geo/external-map-link';
 import {
   Image as ImageIcon,
   FileText,
@@ -206,7 +207,7 @@ export function LocationAttachment({ attachment, isOutbound }: SingleAttachmentP
   const colors = useSemanticColors();
   const lat = attachment.metadata?.latitude as number | undefined;
   const lng = attachment.metadata?.longitude as number | undefined;
-  const mapsUrl = lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : attachment.url;
+  const mapsUrl = (lat && lng ? externalMapSearchUrl({ kind: 'point', lat, lng }) : null) ?? attachment.url;
 
   return (
     <a

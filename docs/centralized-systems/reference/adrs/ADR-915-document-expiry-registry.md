@@ -160,6 +160,7 @@ ADR-838). Ένας τρίτος, χειρόγραφος κατάλογος θα 
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-16 | **§45.20 Φ6γ — «Νέα ημερομηνία» + ο χώρος του μηχανικού ως «πόρτες».** Ο μηχανικός **ζητά** νέα προθεσμία με αιτιολογία (actor `engagement`, ένα εκκρεμές τη φορά), το γραφείο **αποδέχεται** (η ίδια `schedule-delivery`, προσυμπληρωμένη, και με άλλη ημέρα) ή **απορρίπτει** με αιτιολογία· ειδοποιήσεις και στις δύο πλευρές. Στον χώρο του μηχανικού: γραφείο → βιτρίνα (πάντα, ADR-777 §8.58) · ακίνητο → αγγελία μόνο αν δημοσιευμένη · διεύθυνση → εξωτερικοί χάρτες (νέο SSoT `external-map-link.ts`) · μία γραμμή ιδιοκτητών με «ενέκρινε» κατά ταυτότητα + αντιγραφή ΑΦΜ (`CopyValueButton`) · «λήγει σε N ημέρες» και στο «εντός» (`latenessDayCount`, ένα αντί για δύο αντίγραφα). jest 295/295. |
 | 2026-11-16 | **§45.19 Φ6β — «Οι εκκρεμότητές μου».** Νέα μέθοδος `openItem` στη σύμβαση οικοδεσπότη (ADR-862 §5.3.11 — έκδοση: προθεσμία παράδοσης · μεταβίβαση: ημέρα υπογραφής) · `engagementOpenItemsOf` από **όλα** τα γραφεία, κοντινότερη πρώτη · `GET /api/engagements` φέρει `openItems` (+ `?view=open-items` μόνο αυτά) · ενότητα στο «Οι υποθέσεις μου» · τέταρτη πηγή `engagement` στο ημερολόγιο CRM (ADR-089). Η όψη της βαθμίδας μετακινήθηκε σε `components/shared/due-countdown-look.ts` (CHECK 3.34). Μένει Φ6γ. |
 | 2026-11-16 | **§45.18 Φ6α — η προθεσμία στην όψη του μηχανικού.** `MyIssuanceCard.delivery` + `IssuanceAgreementView.lateness` από τον ίδιο κριτή με το μητρώο (χωρίς ημέρα υπογραφής, Ε-9′)· κάρτα και χώρος δείχνουν «Παράδοση έως» + τη βαθμίδα του μητρώου (ένα λεξιλόγιο). Μένουν Φ6β («Οι εκκρεμότητές μου», `openItem`, ημερολόγιο μηχανικού) και Φ6γ («Νέα ημερομηνία»). |
 | 2026-11-16 | **§45.17 Φ5 — ειδοποιήσεις προθεσμίας παράδοσης.** `properties.documentIssuanceOverdue` (γραφείο, +1 · +7) και `properties.documentIssuanceDeliveryDue` (επαγγελματίας με ενεργή συμμετοχή, παραμονή), μία προτίμηση `documentIssuanceDelivery`. Καθαρό `deliveryMilestoneOf` (το πιο πρόσφατο ορόσημο που πέρασε) · `eventId` με την προθεσμία ⇒ μία φορά ανά ορόσημο. Εκπομπή από τη σάρωση της Φ3· η ενεργή συμμετοχή βγήκε σε δικό της module (`issuance-active-engagement.ts`), κοινό για email και ειδοποίηση. jest 2897/2897. |
@@ -4995,4 +4996,62 @@ Browser ⏳.
 **Γνωστό όριο:** μετά το «Αναλαμβάνω» σε υπόθεση με ημέρα υπογραφής, η εκκρεμότητα εμφανίζεται στην επόμενη φόρτωση (η
 αισιόδοξη ενημέρωση αλλάζει μόνο την κάρτα).
 
-**⏳ Μένει:** **Φ6γ** «Νέα ημερομηνία» (πρώτα διάσπαση του `issuance-assignment.ts`, 500 γραμμές) · browser.
+**⏳ Μένει:** **Φ6γ** «Νέα ημερομηνία» (πρώτα διάσπαση του `issuance-assignment.ts`, 500 γραμμές) · browser. → **έγινε, §45.20.**
+
+### 45.20 Φ6γ — «Νέα ημερομηνία»: ο μηχανικός ΖΗΤΑ, το γραφείο ΑΠΟΦΑΣΙΖΕΙ · και ο χώρος του μηχανικού γίνεται «πόρτες» (2026-11-16)
+
+**Γιατί:** ο μηχανικός έβλεπε την προθεσμία (Φ6α/Φ6β) αλλά δεν είχε κανέναν δρόμο να πει «δεν προλαβαίνω» μέσα από την
+εφαρμογή. Πρότυπο Procore/ACC «Request date change»: **αίτημα με αιτιολογία προς τον κάτοχο της προθεσμίας, όχι αλλαγή**.
+Αποφάσεις Giorgio: απόρριψη = πράξη με αιτιολογία ✅ · ειδοποίηση του μηχανικού για την απάντηση ✅ · ένα εκκρεμές τη φορά ✅.
+
+**Μοντέλο (γεγονότα — το «εκκρεμεί» ΠΑΡΑΓΕΤΑΙ):** νέο πεδίο εγγραφής `deliveryChangeRequests` (append-only, όπως το
+`deliverySchedule`): `{ dueOn, reason, at, byUid, engagementId, answer: { outcome, dueOn, reason, at, byUid } | null }`.
+Εκκρεμές = το τελευταίο με `answer === null` (`pendingDeliveryChangeOf`). Παλιά έγγραφα ⇒ `[]` (`.default([])`).
+
+| Πράξη | Ποιος | Κανόνες |
+|---|---|---|
+| `request-delivery-change {dueOn, reason}` | **μόνο** actor `engagement` (νέος, `issuance-actor.ts`) | από `accepted` · ημέρα ≥ σήμερα (ημερολόγιο Ελλάδας) · ≠ τρέχουσα · αιτιολογία 1..500 · εκκρεμές ⇒ `transition-refused` · ίδιο αίτημα ξανά ⇒ ιδεμποτές `changed: false` |
+| `decline-delivery-change {reason}` | μόνο γραφείο | μόνο με εκκρεμές · αιτιολογία υποχρεωτική · η προθεσμία μένει |
+| `schedule-delivery` (υπάρχουσα) | γραφείο | με εκκρεμές ⇒ στην **ίδια** μείωση `answer: accepted` με την ημέρα που **όρισε** το γραφείο (μπορεί ≠ ζητούμενης, όπως στο Procore) |
+
+Ο actor `engagement` **δεν** κάνει καμία άλλη πράξη (`actor-refused` πριν από τον έλεγχο σταδίου).
+
+**Διακομιστής (commit `cf3639bb`):** διάσπαση `issuance-actor.ts` + `issuance-assignment-audit.server.ts` · φύλλο
+`issuance-delivery-change.ts` · γραφέας με writer `engagement` (CAS όπως το γραφείο) · πόρτα μηχανικού
+`POST /api/engagements/[engagementId]/issuance/delivery-change` (`engagementPost` ⇒ rate limit + auth + ιδεμποτία· η
+συμμετοχή ξαναδιαβάζεται και κρίνεται **μέσα** στη συναλλαγή) · πόρτα γραφείου = το υπάρχον `PUT …/issuance-assignments` ·
+ειδοποιήσεις `…_DELIVERY_CHANGE_REQUESTED` (γραφείο) / `…_DELIVERY_CHANGE_ANSWERED` (μηχανικός) · πεδίο ιστορικού.
+
+**UI (αυτό το βήμα):**
+
+| Αρχείο | Αλλαγή |
+|---|---|
+| `lib/document-validity/issuance-delivery-change.ts` | `DeliveryChangeGlance` + `deliveryChangeGlanceOf(record, engagementId)` — εκκρεμές ή τελευταία απάντηση, **μόνο** της δικής του συμμετοχής· 🔒 Ε-9′: **κανένα** `byUid` |
+| `types/my-engagements.ts` · `issuance-engagement-host-adapter.ts` | `IssuanceAgreementView.deliveryChange` |
+| `services/conveyance/conveyance-engagement-gateway.ts` | `requestIssuanceDeliveryChange` + κλειστό σύνολο `DELIVERY_CHANGE_REJECTIONS` (`namedError`) |
+| `components/conveyance/my-cases/EngagedDeliveryChange.tsx` (νέο) | κουμπί «Αίτημα νέας ημερομηνίας» → διάλογος (ημέρα `min=σήμερα` + αιτιολογία)· γραμμή «αναμένεται απάντηση» **αντί** για το κουμπί όσο εκκρεμεί· απάντηση «δέχτηκε — νέα προθεσμία» / «απέρριψε: αιτιολογία»· κάθε κωδικός άρνησης με δικό του μήνυμα· `STALE` ⇒ ξαναδιάβασμα· `EngagedCaseContent` περνά `onChanged={reload}` |
+| `components/document-registry/RegistryIssuanceDelivery.tsx` · `RegistryIssuanceDialogs.tsx` · `RegistryIssuanceDeliveryForm.tsx` | πλαίσιο εκκρεμούς (ημέρα · πότε · αιτιολογία) με «Αποδοχή» = η **ίδια** φόρμα προθεσμίας `prefill`-αρισμένη, και «Απόρριψη» = νέα `DeclineDeliveryChangeForm` (lazy, ίδιο αρχείο)· κλειδιά `DELIVERY_CHANGE_KEYS` |
+
+**Ο χώρος του μηχανικού γίνεται «πόρτες» (έρευνα + έγκριση Giorgio, ίδιο βήμα):**
+
+| Στοιχείο | Απόφαση | Γιατί |
+|---|---|---|
+| Γραφείο | σύνδεσμος προς `/pro/<…>` **πάντα** όταν υπάρχει ταυτότητα + όνομα (`agencyDoorFor` → `agencyProfileRoute`)· `EngagedIssuanceView.hostCompanyId` | ADR-777 §8.58: σύνδεσμος «μόνο αν δημοσιεύει» θα γινόταν **μαντείο** — η σελίδα προορισμού απαντά αδιάκριτα. ⚠️ Η αρχική σύσταση έλεγε «υπό όρους»· ο κώδικας κέρδισε |
+| Ακίνητο | σύνδεσμος **μόνο** σε δημοσιευμένη αγγελία (`readPublicListingById`, ταυτότητα = `propertyId`)· `EngagedIssuanceView.publicListingId` | ο μηχανικός είναι ήδη μέρος της ανάθεσης (όχι μαντείο)· σύνδεσμος σε 404 = αδιέξοδο |
+| Έγγραφο | κείμενο | είναι το παραδοτέο, δεν υπάρχει ακόμη |
+| Διεύθυνση αυτοψίας | **εξωτερικοί χάρτες** σε νέα καρτέλα (`noopener noreferrer`) — νέο SSoT `lib/geo/external-map-link.ts` (Google Maps URLs `api=1`, χωρίς κλειδί)· μεταφέρθηκε εκεί και το χειρόγραφο `google.com/maps?q=` του `crm/inbox/attachment-parts.tsx` | ο άνθρωπος θέλει να **πάει** (διαδρομή, εφαρμογή χαρτών στο κινητό)· ο δικός μας χάρτης δεν δίνει πλοήγηση. Δεν είναι πηγή πλακιδίων (CHECK 3.95) |
+| Ιδιοκτήτης / Ιδιοκτήτες | **όχι** σύνδεσμοι (επαφές του γραφείου ⇒ 403 ή διαρροή, Ε-9′)· **μία** γραμμή: ο εγκρίνων σημειώνεται «(ενέκρινε την προσφορά)» κατά **ταυτότητα** επαφής (`IssuanceOwnerView.approvedQuote`)· κουμπί αντιγραφής ΑΦΜ (νέο κοινό `components/shared/CopyValueButton.tsx` πάνω στο `useCopyToClipboard`) | ο μηχανικός **πληκτρολογεί** το ΑΦΜ στο μητρώο του εγγράφου· ΑΦΜ με εκκρεμή διόρθωση ή απόν **δεν** αντιγράφεται |
+| «Προθεσμία 23/11» | το σήμα λέει «λήγει σε 7 ημέρες» και στη βαθμίδα `on-track` (ήταν «εντός προθεσμίας»)· νέο `latenessDayCount` = **ο ένας** αριθμός της βαθμίδας | ήταν **δύο** αντίγραφα (`tierText` μητρώου · `countdownText` «Οι εκκρεμότητές μου») και το ένα έκρυβε τις ημέρες· η απόλυτη ημέρα μένει πρώτη (GitLab/Atlassian: προθεσμία ⇒ απόλυτη + σχετική ως βοήθημα) |
+
+i18n el+en: `conveyance` (`engagement.issuance.deliveryChange.*`, `siteAddressMapHint`, `ownerVat*`, `ownerApprovedMark`,
+`openItems.countdown.*.on-track`) · `document-registry` (`issuance.delivery.change.*`, `tier.on-track`). Γεννήτορες τύπων +
+shell slice: μέσα στη σφράγιση.
+
+**Άγκυρες:** νέα `lib/document-validity/__tests__/issuance-delivery-change.test.ts` (ποιος μπορεί τι · αίτημα ≠ αλλαγή ·
+5 άκυροι όροι · ένα εκκρεμές · ιδεμποτία · απόρριψη · αποδοχή με **άλλη** ημέρα · όψη χωρίς uid και μόνο της δικής του
+συμμετοχής · `latenessDayCount`) · νέα `lib/geo/__tests__/external-map-link.test.ts` · `issuance-agreement-parties.test.ts`
+(+`approvedQuote` κατά ταυτότητα). **jest 295/295 σε 18 σουίτες** (οικογένεια `issuance-*`, μητρώο, εκκρεμότητες).
+
+**⏳ Μένει:** browser (μηχανικός ζητά → γραφείο ειδοποίηση + πλαίσιο → αποδοχή · δεύτερος κύκλος απόρριψη) · ένδειξη
+«αίτημα αλλαγής» στο κελί του πίνακα/εκκρεμότητες CRM (προτείνεται χωριστά) · το «Άνοιγμα» που αναδιπλώνεται στο localhost
+(«Οι εκκρεμότητές μου», εύρημα §45.19).

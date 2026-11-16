@@ -479,7 +479,7 @@
         "overdue": "{count, plural, one {# day overdue} other {# days overdue}}",
         "due-today": "due today",
         "due-soon": "{count, plural, one {due in # day} other {due in # days}}",
-        "on-track": "on track",
+        "on-track": "{count, plural, one {due in # day} other {due in # days}}",
         "no-due-date": "no deadline"
       },
       "source": {
@@ -503,6 +503,16 @@
           "REMINDER_LIMIT": "Many reminders have already been sent for this assignment.",
           "generic": "The reminder was not sent. Please try again."
         }
+      },
+      "change": {
+        "requested": "The professional asks for a new deadline: {date} (requested on {at})",
+        "reason": "Reason: {reason}",
+        "accept": "Accept",
+        "acceptDescription": "Set the new deadline — you may also set a different date from the one requested. The professional is notified.",
+        "decline": "Decline",
+        "declineTitle": "Decline the new-date request",
+        "declineDescription": "The current deadline stays. The professional is notified with your reason.",
+        "declineSubmit": "Decline request"
       }
     },
     "ownerVat": {

@@ -23,6 +23,7 @@ import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import { ballInCourtOf, issuanceStageOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import { deliveryChangeGlanceOf } from '@/lib/document-validity/issuance-delivery-change';
 import { issuanceDeliveryOf, issuanceDeliveryStatusOf, issuanceLatenessOf } from '@/lib/document-validity/issuance-delivery-due';
 import { agreedQuoteOf, quoteTotalsOf } from '@/lib/document-validity/issuance-quote';
 import { conveyanceToday, nextConveyanceDayStart } from '@/lib/conveyance/conveyance-calendar';
@@ -42,6 +43,7 @@ import { actingViews, type ActingViews } from '@/services/conveyance/conveyance-
 import { placementRejectionOf, shownIn, type CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
 import { answerChanges, recordEngagementAudit } from '@/services/conveyance/conveyance-engagement-support';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
+import { readPublicListingById } from '@/services/listings/public-listing-by-id.reader';
 import type { EngagementHostLine } from '@/types/contact-professional-link';
 import { SCOPE_OF_SUBJECT, type IssuanceEngagement } from '@/types/engagement';
 import type { IssuanceEngagementInvitation } from '@/types/engagement-invitation';
@@ -97,6 +99,11 @@ async function stageOpen(db: Firestore, tx: Transaction, invitation: IssuanceEng
 
 async function propertyNameOf(db: Firestore, hostCompanyId: string, propertyId: string): Promise<string | null> {
   return (await loadConveyanceSubject(db, hostCompanyId, propertyId).catch(() => null))?.propertyName ?? null;
+}
+
+/** §45.20 — η δημοσιευμένη αγγελία του ακινήτου (ταυτότητα = `propertyId`), ή `null`· αποτυχία ανάγνωσης ⇒ χωρίς σύνδεσμο. */
+async function publicListingIdOf(db: Firestore, propertyId: string): Promise<string | null> {
+  return (await readPublicListingById(db, propertyId).catch(() => null))?.id ?? null;
 }
 
 async function hostNameOf(hostCompanyId: string): Promise<string | null> {
@@ -227,7 +234,9 @@ async function openItem(db: Firestore, uid: string, engagement: IssuanceEngageme
  * ADR-915 §45.10 — ό,τι υποσχέθηκε η σελίδα προσφοράς «μετά την έγκριση» (Π-7): **μόνο** σε αναληφθείσα ανάθεση.
  * Πριν (προσφορά · απόφαση) ή μετά (ακύρωση) ⇒ `null`: ο φάκελος προσφοράς δεν διευρύνεται σιωπηλά.
  */
-async function agreementOf(db: Firestore, assignment: DocumentIssuanceAssignment, stage: IssuanceStage, now: Date): Promise<IssuanceAgreementView | null> {
+async function agreementOf(
+  db: Firestore, assignment: DocumentIssuanceAssignment, stage: IssuanceStage, now: Date, engagementId: string,
+): Promise<IssuanceAgreementView | null> {
   if (stage !== SPACE_OPEN_STAGE || assignment.decision === null) return null;
   const record = issuanceRecordOf(assignment);
   const quote = agreedQuoteOf(record);
@@ -238,7 +247,10 @@ async function agreementOf(db: Firestore, assignment: DocumentIssuanceAssignment
   ]);
   const dueOn = issuanceDeliveryOf(record)?.dueOn ?? null;
   const lateness = issuanceLatenessOf(dueOn, conveyanceToday(now));
-  return { siteAddress, ownerName, totals: quote ? quoteTotalsOf(quote) : null, dueOn, lateness, ...parties };
+  return {
+    siteAddress, ownerName, totals: quote ? quoteTotalsOf(quote) : null, dueOn, lateness, ...parties,
+    deliveryChange: deliveryChangeGlanceOf(record, engagementId),
+  };
 }
 
 async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEngagement, nowMs: number): Promise<EngagedViewOutcome> {
@@ -249,18 +261,21 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
   const assignment = await readHostedIssuanceAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId);
   if (!assignment) return { ok: false, rejection: 'not-found' };
   const stage = issuanceStageOf(assignment);
-  const [propertyName, hostName, agreement] = await Promise.all([
+  const [propertyName, hostName, agreement, publicListingId] = await Promise.all([
     propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
     hostNameOf(engagement.hostCompanyId),
-    agreementOf(db, assignment, stage, new Date(nowMs)),
+    agreementOf(db, assignment, stage, new Date(nowMs), engagement.id),
+    publicListingIdOf(db, assignment.propertyId),
   ]);
   return {
     ok: true,
     view: {
       kind: 'document_issuance',
       engagementId: engagement.id,
+      hostCompanyId: engagement.hostCompanyId,
       hostName,
       propertyName,
+      publicListingId,
       documentKind: assignment.documentKind,
       stage,
       ballInCourt: ballInCourtOf(stage),

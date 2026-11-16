@@ -76,6 +76,7 @@ export async function readIssuanceAgreementParties(db: Firestore, assignment: Do
       name: data ? trimmedStringOrNull(extractContactDisplayName(data)) : null,
       vatNumber: vatOf(id),
       vatPendingOfficeConfirmation: pending.has(id),
+      approvedQuote: id === record.decision?.ownerContactId,
     };
   }) ?? null;
   return { inspectionContact: inspectionViewOf(entry, docs), owners };

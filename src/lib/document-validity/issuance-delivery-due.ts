@@ -120,6 +120,21 @@ export function issuanceLatenessOf(dueOn: string | null, today: string): Issuanc
   return daysLeft <= ISSUANCE_DELIVERY_POLICY.dueSoonDays ? { tier: 'due-soon', daysLeft } : { tier: 'on-track', daysLeft };
 }
 
+/**
+ * §45.20 — **ο αριθμός που λέει η λέξη της βαθμίδας** («καθυστερεί 3» · «λήγει σε 7»), ή `null` όταν η λέξη δεν έχει
+ * αριθμό. Η ΜΙΑ αντιστοίχιση για κάθε σήμα (μητρώο · χώρος επαγγελματία · «Οι εκκρεμότητές μου»): ήταν δύο αντίγραφα,
+ * και το ένα έκρυβε τις ημέρες του «εντός» πίσω από ένα αόριστο «εντός προθεσμίας».
+ */
+export function latenessDayCount(lateness: IssuanceLateness): number | null {
+  switch (lateness.tier) {
+    case 'overdue': return lateness.days;
+    case 'due-soon':
+    case 'on-track': return lateness.daysLeft;
+    case 'due-today':
+    case 'no-due-date': return null;
+  }
+}
+
 /** 🏆 Α4 — η παράδοση πέφτει **μετά** την ημέρα που τη χρειάζεται η υπογραφή. `signingDay === null` ⇒ καμία σύγκρουση. */
 export function deliveryMissesSigning(dueOn: string, signingDay: string | null): boolean {
   return signingDay !== null && dueOn > signingDay;

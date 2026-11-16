@@ -20,11 +20,16 @@ import { formatDate } from '@/lib/intl-formatting';
 import type { IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceDeliveryStatus } from '@/lib/document-validity/issuance-delivery-due';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
-import { DELIVERY_KEYS, DELIVERY_REMINDER_KEYS, DELIVERY_SOURCE_KEYS } from '@/components/document-registry/issuance-delivery-labels';
+import { DELIVERY_CHANGE_KEYS, DELIVERY_KEYS, DELIVERY_REMINDER_KEYS, DELIVERY_SOURCE_KEYS } from '@/components/document-registry/issuance-delivery-labels';
+import { pendingDeliveryChangeOf } from '@/lib/document-validity/issuance-delivery-change';
 import { DeliveryLatenessBadge, MissesSigning } from '@/components/document-registry/RegistryIssuanceDeliveryCell';
 import { DeliveryReminderButton, type DeliveryReminderTarget } from '@/components/document-registry/RegistryDeliveryReminder';
 import { lastDeliveryReminderAt, type IssuanceDeliveryReminders } from '@/lib/document-validity/issuance-delivery-reminder';
-import { IssuanceDeliveryDialog } from '@/components/document-registry/RegistryIssuanceDialogs';
+import {
+  IssuanceAcceptDeliveryChangeDialog,
+  IssuanceDeclineDeliveryChangeDialog,
+  IssuanceDeliveryDialog,
+} from '@/components/document-registry/RegistryIssuanceDialogs';
 import type { RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
@@ -69,6 +74,36 @@ function DeliveryReminderLine({ target, reminders }: { readonly target: Delivery
   );
 }
 
+/**
+ * §45.20 Φ6γ — το **εκκρεμές** αίτημα νέας ημερομηνίας του επαγγελματία: ζητούμενη ημέρα · πότε · αιτιολογία, και (με
+ * δικαίωμα) «Αποδοχή» (προσυμπληρωμένη φόρμα προθεσμίας) / «Απόρριψη» (με αιτιολογία). Ο κριτής «εκκρεμεί» είναι ο ΕΝΑΣ
+ * του μειωτή (`pendingDeliveryChangeOf`) — καμία δεύτερη ανάγνωση εδώ.
+ */
+function PendingDeliveryChange({ view, record, currentDueOn, canAct }: {
+  readonly view: RegistryIssuanceView;
+  readonly record: IssuanceAssignmentRecord;
+  readonly currentDueOn: string | null;
+  readonly canAct: boolean;
+}): React.ReactElement | null {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const pending = pendingDeliveryChangeOf(record);
+  if (pending === null) return null;
+  return (
+    <aside role="status" className="flex flex-col gap-1 rounded-md border border-border p-2 text-xs">
+      <p className="m-0 font-medium text-foreground">
+        {t(DELIVERY_CHANGE_KEYS.requested, { date: formatDate(pending.dueOn), at: formatDate(pending.at) })}
+      </p>
+      <p className="m-0 text-muted-foreground">{t(DELIVERY_CHANGE_KEYS.reason, { reason: pending.reason })}</p>
+      {canAct ? (
+        <footer className="flex flex-wrap gap-2">
+          <IssuanceAcceptDeliveryChangeDialog view={view} currentDueOn={currentDueOn} request={{ dueOn: pending.dueOn, reason: pending.reason }} />
+          <IssuanceDeclineDeliveryChangeDialog view={view} />
+        </footer>
+      ) : null}
+    </aside>
+  );
+}
+
 export interface RegistryIssuanceDeliveryProps {
   readonly view: RegistryIssuanceView;
   readonly status: IssuanceDeliveryStatus;
@@ -92,6 +127,7 @@ export function RegistryIssuanceDelivery({ view, status, record, professionalNam
       {due !== null && status.missesSigning ? (
         <p className="m-0 text-xs"><MissesSigning dueOn={due.dueOn} signingDay={view.signingDay} short={false} /></p>
       ) : null}
+      <PendingDeliveryChange view={view} record={record} currentDueOn={due?.dueOn ?? null} canAct={canAct} />
       <ScheduleHistory record={record} />
       <DeliveryReminderLine target={view} reminders={record.deliveryReminders} />
       {canAct ? <IssuanceDeliveryDialog view={view} professionalName={professionalName} currentDueOn={due?.dueOn ?? null} /> : null}

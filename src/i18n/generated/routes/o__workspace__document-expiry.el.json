@@ -56,7 +56,7 @@
           "due-soon": "{count, plural, one {λήγει σε # ημέρα} other {λήγει σε # ημέρες}}",
           "due-today": "λήγει σήμερα",
           "no-due-date": "χωρίς προθεσμία",
-          "on-track": "εντός προθεσμίας",
+          "on-track": "{count, plural, one {λήγει σε # ημέρα} other {λήγει σε # ημέρες}}",
           "overdue": "{count, plural, one {καθυστερεί # ημέρα} other {καθυστερεί # ημέρες}}"
         },
         "until": "· έως {date}"

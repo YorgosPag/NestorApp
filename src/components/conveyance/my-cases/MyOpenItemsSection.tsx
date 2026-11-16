@@ -20,7 +20,7 @@ import { DUE_COUNTDOWN_LOOK } from '@/components/shared/due-countdown-look';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { MyOpenItemsList } from '@/hooks/useMyCases';
 import { myCaseHref, type CaseHome } from '@/lib/conveyance/conveyance-routes';
-import type { IssuanceLateness, IssuanceLatenessTier } from '@/lib/document-validity/issuance-delivery-due';
+import { latenessDayCount, type IssuanceLateness, type IssuanceLatenessTier } from '@/lib/document-validity/issuance-delivery-due';
 import { formatDate } from '@/lib/intl-formatting';
 import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
@@ -64,14 +64,11 @@ const COUNTDOWN_KEYS: Readonly<Record<EngagementOpenItemDue, Readonly<Record<Iss
   },
 };
 
-/** Η λέξη της βαθμίδας για **αυτό** το είδος ημερομηνίας — οι αριθμητικές με `{count}` (πληθυντικός ICU). */
+/** Η λέξη της βαθμίδας για **αυτό** το είδος ημερομηνίας — ο αριθμός από τον ΕΝΑ `latenessDayCount` (πληθυντικός ICU). */
 function countdownText(t: Translate, due: EngagementOpenItemDue, countdown: IssuanceLateness): string {
   const key = COUNTDOWN_KEYS[due][countdown.tier];
-  switch (countdown.tier) {
-    case 'overdue': return t(key, { count: countdown.days });
-    case 'due-soon': return t(key, { count: countdown.daysLeft });
-    default: return t(key);
-  }
+  const count = latenessDayCount(countdown);
+  return count === null ? t(key) : t(key, { count });
 }
 
 function OpenItemRow({ item, home }: { readonly item: EngagementOpenItem; readonly home: CaseHome }) {

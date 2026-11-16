@@ -476,6 +476,37 @@
       "ownersUnavailable": "Could not be read right now — try again later",
       "ownersNone": "The office has not recorded an owner",
       "unnamedContact": "Unnamed",
+      "siteAddressMapHint": "opens in Google Maps in a new tab",
+      "ownerApprovedMark": "approved the quote",
+      "ownerVatCopy": "Copy tax ID {vat}",
+      "ownerVatCopied": "Tax ID copied.",
+      "ownerVatCopyFailed": "Copy failed — select the number and copy it manually.",
+      "deliveryChange": {
+        "trigger": "Request a new date",
+        "title": "Request a new delivery date",
+        "description": "The office will decide, and you will be notified of the answer.",
+        "descriptionWithDue": "The office will decide, and you will be notified of the answer. Until then the current deadline ({date}) stands.",
+        "dateLabel": "New delivery date",
+        "reasonLabel": "Reason",
+        "reasonHint": "Tell the office why the change is needed.",
+        "cancel": "Cancel",
+        "submit": "Send request",
+        "sending": "Sending…",
+        "sent": "Your request was sent to the office.",
+        "pending": "You asked for a new date, {date} (on {at}) — awaiting the office’s answer.",
+        "pendingReason": "Reason: {reason}",
+        "accepted": "The office accepted your request ({requested}) and set a new deadline: {date}.",
+        "declined": "The office declined your request for {requested}: {reason}",
+        "errors": {
+          "NOT_FOUND": "The assignment was not found.",
+          "ENGAGEMENT_NOT_ACTIVE": "Your access to this assignment is no longer active.",
+          "UNAVAILABLE": "The service is unavailable right now. Please try again shortly.",
+          "STALE": "The assignment changed in the meantime — the page was refreshed. Check and send again.",
+          "TRANSITION_REFUSED": "A request is already pending, or the assignment is no longer in progress.",
+          "TERMS_REFUSED": "The date must be today or later and different from the current one; a reason is required.",
+          "generic": "The request was not sent. Please try again."
+        }
+      },
       "scope": "The space gives access to this assignment only. Your contact details are not shown to anyone without your own choice."
     },
     "myCases": {
@@ -522,14 +553,14 @@
             "overdue": "{count, plural, one {# day overdue} other {# days overdue}}",
             "due-today": "due today",
             "due-soon": "{count, plural, one {due in # day} other {due in # days}}",
-            "on-track": "on track",
+            "on-track": "{count, plural, one {due in # day} other {due in # days}}",
             "no-due-date": "no deadline"
           },
           "signing": {
             "overdue": "{count, plural, one {passed # day ago} other {passed # days ago}}",
             "due-today": "today",
             "due-soon": "{count, plural, one {in # day} other {in # days}}",
-            "on-track": "scheduled",
+            "on-track": "{count, plural, one {in # day} other {in # days}}",
             "no-due-date": "no date"
           }
         }

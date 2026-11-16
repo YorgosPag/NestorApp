@@ -54,14 +54,14 @@
               "due-soon": "{count, plural, one {λήγει σε # ημέρα} other {λήγει σε # ημέρες}}",
               "due-today": "λήγει σήμερα",
               "no-due-date": "χωρίς προθεσμία",
-              "on-track": "εντός προθεσμίας",
+              "on-track": "{count, plural, one {λήγει σε # ημέρα} other {λήγει σε # ημέρες}}",
               "overdue": "{count, plural, one {καθυστερεί # ημέρα} other {καθυστερεί # ημέρες}}"
             },
             "signing": {
               "due-soon": "{count, plural, one {σε # ημέρα} other {σε # ημέρες}}",
               "due-today": "σήμερα",
               "no-due-date": "χωρίς ημερομηνία",
-              "on-track": "προγραμματισμένη",
+              "on-track": "{count, plural, one {σε # ημέρα} other {σε # ημέρες}}",
               "overdue": "{count, plural, one {πέρασε πριν από # ημέρα} other {πέρασε πριν από # ημέρες}}"
             }
           },

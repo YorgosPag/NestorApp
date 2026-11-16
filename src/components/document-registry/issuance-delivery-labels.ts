@@ -33,6 +33,18 @@ export const DELIVERY_KEYS = {
   submit: `${K}submit`,
 } as const;
 
+/** §45.20 Φ6γ — το εκκρεμές αίτημα νέας ημερομηνίας του επαγγελματία: αποδοχή (προσυμπληρωμένη) ή απόρριψη. */
+export const DELIVERY_CHANGE_KEYS = {
+  requested: `${K}change.requested`,
+  reason: `${K}change.reason`,
+  accept: `${K}change.accept`,
+  acceptDescription: `${K}change.acceptDescription`,
+  decline: `${K}change.decline`,
+  declineTitle: `${K}change.declineTitle`,
+  declineDescription: `${K}change.declineDescription`,
+  declineSubmit: `${K}change.declineSubmit`,
+} as const;
+
 /** Η λέξη κάθε βαθμίδας — οι αριθμητικές παίρνουν `{count}` με πληθυντικό ICU. */
 export const DELIVERY_TIER_KEYS: Readonly<Record<IssuanceLatenessTier, string>> = {
   overdue: `${K}tier.overdue`,

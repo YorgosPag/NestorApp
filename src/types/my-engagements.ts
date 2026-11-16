@@ -13,6 +13,7 @@
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { BallInCourtParty, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import type { DeliveryChangeGlance } from '@/lib/document-validity/issuance-delivery-change';
 import type { IssuanceLateness } from '@/lib/document-validity/issuance-delivery-due';
 import type { InspectionContactRole } from '@/lib/document-validity/issuance-inspection-contact';
 import type { QuoteTotals } from '@/lib/document-validity/issuance-quote';
@@ -91,6 +92,11 @@ export interface IssuanceOwnerView {
    * λέει «εκκρεμεί επιβεβαίωση γραφείου» **αντί** για αριθμό που μπορεί να είναι λάθος.
    */
   readonly vatPendingOfficeConfirmation: boolean;
+  /**
+   * §45.20 — αυτός είναι ο ιδιοκτήτης που **ενέκρινε** την προσφορά (κρίση κατά ταυτότητα επαφής, ποτέ κατά όνομα) ⇒ η
+   * όψη τον σημειώνει μέσα στον κατάλογο αντί για δεύτερη γραμμή «Ιδιοκτήτης» με το ίδιο όνομα.
+   */
+  readonly approvedQuote: boolean;
 }
 
 /**
@@ -114,6 +120,8 @@ export interface IssuanceAgreementView {
   readonly inspectionContact: InspectionContactView | null;
   /** `null` ⇒ οι ιδιοκτήτες δεν διαβάστηκαν τώρα· `[]` ⇒ το μητρώο δεν ξέρει ιδιοκτήτη. */
   readonly owners: readonly IssuanceOwnerView[] | null;
+  /** §45.20 Φ6γ — το αίτημα νέας ημερομηνίας **αυτής** της συμμετοχής: εκκρεμεί ή η τελευταία απάντηση. */
+  readonly deliveryChange: DeliveryChangeGlance;
 }
 
 /**
@@ -123,8 +131,18 @@ export interface IssuanceAgreementView {
 export interface EngagedIssuanceView {
   readonly kind: 'document_issuance';
   readonly engagementId: string;
+  /**
+   * §45.20 — η ταυτότητα του γραφείου, για την πόρτα προς τη **δημόσια** βιτρίνα του (`agencyDoorFor` → `/pro/<…>`).
+   * Δεν είναι διαρροή: είναι το κλειδί δημόσια αναγνώσιμου εγγράφου (ADR-827 §9.4), ήδη ορατό σε κάθε κάρτα καταλόγου.
+   */
+  readonly hostCompanyId: string;
   readonly hostName: string | null;
   readonly propertyName: string | null;
+  /**
+   * §45.20 — η **δημοσιευμένη** αγγελία του ακινήτου (`public_listings/{propertyId}`), ή `null` όταν δεν υπάρχει. Ο
+   * επαγγελματίας είναι ήδη μέρος της ανάθεσης — δεν είναι μαντείο· σύνδεσμος σε 404 όμως θα ήταν αδιέξοδο.
+   */
+  readonly publicListingId: string | null;
   readonly documentKind: DocumentKind;
   readonly stage: IssuanceStage;
   readonly ballInCourt: BallInCourtParty | null;

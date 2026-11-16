@@ -39,7 +39,7 @@ import {
   RECEIPT_KEYS,
   SEND_KEYS,
 } from '@/components/document-registry/issuance-labels';
-import { DELIVERY_KEYS } from '@/components/document-registry/issuance-delivery-labels';
+import { DELIVERY_CHANGE_KEYS, DELIVERY_KEYS } from '@/components/document-registry/issuance-delivery-labels';
 import { INSPECTION_KEYS } from '@/components/document-registry/issuance-inspection-labels';
 import type { IssuanceInspectionContactEntry } from '@/lib/document-validity/issuance-inspection-contact';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
@@ -52,6 +52,7 @@ const SendForm = dynamic(() => import('./RegistryIssuanceSendForm').then((mod) =
 const QuoteRecordForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.QuoteRecordForm), { ssr: false });
 const ReceiptForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.ReceiptForm), { ssr: false });
 const DeliveryScheduleForm = dynamic(() => import('./RegistryIssuanceDeliveryForm').then((mod) => mod.DeliveryScheduleForm), { ssr: false });
+const DeclineDeliveryChangeForm = dynamic(() => import('./RegistryIssuanceDeliveryForm').then((mod) => mod.DeclineDeliveryChangeForm), { ssr: false });
 const InspectionContactForm = dynamic(() => import('./RegistryIssuanceInspectionForm').then((mod) => mod.InspectionContactForm), { ssr: false });
 
 export interface IssuanceDialogShellProps {
@@ -166,6 +167,36 @@ export function IssuanceDeliveryDialog({ view, professionalName, currentDueOn }:
       description={change ? t(DELIVERY_KEYS.descriptionChange, { name: professionalName }) : t(DELIVERY_KEYS.descriptionSet, { name: professionalName })}
     >
       {(close) => <DeliveryScheduleForm view={view} close={close} currentDueOn={currentDueOn} />}
+    </IssuanceDialogShell>
+  );
+}
+
+/**
+ * §45.20 Φ6γ — «Αποδοχή» αιτήματος νέας ημερομηνίας: η **ίδια** φόρμα προθεσμίας, προσυμπληρωμένη με τη ζητούμενη
+ * ημέρα και την αιτιολογία του αιτήματος· η αποθήκευση (`schedule-delivery`) απαντά και το αίτημα.
+ */
+export function IssuanceAcceptDeliveryChangeDialog({ view, currentDueOn, request }: {
+  readonly view: RegistryIssuanceView;
+  readonly currentDueOn: string | null;
+  readonly request: { readonly dueOn: string; readonly reason: string };
+}): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  return (
+    <IssuanceDialogShell trigger={t(DELIVERY_CHANGE_KEYS.accept)} title={t(DELIVERY_KEYS.title)} description={t(DELIVERY_CHANGE_KEYS.acceptDescription)}>
+      {(close) => <DeliveryScheduleForm view={view} close={close} currentDueOn={currentDueOn} prefill={request} />}
+    </IssuanceDialogShell>
+  );
+}
+
+/** §45.20 Φ6γ — «Απόρριψη» αιτήματος νέας ημερομηνίας, με αιτιολογία· η τρέχουσα προθεσμία μένει. */
+export function IssuanceDeclineDeliveryChangeDialog({ view }: { readonly view: RegistryIssuanceView }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  return (
+    <IssuanceDialogShell
+      trigger={t(DELIVERY_CHANGE_KEYS.decline)} triggerVariant="ghost"
+      title={t(DELIVERY_CHANGE_KEYS.declineTitle)} description={t(DELIVERY_CHANGE_KEYS.declineDescription)}
+    >
+      {(close) => <DeclineDeliveryChangeForm view={view} close={close} />}
     </IssuanceDialogShell>
   );
 }

@@ -19,22 +19,17 @@ import { AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
-import type { IssuanceDeliveryStatus, IssuanceLateness } from '@/lib/document-validity/issuance-delivery-due';
+import { latenessDayCount, type IssuanceDeliveryStatus, type IssuanceLateness } from '@/lib/document-validity/issuance-delivery-due';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import { DELIVERY_KEYS, DELIVERY_TIER_KEYS } from '@/components/document-registry/issuance-delivery-labels';
 import { DUE_COUNTDOWN_LOOK } from '@/components/shared/due-countdown-look';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-/** Η λέξη της βαθμίδας — οι αριθμητικές με `{count}` (πληθυντικός ICU). */
+/** Η λέξη της βαθμίδας — οι αριθμητικές με `{count}` (πληθυντικός ICU) από τον ΕΝΑ `latenessDayCount`. */
 function tierText(t: Translate, lateness: IssuanceLateness): string {
-  switch (lateness.tier) {
-    case 'overdue': return t(DELIVERY_TIER_KEYS.overdue, { count: lateness.days });
-    case 'due-soon': return t(DELIVERY_TIER_KEYS['due-soon'], { count: lateness.daysLeft });
-    case 'due-today': return t(DELIVERY_TIER_KEYS['due-today']);
-    case 'on-track': return t(DELIVERY_TIER_KEYS['on-track']);
-    case 'no-due-date': return t(DELIVERY_TIER_KEYS['no-due-date']);
-  }
+  const count = latenessDayCount(lateness);
+  return count === null ? t(DELIVERY_TIER_KEYS[lateness.tier]) : t(DELIVERY_TIER_KEYS[lateness.tier], { count });
 }
 
 /** Η βαθμίδα ως σήμα: εικονίδιο + λέξη — το χρώμα είναι το τρίτο κανάλι, όχι το μόνο. */

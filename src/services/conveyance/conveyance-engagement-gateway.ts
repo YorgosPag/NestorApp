@@ -16,6 +16,7 @@ import { invitationLinkRefusalOf } from '@/lib/invitations/invitation-link-refus
 import { CASE_HOME_PARAM, ENGAGEMENTS_VIEW_PARAM, type CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
+import type { IssuanceStage } from '@/lib/document-validity/issuance-assignment';
 import type { CaseActivityItem, CaseProfessionalSlot, MyCaseCard } from '@/types/conveyance-case';
 import type { EngagedView, EngagementOpenItem, MyEngagementCard } from '@/types/my-engagements';
 import type { ContributionSummary } from '@/types/conveyance-contribution';
@@ -187,6 +188,34 @@ export type ContributionRejection = (typeof CONTRIBUTION_REJECTIONS)[number];
 
 export function contributionRejectionOf(error: unknown): ContributionRejection | null {
   return namedError(error, CONTRIBUTION_REJECTIONS);
+}
+
+// =============================================================================
+// «ΝΕΑ ΗΜΕΡΟΜΗΝΙΑ» — ο επαγγελματίας ζητά αλλαγή προθεσμίας (ADR-915 §45.20 Φ6γ)
+// =============================================================================
+
+/** Οι κωδικοί της πόρτας (`REFUSAL_STATUS` του route) που η φόρμα ξέρει να εξηγήσει· άγνωστος ⇒ γενικό μήνυμα. */
+export const DELIVERY_CHANGE_REJECTIONS = [
+  'NOT_FOUND', 'ENGAGEMENT_NOT_ACTIVE', 'UNAVAILABLE', 'STALE', 'TRANSITION_REFUSED', 'TERMS_REFUSED',
+] as const;
+export type DeliveryChangeRejection = (typeof DELIVERY_CHANGE_REJECTIONS)[number];
+
+export interface DeliveryChangeRequestBody {
+  readonly dueOn: string;
+  readonly reason: string;
+  /** Το στάδιο που είδε ο άνθρωπος — αλλαγή στο μεταξύ ⇒ 409 `STALE`, ποτέ σιωπηλή γραφή. */
+  readonly expectedStage: IssuanceStage | null;
+}
+
+export function requestIssuanceDeliveryChange(
+  engagementId: string,
+  body: DeliveryChangeRequestBody,
+): Promise<{ readonly outcome: 'changed' | 'unchanged' }> {
+  return apiClient.post(API_ROUTES.ENGAGEMENTS.ISSUANCE_DELIVERY_CHANGE(engagementId), body);
+}
+
+export function deliveryChangeRejectionOf(error: unknown): DeliveryChangeRejection | null {
+  return namedError(error, DELIVERY_CHANGE_REJECTIONS);
 }
 
 // =============================================================================

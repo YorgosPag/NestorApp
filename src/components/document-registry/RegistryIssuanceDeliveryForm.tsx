@@ -24,7 +24,8 @@ import { ISSUANCE_NOTE_MAX } from '@/lib/document-validity/issuance-assignment';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
-import { DELIVERY_KEYS } from '@/components/document-registry/issuance-delivery-labels';
+import { DELIVERY_CHANGE_KEYS, DELIVERY_KEYS } from '@/components/document-registry/issuance-delivery-labels';
+import { DELIVERY_CHANGE_POLICY } from '@/lib/document-validity/issuance-delivery-change';
 import { ISSUANCE_KEYS, PROPOSE_KEYS } from '@/components/document-registry/issuance-labels';
 
 export interface DeliveryScheduleFormProps {
@@ -32,13 +33,18 @@ export interface DeliveryScheduleFormProps {
   readonly close: () => void;
   /** Η τρέχουσα προθεσμία — `null` ⇒ ορισμός (η αιτιολογία προαιρετική). */
   readonly currentDueOn: string | null;
+  /**
+   * §45.20 Φ6γ — «Αποδοχή» αιτήματος του επαγγελματία: η φόρμα ξεκινά με τη **ζητούμενη** ημερομηνία και την αιτιολογία
+   * του αιτήματος. Το γραφείο μπορεί να ορίσει και άλλη (Procore) — η ίδια πράξη `schedule-delivery` απαντά το αίτημα.
+   */
+  readonly prefill?: { readonly dueOn: string; readonly reason: string };
 }
 
-export function DeliveryScheduleForm({ view, close, currentDueOn }: DeliveryScheduleFormProps): React.ReactElement {
+export function DeliveryScheduleForm({ view, close, currentDueOn, prefill }: DeliveryScheduleFormProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
-  const [dueOn, setDueOn] = useState(currentDueOn ?? '');
-  const [reason, setReason] = useState('');
+  const [dueOn, setDueOn] = useState(prefill?.dueOn ?? currentDueOn ?? '');
+  const [reason, setReason] = useState(prefill?.reason ?? '');
   const dateId = useId();
   const reasonId = useId();
   const hintId = useId();
@@ -63,6 +69,33 @@ export function DeliveryScheduleForm({ view, close, currentDueOn }: DeliverySche
       <DialogActionFooter
         cancelLabel={t(PROPOSE_KEYS.cancel)} confirmLabel={t(DELIVERY_KEYS.submit)} busyLabel={t(ISSUANCE_KEYS.saving)}
         onCancel={close} onConfirm={submit} isSubmitting={false} canSubmit={valid}
+      />
+    </>
+  );
+}
+
+/**
+ * §45.20 Φ6γ — **απόρριψη** του αιτήματος νέας ημερομηνίας: αιτιολογία υποχρεωτική (τη διαβάζει ο επαγγελματίας στην
+ * ειδοποίηση και στον χώρο του). Η τρέχουσα προθεσμία μένει ως έχει. Ο server ξανακρίνει (εκκρεμεί ακόμη; CAS).
+ */
+export function DeclineDeliveryChangeForm({ view, close }: { readonly view: RegistryIssuanceView; readonly close: () => void }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  const actions = useIssuanceAssignmentActions();
+  const [reason, setReason] = useState('');
+  const reasonId = useId();
+  const trimmed = reason.trim();
+  const submit = () => {
+    if (actions === null || trimmed === '') return;
+    close();
+    actions.act({ action: 'decline-delivery-change', ...issuanceTargetOf(view), reason: trimmed });
+  };
+  return (
+    <>
+      <Label htmlFor={reasonId} className="text-sm font-medium">{t(DELIVERY_KEYS.reasonLabel)}</Label>
+      <Textarea id={reasonId} value={reason} required maxLength={DELIVERY_CHANGE_POLICY.reasonMax} onChange={(event) => setReason(event.target.value)} />
+      <DialogActionFooter
+        cancelLabel={t(PROPOSE_KEYS.cancel)} confirmLabel={t(DELIVERY_CHANGE_KEYS.declineSubmit)} busyLabel={t(ISSUANCE_KEYS.saving)}
+        confirmVariant="destructive" onCancel={close} onConfirm={submit} isSubmitting={false} canSubmit={trimmed !== ''}
       />
     </>
   );

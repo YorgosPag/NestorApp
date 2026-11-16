@@ -47,10 +47,19 @@ describe('ADR-915 §45.15 — readIssuanceAgreementParties', () => {
   it('χωρίς τεκμήριο ⇒ οι ιδιοκτήτες με το ΑΦΜ της επαφής, καμία εκκρεμότητα', async () => {
     const parties = await readIssuanceAgreementParties(DB, assignmentWith(null), NOW);
     expect(parties.owners).toEqual([
-      { name: 'Άλφα', vatNumber: '090000045', vatPendingOfficeConfirmation: false },
-      { name: 'Βήτα', vatNumber: '111111111', vatPendingOfficeConfirmation: false },
+      { name: 'Άλφα', vatNumber: '090000045', vatPendingOfficeConfirmation: false, approvedQuote: false },
+      { name: 'Βήτα', vatNumber: '111111111', vatPendingOfficeConfirmation: false, approvedQuote: false },
     ]);
     expect(contacts).toHaveBeenCalledTimes(1);
+  });
+
+  it('§45.20 — ο εγκρίνων σημειώνεται κατά ΤΑΥΤΟΤΗΤΑ επαφής (ποτέ κατά όνομα) — μόνο εκείνος', async () => {
+    const assignment = {
+      id: 'diss_1', companyId: 'comp_1', propertyId: 'prop_1',
+      record: { inspectionContacts: [], decision: { ownerAttestation: null, ownerContactId: 'cont_b' } },
+    } as unknown as DocumentIssuanceAssignment;
+    const parties = await readIssuanceAgreementParties(DB, assignment, NOW);
+    expect(parties.owners?.map((owner) => owner.approvedQuote)).toEqual([false, true]);
   });
 
   it('🔴 1β-γ-2 — διόρθωση που η επαφή ΔΕΝ έχει ⇒ «εκκρεμεί»· διόρθωση ήδη εφαρμοσμένη ⇒ όχι', async () => {
