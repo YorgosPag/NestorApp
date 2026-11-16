@@ -173,6 +173,20 @@ export async function sendIssuanceSpaceInvitation(
   }
 }
 
+/** ADR-915 §45.15 (1β-γ-2) — «Εφαρμογή στην επαφή» της διόρθωσης ΑΦΜ του ιδιοκτήτη: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_OWNER_VAT_URL = `${ISSUANCE_ASSIGNMENTS_URL}/owner-vat`;
+
+/** **Ένα** πάτημα ⇒ μία εφαρμογή (ιδεμποτία στο σύνορο **και** στην πράξη)· ο κωδικός άρνησης είναι και το κλειδί του μηνύματος. */
+export async function applyIssuanceOwnerVat(
+  body: { readonly propertyId: string; readonly documentKind: DocumentKind; readonly contactId: string; readonly vatNumber: string },
+): Promise<IssuanceMessageResult<{ readonly result: 'applied' | 'unchanged' }>> {
+  try {
+    return { kind: 'ok', data: await apiClient.post(ISSUANCE_OWNER_VAT_URL, body) };
+  } catch (cause) {
+    return { kind: 'failed', code: logActionFailure('Η διόρθωση ΑΦΜ δεν εφαρμόστηκε', cause, { documentKind: body.documentKind }) };
+  }
+}
+
 /** ADR-915 §45 Φ3 — «Υπενθύμιση» παράδοσης στον επαγγελματία: ΕΝΑ σημείο για τη διαδρομή. */
 export const ISSUANCE_DELIVERY_REMINDER_URL = `${ISSUANCE_ASSIGNMENTS_URL}/delivery-reminder`;
 

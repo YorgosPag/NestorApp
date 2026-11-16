@@ -471,6 +471,7 @@
       "ownersLabel": "Ιδιοκτήτες",
       "ownerVat": "ΑΦΜ {vat}",
       "ownerVatMissing": "ΑΦΜ: δεν έχει δηλωθεί",
+      "ownerVatPending": "ΑΦΜ: εκκρεμεί επιβεβαίωση από το γραφείο",
       "ownersUnavailable": "Δεν διαβάστηκαν τώρα — ξαναδοκιμάστε αργότερα",
       "ownersNone": "Το γραφείο δεν έχει καταχωρίσει ιδιοκτήτη",
       "unnamedContact": "Χωρίς όνομα",

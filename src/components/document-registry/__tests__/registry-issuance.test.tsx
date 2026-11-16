@@ -30,6 +30,7 @@ import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
 import { formatDate } from '@/lib/intl-formatting';
 import { DELIVERY_KEYS, DELIVERY_SOURCE_KEYS, DELIVERY_TIER_KEYS } from '../issuance-delivery-labels';
 import { INSPECTION_KEYS } from '../issuance-inspection-labels';
+import { OWNER_VAT_KEYS } from '../issuance-owner-vat-labels';
 import { INSPECTION_ROLE_LABEL_KEYS } from '../document-registry-labels';
 import { LAYOUT_KEYS, REGISTRY_TAB_LABEL_KEYS } from '../registry-layout-labels';
 import { reduceIssuance, type IssuanceAction, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
@@ -50,11 +51,13 @@ jest.mock('@/hooks/document-registry/useDocumentRegistry', () => ({
 const save = jest.fn(async (..._args: unknown[]): Promise<ObligorDesignationSave> => ({ kind: 'saved' }));
 const preview = jest.fn();
 const send = jest.fn();
+const applyVat = jest.fn(async (..._args: unknown[]) => ({ kind: 'ok', data: { result: 'applied' } }));
 jest.mock('@/services/document-registry/document-registry.client', () => ({
   saveObligorDesignation: jest.fn(),
   saveIssuanceAction: (...args: unknown[]) => save(...args),
   previewIssuanceMessage: (...args: unknown[]) => preview(...args),
   sendIssuanceMessage: (...args: unknown[]) => send(...args),
+  applyIssuanceOwnerVat: (...args: unknown[]) => applyVat(...args),
 }));
 // Η αναζήτηση επαφής φέρνει υπηρεσίες Firebase — εδώ αρκεί ότι ΔΕΝ χρειάζεται όταν υπάρχει γνωστός.
 jest.mock('@/components/contacts/relationships/ContactSearchManager', () => ({ ContactSearchManager: () => null }));
@@ -698,5 +701,66 @@ describe('ADR-915 §45.15 — υπεύθυνος αυτοψίας στο πάν�
     renderWith(recordOf(QUOTED));
     expect(within(article()).getByText(INSPECTION_KEYS.none)).toBeTruthy();
     expect(within(article()).queryByRole('button', { name: INSPECTION_KEYS.setTrigger })).toBeNull();
+  });
+});
+
+describe('ADR-915 §45.15 (1β-γ-2) — ό,τι δήλωσε ο ιδιοκτήτης στην έγκριση, στο πάνελ του γραφείου', () => {
+  /** Αναληφθείσα ανάθεση με τεκμήριο: άλφα διορθώθηκε (η επαφή έχει άλλο) · γάμμα διορθώθηκε (η επαφή δεν έχει) ·
+   *  δέλτα διορθώθηκε στο ΙΔΙΟ που ήδη έχει ⇒ καμία εκκρεμότητα. */
+  function renderAttested(missingNote: string | null) {
+    const accepted = recordOf(ACCEPTED);
+    if (accepted.decision === null) throw new Error('no decision');
+    const record: IssuanceAssignmentRecord = {
+      ...accepted,
+      decision: {
+        ...accepted.decision,
+        ownerAttestation: {
+          owners: [
+            { contactId: 'cont_alpha', verdict: 'corrected', vatNumber: '998877666' },
+            { contactId: 'cont_gamma', verdict: 'corrected', vatNumber: '123456783' },
+            { contactId: 'cont_delta', verdict: 'corrected', vatNumber: '090000045' },
+          ],
+          missingNote,
+        },
+      },
+    };
+    const base = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record }]);
+    registry = {
+      ...base,
+      people: {
+        ...base.people,
+        cont_alpha: { ...base.people.cont_alpha, vatNumber: '111111111' },
+        cont_delta: { ...base.people.cont_delta, vatNumber: '090 000 045' },
+      },
+    };
+    render(<DocumentRegistryContent />);
+  }
+
+  it('εκκρεμεί ΜΟΝΟ ό,τι η επαφή δεν έχει· «Εφαρμογή στην επαφή» στέλνει ΤΟ ΤΕΚΜΗΡΙΟ και ξαναφορτώνει', async () => {
+    renderAttested(null);
+    const section = within(article()).getByRole('region', { name: OWNER_VAT_KEYS.heading });
+    expect(within(section).getByText(`${OWNER_VAT_KEYS.pending} ${JSON.stringify({ name: 'Συνθετικός Άλφα', vat: '998877666', current: '111111111' })}`)).toBeTruthy();
+    expect(within(section).getByText(`${OWNER_VAT_KEYS.pendingNoCurrent} ${JSON.stringify({ name: 'Συνθετικός Γάμμα', vat: '123456783' })}`)).toBeTruthy();
+    expect(within(section).queryByText(/Συνθετικός Δέλτα/)).toBeNull();
+    const buttons = within(section).getAllByRole('button', { name: OWNER_VAT_KEYS.apply });
+    expect(buttons).toHaveLength(2);
+    await userEvent.setup().click(buttons[0]);
+    await waitFor(() => expect(revalidate).toHaveBeenCalled());
+    expect(applyVat).toHaveBeenCalledWith({ propertyId: 'p6', documentKind: 'energy-certificate', contactId: 'cont_alpha', vatNumber: '998877666' });
+    expect(notifySuccess).toHaveBeenCalledWith(OWNER_VAT_KEYS.applied);
+  });
+
+  it('χωρίς δικαίωμα ⇒ η εκκρεμότητα φαίνεται, κανένα κουμπί· η σημείωση «λείπει κάποιος» φαίνεται', () => {
+    verdict = 'denied-permission';
+    renderAttested('Δέλτα Συνθετικός');
+    const section = within(article()).getByRole('region', { name: OWNER_VAT_KEYS.heading });
+    expect(within(section).queryByRole('button', { name: OWNER_VAT_KEYS.apply })).toBeNull();
+    expect(within(section).getByText(`${OWNER_VAT_KEYS.missingNote} ${JSON.stringify({ note: 'Δέλτα Συνθετικός' })}`)).toBeTruthy();
+  });
+
+  it('καμία εκκρεμότητα και καμία σημείωση ⇒ καμία ενότητα', () => {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf(ACCEPTED) }]);
+    render(<DocumentRegistryContent />);
+    expect(within(article()).queryByRole('region', { name: OWNER_VAT_KEYS.heading })).toBeNull();
   });
 });

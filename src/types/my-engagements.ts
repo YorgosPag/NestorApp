@@ -55,6 +55,11 @@ export interface IssuanceOwnerView {
   readonly name: string | null;
   /** `null` ⇒ το γραφείο δεν έχει ΑΦΜ για αυτόν — η όψη το λέει, ποτέ κενό σιωπηλά. */
   readonly vatNumber: string | null;
+  /**
+   * §45.15 (1β-γ-2) — ο ιδιοκτήτης δήλωσε στην έγκριση **άλλο** ΑΦΜ και το γραφείο δεν το έχει εφαρμόσει ακόμη ⇒ η όψη
+   * λέει «εκκρεμεί επιβεβαίωση γραφείου» **αντί** για αριθμό που μπορεί να είναι λάθος.
+   */
+  readonly vatPendingOfficeConfirmation: boolean;
 }
 
 /**

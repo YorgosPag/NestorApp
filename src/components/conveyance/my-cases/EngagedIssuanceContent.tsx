@@ -97,6 +97,12 @@ function InspectionContactRow({ contact }: { readonly contact: InspectionContact
   );
 }
 
+/** §45.15 (1β-γ-2) — εκκρεμής διόρθωση ⇒ **κανένας** αριθμός (μπορεί να είναι λάθος)· λείπει ⇒ ρητά· αλλιώς το ΑΦΜ. */
+function ownerVatText(t: ReturnType<typeof useTranslation>['t'], owner: NonNullable<IssuanceAgreementView['owners']>[number]): string {
+  if (owner.vatPendingOfficeConfirmation) return t(ISSUANCE_SPACE_KEYS.ownerVatPending);
+  return owner.vatNumber === null ? t(ISSUANCE_SPACE_KEYS.ownerVatMissing) : t(ISSUANCE_SPACE_KEYS.ownerVat, { vat: owner.vatNumber });
+}
+
 /** ADR-915 §45.15 — όλοι οι ιδιοκτήτες με ΑΦΜ (για το έντυπο). ΑΦΜ που λείπει γράφεται ρητά. */
 function OwnersRow({ owners }: { readonly owners: IssuanceAgreementView['owners'] }) {
   const { t } = useTranslation(['conveyance']);
@@ -110,7 +116,7 @@ function OwnersRow({ owners }: { readonly owners: IssuanceAgreementView['owners'
             <li key={`${owner.name ?? ''}:${owner.vatNumber ?? ''}:${index}`}>
               {owner.name ?? t(ISSUANCE_SPACE_KEYS.unnamedContact)}
               {' · '}
-              {owner.vatNumber === null ? t(ISSUANCE_SPACE_KEYS.ownerVatMissing) : t(ISSUANCE_SPACE_KEYS.ownerVat, { vat: owner.vatNumber })}
+              {ownerVatText(t, owner)}
             </li>
           ))}
         </ul>

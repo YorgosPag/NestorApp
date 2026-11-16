@@ -277,6 +277,7 @@ async function readOwnersAndIssuance(
     ...known,
     wanted: obligorPropertyIds(rows),
     partyContactIds: [...partyContactIdsOf(rows), ...issuance.contactIds],
+    vatContactIds: issuance.vatContactIds,
   });
   return { owners, issuance };
 }

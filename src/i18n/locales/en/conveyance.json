@@ -471,6 +471,7 @@
       "ownersLabel": "Owners",
       "ownerVat": "Tax ID {vat}",
       "ownerVatMissing": "Tax ID: not declared",
+      "ownerVatPending": "Tax ID: awaiting confirmation by the office",
       "ownersUnavailable": "Could not be read right now — try again later",
       "ownersNone": "The office has not recorded an owner",
       "unnamedContact": "Unnamed",

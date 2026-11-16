@@ -61,6 +61,7 @@ export const ISSUANCE_SPACE_KEYS = {
   ownersLabel: 'conveyance:engagement.issuance.ownersLabel',
   ownerVat: 'conveyance:engagement.issuance.ownerVat',
   ownerVatMissing: 'conveyance:engagement.issuance.ownerVatMissing',
+  ownerVatPending: 'conveyance:engagement.issuance.ownerVatPending',
   ownersUnavailable: 'conveyance:engagement.issuance.ownersUnavailable',
   ownersNone: 'conveyance:engagement.issuance.ownersNone',
   unnamedContact: 'conveyance:engagement.issuance.unnamedContact',

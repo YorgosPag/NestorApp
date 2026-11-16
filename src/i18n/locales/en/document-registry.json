@@ -504,6 +504,22 @@
           "generic": "The reminder was not sent. Please try again."
         }
       }
+    },
+    "ownerVat": {
+      "heading": "Owner statements at approval",
+      "pending": "{name}: tax ID {vat} was declared — the contact has {current}",
+      "pendingNoCurrent": "{name}: tax ID {vat} was declared — the contact has no tax ID",
+      "apply": "Apply to contact",
+      "applying": "Applying…",
+      "applied": "The tax ID was saved to the contact.",
+      "unchanged": "The contact already had this tax ID.",
+      "missingNote": "“Missing owner” note: “{note}”. Add owners from the property’s ownership.",
+      "refusals": {
+        "NOT_FOUND": "The assignment was not found.",
+        "NO_CORRECTION": "The correction changed in the meantime. See the current one.",
+        "CONTACT_UNAVAILABLE": "The contact is no longer available to the office.",
+        "generic": "The correction was not applied. Please try again."
+      }
     }
   },
   "factsDeclaration": {

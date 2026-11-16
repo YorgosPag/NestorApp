@@ -43,6 +43,7 @@ import { RegistryIssuanceSpaceLine } from '@/components/document-registry/Regist
 import { InspectorFitLine } from '@/components/document-registry/RegistryInspectorFitLine';
 import { RegistryIssuanceDelivery } from '@/components/document-registry/RegistryIssuanceDelivery';
 import { RegistryIssuanceInspection } from '@/components/document-registry/RegistryIssuanceInspection';
+import { RegistryIssuanceOwnerAttestation } from '@/components/document-registry/RegistryIssuanceOwnerAttestation';
 import { INSPECTION_CONTACT_STAGES } from '@/lib/document-validity/issuance-inspection-contact';
 import {
   IssuanceCancelDialog,
@@ -340,6 +341,8 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
       {INSPECTION_CONTACT_STAGES.includes(state.stage) ? (
         <RegistryIssuanceInspection view={view} record={state.record} registry={registry} canAct={(actions?.canAct ?? false) && !saving} />
       ) : null}
+      {/* §45.15 (1β-γ-2) — ό,τι δήλωσε ο ιδιοκτήτης στην έγκριση και περιμένει το γραφείο (διόρθωση ΑΦΜ · «λείπει κάποιος»). */}
+      <RegistryIssuanceOwnerAttestation view={view} record={state.record} registry={registry} canAct={(actions?.canAct ?? false) && !saving} />
       <HistoryLines record={state.record} registry={registry} />
       {saving ? <span role="status" className="text-xs text-muted-foreground">{t(ISSUANCE_KEYS.saving)}</span> : null}
       {actions?.canAct && !saving ? <StageActions view={view} stage={state.stage} record={state.record} registry={registry} /> : null}

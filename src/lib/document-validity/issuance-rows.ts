@@ -32,6 +32,7 @@ import {
   type IssuanceRosterEntry,
 } from './issuance-candidates';
 import { currentInspectionContactOf } from './issuance-inspection-contact';
+import type { IssuanceOwnerAttestation } from './issuance-owner-attestation';
 
 /** Η ανάθεση μιας γραμμής «Ανάθεσης» — τα **γεγονότα** ωμά· η οθόνη κρίνει με τον ίδιο πυρήνα (`issuanceStateOf`). */
 export interface RowIssuance {
@@ -67,15 +68,28 @@ export function latestIssuedOnByKey(rows: readonly RegistryRow[]): ReadonlyMap<s
   return latest;
 }
 
-/** Γραμμές + κατάλογος ⇒ ανάθεση ανά γραμμή «Ανάθεσης» + οι επαφές που θα ονομαστούν (επαγγελματίες · υπεύθυνοι αυτοψίας · υποψήφιοι). */
+/** §45.15 (1β-γ-2) — οι επαφές των οποίων ο ιδιοκτήτης **διόρθωσε** ΑΦΜ στο τεκμήριο της έγκρισης. */
+function correctedVatContactIds(attestation: IssuanceOwnerAttestation | null): readonly string[] {
+  return attestation === null ? [] : attestation.owners.filter((owner) => owner.verdict === 'corrected').map((owner) => owner.contactId);
+}
+
+/**
+ * Γραμμές + κατάλογος ⇒ ανάθεση ανά γραμμή «Ανάθεσης» + οι επαφές που θα ονομαστούν (επαγγελματίες · υπεύθυνοι αυτοψίας ·
+ * υποψήφιοι) + (§45.15) οι **μόνες** επαφές για τις οποίες ταξιδεύει ΑΦΜ: όσες έχουν διόρθωση σε τεκμήριο (5(1)(γ)).
+ */
 export function issuanceOfRows(
   rows: readonly RegistryRow[],
   roster: readonly IssuanceRosterEntry[],
-): { readonly issuance: Readonly<Record<string, RowIssuance>>; readonly contactIds: readonly string[] } {
+): {
+  readonly issuance: Readonly<Record<string, RowIssuance>>;
+  readonly contactIds: readonly string[];
+  readonly vatContactIds: readonly string[];
+} {
   const latest = latestIssuedOnByKey(rows);
   const current = new Map(roster.map((entry) => [issuanceKeyOf(entry.propertyId, entry.documentKind), entry.record] as const));
   const issuance: Record<string, RowIssuance> = {};
   const contactIds = new Set<string>();
+  const vatContactIds = new Set<string>();
   for (const [key, { propertyId, kind }] of assignableTargets(rows)) {
     const record = current.get(key) ?? null;
     const latestIssuedOn = latest.get(key) ?? null;
@@ -88,6 +102,10 @@ export function issuanceOfRows(
     const inspection = record === null ? null : currentInspectionContactOf(record);
     if (inspection !== null) contactIds.add(inspection.contactId);
     for (const candidate of candidates) contactIds.add(candidate.contactId);
+    for (const id of correctedVatContactIds(record?.decision?.ownerAttestation ?? null)) {
+      contactIds.add(id);
+      vatContactIds.add(id);
+    }
   }
-  return { issuance, contactIds: [...contactIds] };
+  return { issuance, contactIds: [...contactIds], vatContactIds: [...vatContactIds] };
 }

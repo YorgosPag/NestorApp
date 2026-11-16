@@ -9,7 +9,8 @@
  *    μετασχηματισμό με την υπόθεση (`subjectContextOf`)· οι μεταβιβάζοντες από τις υποθέσεις που ήδη διάβασε το μητρώο·
  *    οι πελάτες εντολών από τον αναγνώστη εντολών. Το έργο διαβάζεται **μόνο** όταν χρειάζεται (καμία άλλη απάντηση).
  * 🔑 **Όνομα ζωντανά, ποτέ αντίγραφο** (§23.10 Ζ4): `readOwnedContactDocs` — ξένη ≡ ανύπαρκτη (ADR-742) — και
- *    `extractContactDisplayName`. Μόνο όνομα ταξιδεύει (5(1)(γ)).
+ *    `extractContactDisplayName`. Μόνο όνομα ταξιδεύει (5(1)(γ)) — και ΑΦΜ **μόνο** για όσες ζητά ρητά η ερώτηση
+ *    (`vatContactIds`, §45.15: διόρθωση ιδιοκτήτη που περιμένει το γραφείο).
  * 🔑 **Μόνο όσα θα δειχτούν**: ο καλών δίνει τα ακίνητα των τρεχουσών γραμμών· ποτέ σάρωση.
  * 🔑 ADR-915 §26 — **ο υπεύθυνος** (`obligorLeadOf`) από τα **ίδια** δεδομένα: μερίδια **μόνο** όταν οι ιδιοκτήτες
  *    είναι οι αγοραστές (`readStoredOwners`, ADR-244) · κύριος πωλητής **μόνο** όταν είναι οι μεταβιβάζοντες · η ρητή
@@ -31,7 +32,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { readStoredOwners } from '@/lib/ownership/owner-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isRecord, trimmedStringOrNull } from '@/lib/type-guards';
-import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
+import { extractContactDisplayName, extractContactVatNumber } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { subjectContextOf } from '@/services/conveyance/conveyance-subject.server';
 import type { ConveyanceCase, ConveyanceSellerParty } from '@/types/conveyance-case';
@@ -56,6 +57,11 @@ export interface RegistryOwnersQuestion {
    * οι επαγγελματίες των αναθέσεων και οι υποψήφιοι. Μία ανάγνωση, ένας έλεγχος μισθωτή.
    */
   readonly partyContactIds: readonly string[];
+  /**
+   * §45.15 (1β-γ-2) — οι **μόνες** επαφές για τις οποίες ταξιδεύει και το ΑΦΜ: όσες διόρθωσε ο ιδιοκτήτης σε τεκμήριο
+   * έγκρισης (η «εκκρεμής διόρθωση» χρειάζεται το τρέχον). Όλες οι άλλες: μόνο όνομα (5(1)(γ)).
+   */
+  readonly vatContactIds: readonly string[];
 }
 
 export interface RegistryOwners {
@@ -181,7 +187,12 @@ async function leadsOf(
  * Τα ονόματα — μόνο επαφές του μισθωτή· κενό όνομα ⇒ `null` («επαφή χωρίς όνομα»). ADR-915 §40.7 Φ3 — από τα **ίδια**
  * έγγραφα, η τάξη που μετρά για όσες κρατούν άδεια με τάξεις (`licenceStandings` μόνο όταν υπάρχει).
  */
-async function readPeople(db: AdminFirestore, companyId: string, contactIds: readonly string[]): Promise<Record<string, RegistryPersonLabel>> {
+async function readPeople(
+  db: AdminFirestore,
+  companyId: string,
+  contactIds: readonly string[],
+  vatFor: ReadonlySet<string>,
+): Promise<Record<string, RegistryPersonLabel>> {
   const contacts = new Map<string, DocData>();
   for (const group of chunkArray([...contactIds], REGISTRY_GET_ALL_CHUNK)) {
     for (const [id, data] of await readOwnedContactDocs(db, companyId, group)) contacts.set(id, data);
@@ -191,7 +202,13 @@ async function readPeople(db: AdminFirestore, companyId: string, contactIds: rea
   for (const [id, data] of contacts) {
     const licenceStandings = standings.get(id);
     const name = trimmedStringOrNull(extractContactDisplayName(data));
-    people[id] = licenceStandings === undefined ? { name } : { name, licenceStandings };
+    // §45.15 (1β-γ-2) — το ΑΦΜ από τα ΙΔΙΑ έγγραφα, ΜΟΝΟ για όσες το ζητά η ερώτηση (και μόνο όταν υπάρχει).
+    const vatNumber = vatFor.has(id) ? extractContactVatNumber(data) : null;
+    people[id] = {
+      name,
+      ...(licenceStandings === undefined ? {} : { licenceStandings }),
+      ...(vatNumber === null ? {} : { vatNumber }),
+    };
   }
   return people;
 }
@@ -207,7 +224,8 @@ export async function readRegistryOwners(db: AdminFirestore, companyId: string, 
     const owners = new Map([...ownership].map(([id, facts]) => [id, facts.owners] as const));
     const shares = new Map([...ownership].flatMap(([id, facts]) => (facts.shares.size > 0 ? [[id, Object.fromEntries(facts.shares)] as const] : [])));
     const { leads, designated } = await leadsOf(db, companyId, ownership);
-    const people = await readPeople(db, companyId, distinctContactIds([...[...owners.values()].flat(), ...designated, ...question.partyContactIds]));
+    const named = distinctContactIds([...[...owners.values()].flat(), ...designated, ...question.partyContactIds]);
+    const people = await readPeople(db, companyId, named, new Set(question.vatContactIds));
     return { owners, leads, shares, people };
   } catch (error) {
     logger.warn('Οι ιδιοκτήτες του μητρώου δεν διαβάστηκαν — η οθόνη δείχνει μόνο τον ρόλο', {

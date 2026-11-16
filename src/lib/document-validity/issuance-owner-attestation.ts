@@ -65,7 +65,7 @@ function entryOf(owner: OwnerAttestationAnswerEntry, currentVat: string | null):
   if (owner.vatNumber === null || !isValidGreekVat(owner.vatNumber)) return 'vat-invalid';
   const vatNumber = normalizeVat(owner.vatNumber);
   // Και οι δύο πλευρές κανονικοποιημένες: «090 000 045» στην επαφή ≡ «090000045» από τη σελίδα.
-  return currentVat !== null && vatNumber === normalizeVat(currentVat)
+  return sameVat(vatNumber, currentVat)
     ? { contactId: owner.contactId, verdict: 'confirmed', vatNumber }
     : { contactId: owner.contactId, verdict: 'corrected', vatNumber };
 }
@@ -90,6 +90,28 @@ export function ownerAttestationOf(
   }
   const missingNote = answer.missingNote?.trim() || null;
   return { owners, missingNote };
+}
+
+/** Ίδιο ΑΦΜ; — κανονικοποιημένα και τα δύο (`null` ≠ οτιδήποτε). */
+export function sameVat(a: string | null, b: string | null): boolean {
+  return a !== null && b !== null && normalizeVat(a) === normalizeVat(b);
+}
+
+/**
+ * 1β-γ-2 — **οι εκκρεμείς διορθώσεις**: όσα ΑΦΜ διόρθωσε ο ιδιοκτήτης και **δεν** έχει ακόμη η επαφή. **Παράγεται**, δεν
+ * αποθηκεύεται: μόλις το γραφείο εφαρμόσει τη διόρθωση, σβήνει μόνη της (Salesforce staging).
+ * `currentVatOf` → `undefined` = η επαφή δεν διαβάστηκε τώρα ⇒ **καμία** κρίση (ποτέ ψεύτικη εκκρεμότητα).
+ */
+export function pendingVatCorrectionsOf(
+  attestation: IssuanceOwnerAttestation | null,
+  currentVatOf: (contactId: string) => string | null | undefined,
+): readonly OwnerAttestationEntry[] {
+  if (attestation === null) return [];
+  return attestation.owners.filter((owner) => {
+    if (owner.verdict !== 'corrected') return false;
+    const current = currentVatOf(owner.contactId);
+    return current !== undefined && !sameVat(owner.vatNumber, current);
+  });
 }
 
 /** Το ΑΦΜ τρίτου στη σελίδα του ιδιοκτήτη: μόνο τα τελευταία ψηφία (ιδιωτικότητα εκ σχεδιασμού). */

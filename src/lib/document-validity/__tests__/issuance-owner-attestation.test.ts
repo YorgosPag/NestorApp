@@ -9,7 +9,12 @@ import {
   type IssuanceActor,
   type IssuanceAssignmentRecord,
 } from '@/lib/document-validity/issuance-assignment';
-import { maskedVatTail, ownerAttestationOf, type IssuanceOwnerAttestation } from '@/lib/document-validity/issuance-owner-attestation';
+import {
+  maskedVatTail,
+  ownerAttestationOf,
+  pendingVatCorrectionsOf,
+  type IssuanceOwnerAttestation,
+} from '@/lib/document-validity/issuance-owner-attestation';
 import { issuanceLinkAnswerBody } from '@/lib/document-validity/issuance-request';
 
 /** Έγκυρα κατά mod-11 (υπολογισμένα), και ένα με λάθος ψηφίο ελέγχου. */
@@ -62,6 +67,23 @@ describe('ADR-915 §45.15 — ownerAttestationOf', () => {
     ]],
   ])('🔴 %s ⇒ `owners-changed` (ποτέ τεκμήριο για όσους δεν είδε)', (_label, owners) => {
     expect(ownerAttestationOf({ owners, missingNote: null }, CURRENT)).toBe('owners-changed');
+  });
+
+  it('1β-γ-2 — εκκρεμεί ΜΟΝΟ η διόρθωση που η επαφή δεν έχει· άγνωστη επαφή ⇒ καμία κρίση (ποτέ ψεύτικη εκκρεμότητα)', () => {
+    const attestation = {
+      owners: [
+        { contactId: 'cont_a', verdict: 'confirmed' as const, vatNumber: VAT_A },
+        { contactId: 'cont_b', verdict: 'corrected' as const, vatNumber: VAT_B },
+        { contactId: 'cont_c', verdict: 'corrected' as const, vatNumber: VAT_C },
+        { contactId: 'cont_d', verdict: 'corrected' as const, vatNumber: VAT_A },
+      ],
+      missingNote: null,
+    };
+    const current: Readonly<Record<string, string | null>> = { cont_a: VAT_C, cont_b: '123 456 783', cont_c: null };
+    const pending = pendingVatCorrectionsOf(attestation, (id) => (id in current ? current[id] : undefined));
+    // cont_a: επιβεβαίωση (ποτέ εκκρεμότητα) · cont_b: ίδιο κανονικοποιημένο · cont_d: δεν διαβάστηκε.
+    expect(pending.map((owner) => owner.contactId)).toEqual(['cont_c']);
+    expect(pendingVatCorrectionsOf(null, () => null)).toEqual([]);
   });
 
   it('μάσκα: μόνο τα τελευταία ψηφία', () => {

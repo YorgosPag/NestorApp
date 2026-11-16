@@ -68,6 +68,12 @@ export interface RegistryLabel {
  */
 export interface RegistryPersonLabel extends RegistryLabel {
   readonly licenceStandings?: Readonly<Partial<Record<ProfessionalLicence, LicenceStanding>>>;
+  /**
+   * ADR-915 §45.15 (1β-γ-2) — το ΑΦΜ της επαφής **τώρα**, από την ίδια ανάγνωση (`extractContactVatNumber`) — **μόνο** για
+   * επαφές με διόρθωση ιδιοκτήτη σε τεκμήριο (`vatContactIds`, 5(1)(γ)). Για αυτές: απόν = η επαφή δεν έχει ΑΦΜ. Το
+   * διαβάζει η «εκκρεμής διόρθωση» (`pendingVatCorrectionsOf`), ποτέ δεύτερη ανάγνωση.
+   */
+  readonly vatNumber?: string;
 }
 
 /**

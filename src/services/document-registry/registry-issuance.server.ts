@@ -36,11 +36,13 @@ export interface RegistryIssuanceReading {
   readonly truncated: boolean;
   /** Οι επαφές που θα ονομάσει η οθόνη (επαγγελματίες · υποψήφιοι) — διαβάζονται μαζί με τους ιδιοκτήτες. */
   readonly contactIds: readonly string[];
+  /** §45.15 (1β-γ-2) — οι **μόνες** επαφές για τις οποίες διαβάζεται και ταξιδεύει ΑΦΜ (διόρθωση σε τεκμήριο). */
+  readonly vatContactIds: readonly string[];
   /** §39 — ο χώρος κάθε ανάθεσης (κλειδί `issuanceKeyOf`). `null` = δεν διαβάστηκε ⇒ η οθόνη δεν ισχυρίζεται τίποτα. */
   readonly spaces: Readonly<Record<string, IssuanceSpaceStatus>> | null;
 }
 
-const NOTHING: RegistryIssuanceReading = { issuance: {}, known: true, truncated: false, contactIds: [], spaces: {} };
+const NOTHING: RegistryIssuanceReading = { issuance: {}, known: true, truncated: false, contactIds: [], vatContactIds: [], spaces: {} };
 
 /** **Οι αναθέσεις του μητρώου** — μία ανάγνωση του καταλόγου, μόνο όταν κάποια γραμμή δείχνει «Ανάθεση». */
 export async function readRegistryIssuance(db: Firestore, companyId: string, rows: readonly RegistryRow[], now: Date): Promise<RegistryIssuanceReading> {
@@ -52,7 +54,7 @@ export async function readRegistryIssuance(db: Firestore, companyId: string, row
     logger.warn('Οι αναθέσεις έκδοσης δεν διαβάστηκαν — η οθόνη κρύβει την «Ανάθεση»', {
       data: { companyId, error: getErrorMessage(error, 'unknown') },
     });
-    return { issuance: {}, known: false, truncated: false, contactIds: [], spaces: null };
+    return { issuance: {}, known: false, truncated: false, contactIds: [], vatContactIds: [], spaces: null };
   }
 }
 
