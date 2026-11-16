@@ -20,6 +20,7 @@ import type { QuoteTotals } from '@/lib/document-validity/issuance-quote';
 import type { ActingForView, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
 import type { DeclaredCredential, EngagementState, EngagementSubjectKind, EngagementVerdict } from '@/types/engagement';
 import type { ViewFreshness } from '@/types/server-view';
+import type { IssuanceDocumentRequests } from '@/types/issuance-document-request';
 
 /** Η κάρτα μιας **ανάθεσης έκδοσης** — ό,τι χρειάζεται για να αποφασίσει «ανοίγω;». */
 export interface MyIssuanceCard {
@@ -152,6 +153,11 @@ export interface EngagedIssuanceView {
   readonly proposedAt: string;
   /** ADR-915 §45.10 (Π-7) — ό,τι υποσχέθηκε η σελίδα προσφοράς «μετά την έγκριση»· `null` ⇒ ο χώρος δεν είναι σε εκτέλεση. */
   readonly agreement: IssuanceAgreementView | null;
+  /**
+   * ADR-942 Φ1 — «Έγγραφα για την έκδοση»: τι ζητείται, τι έχει ήδη ο φάκελος του κατόχου, τι ζήτησε ο ίδιος. `null` ⇒
+   * το είδος δεν έχει κατάλογο ή το γραφείο δεν κατέχει πια το ακίνητο (καμία ενότητα)· `'unknown'` ⇒ δεν διαβάστηκε.
+   */
+  readonly documentRequests: IssuanceDocumentRequests | null | 'unknown';
   /**
    * Το ίδιο συμβόλαιο φρεσκάδας με την όψη της μεταβίβασης (ADR-901 §14.8). Στη Φ-Β ο χώρος δεν έχει γραφέα σήματος
    * ⇒ `revision` μένει 0 και η όψη ξαναδιαβάζεται στην αλλαγή ημέρας ή στο άνοιγμα — ρητά, όχι ξεχασμένα (ADR-915 §39).

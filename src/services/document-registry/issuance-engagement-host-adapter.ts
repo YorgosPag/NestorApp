@@ -20,7 +20,7 @@ import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { qualificationRegistryAuthority } from '@/config/document-validity/document-issuers';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
-import { selectCurrentEngagement } from '@/lib/auth/engagement-read';
+import { listEngagementsOfUser, selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import { ballInCourtOf, issuanceStageOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
 import { deliveryChangeGlanceOf } from '@/lib/document-validity/issuance-delivery-change';
@@ -45,10 +45,11 @@ import { answerChanges, recordEngagementAudit } from '@/services/conveyance/conv
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
 import { readPublicListingById } from '@/services/listings/public-listing-by-id.reader';
 import type { EngagementHostLine } from '@/types/contact-professional-link';
-import { SCOPE_OF_SUBJECT, type IssuanceEngagement } from '@/types/engagement';
+import { isIssuanceEngagement, SCOPE_OF_SUBJECT, type IssuanceEngagement } from '@/types/engagement';
 import type { IssuanceEngagementInvitation } from '@/types/engagement-invitation';
 import type { EngagementOpenItem, IssuanceAgreementView, IssuanceDeliveryGlance, MyIssuanceCard } from '@/types/my-engagements';
 import { readIssuanceAgreementParties } from './issuance-agreement-parties.server';
+import { issuanceDocumentRequestPanel } from './issuance-document-request-panel.server';
 import { issuanceRecordOf, parseIssuanceAssignment, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
 
 /** Το στάδιο όπου ο χώρος δέχεται είσοδο — μετά το «Αναλαμβάνω», πριν από ακύρωση/παράδοση. */
@@ -97,7 +98,7 @@ async function stageOpen(db: Firestore, tx: Transaction, invitation: IssuanceEng
   return spaceAccepts(assignment, invitation) ? NO_LIVE_VIEW : null;
 }
 
-async function propertyNameOf(db: Firestore, hostCompanyId: string, propertyId: string): Promise<string | null> {
+export async function issuancePropertyNameOf(db: Firestore, hostCompanyId: string, propertyId: string): Promise<string | null> {
   return (await loadConveyanceSubject(db, hostCompanyId, propertyId).catch(() => null))?.propertyName ?? null;
 }
 
@@ -123,7 +124,7 @@ export async function contactNameOf(db: Firestore, hostCompanyId: string, contac
 /** Η **μία** περιγραφή της πρόσκλησης ανάθεσης — για την όψη (`describe` του οικοδεσπότη) **και** το email της. */
 export async function describeIssuanceInvitation(db: Firestore, invitation: IssuanceEngagementInvitation) {
   const [propertyLabel, hostName] = await Promise.all([
-    propertyNameOf(db, invitation.hostCompanyId, invitation.propertyId),
+    issuancePropertyNameOf(db, invitation.hostCompanyId, invitation.propertyId),
     hostNameOf(invitation.hostCompanyId),
   ]);
   return { propertyLabel, hostName, subject: { kind: 'document_issuance', documentKind: invitation.documentKind } } as const;
@@ -135,7 +136,7 @@ async function announceSpace(db: Firestore, invitation: IssuanceEngagementInvita
   if (!assignment) return;
   const sentBy = assignment.notice?.byUid;
   const [propertyName, respondentName] = await Promise.all([
-    propertyNameOf(db, invitation.hostCompanyId, invitation.propertyId),
+    issuancePropertyNameOf(db, invitation.hostCompanyId, invitation.propertyId),
     contactNameOf(db, invitation.hostCompanyId, invitation.contactId),
   ]);
   await announceIssuanceAnswer({
@@ -149,7 +150,7 @@ async function afterAnswer(db: Firestore, invitation: IssuanceEngagementInvitati
     await recordEngagementAudit({
       engagement: answer.engagement, action: 'created', changes: answerChanges(null, answer.engagement),
       performedBy: answerer.uid, performedByName: answerer.email,
-      entityName: await propertyNameOf(db, invitation.hostCompanyId, invitation.propertyId),
+      entityName: await issuancePropertyNameOf(db, invitation.hostCompanyId, invitation.propertyId),
     });
   }
   await announceSpace(db, invitation, answer.kind === 'accepted' ? 'space-entered' : 'space-declined');
@@ -158,6 +159,14 @@ async function afterAnswer(db: Firestore, invitation: IssuanceEngagementInvitati
 // =============================================================================
 // Η ΠΛΕΥΡΑ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ
 // =============================================================================
+
+/** Η **δική του** συμμετοχή σε ανάθεση έκδοσης — ξένη, άλλου είδους ή άγνωστη ≡ καμία (αίτημα νέας ημερομηνίας · αίτημα εγγράφων). */
+export async function ownIssuanceEngagement(db: Firestore, uid: string, engagementId: string): Promise<IssuanceEngagement | 'unknown' | null> {
+  const list = await listEngagementsOfUser(db, uid);
+  if (list.outcome === 'unknown') return 'unknown';
+  const engagement = list.engagements.find((e) => e.id === engagementId);
+  return engagement !== undefined && isIssuanceEngagement(engagement) ? engagement : null;
+}
 
 /** Ο ΕΝΑΣ κριτής της συμμετοχής σε ανάθεση — τον μοιράζονται η όψη, οι εκκρεμότητες και το αίτημα νέας ημερομηνίας (§45.20). */
 export function judgeIssuanceEngagement(engagement: IssuanceEngagement, uid: string, nowMs: number) {
@@ -171,7 +180,7 @@ async function cardOf(db: Firestore, engagement: IssuanceEngagement, uid: string
     acting.actingFor(engagement),
   ]);
   // Ποιο ακίνητο — ναι (για να αναγνωρίσει την ανάθεση)· περιεχόμενο — όχι, όπως και στη μεταβίβαση.
-  const propertyName = assignment ? await propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId) : null;
+  const propertyName = assignment ? await issuancePropertyNameOf(db, engagement.hostCompanyId, assignment.propertyId) : null;
   const stage = assignment ? issuanceStageOf(assignment) : null;
   return {
     kind: 'document_issuance',
@@ -221,7 +230,7 @@ async function openItem(db: Firestore, uid: string, engagement: IssuanceEngageme
   const glance = assignment ? deliveryGlanceOf(issuanceStageOf(assignment), assignment, nowMs) : null;
   if (!assignment || !glance) return null;
   const [propertyName, hostName] = await Promise.all([
-    propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
+    issuancePropertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
     hostNameOf(engagement.hostCompanyId),
   ]);
   return {
@@ -261,11 +270,12 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
   const assignment = await readHostedIssuanceAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId);
   if (!assignment) return { ok: false, rejection: 'not-found' };
   const stage = issuanceStageOf(assignment);
-  const [propertyName, hostName, agreement, publicListingId] = await Promise.all([
-    propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
+  const [propertyName, hostName, agreement, publicListingId, documentRequests] = await Promise.all([
+    issuancePropertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
     hostNameOf(engagement.hostCompanyId),
     agreementOf(db, assignment, stage, new Date(nowMs), engagement.id),
     publicListingIdOf(db, assignment.propertyId),
+    issuanceDocumentRequestPanel(db, { assignment, viewer: { role: engagement.role, uid: viewer.uid }, nowMs }),
   ]);
   return {
     ok: true,
@@ -282,6 +292,7 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
       credential: engagement.declaredCredential ?? null,
       proposedAt: assignment.proposedAt,
       agreement,
+      documentRequests,
       freshness: { revision: NO_SIGNAL_REVISION, freshUntil: nextConveyanceDayStart(new Date(nowMs)).toISOString() },
     },
   };
@@ -293,7 +304,7 @@ async function hostLine(db: Firestore, engagement: IssuanceEngagement): Promise<
   if (!assignment) return { propertyId: null, propertyName: null, documentKind: null };
   return {
     propertyId: assignment.propertyId,
-    propertyName: await propertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
+    propertyName: await issuancePropertyNameOf(db, engagement.hostCompanyId, assignment.propertyId),
     documentKind: assignment.documentKind,
   };
 }

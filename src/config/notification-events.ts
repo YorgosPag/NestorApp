@@ -233,6 +233,14 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_CASE_DOCUMENT_REQUEST_HOST: 'properties.caseDocumentRequestHost',
   PROPERTIES_CASE_DOCUMENT_REQUEST_ENGAGED: 'properties.caseDocumentRequestEngaged',
+  /**
+   * ADR-942 Φ1 — **«Ζήτησε έγγραφο» στην ανάθεση έκδοσης**: ο μηχανικός ζητά έγγραφα του καταλόγου από το γραφείο
+   * (`REQUESTED`, μία ανά παραλήπτη ανά πάτημα — προσγείωση στο πάνελ της γραμμής)· το γραφείο ανέβασε ένα από αυτά
+   * (`PROVIDED`, μία ανά αίτημα ανά αρχείο — προς τον μηχανικό στον χώρο του). Προτίμηση: `caseDocumentRequests` (η
+   * **ίδια** με τη μεταβίβαση — ένας διακόπτης «αιτήματα εγγράφων», όχι δεύτερος).
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_DOCUMENTS_REQUESTED: 'properties.documentIssuanceDocumentsRequested',
+  PROPERTIES_DOCUMENT_ISSUANCE_DOCUMENT_PROVIDED: 'properties.documentIssuanceDocumentProvided',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -617,6 +625,20 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'caseDocumentRequests',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-942 Φ1 — ζητούνται έγγραφα για την έκδοση (στο γραφείο): ΠΡΟΕΙΔΟΠΟΙΗΣΗ (η έκδοση περιμένει κάτι από εσάς).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_DOCUMENTS_REQUESTED]: {
+    category: 'properties',
+    settingKey: 'caseDocumentRequests',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-942 Φ1 — ανέβηκε έγγραφο που ζήτησε ο μηχανικός: ΠΛΗΡΟΦΟΡΙΑ.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_DOCUMENT_PROVIDED]: {
+    category: 'properties',
+    settingKey: 'caseDocumentRequests',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_CARD_EMAIL_RETURNED]: {
     category: 'properties',

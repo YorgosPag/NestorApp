@@ -18,16 +18,20 @@ import { z } from 'zod';
 
 import { DOCUMENT_REQUEST_BATCH_MAX } from '@/config/engagement-policy';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
-import type { RequestDocumentsOutcome } from '@/services/conveyance/conveyance-document-request.service';
-import type { EngagedCaseResolution } from '@/services/conveyance/conveyance-engagement-access.service';
+import type { DocumentRequestItemOutcome } from '@/types/document-request';
+import type { EngagementVerdict } from '@/types/engagement';
 
 export const documentRequestBody = z.object({
   checklistItemIds: z.array(z.string().min(1).max(100)).min(1).max(DOCUMENT_REQUEST_BATCH_MAX),
 });
 
-type ResolutionFailure = Extract<EngagedCaseResolution, { ok: false }>;
+/** Κάθε είδος υπόθεσης (ADR-942) — ίδιο λεξιλόγιο αποτελέσματος, άρα ίδιοι κωδικοί HTTP. */
+type DocumentRequestRouteOutcome =
+  | { readonly ok: true; readonly items: readonly DocumentRequestItemOutcome<string>[] }
+  | { readonly ok: false; readonly rejection: 'case-closed' | 'not-found' | 'unknown' }
+  | { readonly ok: false; readonly rejection: 'denied'; readonly verdict: EngagementVerdict };
 
-export function documentRequestResponse(outcome: RequestDocumentsOutcome | ResolutionFailure) {
+export function documentRequestResponse(outcome: DocumentRequestRouteOutcome) {
   if (outcome.ok) return apiSuccess({ items: outcome.items });
   switch (outcome.rejection) {
     case 'case-closed':

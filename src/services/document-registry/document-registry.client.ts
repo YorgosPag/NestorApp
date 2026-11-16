@@ -23,6 +23,7 @@ import type { IssuanceOpenItemsResponse } from '@/lib/document-validity/issuance
 import type { IssuancePreview } from '@/types/issuance-invitation';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
+import type { IssuanceDocumentRequests, IssuanceRequestEntityType } from '@/types/issuance-document-request';
 
 const logger = createModuleLogger('document-registry.client');
 
@@ -207,5 +208,42 @@ export async function sendIssuanceDeliveryReminder(
     return { kind: 'ok', data: await apiClient.post(ISSUANCE_DELIVERY_REMINDER_URL, body) };
   } catch (cause) {
     return { kind: 'failed', code: logActionFailure('Η υπενθύμιση παράδοσης δεν στάλθηκε', cause, { documentKind: body.documentKind }) };
+  }
+}
+
+/** ADR-942 Φ1 — «Έγγραφα που ζήτησε ο μηχανικός» στο πάνελ της ανάθεσης: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_DOCUMENT_REQUESTS_URL = `${ISSUANCE_ASSIGNMENTS_URL}/document-requests`;
+
+/** Το δοχείο του **κατόχου** — εκεί και μόνο εκεί ανεβάζει η οθόνη (ADR-942 Ε2). */
+export interface IssuanceUploadTarget {
+  readonly entityType: IssuanceRequestEntityType;
+  readonly entityId: string;
+}
+
+export type IssuanceDocumentRequestsLoad =
+  | { readonly kind: 'ready'; readonly panel: IssuanceDocumentRequests; readonly upload: IssuanceUploadTarget }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'failed' };
+
+/** **Φέρε** τα έγγραφα που ζήτησε ο μηχανικός μιας ανάθεσης — `unavailable` ⇒ καμία ενότητα (χωρίς κατάλογο / κάτοχο). */
+export async function fetchIssuanceDocumentRequests(propertyId: string, documentKind: DocumentKind): Promise<IssuanceDocumentRequestsLoad> {
+  try {
+    const url = `${ISSUANCE_DOCUMENT_REQUESTS_URL}?propertyId=${encodeURIComponent(propertyId)}&documentKind=${encodeURIComponent(documentKind)}`;
+    const { panel, upload } = await apiClient.get<{ readonly panel: IssuanceDocumentRequests; readonly upload: IssuanceUploadTarget }>(url);
+    return { kind: 'ready', panel, upload };
+  } catch (cause) {
+    logActionFailure('Τα έγγραφα που ζήτησε ο μηχανικός δεν φορτώθηκαν', cause, { propertyId });
+    return isClientRefusal(cause) ? { kind: 'unavailable' } : { kind: 'failed' };
+  }
+}
+
+/** Μετά το ανέβασμα: ο server κρίνει το αρχείο **μόνος του** και ειδοποιεί όσους το ζήτησαν (ιδεμποτικό). */
+export async function announceIssuanceDocumentProvided(
+  body: { readonly propertyId: string; readonly documentKind: DocumentKind; readonly fileId: string },
+): Promise<IssuanceMessageResult<{ readonly notified: number }>> {
+  try {
+    return { kind: 'ok', data: await apiClient.post(`${ISSUANCE_DOCUMENT_REQUESTS_URL}/provided`, body) };
+  } catch (cause) {
+    return { kind: 'failed', code: logActionFailure('Η ειδοποίηση «ανέβηκε έγγραφο» δεν στάλθηκε', cause, { documentKind: body.documentKind }) };
   }
 }

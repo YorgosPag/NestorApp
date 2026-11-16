@@ -29,6 +29,7 @@ import type { DocumentRegistryResponse } from '@/services/document-registry/docu
 import { orgWorkspace } from '@/types/workspace-membership';
 
 import { activeIssuanceEngagementOf } from './issuance-active-engagement';
+import { issuanceOfficeRecipients } from './issuance-office-recipients';
 
 const logger = createModuleLogger('issuance-delivery-change-notifier');
 const FEATURE = 'document-issuance-delivery-change';
@@ -84,7 +85,7 @@ async function announceRequested(subject: DeliveryChangeSubject, request: Extrac
   const bodyKey = name === null ? 'documentIssuanceDelivery.changeRequestedBodyUnnamed' : 'documentIssuanceDelivery.changeRequestedBody';
   const bodyParams = name === null ? { date, reason: request.reason } : { date, reason: request.reason, name };
   const destination = viewDestination(documentExpiryHref(undefined, { doc: issuanceKeyOf(subject.propertyId, subject.documentKind) }), orgWorkspace(subject.companyId));
-  const recipients = [...new Set([record.proposedByUid, ...(record.notice === null ? [] : [record.notice.byUid])])];
+  const recipients = issuanceOfficeRecipients(record);
   await Promise.all(recipients.map((recipientUid) => send({
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_CHANGE_REQUESTED,
     recipientId: recipientUid,

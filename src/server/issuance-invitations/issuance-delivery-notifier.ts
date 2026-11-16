@@ -31,6 +31,7 @@ import type { DocumentIssuanceAssignment } from '@/services/document-registry/is
 import { orgWorkspace } from '@/types/workspace-membership';
 
 import { activeIssuanceEngagementOf } from './issuance-active-engagement';
+import { issuanceOfficeRecipients } from './issuance-office-recipients';
 
 const logger = createModuleLogger('issuance-delivery-notifier');
 const FEATURE = 'document-issuance-delivery';
@@ -62,7 +63,7 @@ async function announceOverdue(subject: DeliveryMilestoneSubject, dueOn: string,
   const bodyKey = name === null ? 'documentIssuanceDelivery.overdueBodyUnnamed' : 'documentIssuanceDelivery.overdueBody';
   const bodyParams = name === null ? { days } : { days, name };
   const destination = viewDestination(documentExpiryHref(undefined, { doc: issuanceKeyOf(assignment.propertyId, assignment.documentKind) }), orgWorkspace(assignment.companyId));
-  const recipients = [...new Set([record.proposedByUid, ...(record.notice === null ? [] : [record.notice.byUid])])];
+  const recipients = issuanceOfficeRecipients(record);
   await Promise.all(recipients.map((recipientUid) => send({
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_OVERDUE,
     recipientId: recipientUid,

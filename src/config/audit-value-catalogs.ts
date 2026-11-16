@@ -176,6 +176,11 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   buildingIdentityIssuanceSpaceInvitation: { ns: 'document-registry', path: 'issuance.space.auditValues' },
   electricalInstallationIssuanceSpaceInvitation: { ns: 'document-registry', path: 'issuance.space.auditValues' },
   issuanceSpaceInvitation: { ns: 'document-registry', path: 'issuance.space.auditValues' },
+  // ── ADR-942 Φ1 — αίτημα εγγράφου του μηχανικού: τιμή = id του καταλόγου (`study-admin-title-deed` ⇒ «Τίτλος
+  //    ιδιοκτησίας»). Ο ΙΔΙΟΣ κατάλογος λέξεων με την ενότητα «Έγγραφα για την έκδοση» (μηχανικός + γραφείο).
+  energyCertificateIssuanceDocumentRequest: { ns: 'document-registry', path: 'issuance.documentRequest.items' },
+  buildingIdentityIssuanceDocumentRequest: { ns: 'document-registry', path: 'issuance.documentRequest.items' },
+  electricalInstallationIssuanceDocumentRequest: { ns: 'document-registry', path: 'issuance.documentRequest.items' },
 
   // ── Property: ADR-915 §35 — απόφαση μόνιμης υποχρέωσης (ένα πεδίο ανά είδος). Οι ΙΔΙΟΙ κατάλογοι με την ενότητα
   //    «Μόνιμες υποχρεώσεις» (μόνο camelCase· ο resolver κανονικοποιεί `not-required` → `notRequired`).

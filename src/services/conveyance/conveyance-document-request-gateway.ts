@@ -11,6 +11,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { CaseFileTarget } from '@/hooks/useCaseFileOpener';
 import type { DocumentRequestItemOutcome } from '@/types/conveyance-document-request';
+import type { IssuanceRequestOutcome } from '@/types/issuance-document-request';
 
 export interface DocumentRequestResponse {
   readonly items: readonly DocumentRequestItemOutcome[];
@@ -22,6 +23,14 @@ export function requestCaseDocumentsRequest(door: CaseFileTarget, checklistItemI
     ? API_ROUTES.CONVEYANCE_CASES.DOCUMENT_REQUESTS(door.caseId)
     : API_ROUTES.ENGAGEMENTS.DOCUMENT_REQUESTS(door.engagementId);
   return apiClient.post(url, { checklistItemIds });
+}
+
+/**
+ * ADR-942 Φ1 — ο μηχανικός μιας ανάθεσης έκδοσης ζητά στοιχεία του καταλόγου· **ίδια** πόρτα με τη μεταβίβαση (το
+ * μητρώο προσαρμογέων του server διαλέγει από το είδος της συμμετοχής).
+ */
+export function requestIssuanceDocumentsRequest(engagementId: string, itemIds: readonly string[]): Promise<{ readonly items: readonly IssuanceRequestOutcome[] }> {
+  return apiClient.post(API_ROUTES.ENGAGEMENTS.DOCUMENT_REQUESTS(engagementId), { checklistItemIds: itemIds });
 }
 
 /** Γιατί απορρίφθηκε **όλο** το αίτημα — κλειστό σύνολο· οτιδήποτε άλλο ⇒ `failed`. */

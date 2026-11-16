@@ -1558,6 +1558,8 @@
     "common-validation",
     "conveyance",
     "document-registry",
+    "files",
+    "files-media",
     "legality",
     "property-market"
   ],

@@ -82,6 +82,18 @@ export async function readOfficeOwnerProperties(
   return { properties, truncated: snapshot.size > cap };
 }
 
+/**
+ * ADR-942 Φ1 (Ε2) — είναι **αυτό** το ακίνητο ιδιώτη **τώρα** σε θεματοφυλακή **αυτού** του γραφείου; Ο ΙΔΙΟΣ αναγνώστης
+ * και ο ΙΔΙΟΣ κριτής με το μητρώο (`inOfficeCustody`): ακίνητο που πέρασε στον ιδιοκτήτη ⇒ `false` ⇒ το γραφείο δεν
+ * είναι πια ο κάτοχος των εγγράφων του.
+ */
+export async function isOwnerPropertyInOfficeCustody(db: AdminFirestore, companyId: string, propertyId: string): Promise<boolean> {
+  const snapshot = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId).get();
+  const data = snapshot.data();
+  const property = data === undefined ? null : ownerPropertyFromDocument(data, snapshot.id);
+  return property !== null && inOfficeCustody(property, companyId);
+}
+
 /** Ένα ακίνητο ιδιώτη που ο δρων **διαχειρίζεται**, μαζί με το βιβλίο του χώρου του (§37). */
 export interface AdministeredOwnerProperty {
   readonly property: RegistryProperty;

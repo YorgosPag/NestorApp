@@ -1008,6 +1008,12 @@
     "changeDeclined": "New date request not approved — “{title}”",
     "changeDeclinedBody": "The delivery date stays as it was. The office's reason: “{reason}”."
   },
+  "documentIssuanceRequest": {
+    "requested": "{count, plural, one {# document requested} other {# documents requested}} for the issuance — “{title}”",
+    "requestedBody": "The engineer on this assignment is requesting documents from the property file. Open the row to see which ones and upload them.",
+    "provided": "A document you requested was uploaded — “{title}”",
+    "providedBody": "The office uploaded one of the documents you requested to the property file. Open the assignment space."
+  },
   "documentIssuanceAnswered": {
     "approved": "Assignment approved — «{title}»",
     "rejected": "Assignment not approved — «{title}»",

@@ -40,6 +40,7 @@ import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/docume
 import { registryPersonOf } from '@/components/document-registry/registry-obligors';
 import { ObligorPerson } from '@/components/document-registry/registry-links';
 import { RegistryIssuanceSpaceLine } from '@/components/document-registry/RegistryIssuanceSpaceLine';
+import { RegistryIssuanceDocumentRequests } from '@/components/document-registry/RegistryIssuanceDocumentRequests';
 import { InspectorFitLine } from '@/components/document-registry/RegistryInspectorFitLine';
 import { RegistryIssuanceDelivery } from '@/components/document-registry/RegistryIssuanceDelivery';
 import { RegistryIssuanceInspection } from '@/components/document-registry/RegistryIssuanceInspection';
@@ -330,6 +331,8 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
       <BallInCourtLine state={state} view={view} registry={registry} />
       {/* §39 — μετά το «Αναλαμβάνω»: μπήκε ο επαγγελματίας στον χώρο της ανάθεσης; */}
       {state.stage === 'accepted' ? <RegistryIssuanceSpaceLine view={view} /> : null}
+      {/* ADR-942 Φ1 — τι ζήτησε ο μηχανικός· ανέβασμα κατευθείαν στον φάκελο του ακινήτου (θεματοφυλακή του κατόχου). */}
+      {state.stage === 'accepted' ? <RegistryIssuanceDocumentRequests view={view} canAct={(actions?.canAct ?? false) && !saving} /> : null}
       {/* §45 Φ2 — έως πότε · καθυστερεί · προλαβαίνει την υπογραφή · ορισμός/αλλαγή προθεσμίας. */}
       {view.delivery === null ? null : (
         <RegistryIssuanceDelivery

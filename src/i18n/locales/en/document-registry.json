@@ -538,6 +538,60 @@
         "CONTACT_UNAVAILABLE": "The contact is no longer available to the office.",
         "generic": "The correction was not applied. Please try again."
       }
+    },
+    "documentRequest": {
+      "title": "Documents for the issuance",
+      "leadEngaged": "Ask the office for what you need. Documents are uploaded to the property file, never to a copy.",
+      "leadOffice": "The engineer on this assignment needs these documents. Upload what you have to the property file.",
+      "tiers": {
+        "a": {
+          "title": "Identification",
+          "ifMissing": "Without these the engineer cannot submit the certificate."
+        },
+        "b": {
+          "title": "Geometry",
+          "ifMissing": "If missing, the engineer surveys on site: more time and a possible extra charge."
+        },
+        "c": {
+          "title": "Envelope and systems",
+          "ifMissing": "If missing, conservative default values apply and the energy class usually comes out worse."
+        }
+      },
+      "tiersUnverified": "The grouping into tiers is indicative and has not yet been confirmed by an energy inspector.",
+      "provided": "In the property file · {date}",
+      "providedUndated": "In the property file",
+      "pendingFromOffice": "Pending from the office · requested {date}",
+      "askedOfOffice": "Requested by the engineer · {date}",
+      "request": "Request from the office",
+      "requesting": "Sending…",
+      "requestedToday": "Requested today",
+      "requestAll": "{count, plural, one {Request # document} other {Request all missing (#)}}",
+      "requestAllConfirm": {
+        "title": "Request all missing documents?",
+        "description": "{count, plural, one {The office will receive one notification for # document.} other {The office will receive one notification for # documents.}}",
+        "confirm": "Send",
+        "cancel": "Cancel"
+      },
+      "noRecipient": "There is currently no office account to receive the request.",
+      "closed": "The assignment is not in progress, so no documents are requested.",
+      "unknown": "The documents could not be loaded. Refresh the page.",
+      "noneRequested": "The engineer has not requested any documents yet.",
+      "upload": "Upload",
+      "uploading": "Uploading…",
+      "uploaded": "The document was uploaded to the property file.",
+      "uploadFailed": "The document was not uploaded. Please try again.",
+      "items": {
+        "studyAdminTitleDeed": "Title deed",
+        "studyAdminCadastre": "Land registry (KAEK)",
+        "studyAdminTopographic": "Topographic survey",
+        "unitFloorPlan": "Floor plans",
+        "unitSectionDrawing": "Sections",
+        "unitPermit": "Building permit",
+        "studyEnergyInsulation": "Thermal insulation study",
+        "studyMepHvac": "Heating / cooling study",
+        "unitElectricalPlan": "Electrical drawings",
+        "studyEnergyCertificate": "Previous energy certificate"
+      }
     }
   },
   "factsDeclaration": {

@@ -36,6 +36,7 @@ import { formatMinor } from '@/lib/money/money';
 import { phoneHref } from '@/lib/validation/text-link-segments';
 import type { EngagedIssuanceView, InspectionContactView, IssuanceAgreementView } from '@/types/my-engagements';
 import { ISSUANCE_SPACE_KEYS, PROFESSIONAL_BALL_KEYS, PROFESSIONAL_STAGE_KEYS } from './issuance-space-labels';
+import { EngagedIssuanceDocumentRequests, EngagedIssuanceDocumentRequestsUnknown } from './EngagedIssuanceDocumentRequests';
 
 const LINK_CLASS = 'underline decoration-dotted underline-offset-4 hover:decoration-solid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm';
 
@@ -255,6 +256,10 @@ export function EngagedIssuanceContent({ view, onChanged }: { readonly view: Eng
           <p className="text-xs text-muted-foreground">{t(ISSUANCE_SPACE_KEYS.scope)}</p>
         </section>
       </Card>
+      {view.documentRequests === 'unknown' && <EngagedIssuanceDocumentRequestsUnknown />}
+      {view.documentRequests !== null && view.documentRequests !== 'unknown' && (
+        <EngagedIssuanceDocumentRequests engagementId={view.engagementId} panel={view.documentRequests} onChanged={onChanged} />
+      )}
     </>
   );
 }

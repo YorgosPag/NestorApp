@@ -37,6 +37,11 @@ export interface IssuanceAuditFields {
    * `issuanceSpaceInvitation` είναι αποσυρμένο (`config/audit-retired-fields.ts`).
    */
   readonly spaceInvitation: string;
+  /**
+   * ADR-942 Φ1 — **αίτημα εγγράφου** από τον μηχανικό: `— → <είδος του καταλόγου>` (κατάλογος
+   * `issuance.documentRequest.items` ⇒ «Τίτλος ιδιοκτησίας»). Μία γραμμή ανά νέο αίτημα του ίδιου πατήματος.
+   */
+  readonly documentRequest: string;
 }
 
 /**
@@ -52,6 +57,7 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeAnswer: 'energyCertificateIssuanceDeliveryChangeAnswer',
     deliveryChangeDeclineReason: 'energyCertificateIssuanceDeliveryChangeDeclineReason',
     spaceInvitation: 'energyCertificateIssuanceSpaceInvitation',
+    documentRequest: 'energyCertificateIssuanceDocumentRequest',
   },
   'building-identity': {
     stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
@@ -61,6 +67,7 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeAnswer: 'buildingIdentityIssuanceDeliveryChangeAnswer',
     deliveryChangeDeclineReason: 'buildingIdentityIssuanceDeliveryChangeDeclineReason',
     spaceInvitation: 'buildingIdentityIssuanceSpaceInvitation',
+    documentRequest: 'buildingIdentityIssuanceDocumentRequest',
   },
   'tax-clearance': null,
   'insurance-clearance': null,
@@ -76,5 +83,6 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeAnswer: 'electricalInstallationIssuanceDeliveryChangeAnswer',
     deliveryChangeDeclineReason: 'electricalInstallationIssuanceDeliveryChangeDeclineReason',
     spaceInvitation: 'electricalInstallationIssuanceSpaceInvitation',
+    documentRequest: 'electricalInstallationIssuanceDocumentRequest',
   },
 };

@@ -17,7 +17,6 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { isEngaged } from '@/lib/auth/engagement-judge';
-import { listEngagementsOfUser } from '@/lib/auth/engagement-read';
 import { engagementRef } from '@/lib/auth/engagement-ref';
 import { parseEngagement } from '@/lib/auth/engagement-schema';
 import { issuanceKeyOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
@@ -27,7 +26,7 @@ import { isIssuanceEngagement, type IssuanceEngagement } from '@/types/engagemen
 import { readDocumentRegistry } from './document-registry.service';
 import { issuanceAssignmentIdOf } from './issuance-assignment-schema';
 import { stageIssuanceAction, type IssuanceWrite, type IssuanceWriteOutcome, type StagedIssuanceWrite } from './issuance-assignments.server';
-import { judgeIssuanceEngagement, readHostedIssuanceAssignment } from './issuance-engagement-host-adapter';
+import { judgeIssuanceEngagement, ownIssuanceEngagement, readHostedIssuanceAssignment } from './issuance-engagement-host-adapter';
 
 export interface DeliveryChangeRequestInput {
   readonly uid: string;
@@ -53,14 +52,6 @@ export type DeliveryChangeResult =
   | { readonly ok: false; readonly refusal: DeliveryChangeRefusal };
 
 const refused = (refusal: DeliveryChangeRefusal): DeliveryChangeResult => ({ ok: false, refusal });
-
-/** Η **δική του** συμμετοχή σε ανάθεση έκδοσης — ξένη, άλλου είδους ή άγνωστη ≡ καμία. */
-async function ownIssuanceEngagement(db: Firestore, uid: string, engagementId: string): Promise<IssuanceEngagement | 'unknown' | null> {
-  const list = await listEngagementsOfUser(db, uid);
-  if (list.outcome === 'unknown') return 'unknown';
-  const engagement = list.engagements.find((e) => e.id === engagementId);
-  return engagement !== undefined && isIssuanceEngagement(engagement) ? engagement : null;
-}
 
 /** Η συμμετοχή **μέσα** στη συναλλαγή: ίδια, δική του, και ενεργή **τώρα**. */
 function stillEngaged(raw: unknown, expected: IssuanceEngagement, uid: string, nowMs: number): boolean {
