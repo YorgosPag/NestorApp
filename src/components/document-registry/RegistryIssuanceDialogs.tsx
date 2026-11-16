@@ -40,6 +40,8 @@ import {
   SEND_KEYS,
 } from '@/components/document-registry/issuance-labels';
 import { DELIVERY_KEYS } from '@/components/document-registry/issuance-delivery-labels';
+import { INSPECTION_KEYS } from '@/components/document-registry/issuance-inspection-labels';
+import type { IssuanceInspectionContactEntry } from '@/lib/document-validity/issuance-inspection-contact';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
 import { formatMinor } from '@/lib/money/money';
 
@@ -50,6 +52,7 @@ const SendForm = dynamic(() => import('./RegistryIssuanceSendForm').then((mod) =
 const QuoteRecordForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.QuoteRecordForm), { ssr: false });
 const ReceiptForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.ReceiptForm), { ssr: false });
 const DeliveryScheduleForm = dynamic(() => import('./RegistryIssuanceDeliveryForm').then((mod) => mod.DeliveryScheduleForm), { ssr: false });
+const InspectionContactForm = dynamic(() => import('./RegistryIssuanceInspectionForm').then((mod) => mod.InspectionContactForm), { ssr: false });
 
 export interface IssuanceDialogShellProps {
   readonly trigger: string;
@@ -163,6 +166,23 @@ export function IssuanceDeliveryDialog({ view, professionalName, currentDueOn }:
       description={change ? t(DELIVERY_KEYS.descriptionChange, { name: professionalName }) : t(DELIVERY_KEYS.descriptionSet, { name: professionalName })}
     >
       {(close) => <DeliveryScheduleForm view={view} close={close} currentDueOn={currentDueOn} />}
+    </IssuanceDialogShell>
+  );
+}
+
+/** §45.15 — ορισμός ή αλλαγή του υπευθύνου αυτοψίας· `current === null` ⇔ πρώτος ορισμός. */
+export function IssuanceInspectionDialog({ view, current, lead }: {
+  readonly view: RegistryIssuanceView;
+  readonly current: IssuanceInspectionContactEntry | null;
+  readonly lead: { readonly contactId: string; readonly name: string } | null;
+}): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  return (
+    <IssuanceDialogShell
+      trigger={current === null ? t(INSPECTION_KEYS.setTrigger) : t(INSPECTION_KEYS.changeTrigger)}
+      title={t(INSPECTION_KEYS.title)} description={t(INSPECTION_KEYS.description)}
+    >
+      {(close) => <InspectionContactForm view={view} close={close} current={current} lead={lead} />}
     </IssuanceDialogShell>
   );
 }

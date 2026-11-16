@@ -39,7 +39,7 @@ import {
   type IssuanceQuote, type IssuanceReceipt, type QuoteSubmission, type QuoteTerms,
 } from './issuance-quote';
 import type { IssuanceDeliveryReminders } from './issuance-delivery-reminder';
-import { inspectionContactSet, type IssuanceInspectionContactEntry, type IssuanceSetInspectionContactAction } from './issuance-inspection-contact';
+import { INSPECTION_CONTACT_STAGES, inspectionContactSet, type IssuanceInspectionContactEntry, type IssuanceSetInspectionContactAction } from './issuance-inspection-contact';
 import type { IssuanceReminders } from './issuance-reminder';
 import { ballInCourtOf, isLegacyIssuance, issuanceStageOf, type BallInCourtParty, type IssuanceStage } from './issuance-stage';
 
@@ -250,7 +250,7 @@ const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose'>, read
   quote: ['sent', 'accepted'],
   'record-receipt': ['accepted'],
   'schedule-delivery': ['accepted'],
-  'set-inspection-contact': ['proposed', 'ownerApproved', 'sent', 'quoted', 'accepted'],
+  'set-inspection-contact': INSPECTION_CONTACT_STAGES,
   cancel: ['proposed', 'ownerApproved', 'sent', 'quoted', 'accepted', 'declined'],
 };
 

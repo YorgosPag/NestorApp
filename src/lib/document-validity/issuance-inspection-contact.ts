@@ -20,6 +20,10 @@
  */
 
 import type { IssuanceAssignmentRecord, IssuanceReduction } from './issuance-assignment';
+import type { IssuanceStage } from './issuance-stage';
+
+/** Τα στάδια όπου ο υπεύθυνος ορίζεται/αλλάζει — ο μειωτής (`ALLOWED_FROM`) **και** το πάνελ διαβάζουν αυτό. */
+export const INSPECTION_CONTACT_STAGES: readonly IssuanceStage[] = ['proposed', 'ownerApproved', 'sent', 'quoted', 'accepted'];
 
 /** Οι ιδιότητες — κλειστό σύνολο, με `other` για ό,τι δεν χωρά (τότε το κείμενο είναι υποχρεωτικό). */
 export const INSPECTION_CONTACT_ROLES = ['owner', 'manager', 'tenant', 'technical', 'other'] as const;

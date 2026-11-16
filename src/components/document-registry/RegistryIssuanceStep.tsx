@@ -42,6 +42,8 @@ import { ObligorPerson } from '@/components/document-registry/registry-links';
 import { RegistryIssuanceSpaceLine } from '@/components/document-registry/RegistryIssuanceSpaceLine';
 import { InspectorFitLine } from '@/components/document-registry/RegistryInspectorFitLine';
 import { RegistryIssuanceDelivery } from '@/components/document-registry/RegistryIssuanceDelivery';
+import { RegistryIssuanceInspection } from '@/components/document-registry/RegistryIssuanceInspection';
+import { INSPECTION_CONTACT_STAGES } from '@/lib/document-validity/issuance-inspection-contact';
 import {
   IssuanceCancelDialog,
   IssuanceDecisionDialog,
@@ -334,6 +336,10 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
           professionalName={nameOf(t, state.record.professionalContactId, registry)} canAct={(actions?.canAct ?? false) && !saving}
         />
       )}
+      {/* §45.15 — με ποιον κλείνει ο μηχανικός την αυτοψία (ό,τι θα δει στον χώρο του μετά την ανάληψη). */}
+      {INSPECTION_CONTACT_STAGES.includes(state.stage) ? (
+        <RegistryIssuanceInspection view={view} record={state.record} registry={registry} canAct={(actions?.canAct ?? false) && !saving} />
+      ) : null}
       <HistoryLines record={state.record} registry={registry} />
       {saving ? <span role="status" className="text-xs text-muted-foreground">{t(ISSUANCE_KEYS.saving)}</span> : null}
       {actions?.canAct && !saving ? <StageActions view={view} stage={state.stage} record={state.record} registry={registry} /> : null}

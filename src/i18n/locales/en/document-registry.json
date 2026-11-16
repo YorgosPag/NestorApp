@@ -259,6 +259,22 @@
       "cancelled": "Cancelled",
       "quoted": "Quote received — awaiting the owner's approval"
     },
+    "inspection": {
+      "line": "Site visit contact",
+      "none": "Not set — the engineer will contact the office.",
+      "setTrigger": "Set site visit contact",
+      "changeTrigger": "Change site visit contact",
+      "title": "Site visit contact",
+      "description": "Who the engineer arranges the site visit with. Once engaged, they see the contact’s name, capacity and phone. The change is recorded in the history.",
+      "whoLegend": "Who",
+      "whoLead": "The property’s contact person: {name}",
+      "whoOther": "Another contact",
+      "searchPlaceholder": "Search contacts…",
+      "roleLegend": "Capacity",
+      "roleOtherLabel": "Which capacity?",
+      "noPhone": "This contact has no phone: the engineer will see “contact the office”. Add a phone to the contact.",
+      "submit": "Save"
+    },
     "inspectionRole": {
       "owner": "Owner",
       "manager": "Property manager",

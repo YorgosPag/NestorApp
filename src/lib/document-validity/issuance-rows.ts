@@ -31,6 +31,7 @@ import {
   type IssuanceCandidate,
   type IssuanceRosterEntry,
 } from './issuance-candidates';
+import { currentInspectionContactOf } from './issuance-inspection-contact';
 
 /** Η ανάθεση μιας γραμμής «Ανάθεσης» — τα **γεγονότα** ωμά· η οθόνη κρίνει με τον ίδιο πυρήνα (`issuanceStateOf`). */
 export interface RowIssuance {
@@ -66,7 +67,7 @@ export function latestIssuedOnByKey(rows: readonly RegistryRow[]): ReadonlyMap<s
   return latest;
 }
 
-/** Γραμμές + κατάλογος ⇒ ανάθεση ανά γραμμή «Ανάθεσης» + οι επαφές που θα ονομαστούν (επαγγελματίες · υποψήφιοι). */
+/** Γραμμές + κατάλογος ⇒ ανάθεση ανά γραμμή «Ανάθεσης» + οι επαφές που θα ονομαστούν (επαγγελματίες · υπεύθυνοι αυτοψίας · υποψήφιοι). */
 export function issuanceOfRows(
   rows: readonly RegistryRow[],
   roster: readonly IssuanceRosterEntry[],
@@ -83,6 +84,9 @@ export function issuanceOfRows(
     const candidates = rankIssuanceCandidates(roster, { kind, propertyId, excludeContactId: declined });
     issuance[key] = { record, latestIssuedOn, candidates };
     if (record !== null) contactIds.add(record.professionalContactId);
+    // §45.15 — ο υπεύθυνος αυτοψίας μπορεί να μην είναι ιδιοκτήτης (ενοικιαστής · διαχειριστής): ονομάζεται κι αυτός.
+    const inspection = record === null ? null : currentInspectionContactOf(record);
+    if (inspection !== null) contactIds.add(inspection.contactId);
     for (const candidate of candidates) contactIds.add(candidate.contactId);
   }
   return { issuance, contactIds: [...contactIds] };

@@ -29,6 +29,8 @@ import {
 import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
 import { formatDate } from '@/lib/intl-formatting';
 import { DELIVERY_KEYS, DELIVERY_SOURCE_KEYS, DELIVERY_TIER_KEYS } from '../issuance-delivery-labels';
+import { INSPECTION_KEYS } from '../issuance-inspection-labels';
+import { INSPECTION_ROLE_LABEL_KEYS } from '../document-registry-labels';
 import { LAYOUT_KEYS, REGISTRY_TAB_LABEL_KEYS } from '../registry-layout-labels';
 import { reduceIssuance, type IssuanceAction, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { withIssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
@@ -644,5 +646,57 @@ describe('ADR-915 §45 Φ2 — προθεσμία παράδοσης: κελί �
     expect(await within(dialog).findByText(startsWith(DELIVERY_KEYS.ifApprovedToday))).toBeTruthy();
     // Η υπογραφή του p6 είναι «σήμερα» του μητρώου (15/10)· κάθε έγκριση από σήμερα και μετά πέφτει αργότερα.
     expect(within(dialog).getByRole('alert').textContent?.startsWith(DELIVERY_KEYS.missesSigning)).toBe(true);
+  });
+});
+
+describe('ADR-915 §45.15 — υπεύθυνος αυτοψίας στο πάνελ του γραφείου', () => {
+  const renderWith = (record: IssuanceAssignmentRecord) => {
+    registry = withRoster([{ propertyId: 'p6', documentKind: 'energy-certificate', record }]);
+    render(<DocumentRegistryContent />);
+  };
+
+  it('χωρίς ορισμό ⇒ «δεν έχει οριστεί»· η φόρμα προτείνει τον υπεύθυνο του ακινήτου ως «Ιδιοκτήτη» ⇒ ΕΝΑ πάτημα', async () => {
+    renderWith(recordOf(QUOTED));
+    expect(within(article()).getByText(INSPECTION_KEYS.none)).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(within(article()).getByRole('button', { name: INSPECTION_KEYS.setTrigger }));
+    const dialog = await screen.findByRole('dialog');
+    expect((await within(dialog).findByRole('radio', { name: new RegExp(INSPECTION_KEYS.whoLead) })).getAttribute('aria-checked')).toBe('true');
+    expect(within(dialog).getByRole('radio', { name: INSPECTION_ROLE_LABEL_KEYS.owner }).getAttribute('aria-checked')).toBe('true');
+    await user.click(within(dialog).getByRole('button', { name: INSPECTION_KEYS.submit }));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'set-inspection-contact', propertyId: 'p6', documentKind: 'energy-certificate', expectedStage: 'quoted',
+      contactId: 'cont_alpha', role: 'owner', roleOther: null,
+    }));
+  });
+
+  it('🔴 «Άλλο» χωρίς κείμενο ⇒ ανενεργό· με κείμενο ⇒ στέλνεται κομμένο', async () => {
+    renderWith(recordOf(QUOTED));
+    const user = userEvent.setup();
+    await user.click(within(article()).getByRole('button', { name: INSPECTION_KEYS.setTrigger }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(await within(dialog).findByRole('radio', { name: INSPECTION_ROLE_LABEL_KEYS.other }));
+    const submit = within(dialog).getByRole('button', { name: INSPECTION_KEYS.submit });
+    expect(submit.hasAttribute('disabled')).toBe(true);
+    await user.type(within(dialog).getByLabelText(INSPECTION_KEYS.roleOtherLabel), '  Θυρωρός ');
+    await user.click(submit);
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ action: 'set-inspection-contact', role: 'other', roleOther: 'Θυρωρός' }));
+  });
+
+  it('με ορισμό ⇒ η γραμμή δείχνει ιδιότητα · ίδιος ορισμός ⇒ τίποτα να σταλεί', async () => {
+    renderWith(recordOf([...QUOTED, { kind: 'set-inspection-contact', contactId: 'cont_alpha', role: 'tenant', roleOther: null }]));
+    expect(within(article()).getByText(new RegExp(`\\(${INSPECTION_ROLE_LABEL_KEYS.tenant}\\)`))).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(within(article()).getByRole('button', { name: INSPECTION_KEYS.changeTrigger }));
+    const dialog = await screen.findByRole('dialog');
+    const submit = await within(dialog).findByRole('button', { name: INSPECTION_KEYS.submit });
+    expect(submit.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('χωρίς δικαίωμα ⇒ η γραμμή φαίνεται, το κουμπί ΟΧΙ', () => {
+    verdict = 'denied-permission';
+    renderWith(recordOf(QUOTED));
+    expect(within(article()).getByText(INSPECTION_KEYS.none)).toBeTruthy();
+    expect(within(article()).queryByRole('button', { name: INSPECTION_KEYS.setTrigger })).toBeNull();
   });
 });
