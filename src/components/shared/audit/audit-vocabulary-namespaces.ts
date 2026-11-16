@@ -10,6 +10,7 @@
  * ✅ **ΠΑΡΑΓΩΓΗ, ΟΧΙ ΛΙΣΤΑ.** Τα namespaces βγαίνουν από τις **ίδιες** δηλώσεις που χρησιμοποιεί ο resolver
  * (`enumCatalog` · `itemCatalogs` · `nestedKeyCatalog` · κατάλογος ανά όνομα πεδίου · λέξη μονάδας εμβαδού · `labelKey`). Μια νέα
  * δήλωση φορτώνει το namespace της **χωρίς** δεύτερη γραμμή κάπου αλλού — δεν υπάρχει χειρόγραφη λίστα να ξεχαστεί.
+ * Πηγές πεδίων: tracked · αποσυρμένα (ADR-195 (κ)) · **απευθείας γραμμένα** από γραφέα εκτός diff (ADR-915 §45.21).
  * Κάθε οντότητα πληρώνει **μόνο** τα δικά της λεξιλόγια (namespace ανά λειτουργία, πρακτική i18next/Locize).
  *
  * @module components/shared/audit/audit-vocabulary-namespaces
@@ -18,6 +19,7 @@
 import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
 import { getExplicitNamespace } from '@/i18n/namespace-compat';
 import { getRetiredTrackedFields } from '@/config/audit-retired-fields';
+import { getDirectWrittenAuditFields } from '@/config/audit-direct-written-fields';
 import { getAuditValueCatalog, type AuditCatalogRef } from '@/config/audit-value-catalogs';
 import { AUDIT_AREA_FIELDS, AUDIT_VALUE_WORDS } from '@/config/audit-value-vocabularies';
 import type { TrackedFieldDef } from '@/lib/audit/tracked-field-def';
@@ -44,11 +46,15 @@ export function auditVocabularyNamespaces(entityType: string | null): readonly s
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
+  // ADR-915 §45.21 — πεδία που ο γραφέας γράφει απευθείας: ο κατάλογός τους λύνεται από το όνομα (ίδιος κανόνας με τον resolver).
+  const direct = Object.fromEntries(
+    getDirectWrittenAuditFields(entityType).map((field): [string, TrackedFieldDef] => [field, { kind: 'scalar', label: field }]),
+  );
   const retired = Object.fromEntries(
     Object.entries(getRetiredTrackedFields(entityType)).map(([field, entry]) => [field, entry.def]),
   );
   // Οι γραμμές αποσυρμένων πεδίων διαβάζονται κι αυτές — τα λεξιλόγιά τους φορτώνονται μαζί (ADR-195 (κ)).
-  const result = vocabularyNamespacesOf({ ...retired, ...(getTrackedFieldsForEntityAuditType(entityType) ?? {}) });
+  const result = vocabularyNamespacesOf({ ...direct, ...retired, ...(getTrackedFieldsForEntityAuditType(entityType) ?? {}) });
   cache.set(cacheKey, result);
   return result;
 }

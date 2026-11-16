@@ -9,71 +9,14 @@
 
 import 'server-only';
 
-import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { IssuanceAssignmentRecord, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+// §45.21 — η δήλωση των πεδίων ζει σε κοινό module: τη διαβάζει και η γραμμή Ιστορικού για να φορτώσει τα λεξιλόγια.
+import { ISSUANCE_AUDIT_FIELDS, type IssuanceAuditFields } from '@/lib/document-validity/issuance-audit-fields';
 import { lastAnsweredDeliveryChangeOf, pendingDeliveryChangeOf } from '@/lib/document-validity/issuance-delivery-change';
 import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
 import { currentInspectionContactOf } from '@/lib/document-validity/issuance-inspection-contact';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { IssuanceWrite, IssuanceWriter } from './issuance-assignments.server';
-
-/**
- * Το πεδίο του ιστορικού ανά είδος — `null` για είδη αρχής (δεν ανατίθενται). Τα ονόματα ζουν στο
- * `common-audit:audit.fields.*` και οι τιμές σταδίου στον κατάλογο `document-registry:issuance.stage`.
- */
-/** Τα πεδία του ιστορικού **ενός** είδους (ονόματα στο `common-audit:audit.fields.*`). */
-export interface IssuanceAuditFields {
-  readonly stage: string;
-  readonly professional: string;
-  /** §28 — σε ποιον υπεύθυνο στάλθηκε σύνδεσμος έγκρισης (επαφή + όνομα της στιγμής). */
-  readonly approvalRequest: string;
-  /** §45 Φ2 — η προθεσμία παράδοσης (ISO ημέρα· ο αναγνώστης του ιστορικού τη μορφοποιεί ως ημερομηνία). */
-  readonly deliveryDue: string;
-  /** §45.15 — ο υπεύθυνος αυτοψίας (επαφή + όνομα της στιγμής) και η ιδιότητά του (κατάλογος `issuance.inspectionRole`). */
-  readonly inspectionContact: string;
-  readonly inspectionRole: string;
-  /** §45.20 Φ6γ — το αίτημα αλλαγής προθεσμίας του μηχανικού: «— → ημέρα» όταν ζητείται · «ημέρα → —» όταν απαντηθεί. */
-  readonly deliveryChangeRequest: string;
-  /**
-   * §45.20 Φ6γ — **η απάντηση** του γραφείου («— → έγινε δεκτό | απορρίφθηκε», κατάλογος `issuance.delivery.change.outcome`)
-   * και, στην απόρριψη, η αιτιολογία του. Χωρίς αυτά αποδοχή και απόρριψη γράφονταν ΙΔΙΑ («ημέρα → —»).
-   */
-  readonly deliveryChangeAnswer: string;
-  readonly deliveryChangeDeclineReason: string;
-}
-
-export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditFields | null>> = {
-  'energy-certificate': {
-    stage: 'energyCertificateIssuanceStage', professional: 'energyCertificateIssuer', approvalRequest: 'energyCertificateIssuanceApprovalRequest',
-    deliveryDue: 'energyCertificateIssuanceDeliveryDue',
-    inspectionContact: 'energyCertificateIssuanceInspectionContact', inspectionRole: 'energyCertificateIssuanceInspectionRole',
-    deliveryChangeRequest: 'energyCertificateIssuanceDeliveryChangeRequest',
-    deliveryChangeAnswer: 'energyCertificateIssuanceDeliveryChangeAnswer',
-    deliveryChangeDeclineReason: 'energyCertificateIssuanceDeliveryChangeDeclineReason',
-  },
-  'building-identity': {
-    stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
-    deliveryDue: 'buildingIdentityIssuanceDeliveryDue',
-    inspectionContact: 'buildingIdentityIssuanceInspectionContact', inspectionRole: 'buildingIdentityIssuanceInspectionRole',
-    deliveryChangeRequest: 'buildingIdentityIssuanceDeliveryChangeRequest',
-    deliveryChangeAnswer: 'buildingIdentityIssuanceDeliveryChangeAnswer',
-    deliveryChangeDeclineReason: 'buildingIdentityIssuanceDeliveryChangeDeclineReason',
-  },
-  'tax-clearance': null,
-  'insurance-clearance': null,
-  'enfia-certificate': null,
-  'electrical-installation': {
-    stage: 'electricalInstallationIssuanceStage',
-    professional: 'electricalInstallationIssuer',
-    approvalRequest: 'electricalInstallationIssuanceApprovalRequest',
-    deliveryDue: 'electricalInstallationIssuanceDeliveryDue',
-    inspectionContact: 'electricalInstallationIssuanceInspectionContact',
-    inspectionRole: 'electricalInstallationIssuanceInspectionRole',
-    deliveryChangeRequest: 'electricalInstallationIssuanceDeliveryChangeRequest',
-    deliveryChangeAnswer: 'electricalInstallationIssuanceDeliveryChangeAnswer',
-    deliveryChangeDeclineReason: 'electricalInstallationIssuanceDeliveryChangeDeclineReason',
-  },
-};
 
 export interface IssuanceTransition {
   readonly previous: IssuanceAssignmentRecord | null;
