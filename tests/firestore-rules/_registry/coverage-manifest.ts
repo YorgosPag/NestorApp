@@ -452,6 +452,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-943 §5.7 — ΔΙΚΑΙΟΥΧΟΙ MARKETPLACE. Ο πειρασμός: πελάτης γράφει «εξουσιοδοτημένος» ή αναφορά ξένου πωλητή.
+    collection: 'payment_payees',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/payment-payees.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-841 §7 Α21.20 — ΚΑΤΑΣΤΑΣΗ ΑΝΑ ΔΙΕΥΘΥΝΣΗ. Γεγονός του κόσμου, όχι μισθωτή· γράφει μόνο το webhook.
     collection: 'email_recipient_standing',
     pattern: 'deny_all',

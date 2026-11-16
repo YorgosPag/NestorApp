@@ -169,6 +169,8 @@ export const generateDeterministicInvoicePaymentId = (seed: string) =>
 export const generatePaymentCheckoutId = () => enterpriseIdService.generatePaymentCheckoutId();
 export const generateDeterministicPaymentProviderEventId = (seed: string) =>
   enterpriseIdService.generateDeterministicPaymentProviderEventId(seed);
+export const generateDeterministicPaymentPayeeId = (seed: string) =>
+  enterpriseIdService.generateDeterministicPaymentPayeeId(seed);
 export const generateDocumentIssuanceInvitationId = () => enterpriseIdService.generateDocumentIssuanceInvitationId();
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();

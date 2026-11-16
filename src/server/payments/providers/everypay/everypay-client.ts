@@ -44,7 +44,7 @@ export function everypayDateTime(instantIso: string): string {
 }
 
 interface EverypayCall {
-  readonly method: 'GET' | 'POST' | 'DELETE';
+  readonly method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   readonly path: string;
   readonly form?: Readonly<Record<string, string>>;
   readonly query?: Readonly<Record<string, string>>;

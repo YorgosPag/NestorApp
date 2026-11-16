@@ -964,6 +964,9 @@ export const COLLECTIONS = {
   ACCOUNTING_PAYMENT_CHECKOUTS: process.env.NEXT_PUBLIC_ACCOUNTING_PAYMENT_CHECKOUTS_COLLECTION || 'accounting_payment_checkouts',
   //    Ημερολόγιο συμβάντων παρόχου: ντετερμινιστικό id ανά συμβάν ⇒ κάθε webhook επεξεργάζεται ΜΙΑ φορά.
   PAYMENT_PROVIDER_EVENTS: process.env.NEXT_PUBLIC_PAYMENT_PROVIDER_EVENTS_COLLECTION || 'payment_provider_events',
+  // 💳 ADR-943 §5.7 — δικαιούχοι marketplace (ο μηχανικός ως πωλητής στον PSP). ΜΟΝΟ Admin SDK (deny-all). Κρατά
+  //    ΜΟΝΟ αναφορά παρόχου + κατάσταση — ποτέ IBAN / ΑΦΜ (ζουν στον PSP).
+  PAYMENT_PAYEES: process.env.NEXT_PUBLIC_PAYMENT_PAYEES_COLLECTION || 'payment_payees',
 
   // 📄 FILE AUDIT LOG (ADR-191: Enterprise Document Management — Phase 3.1)
   FILE_AUDIT_LOG: process.env.NEXT_PUBLIC_FILE_AUDIT_LOG_COLLECTION || 'file_audit_log',

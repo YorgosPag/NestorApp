@@ -16,6 +16,8 @@ import { normalizeToDate } from '@/lib/date-local';
 import type { PaymentProviderId } from '@/lib/payments/payment-routes';
 import type { CheckoutLaunch, OnlinePaymentMethod } from '@/subapps/accounting/types/online-payment';
 
+import type { MarketplaceCapability, PayeeKycStatus } from './payment-marketplace';
+
 export { isPaymentProviderId, PAYMENT_PROVIDER_IDS } from '@/lib/payments/payment-routes';
 export type { CheckoutLaunch, OnlinePaymentMethod, PaymentProviderId };
 
@@ -152,13 +154,23 @@ export type WebhookSignal =
     readonly providerCode: string | null;
     readonly signedFields: readonly string[];
   }
+  /**
+   * Άλλαξε η πορεία KYC ενός δικαιούχου marketplace (ADR-943 §5.7). Σήμα, όχι αλήθεια: η **εξουσιοδότηση** ξαναδιαβάζεται
+   * από το API (`MarketplaceCapability.readPayee`). Η κατάσταση KYC και η σελίδα KYC είναι πληροφορία για τον άνθρωπο.
+   */
+  | {
+    readonly kind: 'payee-kyc';
+    readonly payeeReference: string;
+    readonly kycStatus: PayeeKycStatus;
+    readonly kycProcessUrl: string | null;
+  }
   /** Υπογεγραμμένο αλλά άσχετο / ελλιπές συμβάν — καμία ενέργεια. */
   | { readonly kind: 'ignored'; readonly reason: string };
 
 /** Τι γράφεται για ένα σήμα σε logs / ίχνος παραλαβής — **ποτέ** τιμές του payload πέρα από κωδικό παρόχου. */
 export interface WebhookSignalDiagnostics {
   readonly signal: WebhookSignal['kind'];
-  /** Ο λόγος (`ignored`) ή ο κωδικός άρνησης του παρόχου (`authorization-failed`)· `null` αλλιώς. */
+  /** Ο λόγος (`ignored`), ο κωδικός άρνησης του παρόχου (`authorization-failed`) ή η κατάσταση KYC (`payee-kyc`)· `null` αλλιώς. */
   readonly reason: string | null;
   /** Τα **ονόματα** των υπογεγραμμένων πεδίων όταν η αποτυχία δεν φέρει υπογεγραμμένη συνεδρία — η διάγνωση του §5.8. */
   readonly signedFields: string | null;
@@ -170,6 +182,7 @@ export interface WebhookSignalDiagnostics {
 export function webhookSignalDiagnostics(verdict: AcceptedVerdict): WebhookSignalDiagnostics {
   const { signal, signatureScheme } = verdict;
   if (signal.kind === 'ignored') return { signal: signal.kind, reason: signal.reason, signedFields: null, signatureScheme };
+  if (signal.kind === 'payee-kyc') return { signal: signal.kind, reason: `kyc:${signal.kycStatus}`, signedFields: null, signatureScheme };
   if (signal.kind !== 'authorization-failed') return { signal: signal.kind, reason: null, signedFields: null, signatureScheme };
   return {
     signal: signal.kind,
@@ -226,4 +239,9 @@ export interface PaymentProvider {
   judgeWebhook(rawBody: string, headers: Headers): WebhookVerdict;
   /** Κρίνει την επιστροφή του browser (πεδία φόρμας ή query). Καθαρό. */
   judgeReturn(fields: URLSearchParams): ReturnVerdict;
+  /**
+   * Η ικανότητα marketplace (ADR-943 §5.7) — `null` όταν ο λογαριασμός δεν την έχει ενεργή. Ρητό `null`, όχι
+   * προαιρετικό πεδίο: κάθε καλών **πρέπει** να απαντήσει «και χωρίς marketplace;».
+   */
+  readonly marketplace: MarketplaceCapability | null;
 }

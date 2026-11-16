@@ -382,6 +382,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   INVOICE_PAYMENT: 'ipay',
   PAYMENT_CHECKOUT: 'pchk',
   PAYMENT_PROVIDER_EVENT: 'pevt',
+  // ADR-943 §5.7 — δικαιούχος marketplace (ο μηχανικός στον PSP): ΕΝΑΣ ανά (πάροχος, χρήστης).
+  PAYMENT_PAYEE: 'ppye',
   SERVICE_PRESET: 'sp',
   CUSTOM_CATEGORY: 'custcat',
   CUSTOMER_BALANCE: 'cbal',

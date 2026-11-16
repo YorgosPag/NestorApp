@@ -71,6 +71,7 @@ export {
   generateDeterministicInvoicePaymentId,
   generatePaymentCheckoutId,
   generateDeterministicPaymentProviderEventId,
+  generateDeterministicPaymentPayeeId,
   generateDocumentIssuanceInvitationId,
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generatePrivateMarketingEventId,

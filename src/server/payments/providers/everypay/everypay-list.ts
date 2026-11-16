@@ -26,7 +26,7 @@ export const EVERYPAY_LIST_PAGE_SIZE = 20;
 /** 50 × 20 = 1.000 εγγραφές ανά ερώτημα: πολύ πάνω από κάθε πραγματικό ερώτημα μας (ανά πληρωμή / ανά συνεδρία / 2 μέρες). */
 export const EVERYPAY_LIST_MAX_PAGES = 50;
 
-export type EverypayListPath = '/payments' | '/refunds';
+export type EverypayListPath = '/payments' | '/refunds' | '/transfers';
 
 /** Όλες οι εγγραφές του ερωτήματος. Μορφή εκτός συμβολαίου ή υπέρβαση ορίου ⇒ 502, ποτέ σιωπηλό «τίποτα». */
 export async function everypayListAll(

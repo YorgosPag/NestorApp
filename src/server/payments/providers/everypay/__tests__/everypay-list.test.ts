@@ -9,7 +9,7 @@ import { createEverypayProvider } from '../everypay-adapter';
 import { EVERYPAY_ENDPOINTS, type EverypayCredentials } from '../everypay-config';
 
 const credentials: EverypayCredentials = {
-  mode: 'sandbox', secretKey: 'sk_test', publicKey: 'pk_test', endpoints: EVERYPAY_ENDPOINTS.sandbox,
+  mode: 'sandbox', secretKey: 'sk_test', publicKey: 'pk_test', endpoints: EVERYPAY_ENDPOINTS.sandbox, marketplace: false,
 };
 
 const respond = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));

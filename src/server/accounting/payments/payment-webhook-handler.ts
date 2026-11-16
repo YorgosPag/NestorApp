@@ -15,6 +15,8 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
+import { syncPayeeFromKycSignal } from '@/server/payments/payment-payee-service';
+import type { PayeeObservationOutcome } from '@/server/payments/payment-payee-store';
 import type { PaymentProvider, WebhookSignal } from '@/server/payments/payment-provider';
 import {
   checkoutSubjectOf,
@@ -29,7 +31,7 @@ import { syncCheckoutSettlement, type CheckoutSyncOutcome } from './invoice-paym
 
 const logger = createModuleLogger('PaymentWebhookHandler');
 
-export type PaymentSignalOutcome = CheckoutSyncOutcome | CheckoutFailureOutcome | 'ignored';
+export type PaymentSignalOutcome = CheckoutSyncOutcome | CheckoutFailureOutcome | PayeeObservationOutcome | 'ignored';
 
 type AttemptFailureSignal = Extract<WebhookSignal, { kind: 'authorization-failed' }>;
 
@@ -49,7 +51,7 @@ export async function notePaymentAttemptFailure(
 async function checkoutOfSignal(
   db: Firestore,
   provider: PaymentProvider,
-  signal: Exclude<WebhookSignal, { kind: 'ignored' } | { kind: 'authorization-failed' }>,
+  signal: Exclude<WebhookSignal, { kind: 'ignored' } | { kind: 'authorization-failed' } | { kind: 'payee-kyc' }>,
 ): Promise<PaymentCheckoutRecord | null> {
   switch (signal.kind) {
     case 'checkout-reference':
@@ -69,6 +71,7 @@ export async function handlePaymentSignal(
 ): Promise<PaymentSignalOutcome> {
   if (signal.kind === 'ignored') return 'ignored';
   if (signal.kind === 'authorization-failed') return notePaymentAttemptFailure(db, provider, signal, nowISO());
+  if (signal.kind === 'payee-kyc') return syncPayeeFromKycSignal(db, provider, signal);
   const checkout = await checkoutOfSignal(db, provider, signal);
   if (checkout === null) {
     logger.warn('Signed provider event for an unknown checkout', { provider: provider.id, signal: signal.kind });

@@ -16,6 +16,8 @@ import { readConfiguredValue, type EnvironmentSource } from '@/lib/environment/e
 export const EVERYPAY_SECRET_KEY_ENV = 'EVERYPAY_SECRET_KEY';
 export const EVERYPAY_PUBLIC_KEY_ENV = 'EVERYPAY_PUBLIC_KEY';
 export const PAYMENTS_PROVIDER_MODE_ENV = 'PAYMENTS_PROVIDER_MODE';
+/** ADR-943 §5.7 — ρητή ενεργοποίηση του Marketplace (δεκτό μόνο `enabled`): ποτέ σιωπηλή κλήση σε endpoint που ο λογαριασμός δεν έχει. */
+export const EVERYPAY_MARKETPLACE_ENV = 'EVERYPAY_MARKETPLACE';
 
 /** Οι λειτουργίες που γνωρίζει ο κώδικας. Το live **δεν** υπάρχει επίτηδες. */
 export const EVERYPAY_ENDPOINTS = {
@@ -32,6 +34,8 @@ export interface EverypayCredentials {
   readonly secretKey: string;
   readonly publicKey: string;
   readonly endpoints: (typeof EVERYPAY_ENDPOINTS)[EverypayMode];
+  /** Ενεργό Marketplace στον λογαριασμό εμπόρου (ADR-943 §5.7). */
+  readonly marketplace: boolean;
 }
 
 export type EverypayConfigVerdict =
@@ -49,5 +53,6 @@ export function judgeEverypayConfig(env: EnvironmentSource): EverypayConfigVerdi
   if (secretKey === null || publicKey === null) return { configured: false, reason: 'keys-missing' };
   const mode = readConfiguredValue(env, PAYMENTS_PROVIDER_MODE_ENV) ?? '';
   if (!isEverypayMode(mode)) return { configured: false, reason: 'mode-unsupported' };
-  return { configured: true, credentials: { mode, secretKey, publicKey, endpoints: EVERYPAY_ENDPOINTS[mode] } };
+  const marketplace = readConfiguredValue(env, EVERYPAY_MARKETPLACE_ENV) === 'enabled';
+  return { configured: true, credentials: { mode, secretKey, publicKey, endpoints: EVERYPAY_ENDPOINTS[mode], marketplace } };
 }

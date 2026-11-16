@@ -30,6 +30,8 @@ import type {
 import { EverypayApiError, EVERYPAY_TOKEN_ALREADY_USED, everypayDateTime, everypayRequest } from './everypay-client';
 import type { EverypayCredentials } from './everypay-config';
 import { everypayListAll } from './everypay-list';
+import { createEverypayMarketplace } from './everypay-marketplace';
+import { EVERYPAY_SELLER_KYC_EVENT, sellerKycEventOf } from './everypay-marketplace-readers';
 import {
   CAPTURED_PAYMENT_STATUSES,
   codeField,
@@ -181,8 +183,14 @@ function irisSignalOf(payload: Record<string, unknown>): WebhookSignal {
     : { kind: 'authorized-source', checkoutId, sourceToken };
 }
 
-/** Το σώμα ενός υπογεγραμμένου webhook ⇒ σήμα, από το πρόθεμα του token (`pnt_` ειδοποίηση · `pmt_` πληρωμή). */
+/**
+ * Το σώμα ενός υπογεγραμμένου webhook ⇒ σήμα: πρώτα το event KYC του Marketplace (`event_type`, ADR-943 §5.7), μετά
+ * από το πρόθεμα του token (`pnt_` ειδοποίηση · `pmt_` πληρωμή).
+ */
 function bodySignalOf(payload: Record<string, unknown>): WebhookSignal {
+  const kyc = sellerKycEventOf(payload);
+  if (kyc !== null) return { kind: 'payee-kyc', ...kyc };
+  if (textField(payload, 'event_type') === EVERYPAY_SELLER_KYC_EVENT) return { kind: 'ignored', reason: 'kyc-payload-incomplete' };
   const token = textField(payload, 'token');
   if (token?.startsWith('pnt_')) return { kind: 'checkout-reference', providerReference: token };
   if (token?.startsWith('pmt_')) return { kind: 'payment-reference', paymentReference: token };
@@ -254,5 +262,6 @@ export function createEverypayProvider(credentials: EverypayCredentials): Paymen
     cancelCheckout: (subject) => cancelWith(credentials, subject),
     judgeWebhook: (rawBody, headers) => judgeWebhookWith(credentials, rawBody, headers),
     judgeReturn: (fields) => judgeReturnWith(credentials, fields),
+    marketplace: createEverypayMarketplace(credentials),
   };
 }

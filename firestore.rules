@@ -5123,6 +5123,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 🔴 ADR-943 §5.7 — Δικαιούχος marketplace: γραφή από πελάτη = «εξουσιοδοτημένος» χωρίς KYC του PSP, ή αναφορά
+    //    ΞΕΝΟΥ πωλητή ⇒ η προκαταβολή κάποιου άλλου μεταφέρεται σε λάθος λογαριασμό. Ανάγνωση = χάρτης χρηστών ↔
+    //    πωλητών του PSP. Γράφει μόνο ο διακομιστής (εγγραφή δικαιούχου + webhook KYC + συμφιλίωση).
+    match /payment_payees/{payeeId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     // ── Pattern C: Fiscal Periods — ΜΟΝΟ ο server γράφει (ADR-ACC-010 §2.1.1 Φ6) ─
     //
     // 🔒 Κάθε περίοδος ανήκει σε ΕΝΑΝ μισθωτή: docId = generateDeterministicFiscalPeriodId(companyId, 'YYYY-MM')

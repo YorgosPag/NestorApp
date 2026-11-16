@@ -42,4 +42,13 @@ export abstract class AccountingIdGenerators extends DocumentRegistryIdGenerator
   generateDeterministicPaymentProviderEventId(seed: string): string {
     return this.mintDeterministicV4Id(P.PAYMENT_PROVIDER_EVENT, `payment-provider-event:${seed}`);
   }
+
+  /**
+   * ADR-943 §5.7 — **ΕΝΑΣ** δικαιούχος marketplace ανά (πάροχος, χρήστης): σπόρος = `πάροχος:uid` ⇒ δύο ταυτόχρονες
+   * εγγραφές του ίδιου μηχανικού βρίσκουν το **ίδιο** έγγραφο και η δεύτερη `create` συγκρούεται — δεύτερος πωλητής
+   * στον πάροχο είναι δομικά αδύνατος από αυτή την πλευρά.
+   */
+  generateDeterministicPaymentPayeeId(seed: string): string {
+    return this.mintDeterministicV4Id(P.PAYMENT_PAYEE, `payment-payee:${seed}`);
+  }
 }

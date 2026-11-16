@@ -232,6 +232,13 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/server/payments/providers/everypay/everypay-config.ts',
   },
   {
+    name: 'EVERYPAY_MARKETPLACE',
+    severity: 'feature',
+    feature: 'Κράτηση προκαταβολής ανάθεσης στο EveryPay Marketplace — δεκτό ΜΟΝΟ «enabled» (ADR-943 §5.7)',
+    consequence: 'Οποιαδήποτε άλλη τιμή (ή απουσία) ⇒ καμία ικανότητα marketplace: η προκαταβολή με κράτηση δεν προσφέρεται. Ο λογαριασμός εμπόρου πρέπει να έχει ενεργό Marketplace από την EveryPay.',
+    consumer: 'src/server/payments/providers/everypay/everypay-config.ts',
+  },
+  {
     name: 'MAILGUN_WEBHOOK_SIGNING_KEY',
     severity: 'feature',
     feature: 'Webhooks Mailgun: εισερχόμενα email και συμβάντα παράδοσης (ADR-071 · ADR-841 Α21.20)',
