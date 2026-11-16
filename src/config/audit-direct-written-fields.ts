@@ -17,12 +17,23 @@
  * @module config/audit-direct-written-fields
  */
 
-import { ISSUANCE_AUDIT_FIELD_NAMES } from '@/lib/document-validity/issuance-audit-fields';
+import { ISSUANCE_AUDIT_FIELDS } from '@/lib/document-validity/issuance-audit-fields';
+import { UPKEEP_AUDIT_FIELDS } from '@/lib/document-validity/upkeep-audit-fields';
 
-/** ADR-915 §27/§45 — `recordIssuanceAudit` γράφει σε `property` **ή** `owner_property`, ανάλογα με τον χώρο. */
+/** Τα ονόματα πεδίων μιας δήλωσης «πεδία ιστορικού ανά είδος» (`null` = το είδος δεν γράφει). */
+function fieldNamesOf<F extends Readonly<Record<keyof F, string>>>(perKind: Readonly<Record<string, F | null>>): string[] {
+  return Object.values(perKind).flatMap((fields) => (fields === null ? [] : (Object.keys(fields) as (keyof F)[]).map((key) => fields[key])));
+}
+
+/**
+ * Ο χώρος του ακινήτου: `recordIssuanceAudit` (ADR-915 §27/§45) και ο γραφέας των μόνιμων υποχρεώσεων (§35) γράφουν σε
+ * `property` **ή** `owner_property`, ανάλογα με τον χώρο.
+ */
+const PROPERTY_DIRECT_FIELDS: readonly string[] = [...fieldNamesOf(ISSUANCE_AUDIT_FIELDS), ...fieldNamesOf(UPKEEP_AUDIT_FIELDS)];
+
 const DIRECT_WRITTEN_FIELDS: Readonly<Record<string, readonly string[]>> = {
-  property: ISSUANCE_AUDIT_FIELD_NAMES,
-  owner_property: ISSUANCE_AUDIT_FIELD_NAMES,
+  property: PROPERTY_DIRECT_FIELDS,
+  owner_property: PROPERTY_DIRECT_FIELDS,
 };
 
 /** Τα απευθείας γραμμένα πεδία ενός τύπου οντότητας (κενό αν δεν έχει) — μόνο own-property, ποτέ `constructor`. */

@@ -9,6 +9,7 @@
  *   Λ5 — ο helper δεν έχει ούτε έναν ελληνικό χαρακτήρα έξω από σχόλια, ούτε `eslint-disable`.
  *   Λ7 — παλιά ορθογραφία (`main`) = ψευδώνυμο της ρίζας ΚΑΔ, ΙΔΙΑ λέξη· όχι δεύτερο λεξιλόγιο (🏷️′ #2).
  *   Λ8 — αποσυρμένο πεδίο (ΠΕΑ ως ενιαίο αντικείμενο) διαβάζεται με λέξεις, αόρατο στον γραφέα (🏷️′ #3).
+ *   Λ10 — απευθείας γραμμένα πεδία (ανάθεση έκδοσης · μόνιμη υποχρέωση) φορτώνουν το λεξιλόγιό τους (ADR-915 §45.21.1).
  */
 
 import fs from 'fs';
@@ -44,6 +45,9 @@ import {
 } from '@/types/ContactFormTypes';
 import { ACTIVITY_TYPE_OPTIONS } from '@/config/company-gemi/options/activity-types';
 import { getRetiredTrackedFields } from '@/config/audit-retired-fields';
+import { getDirectWrittenAuditFields } from '@/config/audit-direct-written-fields';
+import { ISSUANCE_AUDIT_FIELDS } from '@/lib/document-validity/issuance-audit-fields';
+import { UPKEEP_AUDIT_FIELDS } from '@/lib/document-validity/upkeep-audit-fields';
 import {
   ENERGY_CERTIFICATE_ABSENCES,
   ENERGY_CERTIFICATE_SCOPES,
@@ -433,4 +437,53 @@ describe('Λ9 — ο κατάλογος μιλά με λέξεις (ADR-923 §23
     const text = formatFieldAwareValue('labels', '{"el":"Ψύξη","en":"Cooling"}', formatFor('catalog_family', 'labels'));
     expect(text).toBe(`${word(lang, 'catalog', 'language.el')}: Ψύξη, ${word(lang, 'catalog', 'language.en')}: Cooling`);
   }));
+});
+
+/**
+ * Λ10 — ADR-915 §45.21.1: πεδία που ο γραφέας γράφει ΑΠΕΥΘΕΙΑΣ (εκτός tracked) φορτώνουν κι αυτά το λεξιλόγιό τους.
+ * Μετρημένο σύμπτωμα: σε el «— → declined», «quoted → accepted» — το `document-registry` δεν φορτωνόταν ποτέ για το ακίνητο.
+ */
+describe('Λ10 — απευθείας γραμμένα πεδία: το λεξιλόγιό τους φορτώνεται για το ακίνητο', () => {
+  const PROPERTY_SCOPES = ['property', 'owner_property'] as const;
+  // Το μαντείο διαβάζει τις δηλώσεις των ΓΡΑΦΕΩΝ — όχι το μητρώο που ελέγχει.
+  const declared: string[] = [
+    ...Object.values(ISSUANCE_AUDIT_FIELDS).flatMap((f) => (f === null ? [] : Object.values<string>({ ...f }))),
+    ...Object.values(UPKEEP_AUDIT_FIELDS).flatMap((f) => (f === null ? [] : Object.values<string>({ ...f }))),
+  ];
+  const cases = PROPERTY_SCOPES.flatMap((entityType) =>
+    getDirectWrittenAuditFields(entityType).flatMap((field) => {
+      const catalog = getAuditValueCatalog(field);
+      return catalog === undefined ? [] : [[entityType, field, catalog] as const];
+    }),
+  );
+
+  it('η άγκυρα βλέπει πεδία με κατάλογο (όχι κενό πράσινο)', () => {
+    expect(cases.length).toBeGreaterThanOrEqual(2 * 12);
+  });
+
+  it.each(PROPERTY_SCOPES)('%s · το μητρώο = ΟΛΑ τα πεδία των δηλώσεων των γραφέων', (entityType) => {
+    expect([...getDirectWrittenAuditFields(entityType)].sort()).toEqual([...declared].sort());
+  });
+
+  it.each(PROPERTY_SCOPES)('%s · κανένα δεν είναι στο ενεργό μητρώο (αλλιώς το diff θα το αναζητούσε στο έγγραφο)', (entityType) => {
+    const tracked = Object.keys(getTrackedFieldsForEntityAuditType(entityType) ?? {});
+    for (const field of getDirectWrittenAuditFields(entityType)) expect(tracked).not.toContain(field);
+  });
+
+  it.each(cases)('%s.%s', (entityType, _field, catalog) => {
+    expect(auditVocabularyNamespaces(entityType)).toContain(catalog.ns);
+    for (const lang of LANGS) {
+      for (const p of catalogPaths(catalog)) expect(mockNode(lang, catalog.ns, p)).toEqual(expect.any(Object));
+    }
+  });
+
+  it.each(LANGS.flatMap((lang) => (['accepted', 'declined'] as const).map((value) => [lang, value] as const)))(
+    '%s · η ΠΡΑΓΜΑΤΙΚΗ γραμμή «απάντηση: — → %s» δείχνει λέξη', (lang, value) => inLang(lang, () => {
+      const word = mockNode(lang, 'document-registry', `issuance.delivery.change.outcome.${value}`);
+      expect(typeof word).toBe('string');
+      expect(resolveAuditValue('energyCertificateIssuanceDeliveryChangeAnswer', value, t)).toBe(word);
+      // Στα en η λέξη ΕΙΝΑΙ «accepted»/«declined» — η διάκριση από την ωμή τιμή υπάρχει μόνο στα el (το σύμπτωμα).
+      if (lang === 'el') expect(word).not.toBe(value);
+    }),
+  );
 });

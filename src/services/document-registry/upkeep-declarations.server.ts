@@ -23,6 +23,8 @@ import { STANDING_OBLIGATION_KINDS, type DocumentKind } from '@/config/document-
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import type { UpkeepDecision, UpkeepExemptionReason, UpkeepProposal } from '@/lib/document-validity/property-upkeep';
+// §45.21.1 — η δήλωση των πεδίων ζει σε κοινό module: τη διαβάζει και η γραμμή Ιστορικού για να φορτώσει τα λεξιλόγια.
+import { UPKEEP_AUDIT_FIELDS } from '@/lib/document-validity/upkeep-audit-fields';
 import { createModuleLogger } from '@/lib/telemetry';
 import { custodyOnly, isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -30,29 +32,6 @@ import type { RegistryPropertyScope } from './document-registry.types';
 import { parseUpkeepDeclaration, upkeepDeclarationIdOf, type StoredUpkeepDeclaration } from './upkeep-declaration-schema';
 
 const logger = createModuleLogger('upkeep-declarations');
-
-/**
- * Τα πεδία του ιστορικού **ενός** είδους (ονόματα στο `common-audit:audit.fields.*`, τιμές στους καταλόγους
- * `document-registry:upkeep.*` — `audit-value-catalogs.ts`). `null` = το είδος δεν είναι μόνιμη υποχρέωση.
- */
-export interface UpkeepAuditFields {
-  readonly decision: string;
-  readonly exemption: string;
-  readonly proposal: string;
-}
-
-export const UPKEEP_AUDIT_FIELDS: Readonly<Record<DocumentKind, UpkeepAuditFields | null>> = {
-  'energy-certificate': null,
-  'building-identity': null,
-  'tax-clearance': null,
-  'insurance-clearance': null,
-  'enfia-certificate': null,
-  'electrical-installation': {
-    decision: 'electricalInstallationStandingObligation',
-    exemption: 'electricalInstallationStandingObligationExemption',
-    proposal: 'electricalInstallationStandingObligationProposal',
-  },
-};
 
 function declarationsCollection(db: Firestore) {
   return db.collection(COLLECTIONS.PROPERTY_UPKEEP_DECLARATIONS);

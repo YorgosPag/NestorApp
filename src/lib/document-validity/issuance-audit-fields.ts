@@ -69,7 +69,3 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeDeclineReason: 'electricalInstallationIssuanceDeliveryChangeDeclineReason',
   },
 };
-
-/** Όλα τα ονόματα πεδίων που γράφει ο γραφέας ιστορικού των αναθέσεων, για κάθε είδος που ανατίθεται. */
-export const ISSUANCE_AUDIT_FIELD_NAMES: readonly string[] = Object.values(ISSUANCE_AUDIT_FIELDS)
-  .flatMap((fields) => (fields === null ? [] : Object.values(fields)));
