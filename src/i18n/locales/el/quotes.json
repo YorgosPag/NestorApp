@@ -640,7 +640,7 @@
     "conflict": {
       "award": {
         "title": "Σύγκρουση επιλογής νικητή",
-        "body": "Η/Ο {actor} επέλεξε νικητή τον/την {actualVendor} {ago}. Πάτησες «Έγκριση» στον/στην {attemptedVendor} — αλλά η κατάσταση έχει ήδη αλλάξει."
+        "body": "{actor} επέλεξε νικητή {ago}: {actualVendor}. Πάτησες «Έγκριση» για: {attemptedVendor} — αλλά η κατάσταση έχει ήδη αλλάξει."
       },
       "poCreate": {
         "title": "Σύγκρουση δημιουργίας παραγγελίας"
@@ -652,7 +652,7 @@
         "title": "Σύγκρουση αλλαγής κατάστασης"
       },
       "generic": {
-        "body": "Η/Ο {actor} έκανε αλλαγή {ago}. Η κατάσταση έχει ήδη αλλάξει."
+        "body": "{actor} έκανε αλλαγή {ago}. Η κατάσταση έχει ήδη αλλάξει."
       },
       "action": {
         "acceptRemote": "Δες την επιλογή της/του {actor}",
@@ -661,12 +661,12 @@
     },
     "live": {
       "newQuote": "Νέα προσφορά: {vendor} — {total}",
-      "quoteConfirmed": "Η/Ο {actor} επιβεβαίωσε προσφορά: {vendor}",
-      "quoteAwarded": "Η/Ο {actor} επέλεξε νικητή: {vendor}",
-      "quoteRejected": "Η/Ο {actor} απέρριψε προσφορά: {vendor}",
-      "poCreated": "Η/Ο {actor} δημιούργησε παραγγελία",
-      "lineEdited": "Η/Ο {actor} τροποποίησε γραμμή RFQ",
-      "aggregated": "Η/Ο {actor} έκανε {count} αλλαγές",
+      "quoteConfirmed": "{actor} επιβεβαίωσε προσφορά: {vendor}",
+      "quoteAwarded": "{actor} επέλεξε νικητή: {vendor}",
+      "quoteRejected": "{actor} απέρριψε προσφορά: {vendor}",
+      "poCreated": "{actor} δημιούργησε παραγγελία",
+      "lineEdited": "{actor} τροποποίησε γραμμή RFQ",
+      "aggregated": "{actor} έκανε {count} αλλαγές",
       "viewAction": "Δες",
       "newQuoteNoTotal": "Νέα προσφορά: {vendor}",
       "newQuotesAggregated": "{count} νέες προσφορές",

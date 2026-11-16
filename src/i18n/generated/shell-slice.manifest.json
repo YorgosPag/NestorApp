@@ -81,7 +81,7 @@
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__overview.el.json": "2f23ed3b4f24cc8960f302375f3a32a5c9372e5717c65d5e59e2d1b8d2ceb81f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__po.el.json": "b7c1e20776fb9ad6be26039d9bd0c71dfac687f97998a872687dc3e47c997c48",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq.el.json": "9cf0c913c9f586ae7850ab0f1a6bfcb1c47dc4862db39dc9fb8acc4fec81b907",
-    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "5255bdbbeee44f8f799769bdcd1d120f6eb5160b944b22b495b11bb46834e5bb",
+    "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "29f897940508571ad3b1929b118de89577daaa3efcb1e0c4db4138578519dd2f",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "4417d0b90ea545e7726040be07e723ae3b0506f1786f4daecca137b59d758157",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json": "9e6e28dce807af1b9362fbe47e1eafa1a191843e3a6c68c9d92644adb3ba4d73",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ec24f1fdacbe102d81ef6e2b2c3ffde93e4e29b7857ac702db5ebfe1bb7c3867",
@@ -125,7 +125,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "e45f06e8af44370d125a47684c157ad22a75322ee394c594ed7f31242e315a58",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "e0ef3c2bfd830f4079dd0ab088a9018fb51148c0bfef902ae3a45ad9850b51ca",
+    "src/i18n/generated/shell-slice.el.json": "3921d6e4da8fad959312e129e5c751cec2362029217a62c42fbf38684ccff95a",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0662dde584cc3dff56ad898a4e4a839b59e28188b8f7e7333122a7d377e65634",
+  "inputsSha256": "2d08dafb0eb0b11da22e167277c0c38cd52a617aa84fa66fb6d25eb3fe970a6b",
   "languages": [
     "el"
   ],
@@ -40910,7 +40910,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1336703
+    "sliceBytes": 1336660
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

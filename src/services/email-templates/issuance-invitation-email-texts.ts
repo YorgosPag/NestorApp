@@ -118,7 +118,7 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       subject: (document, property) => `Η απόφασή σας: ${document} — ${property}`,
       heading: 'Χρειάζεται η απόφασή σας',
       intro: (office, professional, document, property) =>
-        `${office} σας στέλνει την προσφορά του/της ${professional} για το έγγραφο «${document}» του ακινήτου ${property}. `
+        `${office} σας στέλνει προσφορά επαγγελματία (${professional}) για το έγγραφο «${document}» του ακινήτου ${property}. `
         + 'Η απόφαση — πρόσωπο και τιμή — είναι δική σας.',
       professionalLabel: 'Επαγγελματίας',
       credentialLabel: 'Προσόν (όπως το δήλωσε το γραφείο)',
@@ -152,8 +152,8 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       subject: (document, property) => `Για την ενημέρωσή σας: ${document} — ${property}`,
       heading: 'Για την ενημέρωσή σας',
       intro: (office, professional, document, property, lead) =>
-        `${office} πρότεινε τον/την ${professional} για το έγγραφο «${document}» του ακινήτου ${property}. `
-        + `Την απόφαση την έχει ο/η ${lead}, ως υπεύθυνος ιδιοκτήτης για τα έγγραφα του ακινήτου.`,
+        `${office} πρότεινε επαγγελματία (${professional}) για το έγγραφο «${document}» του ακινήτου ${property}. `
+        + `Την απόφαση την έχει ${lead}, ως υπεύθυνος ιδιοκτήτης για τα έγγραφα του ακινήτου.`,
       footnote:
         'Λαμβάνετε αυτό το μήνυμα επειδή το γραφείο σάς έχει καταχωρίσει ως συνιδιοκτήτη. Δεν χρειάζεται καμία ενέργεια· '
         + 'για αντίρρηση, επικοινωνήστε με το γραφείο ή με τον υπεύθυνο ιδιοκτήτη.',

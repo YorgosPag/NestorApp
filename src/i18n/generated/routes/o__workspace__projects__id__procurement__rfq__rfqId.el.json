@@ -904,13 +904,13 @@
       "lines": "Γραμμές Αιτήματος",
       "linesEmpty": "Δεν υπάρχουν γραμμές",
       "live": {
-        "aggregated": "Η/Ο {actor} έκανε {count} αλλαγές",
+        "aggregated": "{actor} έκανε {count} αλλαγές",
         "newQuote": "Νέα προσφορά: {vendor} — {total}",
         "newQuoteNoTotal": "Νέα προσφορά: {vendor}",
         "newQuotesAggregated": "{count} νέες προσφορές",
-        "quoteAwarded": "Η/Ο {actor} επέλεξε νικητή: {vendor}",
-        "quoteConfirmed": "Η/Ο {actor} επιβεβαίωσε προσφορά: {vendor}",
-        "quoteRejected": "Η/Ο {actor} απέρριψε προσφορά: {vendor}",
+        "quoteAwarded": "{actor} επέλεξε νικητή: {vendor}",
+        "quoteConfirmed": "{actor} επιβεβαίωσε προσφορά: {vendor}",
+        "quoteRejected": "{actor} απέρριψε προσφορά: {vendor}",
         "unattributed": {
           "aggregated": "Έγιναν {count} αλλαγές",
           "quoteAwarded": "Επιλέχθηκε νικητής: {vendor}",

@@ -226,7 +226,7 @@ const DECISION_EMAIL_SUBJECTS: Record<
 > = {
   confirmed: {
     [CLIENT_NAME_KNOWN]: (client, listing) =>
-      `Ο/Η ${client} ενέκρινε την εντολή για «${listing}»`,
+      `${client} ενέκρινε την εντολή για «${listing}»`,
     [CLIENT_NAME_UNNAMED]: (_client, listing) =>
       `Εγκρίθηκε η εντολή για «${listing}» — ο πελάτης δεν έχει όνομα στην καρτέλα του`,
     [CLIENT_NAME_MISSING]: (_client, listing) =>
@@ -234,7 +234,7 @@ const DECISION_EMAIL_SUBJECTS: Record<
   },
   declined: {
     [CLIENT_NAME_KNOWN]: (client, listing) =>
-      `Ο/Η ${client} αρνήθηκε την εντολή για «${listing}»`,
+      `${client} αρνήθηκε την εντολή για «${listing}»`,
     [CLIENT_NAME_UNNAMED]: (_client, listing) =>
       `Απορρίφθηκε η εντολή για «${listing}» — ο πελάτης δεν έχει όνομα στην καρτέλα του`,
     [CLIENT_NAME_MISSING]: (_client, listing) =>
