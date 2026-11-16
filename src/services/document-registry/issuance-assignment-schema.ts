@@ -27,6 +27,7 @@ import { ISSUANCE_DELIVERY_OUTCOMES } from '@/lib/document-validity/issuance-del
 import { MYDATA_MARK_PATTERN, QUOTE_BASES, QUOTE_MAX_REVISION, QUOTE_SCOPE_ITEMS } from '@/lib/document-validity/issuance-quote';
 import { ISSUANCE_DELIVERY_POLICY } from '@/lib/document-validity/issuance-delivery-due';
 import { ISSUANCE_DELIVERY_REMINDER_POLICY } from '@/lib/document-validity/issuance-delivery-reminder';
+import { DELIVERY_CHANGE_OUTCOMES, DELIVERY_CHANGE_POLICY } from '@/lib/document-validity/issuance-delivery-change';
 import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from '@/lib/document-validity/issuance-inspection-contact';
 import { OWNER_ATTESTATION_POLICY, OWNER_VERDICTS } from '@/lib/document-validity/issuance-owner-attestation';
 import { deliveryBusinessDaysSchema, isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
@@ -125,6 +126,19 @@ const responseSchema = z.discriminatedUnion('basis', [
   z.object({ basis: z.literal('professional-link'), invitationId: nonEmpty, verifiedBy: verification }),
 ]).and(z.object({ outcome: z.enum(['accepted', 'declined']), note, at: nonEmpty }));
 
+/** §45.20 Φ6γ — έγγραφα πριν από τη Φ6γ δεν είχαν αιτήματα αλλαγής προθεσμίας: «κανένα», που ήταν και η αλήθεια τους. */
+const changeReason = z.string().min(1).max(DELIVERY_CHANGE_POLICY.reasonMax);
+const deliveryChangeRequestsSchema = z.array(z.object({
+  dueOn: isoDay,
+  reason: changeReason,
+  at: nonEmpty,
+  byUid: nonEmpty,
+  engagementId: nonEmpty,
+  answer: z.object({
+    outcome: z.enum(DELIVERY_CHANGE_OUTCOMES), dueOn: isoDay.nullable(), reason: changeReason.nullable(), at: nonEmpty, byUid: nonEmpty,
+  }).nullable(),
+})).max(DELIVERY_CHANGE_POLICY.maxEntries).default([]);
+
 const assignmentSchema = z.object({
   id: nonEmpty,
   companyId: nonEmpty,
@@ -154,6 +168,7 @@ const assignmentSchema = z.object({
   deliverySchedule: deliveryScheduleSchema,
   deliveryReminders: deliveryRemindersSchema,
   inspectionContacts: inspectionContactsSchema,
+  deliveryChangeRequests: deliveryChangeRequestsSchema,
   cancellation: z.object({ byUid: nonEmpty, at: nonEmpty }).nullable(),
   updatedAt: nonEmpty,
 });
@@ -168,11 +183,11 @@ export function parseIssuanceAssignment(raw: unknown): DocumentIssuanceAssignmen
 export function issuanceRecordOf(assignment: DocumentIssuanceAssignment): IssuanceAssignmentRecord {
   const {
     professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
-    deliverySchedule, deliveryReminders, inspectionContacts, cancellation,
+    deliverySchedule, deliveryReminders, inspectionContacts, deliveryChangeRequests, cancellation,
   } = assignment;
   return {
     professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
-    deliverySchedule, deliveryReminders, inspectionContacts, cancellation,
+    deliverySchedule, deliveryReminders, inspectionContacts, deliveryChangeRequests, cancellation,
   };
 }
 

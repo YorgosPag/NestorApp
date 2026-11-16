@@ -9,7 +9,7 @@
  * 🔑 **Γραφή σε συναλλαγή με CAS**: ο πελάτης στέλνει το στάδιο που **είδε**· αν άλλαξε στο μεταξύ (άλλος συνεργάτης,
  *    άλλη καρτέλα) ⇒ `stale`, ποτέ σιωπηλή υπερκάλυψη. Ο μειωτής κρίνει πάνω στο **φρέσκο** έγγραφο.
  * 🔑 **Ιστορικό στην καρτέλα του ακινήτου** (ADR-195): στάδιο (τιμή καταλόγου) και επαγγελματίας (επαφή + όνομα τη στιγμή
- *    της αλλαγής), σε πεδίο **ανά είδος** — το ΠΕΑ και η ταυτότητα του ίδιου ακινήτου δεν μπερδεύονται.
+ *    της αλλαγής), σε πεδίο **ανά είδος** — `issuance-assignment-audit.server.ts`.
  * ⚠️ Μη αναγνώσιμο έγγραφο ⇒ παραλείπεται **και** αναφέρεται — ποτέ μαντεψιά απόφασης.
  */
 
@@ -41,8 +41,6 @@ import {
   type ObservedDeliveryOutcome,
 } from '@/lib/document-validity/issuance-delivery';
 import type { IssuanceRosterEntry } from '@/lib/document-validity/issuance-candidates';
-import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
-import { currentInspectionContactOf } from '@/lib/document-validity/issuance-inspection-contact';
 import {
   withDeliveryReminderPlan,
   withDeliveryReminderSent,
@@ -56,8 +54,8 @@ import {
 } from '@/lib/document-validity/issuance-reminder';
 import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { createModuleLogger } from '@/lib/telemetry';
-import { EntityAuditService } from '@/services/entity-audit.service';
 import { DOCUMENT_REGISTRY_CAPS, type RegistryPropertyScope } from './document-registry.types';
+import { recordIssuanceAudit, type IssuanceTransition } from './issuance-assignment-audit.server';
 import {
   issuanceAssignmentIdOf,
   issuanceRecordOf,
@@ -69,47 +67,6 @@ const logger = createModuleLogger('issuance-assignments');
 
 /** Βαλβίδα ασφαλείας του καταλόγου, όχι σελιδοποίηση — **μία** τιμή, στο `DOCUMENT_REGISTRY_CAPS`. */
 export const ISSUANCE_ROSTER_CAP = DOCUMENT_REGISTRY_CAPS['issuance-assignments'];
-
-/**
- * Το πεδίο του ιστορικού ανά είδος — `null` για είδη αρχής (δεν ανατίθενται). Τα ονόματα ζουν στο
- * `common-audit:audit.fields.*` και οι τιμές σταδίου στον κατάλογο `document-registry:issuance.stage`.
- */
-/** Τα πεδία του ιστορικού **ενός** είδους (ονόματα στο `common-audit:audit.fields.*`). */
-export interface IssuanceAuditFields {
-  readonly stage: string;
-  readonly professional: string;
-  /** §28 — σε ποιον υπεύθυνο στάλθηκε σύνδεσμος έγκρισης (επαφή + όνομα της στιγμής). */
-  readonly approvalRequest: string;
-  /** §45 Φ2 — η προθεσμία παράδοσης (ISO ημέρα· ο αναγνώστης του ιστορικού τη μορφοποιεί ως ημερομηνία). */
-  readonly deliveryDue: string;
-  /** §45.15 — ο υπεύθυνος αυτοψίας (επαφή + όνομα της στιγμής) και η ιδιότητά του (κατάλογος `issuance.inspectionRole`). */
-  readonly inspectionContact: string;
-  readonly inspectionRole: string;
-}
-
-export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditFields | null>> = {
-  'energy-certificate': {
-    stage: 'energyCertificateIssuanceStage', professional: 'energyCertificateIssuer', approvalRequest: 'energyCertificateIssuanceApprovalRequest',
-    deliveryDue: 'energyCertificateIssuanceDeliveryDue',
-    inspectionContact: 'energyCertificateIssuanceInspectionContact', inspectionRole: 'energyCertificateIssuanceInspectionRole',
-  },
-  'building-identity': {
-    stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
-    deliveryDue: 'buildingIdentityIssuanceDeliveryDue',
-    inspectionContact: 'buildingIdentityIssuanceInspectionContact', inspectionRole: 'buildingIdentityIssuanceInspectionRole',
-  },
-  'tax-clearance': null,
-  'insurance-clearance': null,
-  'enfia-certificate': null,
-  'electrical-installation': {
-    stage: 'electricalInstallationIssuanceStage',
-    professional: 'electricalInstallationIssuer',
-    approvalRequest: 'electricalInstallationIssuanceApprovalRequest',
-    deliveryDue: 'electricalInstallationIssuanceDeliveryDue',
-    inspectionContact: 'electricalInstallationIssuanceInspectionContact',
-    inspectionRole: 'electricalInstallationIssuanceInspectionRole',
-  },
-};
 
 function assignmentsCollection(db: Firestore) {
   return db.collection(COLLECTIONS.DOCUMENT_ISSUANCE_ASSIGNMENTS);
@@ -141,7 +98,9 @@ export async function readIssuanceRoster(db: Firestore, companyId: string): Prom
 export type IssuanceWriter =
   | { readonly kind: 'office'; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null }
   /** `verifiedBy` (§29) — τι απέδειξε ο κάτοχος· ο μειωτής το συγκρίνει με ό,τι ζήτησε το αίτημα. */
-  | { readonly kind: 'link'; readonly invitationId: string; readonly name: string | null; readonly verifiedBy: LinkVerification };
+  | { readonly kind: 'link'; readonly invitationId: string; readonly name: string | null; readonly verifiedBy: LinkVerification }
+  /** §45.20 Φ6γ — ο μηχανικός από τη συμμετοχή του (αποδεδειγμένη από τον καλούντα)· CAS όπως το γραφείο. */
+  | { readonly kind: 'engagement'; readonly engagementId: string; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null };
 
 export interface IssuanceWrite {
   readonly companyId: string;
@@ -160,75 +119,6 @@ export type IssuanceWriteOutcome =
   | { readonly ok: true; readonly outcome: 'changed' | 'unchanged'; readonly stage: IssuanceStage; readonly record: IssuanceAssignmentRecord }
   | { readonly ok: false; readonly refusal: 'stale' | IssuanceRefusalReason };
 
-interface Transition {
-  readonly previous: IssuanceAssignmentRecord | null;
-  readonly next: IssuanceAssignmentRecord;
-  readonly previousStage: IssuanceStage | null;
-  readonly nextStage: IssuanceStage;
-}
-
-interface AuditChange {
-  readonly field: string;
-  readonly oldValue: string | null;
-  readonly newValue: string | null;
-  readonly oldValueLabel?: string | null;
-  readonly newValueLabel?: string | null;
-}
-
-/** Μια αλλαγή επαφής στο ιστορικό — ταυτότητα + το όνομα **της στιγμής**. */
-function contactChange(field: string, before: string | null, after: string, names: IssuanceWrite['names']): AuditChange {
-  return { field, oldValue: before, newValue: after, oldValueLabel: before === null ? null : names[before] ?? null, newValueLabel: names[after] ?? null };
-}
-
-function auditChangesOf(fields: IssuanceAuditFields, t: Transition, names: IssuanceWrite['names']): AuditChange[] {
-  // Το στάδιο γράφεται **μόνο** όταν άλλαξε: ένα αίτημα έγκρισης αφήνει το `proposed` ίδιο — «proposed → proposed» είναι θόρυβος.
-  const changes: AuditChange[] = t.previousStage === t.nextStage ? [] : [{ field: fields.stage, oldValue: t.previousStage, newValue: t.nextStage }];
-  const before = t.previous?.professionalContactId ?? null;
-  const after = t.next.professionalContactId;
-  if (before !== after) changes.push(contactChange(fields.professional, before, after, names));
-  const request = t.next.approvalRequest;
-  if (request !== null && request.invitationId !== t.previous?.approvalRequest?.invitationId) {
-    changes.push(contactChange(fields.approvalRequest, t.previous?.approvalRequest?.ownerContactId ?? null, request.ownerContactId, names));
-  }
-  // §45 Φ2 — η προθεσμία είναι ΠΑΡΑΓΟΜΕΝΗ: γράφεται όταν αλλάζει η τρέχουσα (έγκριση προσφοράς · ορισμός · αλλαγή).
-  const dueBefore = t.previous === null ? null : issuanceDeliveryOf(t.previous)?.dueOn ?? null;
-  const dueAfter = issuanceDeliveryOf(t.next)?.dueOn ?? null;
-  if (dueBefore !== dueAfter) changes.push({ field: fields.deliveryDue, oldValue: dueBefore, newValue: dueAfter });
-  return [...changes, ...inspectionAuditChangesOf(fields, t, names)];
-}
-
-/** §45.15 — ο υπεύθυνος αυτοψίας: γράφεται ό,τι άλλαξε (πρόσωπο · ιδιότητα), ποτέ «Χ → Χ». */
-function inspectionAuditChangesOf(fields: IssuanceAuditFields, t: Transition, names: IssuanceWrite['names']): AuditChange[] {
-  const before = t.previous === null ? null : currentInspectionContactOf(t.previous);
-  const after = currentInspectionContactOf(t.next);
-  if (after === null) return [];
-  const changes: AuditChange[] = [];
-  if (before?.contactId !== after.contactId) changes.push(contactChange(fields.inspectionContact, before?.contactId ?? null, after.contactId, names));
-  if (before?.role !== after.role) changes.push({ field: fields.inspectionRole, oldValue: before?.role ?? null, newValue: after.role });
-  return changes;
-}
-
-/** Ποιος φαίνεται στο ιστορικό — ο άνθρωπος του γραφείου, ή ο σύνδεσμος (με το όνομα του αποδέκτη του). */
-function performerOf(writer: IssuanceWriter): string {
-  return writer.kind === 'office' ? writer.uid : `issuance-link:${writer.invitationId}`;
-}
-
-async function recordIssuanceAudit(write: IssuanceWrite, transition: Transition): Promise<void> {
-  const fields = ISSUANCE_AUDIT_FIELDS[write.documentKind];
-  if (fields === null) return;
-  const changes = auditChangesOf(fields, transition, write.names);
-  if (changes.length === 0) return;
-  await EntityAuditService.recordChange({
-    entityType: write.property.scope === 'property' ? 'property' : 'owner_property',
-    entityId: write.property.id,
-    entityName: write.property.name,
-    action: 'updated',
-    changes,
-    performedBy: performerOf(write.writer),
-    performedByName: write.writer.name,
-    companyId: write.companyId,
-  });
-}
 
 function storedOf(write: IssuanceWrite, id: string, record: IssuanceAssignmentRecord): DocumentIssuanceAssignment {
   return {
@@ -264,13 +154,17 @@ export interface StagedIssuanceWrite {
 
 const NOTHING_TO_WRITE = { commit: (): void => undefined, audit: async (): Promise<void> => undefined };
 
-/** Η CAS του γραφείου — ο σύνδεσμος δεσμεύεται αλλού (στον μειωτή, στο τρέχον αίτημα). */
+/** Η CAS του γραφείου και της συμμετοχής — ο σύνδεσμος δεσμεύεται αλλού (στον μειωτή, στο τρέχον αίτημα). */
 function casHolds(writer: IssuanceWriter, previousStage: IssuanceStage | null): boolean {
   return writer.kind === 'link' || previousStage === writer.expectedStage;
 }
 
 function actorOf(writer: IssuanceWriter, nowIso: string): IssuanceActor {
-  return writer.kind === 'office' ? { kind: 'office', uid: writer.uid, nowIso } : { kind: 'link', invitationId: writer.invitationId, verifiedBy: writer.verifiedBy, nowIso };
+  switch (writer.kind) {
+    case 'office': return { kind: 'office', uid: writer.uid, nowIso };
+    case 'link': return { kind: 'link', invitationId: writer.invitationId, verifiedBy: writer.verifiedBy, nowIso };
+    case 'engagement': return { kind: 'engagement', engagementId: writer.engagementId, uid: writer.uid, nowIso };
+  }
 }
 
 /**
@@ -290,7 +184,7 @@ export async function stageIssuanceAction(tx: Transaction, db: Firestore, write:
   const nextStage = issuanceStageOf(record);
   const outcome: IssuanceWriteOutcome = { ok: true, outcome: reduced.changed ? 'changed' : 'unchanged', stage: nextStage, record };
   if (!reduced.changed) return { outcome, ...NOTHING_TO_WRITE };
-  const transition: Transition = { previous, next: record, previousStage, nextStage };
+  const transition: IssuanceTransition = { previous, next: record, previousStage, nextStage };
   return {
     outcome,
     commit: () => { tx.set(ref, storedOf(write, ref.id, record)); },

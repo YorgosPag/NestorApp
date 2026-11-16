@@ -18,13 +18,16 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
+import { deliveryChangeTransitionAt } from '@/lib/document-validity/issuance-delivery-change';
 import { issuanceActionOf, type IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
 import { trimmedStringOrNull } from '@/lib/type-guards';
+import { announceDeliveryChange } from '@/server/issuance-invitations/issuance-delivery-change-notifier';
 import { engageApprovedProfessional } from '@/server/issuance-invitations/issuance-space-invite';
 import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { readDocumentRegistry } from './document-registry.service';
 import type { DocumentRegistryResponse } from './document-registry.types';
+import { issuanceAssignmentIdOf } from './issuance-assignment-schema';
 import { writeIssuanceAction, type IssuanceWriteOutcome } from './issuance-assignments.server';
 
 export interface IssuanceRequester {
@@ -112,6 +115,14 @@ export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequ
     nowIso: now.toISOString(),
   });
   await engageOnRecordedApproval(db, actor, body, result, now);
+  if (result.ok && result.outcome === 'changed') {
+    // §45.20 Φ6γ — νέα ημερομηνία ή απόρριψη που απάντησε σε αίτημα του μηχανικού ⇒ ο μηχανικός μαθαίνει (ποτέ δεν πετά).
+    await announceDeliveryChange(db, {
+      assignmentId: issuanceAssignmentIdOf(actor.companyId, body.propertyId, body.documentKind),
+      companyId: actor.companyId, propertyId: body.propertyId, documentKind: body.documentKind,
+      record: result.record, registry, now,
+    }, deliveryChangeTransitionAt(result.record, now.toISOString()));
+  }
   return result;
 }
 

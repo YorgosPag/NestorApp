@@ -750,7 +750,10 @@
       "electricalInstallationIssuanceInspectionContact": "Electrical installation issuance — site visit contact",
       "energyCertificateIssuanceInspectionRole": "Energy certificate issuance — site visit contact capacity",
       "buildingIdentityIssuanceInspectionRole": "Building identity issuance — site visit contact capacity",
-      "electricalInstallationIssuanceInspectionRole": "Electrical installation issuance — site visit contact capacity"
+      "electricalInstallationIssuanceInspectionRole": "Electrical installation issuance — site visit contact capacity",
+      "energyCertificateIssuanceDeliveryChangeRequest": "Energy certificate issuance — delivery date change request",
+      "buildingIdentityIssuanceDeliveryChangeRequest": "Building identity issuance — delivery date change request",
+      "electricalInstallationIssuanceDeliveryChangeRequest": "Electrical installation issuance — delivery date change request"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

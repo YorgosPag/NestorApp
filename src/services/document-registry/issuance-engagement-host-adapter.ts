@@ -77,7 +77,7 @@ function spaceAccepts(assignment: DocumentIssuanceAssignment | null, invitation:
   return issuanceStageOf(assignment) === SPACE_OPEN_STAGE;
 }
 
-async function readAssignment(db: Firestore, hostCompanyId: string, assignmentId: string): Promise<DocumentIssuanceAssignment | null> {
+export async function readHostedIssuanceAssignment(db: Firestore, hostCompanyId: string, assignmentId: string): Promise<DocumentIssuanceAssignment | null> {
   return ownAssignment((await assignmentRef(db, assignmentId).get()).data(), { hostCompanyId, assignmentId });
 }
 
@@ -86,7 +86,7 @@ function expectedOf(invitation: IssuanceEngagementInvitation) {
 }
 
 async function stillOpen(db: Firestore, invitation: IssuanceEngagementInvitation): Promise<boolean> {
-  return spaceAccepts(await readAssignment(db, invitation.hostCompanyId, invitation.subject.assignmentId), invitation);
+  return spaceAccepts(await readHostedIssuanceAssignment(db, invitation.hostCompanyId, invitation.subject.assignmentId), invitation);
 }
 
 /** 🔴 Ο **ίδιος** έλεγχος μέσα στη συναλλαγή: ακύρωση από το γραφείο ανάμεσα στο κλικ και τη σφράγιση ⇒ καμία είσοδος. */
@@ -124,7 +124,7 @@ export async function describeIssuanceInvitation(db: Firestore, invitation: Issu
 
 /** Η ειδοποίηση του γραφείου — όποιος πρότεινε + όποιος έστειλε. Ανάθεση που δεν διαβάζεται ⇒ σιωπή με ίχνος στο log του notifier. */
 async function announceSpace(db: Firestore, invitation: IssuanceEngagementInvitation, event: IssuanceSpaceEvent): Promise<void> {
-  const assignment = await readAssignment(db, invitation.hostCompanyId, invitation.subject.assignmentId);
+  const assignment = await readHostedIssuanceAssignment(db, invitation.hostCompanyId, invitation.subject.assignmentId);
   if (!assignment) return;
   const sentBy = assignment.notice?.byUid;
   const [propertyName, respondentName] = await Promise.all([
@@ -152,13 +152,14 @@ async function afterAnswer(db: Firestore, invitation: IssuanceEngagementInvitati
 // Η ΠΛΕΥΡΑ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ
 // =============================================================================
 
-function judge(engagement: IssuanceEngagement, uid: string, nowMs: number) {
+/** Ο ΕΝΑΣ κριτής της συμμετοχής σε ανάθεση — τον μοιράζονται η όψη, οι εκκρεμότητες και το αίτημα νέας ημερομηνίας (§45.20). */
+export function judgeIssuanceEngagement(engagement: IssuanceEngagement, uid: string, nowMs: number) {
   return decideEngagement({ engagement, uid, subject: engagement.subject, scope: SCOPE_OF_SUBJECT.document_issuance, nowMs });
 }
 
 async function cardOf(db: Firestore, engagement: IssuanceEngagement, uid: string, nowMs: number, acting: ActingViews): Promise<MyIssuanceCard> {
   const [assignment, hostName, actingFor] = await Promise.all([
-    readAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId),
+    readHostedIssuanceAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId),
     hostNameOf(engagement.hostCompanyId),
     acting.actingFor(engagement),
   ]);
@@ -169,7 +170,7 @@ async function cardOf(db: Firestore, engagement: IssuanceEngagement, uid: string
     kind: 'document_issuance',
     engagementId: engagement.id,
     engagementState: engagement.state,
-    verdict: judge(engagement, uid, nowMs).verdict,
+    verdict: judgeIssuanceEngagement(engagement, uid, nowMs).verdict,
     offeredAt: engagement.offeredAt,
     expiresAt: engagement.expiresAt,
     hostName,
@@ -208,8 +209,8 @@ async function listCards(db: Firestore, viewer: CasesViewer, history: readonly I
  * ανάθεση με προθεσμία (ο ίδιος `deliveryGlanceOf` με την κάρτα — καμία δεύτερη αριθμητική).
  */
 async function openItem(db: Firestore, uid: string, engagement: IssuanceEngagement, nowMs: number): Promise<EngagementOpenItem | null> {
-  if (!isEngaged(judge(engagement, uid, nowMs).verdict)) return null;
-  const assignment = await readAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId);
+  if (!isEngaged(judgeIssuanceEngagement(engagement, uid, nowMs).verdict)) return null;
+  const assignment = await readHostedIssuanceAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId);
   const glance = assignment ? deliveryGlanceOf(issuanceStageOf(assignment), assignment, nowMs) : null;
   if (!assignment || !glance) return null;
   const [propertyName, hostName] = await Promise.all([
@@ -241,11 +242,11 @@ async function agreementOf(db: Firestore, assignment: DocumentIssuanceAssignment
 }
 
 async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEngagement, nowMs: number): Promise<EngagedViewOutcome> {
-  const decision = judge(engagement, viewer.uid, nowMs);
+  const decision = judgeIssuanceEngagement(engagement, viewer.uid, nowMs);
   if (!isEngaged(decision.verdict)) return { ok: false, rejection: 'denied', verdict: decision.verdict };
   const misplaced = await placementRejectionOf(viewer, engagement);
   if (misplaced !== null) return misplaced;
-  const assignment = await readAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId);
+  const assignment = await readHostedIssuanceAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId);
   if (!assignment) return { ok: false, rejection: 'not-found' };
   const stage = issuanceStageOf(assignment);
   const [propertyName, hostName, agreement] = await Promise.all([
@@ -273,7 +274,7 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: IssuanceEnga
 
 /** ADR-915 §40 — η γραμμή «Ανέλαβε» στην επαφή του γραφείου: ποιο ακίνητο, ποιο έγγραφο. */
 async function hostLine(db: Firestore, engagement: IssuanceEngagement): Promise<EngagementHostLine> {
-  const assignment = await readAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId).catch(() => null);
+  const assignment = await readHostedIssuanceAssignment(db, engagement.hostCompanyId, engagement.subject.assignmentId).catch(() => null);
   if (!assignment) return { propertyId: null, propertyName: null, documentKind: null };
   return {
     propertyId: assignment.propertyId,

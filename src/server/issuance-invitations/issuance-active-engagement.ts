@@ -25,7 +25,7 @@ export type ActiveIssuanceEngagement = NonNullable<Awaited<ReturnType<typeof rea
 
 export async function activeIssuanceEngagementOf(
   db: Firestore,
-  assignment: DocumentIssuanceAssignment,
+  assignment: Pick<DocumentIssuanceAssignment, 'id' | 'companyId' | 'propertyId' | 'documentKind'>,
   registry: DocumentRegistryResponse,
   nowIso: string,
 ): Promise<ActiveIssuanceEngagement | null> {

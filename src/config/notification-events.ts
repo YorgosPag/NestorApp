@@ -205,6 +205,16 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_DUE: 'properties.documentIssuanceDeliveryDue',
   /**
+   * ADR-915 §45.20 Φ6γ — **ο μηχανικός ζήτησε νέα ημερομηνία παράδοσης**, προς όποιον πρότεινε και όποιον έστειλε·
+   * προσγείωση στο πάνελ της γραμμής (εκεί απαντά το γραφείο). Προτίμηση: `documentIssuanceDelivery`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_CHANGE_REQUESTED: 'properties.documentIssuanceDeliveryChangeRequested',
+  /**
+   * ADR-915 §45.20 Φ6γ — **το γραφείο απάντησε στο αίτημα νέας ημερομηνίας** (όρισε νέα · απέρριψε με αιτιολογία), προς
+   * τον μηχανικό στον χώρο του. Προτίμηση: `documentIssuanceDelivery`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_CHANGE_ANSWERED: 'properties.documentIssuanceDeliveryChangeAnswered',
+  /**
    * ADR-916 §5.15 Φ-Δ.2 (Ο7) — **ο αγοραστής απάντησε στην πρόσκληση παράδοσης** (αποδοχή · άρνηση). Προς όποιον την
    * έστειλε (αν είναι άνθρωπος) + τους διαχειριστές του χώρου· προσγείωση στην καρτέλα «Παράδοση». Το σώμα λέει την
    * **επόμενη κίνηση** από την ίδια κρίση με την καρτέλα. Προτίμηση: `handoverInvitationAnswers`.
@@ -557,6 +567,19 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   },
   // ADR-915 §45 Φ5 — η παράδοση λήγει αύριο (στον επαγγελματία): ΠΛΗΡΟΦΟΡΙΑ.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_DUE]: {
+    category: 'properties',
+    settingKey: 'documentIssuanceDelivery',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-915 §45.20 Φ6γ — αίτημα νέας ημερομηνίας (στο γραφείο) · απάντηση (στον μηχανικό): ΠΛΗΡΟΦΟΡΙΑ.
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_CHANGE_REQUESTED]: {
+    category: 'properties',
+    settingKey: 'documentIssuanceDelivery',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_CHANGE_ANSWERED]: {
     category: 'properties',
     settingKey: 'documentIssuanceDelivery',
     isMandatory: false,

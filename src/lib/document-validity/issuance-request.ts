@@ -28,6 +28,7 @@ import {
   REGISTRY_NUMBER_MAX,
   type IssuanceAction,
 } from './issuance-assignment';
+import { DELIVERY_CHANGE_POLICY } from './issuance-delivery-change';
 import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from './issuance-inspection-contact';
 import { OWNER_ATTESTATION_POLICY, OWNER_VERDICTS, type IssuanceOwnerAttestation } from './issuance-owner-attestation';
 import {
@@ -47,6 +48,9 @@ const target = {
 
 /** Κείμενο προαιρετικό: κενό ⇒ `null` (ένα άδειο πεδίο φόρμας δεν είναι σημείωση). */
 const optionalText = (max: number) => z.string().trim().max(max).nullable().transform((value) => (value === '' ? null : value));
+
+/** Κείμενο υποχρεωτικό (αιτιολογία): κενό ⇒ άρνηση στο σύνορο, όχι στον μειωτή. */
+export const requiredText = (max: number) => z.string().trim().min(1).max(max);
 
 /** ISO ημέρα `YYYY-MM-DD` — κοινή με το σχήμα του δίσκου. */
 export const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -127,6 +131,8 @@ export const issuanceAssignmentBody = z.discriminatedUnion('action', [
     role: z.enum(INSPECTION_CONTACT_ROLES),
     roleOther: optionalText(INSPECTION_CONTACT_POLICY.roleOtherMax),
   }),
+  /** §45.20 Φ6γ — το γραφείο **απορρίπτει** το αίτημα νέας ημερομηνίας του μηχανικού, με αιτιολογία (η αποδοχή = `schedule-delivery`). */
+  z.object({ action: z.literal('decline-delivery-change'), ...target, reason: requiredText(DELIVERY_CHANGE_POLICY.reasonMax) }),
   z.object({ action: z.literal('cancel'), ...target }),
 ]);
 
@@ -271,6 +277,7 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
     case 'record-receipt': return { kind: 'record-receipt', mark: request.mark, issuedOn: request.issuedOn, totalMinor: request.totalMinor };
     case 'schedule-delivery': return { kind: 'schedule-delivery', dueOn: request.dueOn, reason: request.reason };
     case 'set-inspection-contact': return { kind: 'set-inspection-contact', contactId: request.contactId, role: request.role, roleOther: request.roleOther };
+    case 'decline-delivery-change': return { kind: 'decline-delivery-change', reason: request.reason };
     case 'cancel': return { kind: 'cancel' };
   }
 }

@@ -9,7 +9,8 @@
  * (ν.4122/2013 άρθρο 12 §2 · ΗΤΚ: «ο μηχανικός ορίζεται από τους κυρίους») και η εντολή μεσιτείας είναι μεσολάβηση,
  * όχι αντιπροσώπευση (ν.4072/2012 άρθρα 200-201).
  *
- * Τα στάδια και η μπάλα: `./issuance-stage.ts`. Η προσφορά και το παραστατικό: `./issuance-quote.ts`.
+ * Τα στάδια και η μπάλα: `./issuance-stage.ts`. Η προσφορά και το παραστατικό: `./issuance-quote.ts`. Ποιος πράττει
+ * και με ποια βάση (actor · σύνδεσμος · §29): `./issuance-actor.ts`.
  *
  * 🔑 **Το στάδιο ΠΑΡΑΓΕΤΑΙ από τα γεγονότα** (`decision` · `notice` · `response` · `quote` · `cancellation`), δεν
  *    αποθηκεύεται δίπλα τους: δύο πεδία που λένε το ίδιο θα μπορούσαν να διαφωνήσουν.
@@ -28,7 +29,15 @@ import type { IssuerQualification } from '@/config/document-validity/document-is
 import { documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 
+import {
+  decisionBasisOf, quoteSubmissionOf, responseBasisOf,
+  type InstructionChannel, type IssuanceActor, type IssuanceDecisionBasis, type IssuanceResponseBasis, type LinkVerification,
+} from './issuance-actor';
 import type { IssuanceDelivery } from './issuance-delivery';
+import {
+  declinedDeliveryChange, requestedDeliveryChange, withDeliveryChangeAccepted,
+  type DeliveryChangeRequest, type IssuanceDeclineDeliveryChangeAction, type IssuanceRequestDeliveryChangeAction,
+} from './issuance-delivery-change';
 import {
   scheduledDelivery,
   type IssuanceDeliveryScheduleEntry,
@@ -36,7 +45,7 @@ import {
 } from './issuance-delivery-due';
 import {
   areQuoteTermsValid, canReviseQuote, nextQuoteOf, receiptMatchesQuote,
-  type IssuanceQuote, type IssuanceReceipt, type QuoteSubmission, type QuoteTerms,
+  type IssuanceQuote, type IssuanceReceipt, type QuoteTerms,
 } from './issuance-quote';
 import type { IssuanceDeliveryReminders } from './issuance-delivery-reminder';
 import type { IssuanceOwnerAttestation } from './issuance-owner-attestation';
@@ -48,10 +57,10 @@ export {
   BALL_IN_COURT_PARTIES, ISSUANCE_STAGES, ballInCourtOf, issuanceStageOf,
   type BallInCourtParty, type IssuanceStage,
 } from './issuance-stage';
-
-/** Πώς έδωσε ο ιδιοκτήτης την εντολή του — η **βάση** της καταγραφής. Κλειστό σύνολο. */
-export const INSTRUCTION_CHANNELS = ['in-person', 'phone', 'email', 'written'] as const;
-export type InstructionChannel = (typeof INSTRUCTION_CHANNELS)[number];
+export {
+  INSTRUCTION_CHANNELS, LINK_VERIFICATIONS, linkVerificationSatisfies,
+  type InstructionChannel, type IssuanceActor, type IssuanceDecisionBasis, type IssuanceResponseBasis, type LinkVerification,
+} from './issuance-actor';
 
 /** Πώς ενημερώθηκε ο επαγγελματίας. */
 export const NOTICE_CHANNELS = ['phone', 'email', 'in-person'] as const;
@@ -61,33 +70,13 @@ export type NoticeChannel = (typeof NOTICE_CHANNELS)[number];
 export const ISSUANCE_NOTE_MAX = 500;
 export const REGISTRY_NUMBER_MAX = 40;
 
-/**
- * **Τι ζητά ένας σύνδεσμος για να πράξει** (§29): `link` = ο σύνδεσμος αρκεί (§28) · `access-code` = και ο κωδικός που
- * είπε το γραφείο σε **δεύτερο** κανάλι. Το αίτημα γράφει τι **ζητήθηκε**· η βάση της απόφασης τι **αποδείχθηκε**.
- */
-export const LINK_VERIFICATIONS = ['link', 'access-code'] as const;
-export type LinkVerification = (typeof LINK_VERIFICATIONS)[number];
-
-/** Αρκεί αυτό που αποδείχθηκε για αυτό που ζητήθηκε; — ο κωδικός καλύπτει και το «μόνο σύνδεσμος», όχι το αντίστροφο. */
-export function linkVerificationSatisfies(required: LinkVerification, proven: LinkVerification): boolean {
-  return required === 'link' || proven === 'access-code';
-}
-
 /** Το δηλωμένο προσόν του επαγγελματία για **αυτό** το έγγραφο — δηλωμένο, όχι επαληθευμένο (το λέει η οθόνη). */
 export interface IssuanceCredential {
   readonly qualification: IssuerQualification;
   readonly registryNumber: string | null;
 }
 
-/**
- * **Η βάση της απόφασης** (§28 Η-Β2) — παράγεται από **ποιος** έπραξε, ποτέ από το αίτημα:
- * - `recorded-instruction` — το γραφείο κατέγραψε εντολή που πήρε (κανάλι + ποιος κατέγραψε)·
- * - `owner-link-approval` — ο ίδιος ο υπεύθυνος πάτησε τον σύνδεσμο του **τρέχοντος** αιτήματος (το token αποδεικνύει το mailbox).
- */
-export type IssuanceDecisionBasis =
-  | { readonly basis: 'recorded-instruction'; readonly channel: InstructionChannel; readonly recordedByUid: string }
-  | { readonly basis: 'owner-link-approval'; readonly invitationId: string; readonly verifiedBy: LinkVerification };
-
+/** Η απόφαση — η βάση της (§28 Η-Β2) παράγεται από τον actor (`./issuance-actor.ts`). */
 export type IssuanceDecision = IssuanceDecisionBasis & {
   readonly outcome: 'approved' | 'rejected';
   /**
@@ -103,11 +92,7 @@ export type IssuanceDecision = IssuanceDecisionBasis & {
   readonly at: string;
 };
 
-/** Η βάση της απάντησης του επαγγελματία — καταγραφή του γραφείου ή ο σύνδεσμος του **τρέχοντος** μηνύματος. */
-export type IssuanceResponseBasis =
-  | { readonly basis: 'recorded'; readonly recordedByUid: string }
-  | { readonly basis: 'professional-link'; readonly invitationId: string; readonly verifiedBy: LinkVerification };
-
+/** Η απάντηση του επαγγελματία — η βάση της παράγεται από τον actor (`./issuance-actor.ts`). */
 export type IssuanceResponse = IssuanceResponseBasis & {
   readonly outcome: 'accepted' | 'declined';
   readonly note: string | null;
@@ -169,6 +154,8 @@ export interface IssuanceAssignmentRecord {
   readonly deliveryReminders: IssuanceDeliveryReminders | null;
   /** §45.15 — οι ορισμοί υπευθύνου αυτοψίας από το γραφείο, με τη σειρά τους· ο τρέχων = ο νεότερος. Κενό = κανείς. */
   readonly inspectionContacts: readonly IssuanceInspectionContactEntry[];
+  /** §45.20 Φ6γ — τα αιτήματα αλλαγής προθεσμίας του μηχανικού, με τη σειρά τους· εκκρεμές = το τελευταίο χωρίς απάντηση. */
+  readonly deliveryChangeRequests: readonly DeliveryChangeRequest[];
   readonly cancellation: { readonly at: string; readonly byUid: string } | null;
 }
 
@@ -240,6 +227,9 @@ export type IssuanceAction =
   | IssuanceScheduleDeliveryAction
   /** §45.15 — ορισμός ή αλλαγή του υπευθύνου αυτοψίας· μόνο το γραφείο, σε κάθε στάδιο πριν την παράδοση. */
   | IssuanceSetInspectionContactAction
+  /** §45.20 Φ6γ — ο μηχανικός ζητά νέα ημερομηνία (μόνο actor `engagement`) · το γραφείο απορρίπτει με αιτιολογία. */
+  | IssuanceRequestDeliveryChangeAction
+  | IssuanceDeclineDeliveryChangeAction
   | { readonly kind: 'cancel' };
 
 export type IssuanceActionKind = IssuanceAction['kind'];
@@ -254,6 +244,8 @@ const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose'>, read
   quote: ['sent', 'accepted'],
   'record-receipt': ['accepted'],
   'schedule-delivery': ['accepted'],
+  'request-delivery-change': ['accepted'],
+  'decline-delivery-change': ['accepted'],
   'set-inspection-contact': INSPECTION_CONTACT_STAGES,
   cancel: ['proposed', 'ownerApproved', 'sent', 'quoted', 'accepted', 'declined'],
 };
@@ -261,14 +253,15 @@ const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose'>, read
 /** Ποιες πράξεις μπορεί να κάνει **ο σύνδεσμος** — όλες οι άλλες ανήκουν στο γραφείο (§28 Η-Β2). */
 const LINK_ACTIONS: ReadonlySet<IssuanceActionKind> = new Set(['decide', 'respond', 'quote']);
 
-/**
- * **Ποιος πράττει** (§28 Η-Β2): άνθρωπος του γραφείου (`uid`) ή ο κάτοχος ενός συνδέσμου (`invitationId`). Η βάση της
- * απόφασης/απάντησης **παράγεται** από εδώ — ένα αίτημα δεν μπορεί να δηλώσει «με σύνδεσμο» χωρίς σύνδεσμο.
- */
-export type IssuanceActor =
-  | { readonly kind: 'office'; readonly uid: string; readonly nowIso: string }
-  /** `verifiedBy` = τι **απέδειξε** ο κάτοχος (§29): μόνο τον σύνδεσμο, ή και τον κωδικό του δεύτερου καναλιού. */
-  | { readonly kind: 'link'; readonly invitationId: string; readonly verifiedBy: LinkVerification; readonly nowIso: string };
+/** §45.20 Φ6γ — τι κάνει **η συμμετοχή** του μηχανικού: μόνο αίτημα· και αυτό **μόνο** εκείνη (ποτέ γραφείο ή σύνδεσμος). */
+const ENGAGEMENT_ACTIONS: ReadonlySet<IssuanceActionKind> = new Set(['request-delivery-change']);
+
+/** «Ποιος» πριν από «από πού»: κάθε actor κάνει μόνο τις δικές του πράξεις, σε **κανένα** στάδιο τις ξένες. */
+function actorMayAct(actor: IssuanceActor, kind: IssuanceActionKind): boolean {
+  if (actor.kind === 'engagement') return ENGAGEMENT_ACTIONS.has(kind);
+  if (ENGAGEMENT_ACTIONS.has(kind)) return false;
+  return actor.kind === 'office' || LINK_ACTIONS.has(kind);
+}
 
 /**
  * - `transition-refused` — η πράξη δεν επιτρέπεται από αυτό το στάδιο·
@@ -301,6 +294,7 @@ function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: str
     deliverySchedule: [],
     deliveryReminders: null,
     inspectionContacts,
+    deliveryChangeRequests: [],
     cancellation: null,
   };
 }
@@ -315,34 +309,12 @@ function sameProposal(state: IssuanceState, action: Extract<IssuanceAction, { ki
 
 type AdvancingAction = Exclude<IssuanceAction, { kind: 'propose' }>;
 
-/**
- * Η βάση της απόφασης — **από τον actor**. Ο σύνδεσμος αποφασίζει μόνο αν είναι ο σύνδεσμος του **τρέχοντος** αιτήματος
- * και για τον υπεύθυνο **στον οποίο στάλθηκε** (§28 Η-Β1): νέο αίτημα ή νέα πρόταση ⇒ ο παλιός πεθαίνει από κατασκευή.
- * `null` ⇒ `actor-refused`.
- */
-function decisionBasisOf(record: IssuanceAssignmentRecord, action: Extract<AdvancingAction, { kind: 'decide' }>, actor: IssuanceActor): IssuanceDecisionBasis | null {
-  if (actor.kind === 'office') {
-    return action.channel === null ? null : { basis: 'recorded-instruction', channel: action.channel, recordedByUid: actor.uid };
-  }
-  const request = record.approvalRequest;
-  // §29: ο σύνδεσμος του τρέχοντος αιτήματος **και** ό,τι ζήτησε το αίτημα — ο μειωτής, όχι η πόρτα, είναι η αυθεντία.
-  const current = action.channel === null && request !== null
-    && request.invitationId === actor.invitationId && request.ownerContactId === action.ownerContactId
-    && linkVerificationSatisfies(request.verification, actor.verifiedBy);
-  return current ? { basis: 'owner-link-approval', invitationId: actor.invitationId, verifiedBy: actor.verifiedBy } : null;
-}
-
-/** Η βάση της απάντησης — ο σύνδεσμος απαντά μόνο αν είναι του **τρέχοντος** μηνύματος προς τον επαγγελματία. */
-function responseBasisOf(record: IssuanceAssignmentRecord, actor: IssuanceActor): IssuanceResponseBasis | null {
-  if (actor.kind === 'office') return { basis: 'recorded', recordedByUid: actor.uid };
-  const notice = record.notice;
-  const current = notice !== null && notice.invitationId === actor.invitationId
-    && linkVerificationSatisfies(notice.verification ?? 'link', actor.verifiedBy);
-  return current ? { basis: 'professional-link', invitationId: actor.invitationId, verifiedBy: actor.verifiedBy } : null;
-}
-
 /** Οι πράξεις που κάνει **μόνο** το γραφείο — ο έλεγχος actor έγινε ήδη. */
-function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<AdvancingAction, { kind: 'decide' | 'respond' | 'quote' | 'record-receipt' | 'schedule-delivery' | 'set-inspection-contact' }>, uid: string, at: string): IssuanceAssignmentRecord {
+type OfficeOnlyAction = Exclude<AdvancingAction, {
+  kind: 'decide' | 'respond' | 'quote' | 'record-receipt' | 'schedule-delivery' | 'set-inspection-contact' | 'request-delivery-change' | 'decline-delivery-change';
+}>;
+
+function officeAdvanced(record: IssuanceAssignmentRecord, action: OfficeOnlyAction, uid: string, at: string): IssuanceAssignmentRecord {
   switch (action.kind) {
     case 'request-approval': return {
       ...record,
@@ -363,22 +335,13 @@ function officeAdvanced(record: IssuanceAssignmentRecord, action: Exclude<Advanc
   }
 }
 
-/** Η υποβολή της προσφοράς — από τον actor, όπως η βάση της απάντησης (μόνο ο σύνδεσμος του **τρέχοντος** αιτήματος). */
-function quoteSubmissionOf(record: IssuanceAssignmentRecord, actor: IssuanceActor): QuoteSubmission | null {
-  const basis = responseBasisOf(record, actor);
-  if (basis === null) return null;
-  return basis.basis === 'recorded'
-    ? { by: 'recorded', recordedByUid: basis.recordedByUid }
-    : { by: 'professional-link', invitationId: basis.invitationId };
-}
-
 /** §42 — η προσφορά ή η μία αναθεώρηση. Ποτέ σε παλιά ανάθεση, ποτέ μετά το παραστατικό. */
 function quoted(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: Extract<AdvancingAction, { kind: 'quote' }>, actor: IssuanceActor): IssuanceReduction {
   if (isLegacyIssuance(record) || record.receipt !== null) return { ok: false, refusal: 'transition-refused' };
   const revising = stage === 'accepted';
   if (revising && (record.quote === null || !canReviseQuote(record.quote))) return { ok: false, refusal: 'terms-refused' };
   if (!areQuoteTermsValid(action.terms, conveyanceToday(new Date(actor.nowIso)))) return { ok: false, refusal: 'terms-refused' };
-  const submission = quoteSubmissionOf(record, actor);
+  const submission = quoteSubmissionOf(record.notice, actor);
   if (submission === null) return { ok: false, refusal: 'actor-refused' };
   return { ok: true, record: { ...record, quote: nextQuoteOf(record.quote, action.terms, submission, actor.nowIso) }, changed: true };
 }
@@ -387,7 +350,7 @@ function quoted(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: 
 function responded(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: Extract<AdvancingAction, { kind: 'respond' }>, actor: IssuanceActor): IssuanceReduction {
   const legacy = isLegacyIssuance(record);
   if (legacy ? stage !== 'sent' : action.outcome === 'accepted') return { ok: false, refusal: 'transition-refused' };
-  const basis = responseBasisOf(record, actor);
+  const basis = responseBasisOf(record.notice, actor);
   if (basis === null) return { ok: false, refusal: 'actor-refused' };
   return { ok: true, record: { ...record, response: { ...basis, outcome: action.outcome, note: action.note, at: actor.nowIso } }, changed: true };
 }
@@ -395,7 +358,7 @@ function responded(record: IssuanceAssignmentRecord, stage: IssuanceStage, actio
 /** Η απόφαση για **την αναθεώρηση που είδε** όποιος αποφασίζει (§42). */
 function decided(record: IssuanceAssignmentRecord, action: Extract<AdvancingAction, { kind: 'decide' }>, actor: IssuanceActor): IssuanceReduction {
   if (record.quote === null || record.quote.revision !== action.quoteRevision) return { ok: false, refusal: 'terms-refused' };
-  const basis = decisionBasisOf(record, action, actor);
+  const basis = decisionBasisOf(record.approvalRequest, action, actor);
   if (basis === null) return { ok: false, refusal: 'actor-refused' };
   const ownerAttestation = basis.basis === 'owner-link-approval' && action.outcome === 'approved' ? action.ownerAttestation : null;
   const decision: IssuanceDecision = {
@@ -412,15 +375,27 @@ function receipted(record: IssuanceAssignmentRecord, action: Extract<AdvancingAc
   return { ok: true, record: { ...record, receipt }, changed: true };
 }
 
+/** §45.20 — νέα προθεσμία από το γραφείο **απαντά** στο εκκρεμές αίτημα του μηχανικού (αποδοχή), στην ΙΔΙΑ μείωση. */
+function rescheduled(record: IssuanceAssignmentRecord, action: IssuanceScheduleDeliveryAction, uid: string, nowIso: string): IssuanceReduction {
+  const reduced = scheduledDelivery(record, action, uid, nowIso);
+  return reduced.ok && reduced.changed ? { ...reduced, record: withDeliveryChangeAccepted(reduced.record, uid, nowIso) } : reduced;
+}
+
 function advanced(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: AdvancingAction, actor: IssuanceActor): IssuanceReduction {
   if (action.kind === 'decide') return decided(record, action, actor);
   if (action.kind === 'respond') return responded(record, stage, action, actor);
   if (action.kind === 'quote') return quoted(record, stage, action, actor);
   // Ξανά ενημέρωση από `sent` έχει νόημα μόνο ως **νέο μήνυμα** (χαμένο email)· μια δεύτερη «σημείωση τηλεφώνου» όχι.
   if (action.kind === 'notify' && stage === 'sent' && action.invitationId === null) return { ok: false, refusal: 'transition-refused' };
+  if (action.kind === 'request-delivery-change') {
+    return actor.kind === 'engagement'
+      ? requestedDeliveryChange(record, action, actor)
+      : { ok: false, refusal: 'actor-refused' };
+  }
   if (actor.kind !== 'office') return { ok: false, refusal: 'actor-refused' };
   if (action.kind === 'record-receipt') return receipted(record, action, actor.uid, actor.nowIso);
-  if (action.kind === 'schedule-delivery') return scheduledDelivery(record, action, actor.uid, actor.nowIso);
+  if (action.kind === 'schedule-delivery') return rescheduled(record, action, actor.uid, actor.nowIso);
+  if (action.kind === 'decline-delivery-change') return declinedDeliveryChange(record, action, actor.uid, actor.nowIso);
   if (action.kind === 'set-inspection-contact') return inspectionContactSet(record, action, actor.uid, actor.nowIso);
   return { ok: true, record: officeAdvanced(record, action, actor.uid, actor.nowIso), changed: true };
 }
@@ -486,8 +461,8 @@ export function reduceIssuance(
     const carried = state.kind === 'open' ? state.record.inspectionContacts : [];
     return { ok: true, record: proposed(action, actor.uid, actor.nowIso, carried), changed: true };
   }
-  // «Ποιος» πριν από «από πού»: ο σύνδεσμος δεν κάνει πράξη του γραφείου, σε **κανένα** στάδιο.
-  if (actor.kind === 'link' && !LINK_ACTIONS.has(action.kind)) return { ok: false, refusal: 'actor-refused' };
+  // «Ποιος» πριν από «από πού»: ο σύνδεσμος δεν κάνει πράξη του γραφείου, η συμμετοχή μόνο αίτημα — σε **κανένα** στάδιο.
+  if (!actorMayAct(actor, action.kind)) return { ok: false, refusal: 'actor-refused' };
   if (state.kind !== 'open' || !ALLOWED_FROM[action.kind].includes(state.stage)) {
     return { ok: false, refusal: 'transition-refused' };
   }

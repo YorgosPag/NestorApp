@@ -999,7 +999,14 @@
     "overdueBody": "{name}: {days, plural, one {# day} other {# days}} past the due date. Open the row to send a reminder or set a new date.",
     "overdueBodyUnnamed": "{days, plural, one {# day} other {# days}} past the due date. Open the row to send a reminder or set a new date.",
     "dueTomorrow": "Delivery is due tomorrow — “{title}”",
-    "dueTomorrowBody": "The agreed delivery date is tomorrow. Open the assignment space."
+    "dueTomorrowBody": "The agreed delivery date is tomorrow. Open the assignment space.",
+    "changeRequested": "New delivery date requested — “{title}”",
+    "changeRequestedBody": "{name} asks for delivery by {date}: “{reason}”. Open the row to set a new date or decline.",
+    "changeRequestedBodyUnnamed": "The professional asks for delivery by {date}: “{reason}”. Open the row to set a new date or decline.",
+    "changeAccepted": "New delivery date — “{title}”",
+    "changeAcceptedBody": "The office set a new delivery date: {date}.",
+    "changeDeclined": "New date request not approved — “{title}”",
+    "changeDeclinedBody": "The delivery date stays as it was. The office's reason: “{reason}”."
   },
   "documentIssuanceAnswered": {
     "approved": "Assignment approved — «{title}»",
