@@ -25,7 +25,7 @@
  */
 
 import * as React from 'react';
-import { FloatingPanel } from '@/components/ui/floating';
+import { FloatingPanel, type FloatingPanelDimensions, type FloatingPanelId } from '@/components/ui/floating';
 
 /** Panel footprint — width drives the bounds clamp, height caps the scrolling list. */
 const PANEL_DIMENSIONS = { width: 320, height: 460 };
@@ -41,12 +41,25 @@ const CASCADE_PX = 28;
  * Default spot: right edge, BELOW the ViewCube / 3D toggle (both top-right) and clear of the left
  * layers panel — the same reasoning as `ClashReportPanel`'s default. Draggable from there.
  */
-function panelPosition(stackIndex: number): { x: number; y: number } {
+function panelPosition(stackIndex: number, width: number): { x: number; y: number } {
   const margin = 16;
   return {
-    x: window.innerWidth - PANEL_DIMENSIONS.width - margin - stackIndex * CASCADE_PX,
+    x: window.innerWidth - width - margin - stackIndex * CASCADE_PX,
     y: 200 + stackIndex * CASCADE_PX,
   };
+}
+
+/**
+ * ADR-929 §6.25 — προαιρετική **παλέτα εργασίας** αντί για λίστα αναθεώρησης: αλλάζει μέγεθος (8 λαβές), θυμάται
+ * θέση/μέγεθος ανά χρήστη (ADR-723 — Revit/AutoCAD: layout παλετών στο προφίλ, ποτέ στο αρχείο) και κρατά την
+ * κύρια ενέργεια σε καρφωμένο υποσέλιδο. Χωρίς αυτό, η παλέτα συμπεριφέρεται ΑΚΡΙΒΩΣ όπως πριν.
+ */
+export interface TopoReviewPanelWorkspace {
+  /** Προεπιλεγμένο μέγεθος· το viewport το περιορίζει πάντα (`clampPanelGeometry`). */
+  readonly size: FloatingPanelDimensions;
+  readonly minSize: FloatingPanelDimensions;
+  /** Σταθερή ταυτότητα `<subapp>.<panel>` για τη μόνιμη γεωμετρία. */
+  readonly persistenceKey: FloatingPanelId;
 }
 
 export interface TopoReviewPanelProps {
@@ -58,29 +71,38 @@ export interface TopoReviewPanelProps {
   readonly stackIndex: number;
   readonly testId: string;
   readonly children: React.ReactNode;
+  /** ADR-929 §6.25 — βλ. {@link TopoReviewPanelWorkspace}. */
+  readonly workspace?: TopoReviewPanelWorkspace;
+  /** ADR-929 §6.25 — περιεχόμενο κάτω από την κύλιση (κύρια ενέργεια). */
+  readonly footer?: React.ReactNode;
 }
 
 export function TopoReviewPanel(props: TopoReviewPanelProps): React.JSX.Element {
-  const { title, icon, onClose, stackIndex, testId, children } = props;
+  const { title, icon, onClose, stackIndex, testId, children, workspace, footer } = props;
+  const size = workspace?.size ?? PANEL_DIMENSIONS;
   // `getClientPosition` re-runs on viewport resize, so it must resolve the SAME slot — hence the
   // stable callback over `stackIndex` rather than a captured one-off position.
-  const getClientPosition = React.useCallback(() => panelPosition(stackIndex), [stackIndex]);
+  const getClientPosition = React.useCallback(() => panelPosition(stackIndex, size.width), [stackIndex, size.width]);
 
   return (
     <FloatingPanel
       defaultPosition={getClientPosition()}
-      dimensions={PANEL_DIMENSIONS}
+      dimensions={size}
       onClose={onClose}
       draggableOptions={{ getClientPosition }}
-      className="z-[var(--z-index-viewer-menu)] w-80"
+      resizable={workspace !== undefined}
+      minSize={workspace?.minSize}
+      persistenceKey={workspace?.persistenceKey}
+      className={workspace ? 'z-[var(--z-index-viewer-menu)]' : 'z-[var(--z-index-viewer-menu)] w-80'}
       data-testid={testId}
     >
       <FloatingPanel.Header showClose icon={icon}>
         <h3 className="m-0 flex-1 text-sm font-semibold text-foreground">{title}</h3>
       </FloatingPanel.Header>
-      <FloatingPanel.Content className="flex max-h-[60vh] flex-col overflow-y-auto">
+      <FloatingPanel.Content className={workspace ? 'flex flex-col' : 'flex max-h-[60vh] flex-col overflow-y-auto'}>
         {children}
       </FloatingPanel.Content>
+      {footer ? <FloatingPanel.Footer>{footer}</FloatingPanel.Footer> : null}
     </FloatingPanel>
   );
 }

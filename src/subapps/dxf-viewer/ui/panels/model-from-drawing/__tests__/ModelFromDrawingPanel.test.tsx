@@ -32,6 +32,7 @@ import type {
 import { ModelFromDrawingPanel, type ModelFromDrawingPanelActions } from '../ModelFromDrawingPanel';
 import type { ImageSourceView } from '../PlanRecognitionSections';
 import { SCENE_LINE_SOURCE } from '../../../../systems/model-from-drawing/proposal-line-source';
+import { mockViewport } from '@/test-utils/viewport';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -39,15 +40,21 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }),
 }));
 
-// Ο φλοιός (συρόμενο FloatingPanel) δεν είναι το αντικείμενο του test.
+// Ο φλοιός (συρόμενο FloatingPanel) δεν είναι το αντικείμενο του test — αλλά το υποσέλιδό του (§6.25) ΕΙΝΑΙ περιεχόμενο.
 jest.mock('../../topography/TopoReviewPanel', () => ({
-  TopoReviewPanel: ({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) => (
+  TopoReviewPanel: ({ title, children, footer, onClose }: {
+    title: string; children: React.ReactNode; footer?: React.ReactNode; onClose: () => void;
+  }) => (
     <section data-testid="shell" aria-label={title}>
       <button type="button" data-testid="shell-close" onClick={onClose} />
       {children}
+      {footer ? <footer data-testid="shell-footer">{footer}</footer> : null}
     </section>
   ),
 }));
+
+// ADR-929 §6.25 — φαρδιά οθόνη ⇒ παλέτα (το φύλλο της στενής οθόνης έχει δικό του test).
+beforeEach(() => mockViewport(false));
 
 jest.mock('@/components/ui/select', () => ({
   Select: ({ value, onValueChange, children }: { value: string; onValueChange: (v: string) => void; children: React.ReactNode }) => (
@@ -138,7 +145,11 @@ function renderPanel(patch: Partial<ModelFromDrawingState> = {}, imageSource: Im
   );
   const q = (testId: string) => view.container.querySelector(`[data-testid="${testId}"]`);
   const all = (testId: string) => [...view.container.querySelectorAll(`[data-testid="${testId}"]`)];
-  return { ...view, actions, q, all };
+  /** ADR-929 §6.25 — μετάβαση σε βήμα από τη ράγα, όπως ο άνθρωπος. */
+  const step = (id: 'source' | 'walls' | 'openings') => {
+    fireEvent.click(view.container.querySelector(`[data-testid="mfd-steps"] [data-step="${id}"]`) as HTMLElement);
+  };
+  return { ...view, actions, q, all, step };
 }
 
 /**
@@ -264,9 +275,10 @@ describe('ModelFromDrawingPanel — οι αποφάσεις φεύγουν πρ�
   });
 
   it('«Άλλο δείγμα» και κλείσιμο φτάνουν στον host', () => {
-    const { container, q, actions } = renderPanel();
+    const { container, q, actions, step } = renderPanel();
     fireEvent.click(q('shell-close') as HTMLElement);
     expect(actions.onClose).toHaveBeenCalledTimes(1);
+    step('source'); // §6.25 — το δείγμα-πηγή ζει στο ①
     const resample = [...container.querySelectorAll('button')].find((b) => b.textContent === 'modelFromDrawing.sample.change');
     fireEvent.click(resample as HTMLButtonElement);
     expect(actions.onResample).toHaveBeenCalledTimes(1);
@@ -347,9 +359,12 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
 
   it('Φ5.2ε — οι γραμμές χαμηλής βεβαιότητας λέγονται ρητά «όχι τοίχοι», και η γραμμή φεύγει όταν δεν υπάρχουν', () => {
     const shown = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    shown.step('source');
     expect(shown.q('mfd-image-excluded')?.textContent).toBe('modelFromDrawing.image.lowExcluded{"count":1}');
     shown.unmount();
     const none = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, { ...IMAGE_READY, excludedFromWalls: NO_EXCLUSIONS });
+    none.step('source');
+    expect(none.q('mfd-image-summary')).not.toBeNull();
     expect(none.q('mfd-image-excluded')).toBeNull();
   });
 
@@ -357,7 +372,8 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
     const view: ImageSourceView = {
       ...IMAGE_READY, excludedFromWalls: { byRole: { dimension: 97, annotation: 0 }, lowConfidence: 715 },
     };
-    const { q, container } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, view);
+    const { q, container, step } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, view);
+    step('source');
     const rows = [...(q('mfd-image-role-legend')?.querySelectorAll('li') ?? [])];
     expect(rows.map((li) => li.getAttribute('data-role'))).toEqual(['dimension']);
     expect(rows[0].textContent).toBe('modelFromDrawing.image.role.dimension{"count":97}');
@@ -367,7 +383,9 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
   });
 
   it('Φ5.4β — χωρίς τμήματα εκτός τοίχων λόγω ρόλου: κανένα υπόμνημα ρόλων', () => {
-    const { q } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    const { q, step } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    step('source');
+    expect(q('mfd-image-summary')).not.toBeNull();
     expect(q('mfd-image-role-legend')).toBeNull();
   });
 
@@ -392,7 +410,8 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
   });
 
   it('έλεγχος από εικόνα: η σύνοψη αντικαθιστά το χρώμα-δείγμα, με πλήθη ανά βεβαιότητα', () => {
-    const { q, all } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    const { q, all, step } = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
+    step('source');
     expect(q('mfd-image-summary')).not.toBeNull();
     const rows = all('mfd-image-legend').flatMap((ul) => [...ul.querySelectorAll('li')]);
     expect(rows.map((r) => [r.getAttribute('data-tier'), r.querySelector('span:last-child')?.textContent]))
@@ -401,11 +420,16 @@ describe('ModelFromDrawingPanel — πηγή «εικόνα υποβάθρου»
 
   it('χωρίς βαθμονόμηση: η έγκριση κλειδώνει και ο λόγος φαίνεται· με βαθμονόμηση ξεκλειδώνει', () => {
     const blocked = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, { ...IMAGE_READY, calibrated: false });
-    expect((blocked.q('mfd-approve') as HTMLButtonElement).disabled).toBe(true);
+    // §6.25 — αβαθμονόμητη εικόνα ⇒ το πάνελ ανοίγει στο ① (εκεί είναι η απόφαση), με το «Συνέχεια» κλειδωμένο.
     expect(blocked.q('mfd-image-uncalibrated')).not.toBeNull();
+    expect((blocked.q('mfd-step-next') as HTMLButtonElement).disabled).toBe(true);
+    blocked.step('walls');
+    expect((blocked.q('mfd-approve') as HTMLButtonElement).disabled).toBe(true);
+    expect(blocked.q('mfd-walls-needs-calibration')).not.toBeNull();
     blocked.unmount();
     const open = renderPanel({ lineSource: RASTER, proposal: ALL_CONFIRMED }, IMAGE_READY);
     expect((open.q('mfd-approve') as HTMLButtonElement).disabled).toBe(false);
+    expect(open.q('mfd-walls-needs-calibration')).toBeNull();
   });
 
   it('η ειδοποίηση «αβαθμονόμητη» έχει το δικό της κείμενο', () => {
@@ -449,5 +473,79 @@ describe('ModelFromDrawingPanel — στρώση «Διαστάσεις» (ADR-9
     expect(layer?.textContent).toBe(
       'modelFromDrawing.dimensions.layer.refused{"reason":"dxf-viewer-panels:layerValidation.RESERVED"}',
     );
+  });
+});
+
+describe('ModelFromDrawingPanel — βήματα, Λεπτομέρειες, επιφάνεια (ADR-929 §6.25)', () => {
+  const RASTER = { kind: 'raster', recognitionId: 'rec1.1', floorId: 'flr_1', segments: [] } as const;
+  const IMAGE: ImageSourceView = {
+    ...NO_IMAGE, available: true, phase: 'ready', active: true, countsByTier: { high: 1, medium: 0, low: 0 }, calibrated: false,
+  };
+  const railOf = (container: HTMLElement) => [...container.querySelectorAll('[data-testid="mfd-steps"] [data-step]')];
+
+  it('τρία βήματα, σταθερή σειρά· σε πηγή «σχέδιο» το ① είναι ✓ και το τρέχον είναι οι Τοίχοι', () => {
+    const { container } = renderPanel();
+    const steps = railOf(container);
+    expect(steps.map((s) => s.getAttribute('data-step'))).toEqual(['source', 'walls', 'openings']);
+    expect(steps.map((s) => s.getAttribute('data-status'))).toEqual(['done', 'attention', 'pending']);
+    expect(steps.map((s) => s.getAttribute('aria-current'))).toEqual([null, 'step', null]);
+    // Κανάλι κατάστασης χωρίς χρώμα (CHECK 3.41): κείμενο για τον αναγνώστη οθόνης.
+    expect(steps[0].textContent).toContain('modelFromDrawing.steps.status.done');
+  });
+
+  it('ΜΟΝΟ το σώμα του τρέχοντος βήματος αποδίδεται· η κύρια ενέργεια είναι στο υποσέλιδο', () => {
+    const { q, step } = renderPanel();
+    expect(q('mfd-legend')).not.toBeNull();
+    expect(q('shell-footer')?.querySelector('[data-testid="mfd-approve"]')).not.toBeNull();
+    step('openings');
+    expect(q('mfd-legend')).toBeNull();
+    expect(q('mfd-openings-arm')).not.toBeNull();
+    expect(q('mfd-approve')).toBeNull();
+  });
+
+  it('αυτόματη προώθηση ΜΟΝΟ όταν προχωρά η δουλειά: η βαθμονόμηση πάει το πάνελ από το ① στους Τοίχους', () => {
+    const actions = actionsMock();
+    const panel = (image: ImageSourceView) => (
+      <ModelFromDrawingPanel state={stateOf({ lineSource: RASTER, proposal: ALL_CONFIRMED })} actions={actions} imageSource={image} pdfVectorImport={NO_PDF_VECTOR} />
+    );
+    const view = render(panel(IMAGE));
+    const current = () => view.container.querySelector('[aria-current="step"]')?.getAttribute('data-step');
+    expect(current()).toBe('source');
+    // Επίσκεψη που δεν αλλάζει την κατάσταση δεν «ξεχνιέται» σε νέα απόδοση.
+    fireEvent.click(view.container.querySelector('[data-step="openings"]') as HTMLElement);
+    view.rerender(panel(IMAGE));
+    expect(current()).toBe('openings');
+    view.rerender(panel({ ...IMAGE, calibrated: true }));
+    expect(current()).toBe('walls');
+  });
+
+  it('Λεπτομέρειες: κλειστές από προεπιλογή, ανοίγουν με κλικ· οι ανεξήγητες φαίνονται ΚΑΙ κλειστές', () => {
+    const orphaned: WallProposal = { ...UNCONFIRMED, coverage: { ...UNCONFIRMED.coverage, unexplainedIds: ['line_1'] } };
+    const { q } = renderPanel({ proposal: orphaned });
+    const details = q('mfd-walls-details') as HTMLElement;
+    const content = (q('mfd-coverage') as HTMLElement).parentElement as HTMLElement;
+    // forceMount ⇒ το Radix ΔΕΝ βάζει `hidden`· το κλειστό κρύβει το CSS μέσω `data-state` (StepDetails).
+    expect(content.getAttribute('data-state')).toBe('closed');
+    expect(q('mfd-walls-details-hint')?.textContent).toBe('modelFromDrawing.details.unexplained{"count":1}');
+    fireEvent.click(details.querySelector('button') as HTMLButtonElement);
+    expect(content.getAttribute('data-state')).toBe('open');
+  });
+
+  describe('στενή οθόνη ⇒ φύλλο πυθμένα', () => {
+    beforeAll(() => {
+      if (!Element.prototype.scrollTo) Element.prototype.scrollTo = () => undefined;
+    });
+    beforeEach(() => mockViewport(true));
+
+    it('όχι παλέτα: φύλλο με ράγα, σώμα κύλισης και την ΙΔΙΑ κύρια ενέργεια· κλείνει με το δικό του ✕', () => {
+      const { q, container, actions } = renderPanel();
+      expect(q('shell')).toBeNull();
+      const sheet = container.querySelector('section[aria-label="modelFromDrawing.title"]') as HTMLElement;
+      expect(sheet.querySelector('[data-testid="mfd-steps"]')).not.toBeNull();
+      expect(sheet.querySelector('[data-list-scroll]')).not.toBeNull();
+      expect(sheet.querySelector('footer [data-testid="mfd-approve"]')).not.toBeNull();
+      fireEvent.click(sheet.querySelector('button[aria-label="buttons.close"]') as HTMLButtonElement);
+      expect(actions.onClose).toHaveBeenCalledTimes(1);
+    });
   });
 });

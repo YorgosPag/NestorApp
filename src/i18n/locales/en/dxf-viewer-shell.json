@@ -362,6 +362,39 @@
   },
   "modelFromDrawing": {
     "title": "Model from drawing",
+    "steps": {
+      "label": "Steps",
+      "source": {
+        "label": "Source & scale",
+        "start": "Choose a wall source",
+        "next": "Continue to walls"
+      },
+      "walls": {
+        "label": "Walls",
+        "empty": "There is no wall proposal yet. First choose where to read from.",
+        "needsCalibration": "Creation is enabled once the scale is confirmed (step “Source & scale”)."
+      },
+      "openings": {
+        "label": "Openings"
+      },
+      "goSource": "Go to step “Source & scale”",
+      "status": {
+        "done": "completed",
+        "attention": "needs a decision",
+        "pending": "not completed yet"
+      }
+    },
+    "details": {
+      "recognition": "Recognition details",
+      "scale": "Calculation details",
+      "packet": "Upload technical details",
+      "walls": "Details",
+      "unexplained": "{count, plural, one {# unexplained line} other {# unexplained lines}}"
+    },
+    "sheet": {
+      "less": "Smaller panel",
+      "more": "Larger panel"
+    },
     "undoName": "Walls from drawing",
     "pickHint": "Click a wall line in the drawing (Esc to cancel)",
     "pick": {

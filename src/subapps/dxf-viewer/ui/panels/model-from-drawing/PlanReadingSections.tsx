@@ -27,6 +27,7 @@ import type {
   PlanReadingWallsStatus,
 } from '../../../systems/plan-recognition/plan-recognition-store';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
+import { StepDetails } from './StepDetails';
 
 export interface PlanReadingActions {
   readonly onBegin: () => void;
@@ -98,16 +99,19 @@ function PacketBlock({ packet, language, t }: { readonly packet: PlanReadingPack
         className="max-h-40 w-full rounded border border-border bg-background object-contain"
         data-testid="mfd-reading-preview"
       />
-      <figcaption className="flex flex-col gap-0.5">
-        <span className={MUTED}>
-          {t('modelFromDrawing.image.reading.packetSize', {
-            width: packet.widthPx, height: packet.heightPx, size: formatFileSize(packet.blob.size, language),
-          })}
-        </span>
-        <span className={MUTED}>
-          {t('modelFromDrawing.image.reading.fingerprint')}{' '}
-          <code className="break-all font-mono text-[10px] text-foreground" data-testid="mfd-reading-sha">{packet.sha256}</code>
-        </span>
+      {/* ADR-929 §6.25 — η εικόνα ΕΙΝΑΙ η απόφαση («αυτό φεύγει»)· διαστάσεις, μέγεθος, sha256 είναι η απόδειξη: κλειστά. */}
+      <figcaption>
+        <StepDetails label={t('modelFromDrawing.details.packet')} testId="mfd-reading-packet-details">
+          <span className={MUTED}>
+            {t('modelFromDrawing.image.reading.packetSize', {
+              width: packet.widthPx, height: packet.heightPx, size: formatFileSize(packet.blob.size, language),
+            })}
+          </span>
+          <span className={MUTED}>
+            {t('modelFromDrawing.image.reading.fingerprint')}{' '}
+            <code className="break-all font-mono text-[10px] text-foreground" data-testid="mfd-reading-sha">{packet.sha256}</code>
+          </span>
+        </StepDetails>
       </figcaption>
     </figure>
   );

@@ -18,6 +18,7 @@ import { buildOpeningPreview, type OpeningPreview } from '../../../../bim/model-
 import type { OpeningReviewChoice } from '../../../../bim/model-from-drawing/opening-review';
 import { LEVEL, propose, sceneOf, writtenWalls } from '../../../../bim/model-from-drawing/__tests__/opening-fixture';
 import {
+  OpeningApproval,
   OpeningsSection,
   OpeningsStart,
   type OpeningReviewActions,
@@ -49,12 +50,18 @@ function renderSection(options: Options = {}) {
   const actions: jest.Mocked<OpeningReviewActions> = {
     onStartOpenings: jest.fn(), onChooseOpening: jest.fn(), onFocus: jest.fn(), onApproveOpenings: jest.fn(), onDiscardOrphanedOpenings: jest.fn(),
   };
+  const preview = options.preview === undefined ? previewOf(proposal) : options.preview;
+  const choices = options.choices ?? new Map();
+  // ADR-929 §6.25 — η έγκριση ζει πλέον στο καρφωμένο υποσέλιδο του βήματος: αποδίδονται μαζί, όπως στο πάνελ.
   const view = render(
-    <OpeningsSection
-      proposal={proposal} preview={options.preview === undefined ? previewOf(proposal) : options.preview}
-      choices={options.choices ?? new Map()} orphanedCount={0} colorHex="#00cccc" focusedKey={options.focusedKey ?? null}
-      actions={actions} t={t}
-    />,
+    <>
+      <OpeningsSection
+        proposal={proposal} preview={preview}
+        choices={choices} orphanedCount={0} colorHex="#00cccc" focusedKey={options.focusedKey ?? null}
+        actions={actions} t={t}
+      />
+      <OpeningApproval proposal={proposal} preview={preview} choices={choices} actions={actions} t={t} />
+    </>,
   );
   const q = (testId: string) => view.container.querySelector(`[data-testid="${testId}"]`);
   const rows = () => [...view.container.querySelectorAll<HTMLLIElement>('[data-testid="mfd-opening-item"]')];

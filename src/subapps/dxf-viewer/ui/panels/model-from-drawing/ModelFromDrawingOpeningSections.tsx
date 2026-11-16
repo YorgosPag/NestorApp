@@ -276,8 +276,11 @@ export interface OpeningsSectionProps {
   readonly t: Translate;
 }
 
-/** Η ΜΙΑ έγκριση: γράφει τον αριθμό, και λέει τι ΜΕΝΕΙ ΕΞΩ. Τα αναποφάσιστα δεν την κλειδώνουν. */
-function OpeningApproval(props: Pick<OpeningsSectionProps, 'proposal' | 'preview' | 'choices' | 'actions' | 't'>): React.ReactElement {
+/**
+ * Η ΜΙΑ έγκριση: γράφει τον αριθμό, και λέει τι ΜΕΝΕΙ ΕΞΩ. Τα αναποφάσιστα δεν την κλειδώνουν.
+ * ADR-929 §6.25 — ζει στο καρφωμένο υποσέλιδο του βήματος «Κουφώματα», όχι στο τέλος της κύλισης.
+ */
+export function OpeningApproval(props: Pick<OpeningsSectionProps, 'proposal' | 'preview' | 'choices' | 'actions' | 't'>): React.ReactElement {
   const { proposal, preview, choices, actions, t } = props;
   const counts = countOpeningReview(proposal, choices);
   const refusal = preview?.refusal;
@@ -303,7 +306,7 @@ function OpeningApproval(props: Pick<OpeningsSectionProps, 'proposal' | 'preview
   );
 }
 
-/** Το δεύτερο βήμα του βοηθού: δείγμα · πλήθη · ουρά «προς απόφαση» · ανεξήγητες · μία έγκριση. */
+/** Το βήμα «Κουφώματα»: δείγμα · πλήθη · ουρά «προς απόφαση» · ανεξήγητες (η έγκριση: `OpeningApproval`, στο υποσέλιδο). */
 export function OpeningsSection(props: OpeningsSectionProps): React.ReactElement {
   const { proposal, choices, colorHex, actions, t } = props;
   const counts = countOpeningReview(proposal, choices);
@@ -341,7 +344,6 @@ export function OpeningsSection(props: OpeningsSectionProps): React.ReactElement
           {t('modelFromDrawing.openings.unexplained', { count: proposal.unexplainedIds.length })}
         </p>
       ) : null}
-      <OpeningApproval proposal={proposal} preview={props.preview} choices={choices} actions={actions} t={t} />
     </section>
   );
 }

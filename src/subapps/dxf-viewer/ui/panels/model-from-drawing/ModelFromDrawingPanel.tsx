@@ -1,21 +1,19 @@
 'use client';
 
 /**
- * ADR-911 Φ3β — το πάνελ του βοηθού **«Μοντέλο από το σχέδιο»**.
+ * ADR-911 Φ3β · ADR-929 §6.25 — το πάνελ του βοηθού **«Μοντέλο από το σχέδιο»**.
  *
- * Modeless, συρόμενο (ο ΙΔΙΟΣ φλοιός αναθεώρησης με τα πάνελ της τοπογραφίας — `TopoReviewPanel`):
- * ο άνθρωπος πρέπει να βλέπει το σχέδιο όσο αποφασίζει. Δύο όψεις:
+ * Modeless (ο άνθρωπος πρέπει να βλέπει το σχέδιο όσο αποφασίζει). Από το §6.25 είναι **οδηγός τριών βημάτων μέσα
+ * στο ίδιο πάνελ** — ① Πηγή & κλίμακα · ② Τοίχοι · ③ Κουφώματα — αντί για μία στήλη ~20 ενοτήτων χωρίς ιεραρχία:
  *
- *   · `picking` — «δείξε μία γραμμή τοίχου» ή «δείξε μία γραμμή κουφώματος» (Δ1, ένα δείγμα ανά ρόλο).
- *   · `review`  — βήμα ΤΟΙΧΟΙ: υπόμνημα με πλήθη · λειτουργία ανά ομάδα πάχους (Δ3) · αμφίσημα
- *                 (Δ7) · απορρίψεις με λόγο · αναφορά κάλυψης · ΜΙΑ έγκριση που γράφει τον αριθμό.
- *                 Βήμα ΚΟΥΦΩΜΑΤΑ (Φ4-3β): δική του ουρά «προς απόφαση» και δική του έγκριση —
- *                 δύο εγκρίσεις, δύο undo (απόφαση εμβέλειας της Φ4).
+ *   · **Ράγα** πάνω: πού είμαι, τι έγινε (✓), τι θέλει απόφαση (⚠) — κάθε βήμα κουμπί, ελεύθερη μετάβαση (NN/g).
+ *   · **Σώμα** μόνο του τρέχοντος βήματος· τα διαγνωστικά (σ, w, sha256, κάλυψη, βεβαιότητα) σε «Λεπτομέρειες», κλειστά.
+ *   · **Υποσέλιδο** καρφωμένο: ΜΙΑ κύρια ενέργεια, με το «τι μένει έξω» δίπλα της, και η ειδοποίηση της τελευταίας πράξης.
+ *   · Φαρδιά οθόνη ⇒ παλέτα που αλλάζει μέγεθος και το θυμάται· στενή ⇒ φύλλο πυθμένα (`ModelFromDrawingSurface`).
  *
- * Μερική έγκριση (ADR-929 Φ5.2ε): γράφονται οι τοίχοι των επιβεβαιωμένων ομάδων πάχους· οι υπόλοιποι
- * μένουν έξω και το λέει ρητά η γραμμή «δεν θα γραφτούν». Η έγκριση κλειδώνει μόνο όταν δεν υπάρχει
- * τοίχος να γραφτεί ή (πηγή εικόνα) λείπει η βαθμονόμηση. Ο ελεγκτής ξαναελέγχει
- * (`modelFromDrawingSession.approve`) — το κουμπί είναι η ευγένεια, όχι η εγγύηση.
+ * Μερική έγκριση (ADR-929 Φ5.2ε): γράφονται οι τοίχοι των επιβεβαιωμένων ομάδων πάχους· οι υπόλοιποι μένουν έξω και
+ * το λέει ρητά η γραμμή «δεν θα γραφτούν». Ο ελεγκτής ξαναελέγχει (`modelFromDrawingSession.approve`) — το κουμπί
+ * είναι η ευγένεια, όχι η εγγύηση.
  *
  * Καθαρή παρουσίαση: κατάσταση ως prop, αποφάσεις ως callbacks. Χαμηλόσυχνο (ADR-040).
  *
@@ -26,9 +24,9 @@
 import * as React from 'react';
 import { Wand2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Button } from '@/components/ui/button';
+import { StepRail, type StepRailStatus } from '@/components/ui/step-rail';
+import { useViewportClass } from '@/hooks/media/useViewportClass';
 import type { WallCategory } from '../../../bim/types/wall-types';
-import { countProposalByStatus } from '../../../bim/model-from-drawing/assistant-preview';
 import type {
   ModelFromDrawingNotice,
   ModelFromDrawingSampleRole,
@@ -36,31 +34,20 @@ import type {
 } from '../../../systems/model-from-drawing/model-from-drawing-store';
 import { OPENING_REFUSAL_LABEL_KEY } from '../../../systems/model-from-drawing/opening-label-keys';
 import { DIMENSION_LAYER_REFUSAL_LABEL_KEY } from '../../../systems/model-from-drawing/dimension-label-keys';
-import { RecognizedDimensionsSection } from './RecognizedDimensionsSection';
-import { KeepRecognizedSection, type KeepRecognizedActions } from './KeepRecognizedSection';
-import { TopoReviewPanel } from '../topography/TopoReviewPanel';
-import {
-  OpeningsSection,
-  OpeningsStart,
-  type OpeningReviewActions,
-} from './ModelFromDrawingOpeningSections';
-import {
-  type Translate,
-  ColorChip,
-  CoverageSection,
-  DecisionsSection,
-  GroupsSection,
-  LeftOutNote,
-  RejectedSection,
-  StatusLegend,
-} from './ModelFromDrawingSections';
-import { ImageSourceStart, ImageSourceSummary, type ImageSourceView } from './PlanRecognitionSections';
-import { PdfVectorImportSection, type PdfVectorImportActions, type PdfVectorImportView } from './PdfVectorImportSection';
-import { PlanReadingSection, type PlanReadingActions } from './PlanReadingSections';
-import { PlanOcrSection, type PlanOcrActions } from './PlanOcrSection';
-import { PlanReadValuesSection, type PlanReadValuesActions } from './PlanReadValuesSection';
-import { PlanDrawingKindSection, type PlanDrawingKindActions } from './PlanDrawingKindSection';
-import { PlanScaleCardSection, type PlanScaleActions } from './PlanScaleCard';
+import type { KeepRecognizedActions } from './KeepRecognizedSection';
+import type { OpeningReviewActions } from './ModelFromDrawingOpeningSections';
+import type { Translate } from './ModelFromDrawingSections';
+import type { ImageSourceView } from './PlanRecognitionSections';
+import type { PdfVectorImportActions, PdfVectorImportView } from './PdfVectorImportSection';
+import type { PlanReadingActions } from './PlanReadingSections';
+import type { PlanOcrActions } from './PlanOcrSection';
+import type { PlanReadValuesActions } from './PlanReadValuesSection';
+import type { PlanDrawingKindActions } from './PlanDrawingKindSection';
+import type { PlanScaleActions } from './PlanScaleCard';
+import { MFD_STEP_ORDER, mfdStepStatuses, mfdSuggestedStep, type MfdStepId } from './model-from-drawing-steps';
+import { useModelFromDrawingStep } from './useModelFromDrawingStep';
+import { StepAction, StepBody, type StepProps } from './ModelFromDrawingStepBodies';
+import { ModelFromDrawingSurface } from './ModelFromDrawingSurface';
 
 export interface ModelFromDrawingPanelActions extends OpeningReviewActions, KeepRecognizedActions {
   readonly onClose: () => void;
@@ -151,6 +138,7 @@ function noticeText(notice: ModelFromDrawingNotice, role: ModelFromDrawingSample
   }
 }
 
+/** Η ειδοποίηση της τελευταίας πράξης — στο υποσέλιδο, ΔΙΠΛΑ στην ενέργεια που την προκάλεσε. */
 function Notice({ state, t }: { readonly state: ModelFromDrawingState; readonly t: Translate }): React.ReactElement | null {
   const { notice } = state;
   if (!notice) return null;
@@ -164,135 +152,50 @@ function Notice({ state, t }: { readonly state: ModelFromDrawingState; readonly 
   );
 }
 
-/** Φ4-3β — το δεύτερο βήμα: πριν από το δείγμα ένα κουμπί, μετά η πλήρης αναθεώρηση. */
-function OpeningsStep({ state, actions, t }: ModelFromDrawingPanelProps & { readonly t: Translate }): React.ReactElement {
-  if (!state.openingProposal) return <OpeningsStart onStart={actions.onStartOpenings} t={t} />;
-  return (
-    <OpeningsSection
-      proposal={state.openingProposal} preview={state.openingPreview} choices={state.openingReview.choices}
-      orphanedCount={state.openingReview.orphaned.length}
-      colorHex={state.openingColorHex} focusedKey={state.focusedKey} actions={actions} t={t}
-    />
-  );
+/** ΡΗΤΑ κλειδιά ανά βήμα και κατάσταση (CHECK 3.8 — κανένα συναρμολογημένο). */
+const STEP_LABEL_KEY: Readonly<Record<MfdStepId, string>> = {
+  source: 'modelFromDrawing.steps.source.label',
+  walls: 'modelFromDrawing.steps.walls.label',
+  openings: 'modelFromDrawing.steps.openings.label',
+};
+const STEP_STATUS_KEY: Readonly<Record<StepRailStatus, string>> = {
+  done: 'modelFromDrawing.steps.status.done',
+  attention: 'modelFromDrawing.steps.status.attention',
+  pending: 'modelFromDrawing.steps.status.pending',
+};
+
+/** Έχει το βήμα κάτι να πει στο υποσέλιδο; (ενέργεια ή ειδοποίηση) — αλλιώς κανένα άδειο πλαίσιο. */
+function hasFooter(step: MfdStepId, state: ModelFromDrawingState): boolean {
+  if (state.notice) return true;
+  return step === 'openings' ? state.openingProposal !== null : state.proposal !== null;
 }
 
-function ReviewBody(props: ModelFromDrawingPanelProps & { readonly t: Translate }): React.ReactElement {
-  const { state, t } = props;
-  return (
-    <>
-      <WallsStep {...props} />
-      <OpeningsStep {...props} />
-      <Notice state={state} t={t} />
-    </>
-  );
-}
-
-/** Η πηγή «σχέδιο»: το χρώμα-ρόλος που έδειξε ο άνθρωπος, και «άλλο δείγμα». */
-function SceneSampleLine({ colorHex, onResample, t }: {
-  readonly colorHex: string | null;
-  readonly onResample: () => void;
-  readonly t: Translate;
-}): React.ReactElement {
-  return (
-    <p className="m-0 flex items-center gap-1.5 text-xs text-foreground">
-      {colorHex ? <ColorChip hex={colorHex} /> : null}
-      <span className="flex-1">{t('modelFromDrawing.sample.label')}</span>
-      <Button type="button" variant="ghost" size="xs" onClick={onResample}>
-        {t('modelFromDrawing.sample.change')}
-      </Button>
-    </p>
-  );
-}
-
-/** Η πηγή «εικόνα υποβάθρου»: περίληψη, τοπικό OCR, είδος σχεδίου, «Τι διάβασα», ανάγνωση AI, κλίμακα. */
-function ImageSourceSections({ actions, imageSource, t }: Pick<ModelFromDrawingPanelProps, 'actions' | 'imageSource'> & {
-  readonly t: Translate;
-}): React.ReactElement {
-  return (
-    <>
-      <ImageSourceSummary view={imageSource} onResample={actions.onResample} t={t} />
-      <PlanOcrSection view={imageSource.ocr} actions={actions.ocr} t={t} />
-      <PlanDrawingKindSection view={imageSource.drawingKind} actions={actions.drawingKind} t={t} />
-      <PlanReadValuesSection rows={imageSource.readValues} absorbedMarks={imageSource.absorbedMarks} thumbnails={imageSource.readValueThumbnails} actions={actions.readValues} t={t} />
-      <PlanReadingSection available={imageSource.readingAvailable} readingAdopted={imageSource.readingAdopted} review={imageSource.review} actions={actions.reading} t={t} />
-      <PlanScaleCardSection view={imageSource.scale} actions={actions.scale} t={t} />
-    </>
-  );
-}
-
-function WallsStep({ state, actions, imageSource, t }: ModelFromDrawingPanelProps & { readonly t: Translate }): React.ReactElement | null {
-  const { proposal } = state;
-  if (!proposal) return null;
-  const fromImage = state.lineSource.kind === 'raster';
-  const locked = proposal.walls.length === 0 || (fromImage && !imageSource.calibrated);
-  return (
-    <>
-      {fromImage
-        ? <ImageSourceSections actions={actions} imageSource={imageSource} t={t} />
-        : <SceneSampleLine colorHex={state.wallColorHex} onResample={actions.onResample} t={t} />}
-      <StatusLegend proposal={proposal} t={t} />
-      <GroupsSection groups={proposal.groups} onConfirm={actions.onConfirmGroup} t={t} />
-      <DecisionsSection
-        proposal={proposal} focusedKey={state.focusedKey}
-        onSetUndecided={actions.onSetUndecided} onDiscardOrphaned={actions.onDiscardOrphanedDecisions}
-        onFocus={actions.onFocus} t={t}
-      />
-      <RejectedSection proposal={proposal} focusedKey={state.focusedKey} onFocus={actions.onFocus} t={t} />
-      <CoverageSection proposal={proposal} t={t} />
-      <LeftOutNote
-        count={countProposalByStatus(proposal).unconfirmed}
-        text={(count) => t('modelFromDrawing.leftOut', { count })} testId="mfd-left-out"
-      />
-      <RecognizedDimensionsSection summary={state.dimensionSummary} t={t} />
-      {fromImage ? (
-        <KeepRecognizedSection
-          dimensions={state.dimensionSummary} lines={state.lineSummary} tier={state.keepMinTier}
-          calibrated={imageSource.calibrated} actions={actions} t={t}
-        />
-      ) : null}
-      <Button
-        type="button" size="sm" disabled={locked} onClick={actions.onApprove}
-        data-testid="mfd-approve"
-      >
-        {t('modelFromDrawing.approve', { count: proposal.walls.length })}
-      </Button>
-    </>
-  );
-}
-
-export function ModelFromDrawingPanel({ state, actions, imageSource, pdfVectorImport }: ModelFromDrawingPanelProps): React.ReactElement | null {
+export function ModelFromDrawingPanel(props: ModelFromDrawingPanelProps): React.ReactElement | null {
+  const { state, actions, imageSource } = props;
   // `dxf-viewer-panels`: οι λόγοι «άκυρο όνομα επιπέδου» είναι τα ίδια κείμενα με τη μετονομασία layer (Σ1.3β).
-  const { t } = useTranslation(['dxf-viewer-shell', 'dxf-viewer-panels']);
+  // `common`: το «Κλείσιμο» του φύλλου (`buttons.close`) — δίνεται στην επιφάνεια ως `closeLabel`.
+  const { t } = useTranslation(['dxf-viewer-shell', 'dxf-viewer-panels', 'common']);
+  const viewport = useViewportClass();
+  const { current, select } = useModelFromDrawingStep(mfdSuggestedStep(state, imageSource));
   if (state.phase === 'closed') return null;
+
+  const statuses = mfdStepStatuses(state, imageSource);
+  const steps = MFD_STEP_ORDER.map((id) => ({
+    id, label: t(STEP_LABEL_KEY[id]), status: statuses[id], statusLabel: t(STEP_STATUS_KEY[statuses[id]]),
+  }));
+  const stepProps: StepProps = { ...props, t, onSelectStep: select };
   return (
-    <TopoReviewPanel
-      title={t('modelFromDrawing.title')}
+    <ModelFromDrawingSurface
+      viewport={viewport} title={t('modelFromDrawing.title')} onClose={actions.onClose} closeLabel={t('buttons.close')} t={t}
       icon={<Wand2 className="size-4" aria-hidden="true" />}
-      onClose={actions.onClose}
-      stackIndex={0}
-      testId="model-from-drawing-panel"
-    >
-      <section className="flex flex-col gap-2.5">
-        {state.phase === 'picking' ? (
-          <>
-            <p className="m-0 text-xs text-foreground" data-testid="mfd-pick-instruction" data-role={state.sampleRole}>
-              {state.sampleRole === 'opening'
-                ? t('modelFromDrawing.openings.pickInstruction')
-                : t('modelFromDrawing.pick.instruction')}
-            </p>
-            <Notice state={state} t={t} />
-            {state.sampleRole === 'wall'
-              ? <PdfVectorImportSection view={pdfVectorImport.view} actions={pdfVectorImport} t={t} />
-              : null}
-            {state.sampleRole === 'wall'
-              ? <ImageSourceStart view={imageSource} onRecognize={actions.onRecognizeImage} t={t} />
-              : null}
-            {state.sampleRole === 'wall' ? <OpeningsStart onStart={actions.onStartOpenings} t={t} /> : null}
-          </>
-        ) : (
-          <ReviewBody state={state} actions={actions} imageSource={imageSource} t={t} />
-        )}
-      </section>
-    </TopoReviewPanel>
+      rail={<StepRail steps={steps} currentId={current} onSelect={select} ariaLabel={t('modelFromDrawing.steps.label')} data-testid="mfd-steps" />}
+      body={<StepBody step={current} {...stepProps} />}
+      footer={hasFooter(current, state) ? (
+        <>
+          <Notice state={state} t={t} />
+          <StepAction step={current} {...stepProps} />
+        </>
+      ) : null}
+    />
   );
 }

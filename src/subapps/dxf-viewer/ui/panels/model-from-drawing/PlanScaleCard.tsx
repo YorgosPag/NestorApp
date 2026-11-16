@@ -24,6 +24,7 @@ import type {
 import type { RejectedScaleDimension } from '../../../bim/plan-recognition/fusion/scale-references';
 import { MUTED, SECTION_TITLE, type Translate } from './ModelFromDrawingSections';
 import { PlanScaleConfirmedBody } from './PlanScaleConfirmedBody';
+import { StepDetails } from './StepDetails';
 
 const KEY = 'modelFromDrawing.image.scale';
 
@@ -75,7 +76,7 @@ function RejectedList({ rejected, onHover, t }: {
 }
 
 function ScaleSummary({ proposal, t }: { readonly proposal: PlanScaleProposal; readonly t: Translate }): React.ReactElement {
-  const { solution, references, sigmaRel, replacesMmPerPixel } = proposal;
+  const { solution, references, replacesMmPerPixel } = proposal;
   const count = references.used.length;
   const proposed = Math.sqrt(solution.mmPerPixelX * solution.mmPerPixelY);
   return (
@@ -85,7 +86,6 @@ function ScaleSummary({ proposal, t }: { readonly proposal: PlanScaleProposal; r
           ? t(`${KEY}.uniform`, { mm: mm(solution.mmPerPixelX), count })
           : t(`${KEY}.perAxis`, { x: mm(solution.mmPerPixelX), y: mm(solution.mmPerPixelY), stretch: percent(solution.anisotropyRel), count })}
       </p>
-      {sigmaRel !== null ? <p className={MUTED}>{t(`${KEY}.sigma`, { sigma: percent(sigmaRel) })}</p> : null}
       {replacesMmPerPixel !== null ? (
         <p className="m-0 text-[11px] text-foreground" data-testid="mfd-scale-replaces">
           {t(`${KEY}.replaces`, {
@@ -169,11 +169,29 @@ function ProposalBody({ proposal, view, actions, t }: {
           })}</span>
         </p>
       ) : null}
-      <UsedList proposal={proposal} onHover={actions.onHover} t={t} />
-      <RejectedList rejected={proposal.references.rejected} onHover={actions.onHover} t={t} />
       {view.stale ? <p className="m-0 text-[11px] text-destructive" role="status" data-testid="mfd-scale-stale">{t(`${KEY}.stale`)}</p> : null}
       <ApplyControls proposal={proposal} applying={view.applying} actions={actions} t={t} />
+      <ProposalDetails proposal={proposal} onHover={actions.onHover} t={t} />
     </>
+  );
+}
+
+/**
+ * ADR-929 §6.25 — η αβεβαιότητα σ, οι διαστάσεις που μπήκαν (με το υπόλοιπό τους) και όσες έμειναν έξω (με το w)
+ * είναι η **απόδειξη** της πρότασης, όχι η απόφαση: ΜΕΤΑ το κουμπί, στις «Λεπτομέρειες υπολογισμού», κλειστές.
+ */
+function ProposalDetails({ proposal, onHover, t }: {
+  readonly proposal: PlanScaleProposal;
+  readonly onHover: PlanScaleActions['onHover'];
+  readonly t: Translate;
+}): React.ReactElement {
+  const { sigmaRel } = proposal;
+  return (
+    <StepDetails label={t('modelFromDrawing.details.scale')} testId="mfd-scale-details">
+      {sigmaRel !== null ? <p className={MUTED}>{t(`${KEY}.sigma`, { sigma: percent(sigmaRel) })}</p> : null}
+      <UsedList proposal={proposal} onHover={onHover} t={t} />
+      <RejectedList rejected={proposal.references.rejected} onHover={onHover} t={t} />
+    </StepDetails>
   );
 }
 
@@ -224,8 +242,11 @@ export function PlanScaleCardSection({ view, actions, t }: {
       {card.kind === 'proposal' ? <ProposalBody proposal={card} view={view} actions={actions} t={t} /> : null}
       {card.kind === 'confirmed' ? (
         <>
-          <PlanScaleConfirmedBody card={card} refining={refinement !== null} onRefine={actions.onRefine} onHover={actions.onHover} t={t} />
-          <RejectedList rejected={card.rejected} onHover={actions.onHover} t={t} />
+          {/* §6.25 — όσο η ευθυγράμμιση είναι ανοιχτή, οι απορρίψεις φαίνονται ΜΙΑ φορά: στη νέα πρόταση. */}
+          <PlanScaleConfirmedBody
+            card={card} refining={refinement !== null} onRefine={actions.onRefine} onHover={actions.onHover} t={t}
+            details={refinement === null ? <RejectedList rejected={card.rejected} onHover={actions.onHover} t={t} /> : null}
+          />
           {refinement !== null ? <RefinementBody refinement={refinement} view={view} actions={actions} t={t} /> : null}
         </>
       ) : null}

@@ -21,6 +21,7 @@ import { formatNumber, formatPercentage } from '@/lib/intl-formatting';
 import type { PlanScaleConfirmed } from '../../../systems/plan-recognition/plan-scale-card';
 import type { CalibrationAgreementRow } from '../../../bim/plan-recognition/fusion/calibration-agreement';
 import { MUTED, type Translate } from './ModelFromDrawingSections';
+import { StepDetails } from './StepDetails';
 
 const KEY = 'modelFromDrawing.image.scale';
 
@@ -45,12 +46,19 @@ function AgreementRows({ rows, onHover, t }: {
   );
 }
 
-/** Η επιβεβαιωμένη κατάσταση· το κουμπί ευθυγράμμισης κρύβεται όσο η ευθυγράμμιση είναι ανοιχτή. */
-export function PlanScaleConfirmedBody({ card, refining, onRefine, onHover, t }: {
+/**
+ * Η επιβεβαιωμένη κατάσταση· το κουμπί ευθυγράμμισης κρύβεται όσο η ευθυγράμμιση είναι ανοιχτή.
+ *
+ * ADR-929 §6.25 — ορατά μένουν η **ετυμηγορία** (η απόφαση) και η προέλευση· οι γραμμές ανά διάσταση και όσα
+ * απορρίφθηκαν (`details`) πάνε στις «Λεπτομέρειες υπολογισμού», κλειστές.
+ */
+export function PlanScaleConfirmedBody({ card, refining, onRefine, onHover, details, t }: {
   readonly card: PlanScaleConfirmed;
   readonly refining: boolean;
   readonly onRefine: () => void;
   readonly onHover: (textId: string | null) => void;
+  /** Επιπλέον διαγνωστικά στις ίδιες «Λεπτομέρειες» (π.χ. οι απορριφθείσες διαστάσεις). */
+  readonly details?: React.ReactNode;
   readonly t: Translate;
 }): React.ReactElement {
   const { agreement, origin } = card;
@@ -65,7 +73,10 @@ export function PlanScaleConfirmedBody({ card, refining, onRefine, onHover, t }:
         <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
         <span>{t(agreement.withinPrecision ? `${KEY}.agreementWithin` : `${KEY}.agreementBeyond`)}</span>
       </p>
-      <AgreementRows rows={agreement.rows} onHover={onHover} t={t} />
+      <StepDetails label={t('modelFromDrawing.details.scale')} testId="mfd-scale-details">
+        <AgreementRows rows={agreement.rows} onHover={onHover} t={t} />
+        {details}
+      </StepDetails>
       {origin !== null ? <p className={MUTED} data-testid="mfd-scale-origin" data-origin={origin}>{t(`${KEY}.origin.${origin}`)}</p> : null}
       {refining ? null : (
         <Button type="button" variant="outline" size="xs" onClick={onRefine} data-testid="mfd-scale-refine">

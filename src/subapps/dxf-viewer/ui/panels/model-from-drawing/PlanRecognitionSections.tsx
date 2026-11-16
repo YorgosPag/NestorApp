@@ -34,6 +34,7 @@ import type { PlanScaleView } from './PlanScaleCard';
 import type { PlanOcrView } from './PlanOcrSection';
 import type { PlanReadValueRow } from '../../../systems/plan-recognition/plan-read-values';
 import type { PlanDrawingKindView } from './PlanDrawingKindSection';
+import { StepDetails } from './StepDetails';
 
 /** Ό,τι χρειάζεται το πάνελ για την πηγή εικόνα — υπολογισμένο από τον host. */
 export interface ImageSourceView {
@@ -150,23 +151,17 @@ export function ImageSourceStart({ view, onRecognize, t }: {
   );
 }
 
-/** Στον έλεγχο, όταν η πηγή είναι η εικόνα: τι βρέθηκε, πόσο βέβαια, και αν μπορεί να γραφτεί. */
-export function ImageSourceSummary({ view, onResample, t }: {
+/**
+ * ADR-929 §6.25 — το υπόμνημα βεβαιότητας και οι εξαιρέσεις ρόλων είναι **διαγνωστικά**: δίπλα στην πηγή, αλλά
+ * κλειστά (Revit «Expand»). Η απόφαση του βήματος (κλίμακα) δεν τα χρειάζεται για να παρθεί.
+ */
+function RecognitionDetails({ view, counts, t }: {
   readonly view: ImageSourceView;
-  readonly onResample: () => void;
+  readonly counts: Readonly<Record<PlanConfidenceTier, number>>;
   readonly t: Translate;
-}): React.ReactElement | null {
-  if (!view.active || !view.countsByTier) return null;
-  const counts = view.countsByTier;
+}): React.ReactElement {
   return (
-    <section className="flex flex-col gap-1.5" data-testid="mfd-image-summary">
-      <p className="m-0 flex items-center gap-1.5 text-xs text-foreground">
-        <ImageIcon className="size-3.5 shrink-0" aria-hidden="true" />
-        <span className="flex-1">{t('modelFromDrawing.image.source')}</span>
-        <Button type="button" variant="ghost" size="xs" onClick={onResample}>
-          {t('modelFromDrawing.sample.change')}
-        </Button>
-      </p>
+    <StepDetails label={t('modelFromDrawing.details.recognition')} testId="mfd-image-details">
       <h4 className={SECTION_TITLE}>{t('modelFromDrawing.image.confidence.title')}</h4>
       <ul className="m-0 flex list-none flex-col gap-1 p-0" data-testid="mfd-image-legend">
         {PLAN_CONFIDENCE_ORDER.map((tier) => (
@@ -183,11 +178,32 @@ export function ImageSourceSummary({ view, onResample, t }: {
             {t('modelFromDrawing.image.lowExcluded', { count: view.excludedFromWalls.lowConfidence })}
           </p>
         : null}
+    </StepDetails>
+  );
+}
+
+/** Στον έλεγχο, όταν η πηγή είναι η εικόνα: τι βρέθηκε, πόσο βέβαια, και αν μπορεί να γραφτεί. */
+export function ImageSourceSummary({ view, onResample, t }: {
+  readonly view: ImageSourceView;
+  readonly onResample: () => void;
+  readonly t: Translate;
+}): React.ReactElement | null {
+  if (!view.active || !view.countsByTier) return null;
+  return (
+    <section className="flex flex-col gap-1.5" data-testid="mfd-image-summary">
+      <p className="m-0 flex items-center gap-1.5 text-xs text-foreground">
+        <ImageIcon className="size-3.5 shrink-0" aria-hidden="true" />
+        <span className="flex-1">{t('modelFromDrawing.image.source')}</span>
+        <Button type="button" variant="ghost" size="xs" onClick={onResample}>
+          {t('modelFromDrawing.sample.change')}
+        </Button>
+      </p>
       {view.calibrated
         ? null
         : <p className="m-0 text-[11px] text-foreground" role="status" data-testid="mfd-image-uncalibrated">
             {t('modelFromDrawing.image.needsCalibration')}
           </p>}
+      <RecognitionDetails view={view} counts={view.countsByTier} t={t} />
     </section>
   );
 }

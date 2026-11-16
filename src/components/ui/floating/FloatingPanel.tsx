@@ -45,6 +45,7 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFloatingPanelGeometry } from './useFloatingPanelGeometry';
 import { FloatingPanelResizeHandles } from './FloatingPanelResizeHandles';
+import { FloatingPanelFooter } from './FloatingPanelFooter';
 import {
   DEFAULT_MIN_PANEL_SIZE,
   type PanelPosition,
@@ -477,6 +478,7 @@ export const FloatingPanel = Object.assign(FloatingPanelRoot, {
   Content: FloatingPanelContent,
   Close: FloatingPanelClose,
   DragHandle: FloatingPanelDragHandle,
+  Footer: FloatingPanelFooter,
 });
 
 export {

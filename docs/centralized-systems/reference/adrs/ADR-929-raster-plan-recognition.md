@@ -3163,6 +3163,73 @@ Revit: το Scale είναι βήμα του undo. Για το Bluebeam δεν �
 ⚠️ **Δηλωμένο όριο**: το ιστορικό ζει στη μνήμη της καρτέλας (όπως κάθε εντολή του viewer)· μετά από ανανέωση η αναίρεση
 μιας βαθμονόμησης γίνεται με νέα βαθμονόμηση.
 
+### 6.25 Το πάνελ «Μοντέλο από το σχέδιο» ως οδηγός τριών βημάτων — μία ενέργεια, Λεπτομέρειες, παλέτα/φύλλο (2026-11-16) [Μ]
+
+**Πρόβλημα (Giorgio)**: «άναρχο συνονθύλευμα». Μετρημένο στον κώδικα: ~20 ενότητες σε **μία** στήλη 320×460 χωρίς
+ιεραρχία (`SECTION_TITLE` σε όλες), η κύρια ενέργεια («Δημιουργία τοίχων») **τελευταία** μετά από όλα και κυλά μακριά,
+διαγνωστικά (σ, w, sha256, κάλυψη, βεβαιότητα) στο ίδιο επίπεδο με τις αποφάσεις, **καμία** ένδειξη «πού είμαι».
+
+**Τι κάνουν οι μεγάλοι** [Π] (πηγές στο §10· ⚠️ όσες σημειώνονται «περίληψη» διαβάστηκαν μέσω περίληψης αναζήτησης,
+όχι ανοίγοντας τη σελίδα):
+- **NN/g** (ανοίχτηκε): progressive disclosure — το δευτερεύον σε δεύτερη οθόνη/επίπεδο, **≤ 2 επίπεδα**· *staged
+  disclosure* (οδηγός) για βήματα με λίγη αλληλεπίδραση, **προβληματικό όταν τα βήματα αλληλοεξαρτώνται** ⇒ εδώ
+  (η κλίμακα αλλάζει τους τοίχους) τα βήματα πρέπει να είναι **ελεύθερα** (μη-γραμμικός οδηγός).
+- **Revit** (Autodesk help): το «Expand» των προειδοποιήσεων και το `TaskDialog.ExpandedContent` (κρυφό από
+  προεπιλογή) — τα τεχνικά **στο ίδιο πλαίσιο, κλειστά**, όχι σε καθολική ρύθμιση· «Show» για εντοπισμό στο μοντέλο.
+- **Bluebeam / Togal** (περίληψη): κλίμακα **πρώτα** (ή Calibrate με 2 σημεία) → μία αναγνώριση → λίστα αποτελεσμάτων.
+  **CubiCasa** (περίληψη): γραμμική ροή με **μία** πύλη ελέγχου πριν το μη-αναστρέψιμο. **GitLab design system**
+  (περίληψη): ένα κύριο κουμπί ανά βήμα, με περιγραφικό κείμενο.
+- **Figma UI3** (περίληψη): σταθερή σειρά ενοτήτων· δεξί πάνελ με ρυθμιζόμενο πλάτος. **Revit/AutoCAD**: παλέτες που
+  αλλάζουν μέγεθος, layout στο προφίλ χρήστη (ήδη ADR-723).
+- **Apple HIG** (περίληψη): inspector = στήλη σε φαρδιά οθόνη, **sheet με detents** σε compact width, μη-αποκλειστικό.
+  **Material 3** standard bottom sheet: χωρίς scrim, συνυπάρχει με το κύριο περιεχόμενο (ήδη ADR-912 §12.17).
+- ❓ **Δεν επαληθεύτηκαν**: εντολή «τοίχοι από γραμμές» στο Revit 2025/26· ροή PDF→BIM του ArchiCAD· ροές Idealista /
+  magicplan· καθοδήγηση Material 3 για steppers. Δεν στηρίζεται τίποτα πάνω τους.
+
+**Απόφαση** (Giorgio: «βήματα» + «όπως οι μεγάλοι» + «φύλλο πυθμένα τώρα»):
+
+| Βήμα | Ορατό εξαρχής | «Λεπτομέρειες» (κλειστές) | Υποσέλιδο (καρφωμένο) |
+|---|---|---|---|
+| ① Πηγή & κλίμακα | πηγή · θέλει βαθμονόμηση · OCR · είδος σχεδίου · **κάρτα κλίμακας** (τιμή, προειδοποίηση, Εφαρμογή, ετυμηγορία) · «Τι διάβασα» · ανάγνωση AI (με τη μικρογραφία) | βεβαιότητα + εξαιρέσεις ρόλων · σ · διαστάσεις που μπήκαν/απορρίφθηκαν (w) · γραμμές συμφωνίας · μέγεθος + sha256 πακέτου | «Συνέχεια στους τοίχους» (ενεργό μόλις βαθμονομηθεί) |
+| ② Τοίχοι | υπόμνημα · ομάδες πάχους · θέλουν απόφαση · **Διαστάσεις που θα γραφτούν** · «Κράτησε…» | απορρίψεις με λόγο · κάλυψη (με **ένδειξη ανεξήγητων ΚΑΙ κλειστό**) | «μένουν έξω» + «Δημιουργία N τοίχων» (+ λόγος αν κλειδώνει) |
+| ③ Κουφώματα | δείγμα · υπόμνημα · ουρά «προς απόφαση» · ανεξήγητες | — | `OpeningApproval` |
+
+- **Ράγα** (`src/components/ui/step-rail.tsx`, νέο κοινό): `<nav><ol>` + `aria-current="step"`, κάθε βήμα **κουμπί**,
+  κατάσταση `done | attention | pending` με **σχήμα** (✓ · ⚠ · αριθμός) **και** κείμενο αναγνώστη οθόνης (CHECK 3.41 —
+  ποτέ μόνο χρώμα). Κολλημένη πάνω όσο κυλά το σώμα.
+- **Κατάσταση βήματος ΠΑΡΑΓΕΤΑΙ** (`model-from-drawing-steps.ts`): κανένα νέο πεδίο store. Το τοπικό είναι μόνο το
+  βήμα που **κοιτάζει** ο άνθρωπος (`useModelFromDrawingStep`): η επιλογή κρατά τη **βάση** της (το προτεινόμενο βήμα
+  τη στιγμή της επιλογής) ⇒ αυτόματη προώθηση **μόνο** όταν προχωρά η δουλειά (βαθμονόμηση ⇒ ②, εγγραφή τοίχων ⇒ ③),
+  χωρίς `useEffect` και χωρίς ενδιάμεση απόδοση με μπαγιάτικο βήμα.
+- **«Λεπτομέρειες»** (`StepDetails`, πάνω στο υπάρχον Radix `Collapsible`): `forceMount`· το κλειστό κρύβεται **μόνο** με CSS (`data-[state=closed]:hidden`) —
+  με `forceMount` το Radix **δεν** βάζει ποτέ `hidden` (μετρημένο στο `react-collapsible` 1.1.12), άρα το test ρωτά `data-state`·
+  προαιρετικό `hint` ορατό **και** κλειστό (Revit: το «Expand» λέει πόσα υπάρχουν) — κλειστό ≠ σιωπηλό.
+- **Μία κύρια ενέργεια ανά βήμα, στο υποσέλιδο**: νέα προαιρετική υποδοχή `FloatingPanel.Footer`
+  (`FloatingPanelFooter.tsx`) — αδελφό **μετά** το κυλιόμενο `Content`, άρα εξ ορισμού έξω από την κύλιση· οι 17
+  υπάρχοντες καταναλωτές ανεπηρέαστοι. Η ειδοποίηση της τελευταίας πράξης μένει δίπλα στην ενέργεια.
+- **Διπλότυπο που έφυγε**: σε ανοιχτή ευθυγράμμιση οι απορρίψεις φαίνονταν **δύο** φορές (επιβεβαιωμένη κάρτα + νέα
+  πρόταση)· τώρα μία (της νέας πρότασης).
+- **Μέγεθος / συσκευή** (`ModelFromDrawingSurface`, ερώτηση `useViewportClass`):
+  - φαρδιά ⇒ `TopoReviewPanel` με προαιρετικό `workspace`: **400×640** προεπιλογή, min 320×360, 8 λαβές, μόνιμη
+    γεωμετρία `dxf.model-from-drawing` (ADR-723)· οι 3 παλέτες της τοπογραφίας μένουν **ακριβώς** όπως ήταν·
+  - στενή ⇒ `SnapBottomSheet` (ADR-912): ματιά **30%** (ράγα + ενέργεια, **όχι** «κλειστό» — κλείνει μόνο με το δικό
+    του ✕), μισό 55% (ανοίγει εκεί), πλήρες 90%· χωρίς scrim — το σχέδιο μένει ζωντανό·
+  - «μετράω ακόμη» ⇒ τίποτα (ποτέ λάθος φλοιός στο πρώτο καρέ).
+- **Σειρά στο ①**: η κάρτα κλίμακας μπήκε **πριν** από «Τι διάβασα» και την ανάγνωση AI — το αποτέλεσμα πρώτα, η
+  απόδειξη και οι διορθώσεις από κάτω (Bluebeam/Togal: η κλίμακα είναι η απόφαση του βήματος).
+
+**Πέρα από τους μεγάλους**: (α) το κουμπί λέει πάντα **τι** γράφεται και **τι** μένει έξω, και **γιατί** κλειδώνει·
+(β) οι «Λεπτομέρειες» δηλώνουν το προβληματικό περιεχόμενό τους χωρίς να ανοίξουν· (γ) ελεύθερος οδηγός που
+προωθεί μόνος του **μόνο** μετά από επιτυχή πράξη.
+
+⚠️ **Δηλωμένα όρια**: (1) «Τοίχοι ✓» στηρίζεται στην ειδοποίηση `written`, που είναι η **τελευταία** πράξη — μια
+επόμενη πράξη τη σβήνει και το βήμα ξαναδείχνει αριθμό (ο βοηθός δεν κρατά ιστορικό εγγραφών). (2) Ο DXF editor
+**δεν** έχει ακόμη διάταξη κινητού (0 χρήσεις `useIsMobile`/`useViewportClass` στο subapp, μετρημένο): το φύλλο κάνει
+**αυτό** το πάνελ σωστό σε στενή οθόνη, όχι τον editor χρηστικό στο κινητό. (3) Οι γεωμετρίες (400×640, 30/55/90%)
+είναι αρχικές τιμές — να κριθούν ζωντανά.
+⏳ tests με έγκριση (`ModelFromDrawingPanel.test.tsx` νέα ενότητα «βήματα, Λεπτομέρειες, επιφάνεια»·
+`ModelFromDrawingOpeningSections.test.tsx` αποδίδει πλέον και το `OpeningApproval`) · ζωντανά μετά από push.
+
 ## 7. Εναλλακτικές που απορρίφθηκαν
 
 | Εναλλακτική | Γιατί όχι |
@@ -3239,6 +3306,15 @@ Revit: το Scale είναι βήμα του undo. Για το Bluebeam δεν �
 - BIMStruct3D, scan-to-BIM με ιστόγραμμα πυκνότητας 1D + DBSCAN (2026): https://arxiv.org/html/2604.24311v1
 - Lv et al., «Residential Floor Plan Recognition and Reconstruction», CVPR 2021, συμπληρωματικό (σταθερά πάχη τοίχων): https://openaccess.thecvf.com/content/CVPR2021/supplemental/Lv_Residential_Floor_Plan_CVPR_2021_supplemental.pdf
 - Graphisoft community, «Walls From 2d Plan» (ArchiCAD: Magic Wand με επιλεγμένο τύπο, όχι αυτόματη μετατροπή): https://community.graphisoft.com/t5/Modeling/Walls-From-2d-Plan/m-p/61977
+- §6.25 — NN/g, «Progressive Disclosure» (≤2 επίπεδα· staged disclosure και αλληλοεξαρτώμενα βήματα): https://www.nngroup.com/articles/progressive-disclosure/
+- §6.25 — Autodesk, «Viewing all Errors and Warnings Associated with an Error Message» (Expand / Show): https://help.autodesk.com/cloudhelp/2014/ENU/Revit/files/GUID-4CB045A4-D79E-4A05-B8E1-364E6DA6F285.htm
+- §6.25 — Revit API, `TaskDialog.ExpandedContent` (κρυφό από προεπιλογή): https://help.autodesk.com/cloudhelp/2026/ENU/Revit-API-MainReference/files/html/3aff0677-7049-fe66-f37b-fcfbd78f3872.htm
+- §6.25 (περίληψη) — Bluebeam, «Set Page Scale» (Calibrate με 2 σημεία): https://support.bluebeam.com/user-manual/menus/tools/set-page-scale.html
+- §6.25 (περίληψη) — Togal.AI, «The Togal button»: https://intercom.help/togalai-dc6fc0bc1374/en/articles/15602961-the-togal-button-togal-s-automated-takeoff
+- §6.25 (περίληψη) — GitLab design system, Stepper: https://design.gitlab.com/components/stepper
+- §6.25 (περίληψη) — CubiCasa, ροή σάρωσης με «Review scan»: https://kb.crmls.org/knowledgebase/cubicasa-how-to-scan-a-property/
+- §6.25 (περίληψη) — Figma, «Navigating UI3»: https://help.figma.com/hc/articles/23954856027159
+- §6.25 (περίληψη) — Apple HIG, Sheets (detents, μη-αποκλειστικό): https://developer.apple.com/design/human-interface-guidelines/sheets
 
 ## Changelog
 
@@ -3366,3 +3442,4 @@ Revit: το Scale είναι βήμα του undo. Για το Bluebeam δεν �
 | 2026-11-16 | **§6.24.1 — το toast «Αναίρεση» της βαθμονόμησης δεμένο στο ιστορικό, και ΕΝΑ στο DOM**: νέο `dxf-viewer/hooks/notifications/useCommandUndoToast.ts` (ζωντανό = κορυφή της στοίβας αναίρεσης, πάνω στον **έναν** `useUndoToasts`) · `useAnnounceCalibration` το χρησιμοποιεί · `useUndoToasts` + προαιρετικό `type` · αφαίρεση του ένθετου `NotificationProvider` από το `DxfViewerApp` (δεύτερος `<Toaster>` ⇒ κάθε toast του viewer διπλό). ⏳ tests με έγκριση · ζωντανά μετά από push. |
 | 2026-11-16 | **§6.24 — ζωντανή επαλήθευση «Βαθμονόμηση και εισαγωγή» → Ctrl+Z** (ΔΟΚΙΜΗ Κτήριο Β «1ος Όροφος», νέο υπόβαθρο `ΤΕΣΤ3.pdf`): πριν `calibration: null` · 8797 οντότητες → μετά βαθμονόμηση (8,824/8,821 mm/px) · 8850 → **Ctrl+Z** ⇒ `calibration: null`, `transform` 1/1/0/0, κανένα `scale`, 8797 οντότητες, 17 layers. Κλείνει το ⏳ της §6.24. |
 | 2026-11-16 | **§6.24.1 (5) — το πάνελ αποτελέσματος της εισαγωγής PDF ακολουθεί το ιστορικό**: νέο `useCommandStanding` (`top`/`undone`/`buried`) στο `useCommandUndoToast.ts`· `usePdfVectorImportWiring.useLiveOutcome`: αναιρέθηκε ⇒ το αποτέλεσμα φεύγει, καλύφθηκε ⇒ μένει χωρίς «Αναίρεση». + ADR-866 changelog (`useUndoToasts.type`). ⏳ tests με έγκριση · ζωντανά μετά από push. |
+| 2026-11-16 | **§6.25 — το πάνελ «Μοντέλο από το σχέδιο» ως οδηγός τριών βημάτων**: έρευνα (NN/g · Revit Expand/`ExpandedContent` · Bluebeam · Togal · CubiCasa · GitLab · Figma · Apple HIG), ράγα βημάτων `src/components/ui/step-rail.tsx` (νέο κοινό, ✓/⚠/αριθμός + κείμενο αναγνώστη οθόνης), παραγόμενη κατάσταση `model-from-drawing-steps.ts` + `useModelFromDrawingStep` (προώθηση μόνο μετά από επιτυχή πράξη, χωρίς effect), σώματα/ενέργειες `ModelFromDrawingStepBodies.tsx`, «Λεπτομέρειες» `StepDetails.tsx` (Radix `Collapsible`, `forceMount`, ορατό `hint`), νέα υποδοχή `FloatingPanel.Footer` (`FloatingPanelFooter.tsx`), `TopoReviewPanel` με προαιρετικό `workspace` (400×640, αλλαγή μεγέθους, μόνιμη γεωμετρία `dxf.model-from-drawing`) + `footer`, στενή οθόνη ⇒ `SnapBottomSheet` (30/55/90%) στο `ModelFromDrawingSurface.tsx`. Διαγνωστικά (βεβαιότητα, σ, w, συμφωνία, sha256, κάλυψη, απορρίψεις) σε «Λεπτομέρειες»· η έγκριση κουφωμάτων (`OpeningApproval`) στο υποσέλιδο· διπλές απορρίψεις σε ανοιχτή ευθυγράμμιση ⇒ μία. i18n `modelFromDrawing.steps|details|sheet` (el/en) + `src/types/i18n.ts`. Tests: jest 236/236 (`model-from-drawing` + `floating` + 3 του `layout`) · `jscpd:diff` καθαρό (15 αρχεία)· το test «Λεπτομέρειες» ρωτούσε `hidden`, που με `forceMount` το Radix δεν βάζει ποτέ ⇒ ρωτά πλέον `data-state`. |
