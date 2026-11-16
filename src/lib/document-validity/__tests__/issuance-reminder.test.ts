@@ -27,7 +27,7 @@ function record(recipient: IssuanceDeliveryOutcome | null): IssuanceAssignmentRe
       invitationId: 'diin_1', ownerContactId: 'cont_a', note: null, at: AT, byUid: 'user_1', verification: 'access-code',
       delivery: recipient === null ? null : { recipient, coOwners: {} }, reminders: null,
     },
-    decision: null, notice: null, response: null, quote: null, receipt: null, deliverySchedule: [], deliveryReminders: null, inspectionContacts: [], deliveryChangeRequests: [], cancellation: null,
+    decision: null, notice: null, response: null, quote: null, receipt: null, deliverySchedule: [], deliveryReminders: null, inspectionContacts: [], deliveryChangeRequests: [], advanceEvents: [], advanceReceipt: null, cancellation: null,
   };
 }
 

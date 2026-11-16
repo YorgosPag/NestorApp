@@ -106,7 +106,7 @@ function recordOf(actions: readonly IssuanceAction[]): IssuanceAssignmentRecord 
 const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_client', credential: INSPECTOR };
 const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha', quoteRevision: 1, ownerAttestation: null };
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null };
-const FIRM_TERMS: QuoteTerms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5 };
+const FIRM_TERMS: QuoteTerms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: null };
 const QUOTE: IssuanceAction = { kind: 'quote', terms: FIRM_TERMS };
 const INDICATIVE_QUOTE: IssuanceAction = { kind: 'quote', terms: { ...FIRM_TERMS, basis: 'indicative' } };
 /** §42 — πρόταση → αίτημα προσφοράς → προσφορά ⇒ `quoted` (η μπάλα στον υπεύθυνο). */

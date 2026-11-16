@@ -108,7 +108,7 @@ function professionalBody(expectedStage: IssuanceSendBody['expectedStage'] = 'pr
 
 const QUOTE_TERMS: QuoteTermsBody = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2099-12-31', scope: ['issuance'],
-  deliveryBusinessDays: 5,
+  deliveryBusinessDays: 5, advance: null,
 };
 
 /** Το αίτημα προσφοράς φεύγει στον επαγγελματία → το token του συνδέσμου του. */

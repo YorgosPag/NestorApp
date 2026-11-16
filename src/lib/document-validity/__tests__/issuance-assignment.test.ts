@@ -25,7 +25,7 @@ const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };
 const FIRM_TERMS: QuoteTerms = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false,
-  validUntil: '2026-12-31', scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5,
+  validUntil: '2026-12-31', scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5, advance: null,
 };
 const INDICATIVE_TERMS: QuoteTerms = { ...FIRM_TERMS, basis: 'indicative' };
 const QUOTE: IssuanceAction = { kind: 'quote', terms: FIRM_TERMS };

@@ -47,7 +47,12 @@ export type IssuanceActor =
    * ενεργή και **αυτής** της ανάθεσης το αποδεικνύει ο διακομιστής πριν από τον μειωτή· ο μειωτής του επιτρέπει **μόνο**
    * το αίτημα αλλαγής προθεσμίας — ποτέ απόφαση, απάντηση ή προσφορά (αυτές έχουν τη δική τους βάση).
    */
-  | { readonly kind: 'engagement'; readonly engagementId: string; readonly uid: string; readonly nowIso: string };
+  | { readonly kind: 'engagement'; readonly engagementId: string; readonly uid: string; readonly nowIso: string }
+  /**
+   * ADR-943 Κ-8 — ο διακομιστής, **αφού** διάβασε την αλήθεια στο API του παρόχου πληρωμών. Γράφει **μόνο** γεγονότα
+   * χρημάτων της προκαταβολής (`advance-funded` · `advance-released` · `advance-refunded`)· καμία απόφαση, καμία απάντηση.
+   */
+  | { readonly kind: 'system'; readonly source: 'payments'; readonly nowIso: string };
 
 /**
  * **Η βάση της απόφασης** (§28 Η-Β2) — παράγεται από **ποιος** έπραξε, ποτέ από το αίτημα:

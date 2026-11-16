@@ -28,6 +28,7 @@ import {
   REGISTRY_NUMBER_MAX,
   type IssuanceAction,
 } from './issuance-assignment';
+import { CANCELLATION_POLICIES } from './issuance-advance';
 import { DELIVERY_CHANGE_POLICY } from './issuance-delivery-change';
 import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from './issuance-inspection-contact';
 import { OWNER_ATTESTATION_POLICY, OWNER_VERDICTS, type IssuanceOwnerAttestation } from './issuance-owner-attestation';
@@ -63,6 +64,9 @@ const quoteRevision = z.number().int().min(1);
 export const deliveryBusinessDaysSchema = z.number().int().min(QUOTE_DELIVERY_BUSINESS_DAYS.min).max(QUOTE_DELIVERY_BUSINESS_DAYS.max);
 const positiveMinor = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 
+/** ADR-943 — η προκαταβολή των όρων· κοινό με το σχήμα του δίσκου. */
+export const advanceTermsSchema = z.object({ amountMinor: positiveMinor, policy: z.enum(CANCELLATION_POLICIES) });
+
 /**
  * §42 — οι όροι της προσφοράς (χωρίς τη σημείωση, που ταξιδεύει δίπλα τους). Το σχήμα κρίνει **μορφή**· το «ισχύει
  * από σήμερα» και το «επιτρέπεται αναθεώρηση» τα κρίνει ο μειωτής, με το ρολόι του διακομιστή.
@@ -76,6 +80,8 @@ export const quoteTermsBody = z.object({
   scope: z.array(z.enum(QUOTE_SCOPE_ITEMS)).min(1).max(QUOTE_SCOPE_ITEMS.length).transform((items) => [...new Set(items)]),
   /** §45 Φ2 — υποχρεωτικό σε κάθε νέα προσφορά: πρόσωπο + τιμή + **χρόνος** εγκρίνονται μαζί. */
   deliveryBusinessDays: deliveryBusinessDaysSchema,
+  /** ADR-943 Κ-3 — προκαταβολή + πολιτική ακύρωσης· `null` = καμία. Το «όχι πάνω από το σύνολο» το κρίνει ο μειωτής. */
+  advance: advanceTermsSchema.nullable().default(null),
 });
 
 export type QuoteTermsBody = z.infer<typeof quoteTermsBody>;

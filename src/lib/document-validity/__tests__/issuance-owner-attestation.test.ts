@@ -122,7 +122,7 @@ describe('ADR-915 §45.15 — ο μειωτής κρατά το τεκμήριο
     { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null },
     {
       kind: 'quote',
-      terms: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5 },
+      terms: { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: null },
     },
     { kind: 'request-approval', invitationId: 'diin_1', ownerContactId: 'cont_lead', note: null, verification: 'link' },
   ];

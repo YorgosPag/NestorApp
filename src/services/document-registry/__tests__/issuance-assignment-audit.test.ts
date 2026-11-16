@@ -25,7 +25,7 @@ const { EntityAuditService } = require('@/services/entity-audit.service') as { E
 
 const TERMS: QuoteTerms = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false,
-  validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5,
+  validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: null,
 };
 const SETUP: readonly IssuanceAction[] = [
   { kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-1' } },

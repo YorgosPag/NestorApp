@@ -48,7 +48,7 @@ const PROPOSE = {
 const NOTIFY = { action: 'notify', ...TARGET, expectedStage: 'proposed', channel: 'phone' } as const satisfies IssuanceAssignmentBody;
 const QUOTE_TERMS: QuoteTermsBody = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'],
-  deliveryBusinessDays: 5,
+  deliveryBusinessDays: 5, advance: null,
 };
 const RECORD_QUOTE = { action: 'record-quote', ...TARGET, expectedStage: 'sent', terms: QUOTE_TERMS, note: null } as const satisfies IssuanceAssignmentBody;
 const DECIDE = {

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🚧 IN PROGRESS — Φ0 (απόφαση + σχέδιο), 2026-11-16 |
+| **Status** | 🚧 IN PROGRESS — Φ0 ✅ · Φ1 τομέας υλοποιημένος (2026-11-16) · Φ2–Φ6 εκκρεμούν |
 | **Date** | 2026-11-16 |
 | **Category** | Document Registry / Payments |
 | **Canonical Location** | `src/lib/document-validity/issuance-advance*.ts` (τομέας) · `src/server/payments/` (κράτηση, πληρωτέα αντικείμενα) |
@@ -118,6 +118,26 @@ Checkout με `subject` (`invoice` | `issuance-advance`) · μητρώο `payabl
 Φ0 ADR · Φ1 τομέας · Φ2 γενίκευση checkout (η πληρωμή τιμολογίου αμετάβλητη) · Φ3 marketplace port + EveryPay ·
 Φ4 προσφορά → κράτηση + UI · Φ5 έναρξη/αποδέσμευση/ακύρωση/αντίρρηση + cron · Φ6 ζωντανή επαλήθευση sandbox.
 
+### 5.5 Φ1 — τι υλοποιήθηκε (2026-11-16)
+
+| Πού | Τι |
+|---|---|
+| `issuance-advance.ts` (**νέο**) | `CANCELLATION_POLICIES` · `RETAINED_AFTER_START_PERCENT` · `ADVANCE_POLICY` (48ω) · `AdvanceTerms` · `AdvanceEvent` (`funded` · `work-started` · `start-objected` · `released` · `refunded`) · **`advanceStateOf`** (η μία κρίση) · `isAdvanceReleaseDue` · `canObjectToStart` · `advanceCollectedMinor` · `refundDueOnCancelOf` · `finalRemainderMinor` |
+| `issuance-advance-reducer.ts` (**νέο**) | `reduceIssuanceAdvance` — actor ανά πράξη, στάδια ανά πράξη (επιστροφή/αποδέσμευση/ΜΑΡΚ και μετά από ακύρωση), ιδεμποτία από αναφορά παρόχου |
+| `issuance-actor.ts` | actor **`system`** (`source: 'payments'`) |
+| `issuance-assignment.ts` | `advanceEvents` · `advanceReceipt` στην εγγραφή· ο `reduceIssuance` αναθέτει τις πράξεις προκαταβολής· όροι με προκαταβολή ≤ σύνολο· **καμία αναθεώρηση** μετά την πρώτη κίνηση χρημάτων· τελικός ΜΑΡΚ = σύνολο − εισπραχθέν |
+| `issuance-quote.ts` | `QuoteTerms.advance` · `receiptMatchesQuote(…, advanceCollectedMinor)` |
+| `issuance-request.ts` · `issuance-assignment-schema.ts` | `advanceTermsSchema` (αίτημα + δίσκος, `default(null)`) · `advanceEvents` `default([])` · `advanceReceipt` `default(null)` — τα παλιά έγγραφα διαβάζονται χωρίς μετάπτωση |
+| `issuance-quote-draft.ts` | `advance: null` ώσπου να μπουν τα πεδία της φόρμας (Φ4) |
+| `__tests__/issuance-advance.test.ts` (**νέο**) + fixtures 17 σουιτών (`advance: null`) | άγκυρες Κ-3/4/5/7/8 |
+
+**Απόκλιση από το σχέδιο §5.1** (τεκμηριωμένη): αντί για `receipts[]` με σκοπό, **δύο ονομασμένες θέσεις** — `receipt`
+(τελικό, αμετάβλητο από το §42) και `advanceReceipt`. Οι σκοποί είναι ακριβώς δύο, ο τύπος τους κλειστός, και καμία
+αναγνώστρια του `receipt` δεν αλλάζει σημασία (καμία μετάπτωση).
+
+⚠️ **Προς επιβεβαίωση Giorgio**: τα ποσοστά παρακράτησης μετά την έναρξη — ευέλικτη **0%** · μέτρια **50%** · αυστηρή
+**100%** (`RETAINED_AFTER_START_PERCENT`, ένα σημείο). Πριν από την έναρξη: πάντα πλήρης επιστροφή (Κ-5).
+
 ## 6. Πού ξεπερνάμε τους μεγάλους
 1. Πολιτική ακύρωσης **μέσα στην ίδια έγκριση** με την τιμή (ο Airbnb τη δείχνει, δεν την «υπογράφει» μαζί με όρους που αναθεωρούνται).
 2. Υπαναχώρηση καταναλωτή **ρητή και καταγεγραμμένη** τη στιγμή της πληρωμής.
@@ -140,3 +160,4 @@ Checkout με `subject` (`invoice` | `issuance-advance`) · μητρώο `payabl
 | Ημερομηνία | Αλλαγή |
 |---|---|
 | 2026-11-16 | Φ0: έρευνα (ΚΦΑ 16, ν.4308 11/13, ΔΕΔ 843/2023, PSD2/EBA, EveryPay Marketplace, Airbnb/Upwork/Houzz/Stripe, Οδηγία 2011/83) · SSoT audit · αποφάσεις Κ-1…Κ-8 (Giorgio: αποδέσμευση στην έναρξη · τυποποιημένες πολιτικές · προμήθεια 0) · σχέδιο Φ1–Φ6. |
+| 2026-11-16 | Φ1: καθαρός τομέας (§5.5) — `issuance-advance.ts` · `issuance-advance-reducer.ts` · actor `system` · πεδία εγγραφής/σχήματος με defaults · τελικός ΜΑΡΚ με συμψηφισμό · σουίτα `issuance-advance.test.ts`. Απόκλιση: `advanceReceipt` αντί για `receipts[]`. |

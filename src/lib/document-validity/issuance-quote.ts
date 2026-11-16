@@ -21,6 +21,9 @@
 import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
 import { GREEK_VAT_RATE_PERCENTS, type GreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
 
+// Μόνο τύπος: ο όρος «προκαταβολή» ζει στο φύλλο του (ADR-943)· η κρίση του γίνεται εκεί, κανένας κύκλος σε χρόνο εκτέλεσης.
+import type { AdvanceTerms } from './issuance-advance';
+
 /** `indicative` = υπό αυτοψία (αναθεωρείται μία φορά) · `firm` = δεσμευτική. */
 export const QUOTE_BASES = ['indicative', 'firm'] as const;
 export type QuoteBasis = (typeof QUOTE_BASES)[number];
@@ -68,6 +71,11 @@ export interface QuoteTerms {
    * `null` = προσφορά πριν από τη Φ2 (καμία δέσμευση χρόνου — την ημερομηνία την ορίζει τότε το γραφείο, με ίχνος).
    */
   readonly deliveryBusinessDays: number | null;
+  /**
+   * ADR-943 Κ-3 — η προκαταβολή που ζητά ο επαγγελματίας, μέρος των όρων: εγκρίνεται **μαζί** με την τιμή, και η
+   * αναθεώρηση την ξαναθέτει σε έγκριση. `null` = καμία προκαταβολή (και κάθε προσφορά πριν από το ADR-943).
+   */
+  readonly advance: AdvanceTerms | null;
 }
 
 export interface IssuanceQuote extends QuoteTerms {
@@ -148,14 +156,22 @@ export function nextQuoteOf(current: IssuanceQuote | null, terms: QuoteTerms, su
   const prior: Omit<IssuanceQuote, 'previous'> = {
     basis: current.basis, amountMinor: current.amountMinor, vatRatePercent: current.vatRatePercent,
     vatIncluded: current.vatIncluded, validUntil: current.validUntil, scope: current.scope, note: current.note,
-    deliveryBusinessDays: current.deliveryBusinessDays, revision: current.revision, at: current.at, submission: current.submission,
+    deliveryBusinessDays: current.deliveryBusinessDays, advance: current.advance,
+    revision: current.revision, at: current.at, submission: current.submission,
   };
   return { ...terms, revision: current.revision + 1, at, submission, previous: prior };
 }
 
-/** Ταιριάζει το παραστατικό με την εγκεκριμένη τιμή; — ίδιο σύνολο, έγκυρος ΜΑΡΚ. */
-export function receiptMatchesQuote(receipt: Pick<IssuanceReceipt, 'mark' | 'totalMinor'>, quote: IssuanceQuote): boolean {
-  return MYDATA_MARK_PATTERN.test(receipt.mark) && receipt.totalMinor === quoteTotalsOf(quote).totalMinor;
+/**
+ * Ταιριάζει το **τελικό** παραστατικό με την εγκεκριμένη τιμή; — έγκυρος ΜΑΡΚ και σύνολο ίσο με τη συμφωνία **μείον** ό,τι
+ * εισπράχθηκε ήδη ως προκαταβολή (ADR-943 Κ-7, συμψηφισμός)· χωρίς προκαταβολή `advanceCollectedMinor` = 0.
+ */
+export function receiptMatchesQuote(
+  receipt: Pick<IssuanceReceipt, 'mark' | 'totalMinor'>,
+  quote: IssuanceQuote,
+  advanceCollectedMinor: MinorAmount,
+): boolean {
+  return MYDATA_MARK_PATTERN.test(receipt.mark) && receipt.totalMinor === quoteTotalsOf(quote).totalMinor - advanceCollectedMinor;
 }
 
 /** Από ποιο σύνολο και πάνω η εξόφληση σε ιδιώτη γίνεται μόνο ηλεκτρονικά (ν.5301/2026 — ενημερωτικό, όχι επιβολή). */

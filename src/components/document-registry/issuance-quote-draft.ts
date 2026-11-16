@@ -77,5 +77,7 @@ export function quoteTermsFromDraft(draft: QuoteDraft): QuoteTermsBody | null {
     validUntil: draft.validUntil,
     scope: [...draft.scope],
     deliveryBusinessDays,
+    // ADR-943 Φ1: ο τομέας δέχεται προκαταβολή· τα πεδία της φόρμας έρχονται στη Φ4.
+    advance: null,
   };
 }

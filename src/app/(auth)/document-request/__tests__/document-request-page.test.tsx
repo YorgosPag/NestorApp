@@ -138,7 +138,7 @@ describe('ADR-915 §28 — /document-request', () => {
     expect(answers).toHaveLength(1);
     expect(JSON.parse(String(answers[0]?.init.body))).toEqual({
       answer: 'quote', note: null, accessCode: null,
-      terms: { basis: 'firm', amountMinor: 10_050, vatRatePercent: 24, vatIncluded: false, validUntil: expect.any(String), scope: ['site-visit', 'issuance', 'registration'], deliveryBusinessDays: 7 },
+      terms: { basis: 'firm', amountMinor: 10_050, vatRatePercent: 24, vatIncluded: false, validUntil: expect.any(String), scope: ['site-visit', 'issuance', 'registration'], deliveryBusinessDays: 7, advance: null },
     });
   });
 

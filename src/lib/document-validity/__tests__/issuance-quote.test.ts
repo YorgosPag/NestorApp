@@ -19,7 +19,7 @@ import type { GreekVatRatePercent } from '@/subapps/accounting/services/config/v
 
 const TERMS: QuoteTerms = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false,
-  validUntil: '2026-12-31', scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5,
+  validUntil: '2026-12-31', scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5, advance: null,
 };
 const SUBMISSION: QuoteSubmission = { by: 'recorded', recordedByUid: 'uid_agent' };
 const NOW = '2026-10-17T09:00:00.000Z';
@@ -105,7 +105,7 @@ describe('ADR-915 §42 — nextQuoteOf', () => {
     expect(revised.at).toBe(later);
     expect(revised.previous).toEqual({
       basis: 'indicative', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31',
-      scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5, revision: 1, at: NOW, submission: SUBMISSION,
+      scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5, advance: null, revision: 1, at: NOW, submission: SUBMISSION,
     });
     expect(revised.previous).not.toHaveProperty('previous');
   });
@@ -116,15 +116,20 @@ describe('ADR-915 §42 — receiptMatchesQuote', () => {
   const approved = quote();
 
   it('ΜΑΡΚ 14 ψηφίων ⇒ false', () => {
-    expect(receiptMatchesQuote({ mark: '12345678901234', totalMinor: 12_400 }, approved)).toBe(false);
+    expect(receiptMatchesQuote({ mark: '12345678901234', totalMinor: 12_400 }, approved, 0)).toBe(false);
   });
 
   it('λάθος σύνολο ⇒ false', () => {
-    expect(receiptMatchesQuote({ mark: MARK, totalMinor: 10_000 }, approved)).toBe(false);
+    expect(receiptMatchesQuote({ mark: MARK, totalMinor: 10_000 }, approved, 0)).toBe(false);
   });
 
   it('ακριβές σύνολο (με ΦΠΑ) και έγκυρος ΜΑΡΚ ⇒ true', () => {
-    expect(receiptMatchesQuote({ mark: MARK, totalMinor: 12_400 }, approved)).toBe(true);
+    expect(receiptMatchesQuote({ mark: MARK, totalMinor: 12_400 }, approved, 0)).toBe(true);
+  });
+
+  it('ADR-943 Κ-7 — με εισπραγμένη προκαταβολή: το τελικό = σύνολο − προκαταβολή', () => {
+    expect(receiptMatchesQuote({ mark: MARK, totalMinor: 8_400 }, approved, 4_000)).toBe(true);
+    expect(receiptMatchesQuote({ mark: MARK, totalMinor: 12_400 }, approved, 4_000)).toBe(false);
   });
 });
 

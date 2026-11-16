@@ -30,7 +30,8 @@ import { ISSUANCE_DELIVERY_REMINDER_POLICY } from '@/lib/document-validity/issua
 import { DELIVERY_CHANGE_OUTCOMES, DELIVERY_CHANGE_POLICY } from '@/lib/document-validity/issuance-delivery-change';
 import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from '@/lib/document-validity/issuance-inspection-contact';
 import { OWNER_ATTESTATION_POLICY, OWNER_VERDICTS } from '@/lib/document-validity/issuance-owner-attestation';
-import { deliveryBusinessDaysSchema, isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
+import { advanceTermsSchema, deliveryBusinessDaysSchema, isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
+import { ADVANCE_POLICY, ADVANCE_RELEASE_BASES } from '@/lib/document-validity/issuance-advance';
 import { generateDeterministicDocumentIssuanceAssignmentId } from '@/services/enterprise-id.service';
 import { REGISTRY_PROPERTY_SCOPES, type RegistryPropertyScope } from './document-registry.types';
 
@@ -85,6 +86,8 @@ const quoteRevisionSchema = z.object({
   note,
   /** §45 Φ2 — προσφορές πριν από τη Φ2 δεν είχαν χρόνο παράδοσης: «καμία δέσμευση», που ήταν και η αλήθεια τους. */
   deliveryBusinessDays: deliveryBusinessDaysSchema.nullable().default(null),
+  /** ADR-943 — προσφορές πριν από το ADR-943 δεν ζητούσαν προκαταβολή: «καμία», που ήταν και η αλήθεια τους. */
+  advance: advanceTermsSchema.nullable().default(null),
   revision: z.number().int().min(1).max(QUOTE_MAX_REVISION),
   at: nonEmpty,
   submission: z.discriminatedUnion('by', [
@@ -98,6 +101,23 @@ const quoteSchema = quoteRevisionSchema.extend({ previous: quoteRevisionSchema.n
 const receiptSchema = z.object({
   mark: z.string().regex(MYDATA_MARK_PATTERN), issuedOn: isoDay, totalMinor: minor, at: nonEmpty, recordedByUid: nonEmpty,
 }).nullable().default(null);
+
+/** ADR-943 — έγγραφα πριν από το ADR-943 δεν είχαν κινήσεις προκαταβολής: «καμία», που ήταν και η αλήθεια τους. */
+const advanceEventsSchema = z.array(z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('funded'), amountMinor: minor, paymentReference: nonEmpty, withdrawalWaiverAt: nonEmpty.nullable(), at: nonEmpty }),
+  z.object({ kind: z.literal('work-started'), at: nonEmpty, byUid: nonEmpty, engagementId: nonEmpty }),
+  z.object({
+    kind: z.literal('start-objected'),
+    reason: z.string().min(1).max(ADVANCE_POLICY.objectionReasonMax),
+    at: nonEmpty,
+    objection: z.discriminatedUnion('by', [
+      z.object({ by: z.literal('office'), uid: nonEmpty }),
+      z.object({ by: z.literal('owner-link'), invitationId: nonEmpty }),
+    ]),
+  }),
+  z.object({ kind: z.literal('released'), amountMinor: minor, transferReference: nonEmpty, basis: z.enum(ADVANCE_RELEASE_BASES), at: nonEmpty }),
+  z.object({ kind: z.literal('refunded'), amountMinor: minor, reference: nonEmpty, at: nonEmpty }),
+])).max(ADVANCE_POLICY.maxEvents).default([]);
 
 /** §45 Φ2 — έγγραφα πριν από τη Φ2 δεν είχαν καταχωρίσεις προθεσμίας: «καμία», που ήταν και η αλήθεια τους. */
 const deliveryScheduleSchema = z.array(z.object({
@@ -169,6 +189,8 @@ const assignmentSchema = z.object({
   deliveryReminders: deliveryRemindersSchema,
   inspectionContacts: inspectionContactsSchema,
   deliveryChangeRequests: deliveryChangeRequestsSchema,
+  advanceEvents: advanceEventsSchema,
+  advanceReceipt: receiptSchema,
   cancellation: z.object({ byUid: nonEmpty, at: nonEmpty }).nullable(),
   updatedAt: nonEmpty,
 });
@@ -183,11 +205,11 @@ export function parseIssuanceAssignment(raw: unknown): DocumentIssuanceAssignmen
 export function issuanceRecordOf(assignment: DocumentIssuanceAssignment): IssuanceAssignmentRecord {
   const {
     professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
-    deliverySchedule, deliveryReminders, inspectionContacts, deliveryChangeRequests, cancellation,
+    deliverySchedule, deliveryReminders, inspectionContacts, deliveryChangeRequests, advanceEvents, advanceReceipt, cancellation,
   } = assignment;
   return {
     professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
-    deliverySchedule, deliveryReminders, inspectionContacts, deliveryChangeRequests, cancellation,
+    deliverySchedule, deliveryReminders, inspectionContacts, deliveryChangeRequests, advanceEvents, advanceReceipt, cancellation,
   };
 }
 

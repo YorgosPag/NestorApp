@@ -33,6 +33,8 @@ import {
   decisionBasisOf, quoteSubmissionOf, responseBasisOf,
   type InstructionChannel, type IssuanceActor, type IssuanceDecisionBasis, type IssuanceResponseBasis, type LinkVerification,
 } from './issuance-actor';
+import { advanceCollectedMinor, advanceStateOf, isAdvanceTermsValid, type AdvanceEvent } from './issuance-advance';
+import { isIssuanceAdvanceAction, reduceIssuanceAdvance, type IssuanceAdvanceAction } from './issuance-advance-reducer';
 import type { IssuanceDelivery } from './issuance-delivery';
 import {
   declinedDeliveryChange, requestedDeliveryChange, withDeliveryChangeAccepted,
@@ -44,7 +46,7 @@ import {
   type IssuanceScheduleDeliveryAction,
 } from './issuance-delivery-due';
 import {
-  areQuoteTermsValid, canReviseQuote, nextQuoteOf, receiptMatchesQuote,
+  areQuoteTermsValid, canReviseQuote, nextQuoteOf, quoteTotalsOf, receiptMatchesQuote,
   type IssuanceQuote, type IssuanceReceipt, type QuoteTerms,
 } from './issuance-quote';
 import type { IssuanceDeliveryReminders } from './issuance-delivery-reminder';
@@ -156,6 +158,10 @@ export interface IssuanceAssignmentRecord {
   readonly inspectionContacts: readonly IssuanceInspectionContactEntry[];
   /** §45.20 Φ6γ — τα αιτήματα αλλαγής προθεσμίας του μηχανικού, με τη σειρά τους· εκκρεμές = το τελευταίο χωρίς απάντηση. */
   readonly deliveryChangeRequests: readonly DeliveryChangeRequest[];
+  /** ADR-943 — τα γεγονότα της προκαταβολής, με τη σειρά τους· η κατάσταση παράγεται (`advanceStateOf`). Κενό = καμία κίνηση. */
+  readonly advanceEvents: readonly AdvanceEvent[];
+  /** ADR-943 Κ-7 — ο ΜΑΡΚ του παραστατικού προκαταβολής, ίσος με ό,τι εισπράχθηκε. */
+  readonly advanceReceipt: IssuanceReceipt | null;
   readonly cancellation: { readonly at: string; readonly byUid: string } | null;
 }
 
@@ -230,12 +236,14 @@ export type IssuanceAction =
   /** §45.20 Φ6γ — ο μηχανικός ζητά νέα ημερομηνία (μόνο actor `engagement`) · το γραφείο απορρίπτει με αιτιολογία. */
   | IssuanceRequestDeliveryChangeAction
   | IssuanceDeclineDeliveryChangeAction
+  /** ADR-943 — οι πράξεις της προκαταβολής· κρίνονται από τον δικό τους μειωτή (`./issuance-advance-reducer.ts`). */
+  | IssuanceAdvanceAction
   | { readonly kind: 'cancel' };
 
 export type IssuanceActionKind = IssuanceAction['kind'];
 
-/** Από ποια στάδια επιτρέπεται κάθε πράξη (η πρόταση κρίνεται χωριστά, {@link canProposeIssuance}). */
-const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose'>, readonly IssuanceStage[]>> = {
+/** Από ποια στάδια επιτρέπεται κάθε πράξη (η πρόταση και η προκαταβολή κρίνονται χωριστά). */
+const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose' | IssuanceAdvanceAction['kind']>, readonly IssuanceStage[]>> = {
   'request-approval': ['quoted'],
   decide: ['quoted'],
   // `ownerApproved` = παλιά ανάθεση που περιμένει ενημέρωση· `proposed` = αίτημα προσφοράς (§42).
@@ -258,6 +266,7 @@ const ENGAGEMENT_ACTIONS: ReadonlySet<IssuanceActionKind> = new Set(['request-de
 
 /** «Ποιος» πριν από «από πού»: κάθε actor κάνει μόνο τις δικές του πράξεις, σε **κανένα** στάδιο τις ξένες. */
 function actorMayAct(actor: IssuanceActor, kind: IssuanceActionKind): boolean {
+  if (actor.kind === 'system') return false; // ADR-943: μόνο πράξεις προκαταβολής, που κρίνονται πριν από εδώ.
   if (actor.kind === 'engagement') return ENGAGEMENT_ACTIONS.has(kind);
   if (ENGAGEMENT_ACTIONS.has(kind)) return false;
   return actor.kind === 'office' || LINK_ACTIONS.has(kind);
@@ -295,6 +304,8 @@ function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: str
     deliveryReminders: null,
     inspectionContacts,
     deliveryChangeRequests: [],
+    advanceEvents: [],
+    advanceReceipt: null,
     cancellation: null,
   };
 }
@@ -307,7 +318,7 @@ function sameProposal(state: IssuanceState, action: Extract<IssuanceAction, { ki
     && credential.registryNumber === action.credential.registryNumber;
 }
 
-type AdvancingAction = Exclude<IssuanceAction, { kind: 'propose' }>;
+type AdvancingAction = Exclude<IssuanceAction, { kind: 'propose' } | IssuanceAdvanceAction>;
 
 /** Οι πράξεις που κάνει **μόνο** το γραφείο — ο έλεγχος actor έγινε ήδη. */
 type OfficeOnlyAction = Exclude<AdvancingAction, {
@@ -335,12 +346,18 @@ function officeAdvanced(record: IssuanceAssignmentRecord, action: OfficeOnlyActi
   }
 }
 
-/** §42 — η προσφορά ή η μία αναθεώρηση. Ποτέ σε παλιά ανάθεση, ποτέ μετά το παραστατικό. */
+/** Αποδεκτοί όροι — §42 και (ADR-943) προκαταβολή όχι πάνω από το σύνολο της **ίδιας** προσφοράς. */
+function termsAccepted(terms: QuoteTerms, nowIso: string): boolean {
+  return areQuoteTermsValid(terms, conveyanceToday(new Date(nowIso)))
+    && (terms.advance === null || isAdvanceTermsValid(terms.advance, quoteTotalsOf(terms).totalMinor));
+}
+
+/** §42 — η προσφορά ή η μία αναθεώρηση. Ποτέ σε παλιά ανάθεση, ποτέ μετά το παραστατικό ή την πρώτη κίνηση προκαταβολής. */
 function quoted(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: Extract<AdvancingAction, { kind: 'quote' }>, actor: IssuanceActor): IssuanceReduction {
-  if (isLegacyIssuance(record) || record.receipt !== null) return { ok: false, refusal: 'transition-refused' };
+  if (isLegacyIssuance(record) || record.receipt !== null || record.advanceEvents.length > 0) return { ok: false, refusal: 'transition-refused' };
   const revising = stage === 'accepted';
   if (revising && (record.quote === null || !canReviseQuote(record.quote))) return { ok: false, refusal: 'terms-refused' };
-  if (!areQuoteTermsValid(action.terms, conveyanceToday(new Date(actor.nowIso)))) return { ok: false, refusal: 'terms-refused' };
+  if (!termsAccepted(action.terms, actor.nowIso)) return { ok: false, refusal: 'terms-refused' };
   const submission = quoteSubmissionOf(record.notice, actor);
   if (submission === null) return { ok: false, refusal: 'actor-refused' };
   return { ok: true, record: { ...record, quote: nextQuoteOf(record.quote, action.terms, submission, actor.nowIso) }, changed: true };
@@ -370,7 +387,7 @@ function decided(record: IssuanceAssignmentRecord, action: Extract<AdvancingActi
 /** §42 — το παραστατικό δένεται **μόνο** με το σύνολο της εγκεκριμένης αναθεώρησης. */
 function receipted(record: IssuanceAssignmentRecord, action: Extract<AdvancingAction, { kind: 'record-receipt' }>, uid: string, at: string): IssuanceReduction {
   if (record.quote === null) return { ok: false, refusal: 'transition-refused' };
-  if (!receiptMatchesQuote(action, record.quote)) return { ok: false, refusal: 'receipt-mismatch' };
+  if (!receiptMatchesQuote(action, record.quote, advanceCollectedMinor(advanceStateOf(record)))) return { ok: false, refusal: 'receipt-mismatch' };
   const receipt: IssuanceReceipt = { mark: action.mark, issuedOn: action.issuedOn, totalMinor: action.totalMinor, at, recordedByUid: uid };
   return { ok: true, record: { ...record, receipt }, changed: true };
 }
@@ -461,6 +478,7 @@ export function reduceIssuance(
     const carried = state.kind === 'open' ? state.record.inspectionContacts : [];
     return { ok: true, record: proposed(action, actor.uid, actor.nowIso, carried), changed: true };
   }
+  if (isIssuanceAdvanceAction(action)) return reduceIssuanceAdvance(current, action, actor); // ADR-943
   // «Ποιος» πριν από «από πού»: ο σύνδεσμος δεν κάνει πράξη του γραφείου, η συμμετοχή μόνο αίτημα — σε **κανένα** στάδιο.
   if (!actorMayAct(actor, action.kind)) return { ok: false, refusal: 'actor-refused' };
   if (state.kind !== 'open' || !ALLOWED_FROM[action.kind].includes(state.stage)) {

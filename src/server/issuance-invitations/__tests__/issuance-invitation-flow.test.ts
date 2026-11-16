@@ -113,7 +113,7 @@ function body(overrides: Partial<IssuanceSendBody> = {}): IssuanceSendBody {
 
 const QUOTE_TERMS: QuoteTermsBody = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance', 'registration'],
-  deliveryBusinessDays: 5,
+  deliveryBusinessDays: 5, advance: null,
 };
 /** §42 — οι απαντήσεις του υπευθύνου κρίνουν **την αναθεώρηση που είδε** (εδώ: την πρώτη). */
 const approveWith = (accessCode: string | null = null): IssuanceLinkAnswerBody => ({ answer: 'approve', note: null, accessCode, quoteRevision: 1, ownerAttestation: null });
