@@ -43,6 +43,15 @@ import { useDateFnsLocale } from '@/i18n/date-fns-locale';
 // PROPS
 // ============================================================================
 
+/** Η πηγή του γεγονότος — κυριολεκτικά κλειδιά ανά πηγή (CHECK 3.34). */
+function sourceLabel(t: ReturnType<typeof useTranslation>['t'], source: CalendarEvent['source']): string {
+  switch (source) {
+    case 'task': return t('calendarPage.source.task');
+    case 'appointment': return t('calendarPage.source.appointment');
+    case 'document-issuance': return t('calendarPage.source.documentIssuance');
+  }
+}
+
 interface CalendarEventDialogProps {
   event: CalendarEvent | null;
   open: boolean;
@@ -68,9 +77,10 @@ export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: C
   if (!event) return null;
 
   const _colorScheme = CALENDAR_EVENT_COLORS[event.eventType];
+  // ADR-915 §45 Φ4 — πηγή εκτός CRM ⇒ το πρωτότυπο είναι εκεί που λέει το ίδιο το γεγονός (`href`).
   const originalLink = event.source === 'task'
     ? typedHref(`/crm/tasks/${event.entityId}`)
-    : null;
+    : event.href ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -133,7 +143,7 @@ export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: C
             )}
             <Badge variant="secondary">
               <User className={`${iconSizes.xs} ${sp.margin.right.xs}`} />
-              {event.source === 'task' ? t('calendarPage.source.task') : t('calendarPage.source.appointment')}
+              {sourceLabel(t, event.source)}
             </Badge>
           </section>
 

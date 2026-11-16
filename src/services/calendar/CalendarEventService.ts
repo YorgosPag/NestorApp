@@ -3,7 +3,8 @@
  * ENTERPRISE: CALENDAR EVENT SERVICE
  * =============================================================================
  *
- * Merges Tasks + Appointments into a unified CalendarEvent[] for the calendar UI.
+ * Merges Tasks + Appointments (+ ADR-915 §45 Φ4: delivery due dates of open document-issuance assignments, read-only)
+ * into a unified CalendarEvent[] for the calendar UI.
  *
  * Data Flow:
  *   Firestore tasks → TasksRepository.getAll() → CrmTask[]
@@ -17,7 +18,8 @@
 
 import { TasksRepository } from '@/services/crm/tasks/repositories/TasksRepository';
 import { AppointmentsRepository } from './AppointmentsRepository';
-import { taskToCalendarEvent, appointmentToCalendarEvent } from './mappers';
+import { taskToCalendarEvent, appointmentToCalendarEvent, issuanceOpenItemToCalendarEvent } from './mappers';
+import { fetchIssuanceOpenItems } from '@/services/document-registry/document-registry.client';
 import type { CalendarEvent } from '@/types/calendar-event';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -64,10 +66,12 @@ export async function getCalendarEvents(
   const tasks = getTasksRepository();
   const appointments = getAppointmentsRepository();
 
-  // Fetch in parallel — graceful degradation: if one source fails, show the other
-  const [taskResult, appointmentResult] = await Promise.allSettled([
+  // Fetch in parallel — graceful degradation: if one source fails, show the others.
+  // ADR-915 §45 Φ4 — οι αναθέσεις του μητρώου ανήκουν στο γραφείο, όχι σε χρήστη: μόνο στην προβολή «όλων».
+  const [taskResult, appointmentResult, issuanceResult] = await Promise.allSettled([
     userId ? tasks.getByUser(userId) : tasks.getAll(),
     appointments.getByDateRange(start, end),
+    userId ? Promise.resolve(null) : fetchIssuanceOpenItems(),
   ]);
 
   const taskList = taskResult.status === 'fulfilled' ? taskResult.value : [];
@@ -79,6 +83,13 @@ export async function getCalendarEvents(
   if (appointmentResult.status === 'rejected') {
     logger.warn('Appointments fetch failed', { reason: appointmentResult.reason });
   }
+  if (issuanceResult.status === 'rejected') {
+    logger.warn('Document-issuance open items fetch failed', { reason: issuanceResult.reason });
+  }
+  const issuanceItems = issuanceResult.status === 'fulfilled' && issuanceResult.value !== null ? issuanceResult.value.items : [];
+  const issuanceEvents = issuanceItems
+    .map((item) => issuanceOpenItemToCalendarEvent(item, null))
+    .filter((e): e is CalendarEvent => e !== null && e.start >= start && e.start <= end);
 
   // Map to CalendarEvent, filtering out entries without dates
   const taskEvents = taskList
@@ -95,7 +106,7 @@ export async function getCalendarEvents(
   );
 
   // Merge and sort by start date
-  const allEvents = [...filteredTaskEvents, ...appointmentEvents];
+  const allEvents = [...filteredTaskEvents, ...appointmentEvents, ...issuanceEvents];
   allEvents.sort((a, b) => a.start.getTime() - b.start.getTime());
 
   return allEvents;

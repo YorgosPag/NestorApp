@@ -32,6 +32,7 @@ import type FullCalendar from '@fullcalendar/react';
 import type { EventMountArg } from '@fullcalendar/core';
 import { updateTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import type { CalendarEvent } from '@/types/calendar-event';
+import { isCalendarEventEditable } from '@/services/calendar/calendar-event-editability';
 import { daysInMonth } from '@/lib/date/calendar-arithmetic';
 
 // ============================================================================
@@ -187,7 +188,7 @@ export function useCalendarCrossMonthDrag({
       if (!isOutsideLeft && !isOutsideRight) return;
 
       const ev = eventsRef.current.find((ce) => ce.id === eventId);
-      if (!ev || ev.source === 'appointment') return;
+      if (!ev || !isCalendarEventEditable(ev.source)) return;
 
       const newDate = addMonths(ev.start, isOutsideLeft ? -1 : 1);
 

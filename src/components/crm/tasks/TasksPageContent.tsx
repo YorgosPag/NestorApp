@@ -20,6 +20,7 @@ import { subMonths, addMonths } from 'date-fns';
 
 import { TasksTab, type ActivityItem } from '@/components/crm/dashboard/TasksTab';
 import { TaskDetailPanel } from './TaskDetailPanel';
+import { RegistryOpenItemsSection } from './RegistryOpenItemsSection';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn, getSpacingClass } from '@/lib/design-system';
 import { useAuth } from '@/auth/contexts/AuthContext';
@@ -181,6 +182,9 @@ export function TasksPageContent() {
         onFiltersChange={setFilters}
         defaultFilters={defaultTaskFilters}
       />
+
+      {/* ADR-915 §45 Φ4 — οι αναθέσεις του μητρώου λήξεων, μόνο για ανάγνωση (κάτοχος το μητρώο, όχι το CRM). */}
+      <RegistryOpenItemsSection />
 
       <ListContainer>
         {/* Desktop split layout */}

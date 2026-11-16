@@ -226,6 +226,13 @@
     }
   },
   "tasks": {
+    "registryItems": {
+      "heading": "From the document registry",
+      "open": "{count, plural, one {# document issuance in progress} other {# document issuances in progress}}",
+      "late": "{count, plural, one {# is late} other {# are late}}",
+      "hint": "They change only from the registry; due dates appear in the calendar.",
+      "action": "Open in registry"
+    },
     "title": "Activities",
     "description": "Manage your tasks and appointments",
     "newTask": "New Task",

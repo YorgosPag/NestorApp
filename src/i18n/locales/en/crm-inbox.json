@@ -35,7 +35,8 @@
     },
     "source": {
       "task": "Task",
-      "appointment": "Appointment"
+      "appointment": "Appointment",
+      "documentIssuance": "Document registry — document delivery"
     },
     "dialog": {
       "viewTitle": "Event Details",

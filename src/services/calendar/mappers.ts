@@ -14,6 +14,8 @@ import type { AppointmentDocument } from '@/types/appointment';
 import type { CalendarEvent, CalendarEventType } from '@/types/calendar-event';
 import { normalizeToDate, normalizeCalendarDay } from '@/lib/date-local';
 import { appointmentStartAt } from '@/services/appointments/appointment-schedule';
+import { documentExpiryHref } from '@/lib/document-validity/document-registry-view';
+import type { IssuanceOpenItem } from '@/lib/document-validity/issuance-open-item';
 
 // ============================================================================
 // HELPERS
@@ -148,5 +150,36 @@ export function appointmentToCalendarEvent(appt: AppointmentDocument): CalendarE
     assignedTo: appt.assignedTo ?? '',
     status: appt.status ?? (flat['status'] as string | undefined) ?? 'approved',
     companyId: appt.companyId,
+  };
+}
+
+// ============================================================================
+// ADR-915 §45 Φ4 — ANAΘΕΣΗ ΕΚΔΟΣΗΣ (ΜΗΤΡΩΟ ΛΗΞΕΩΝ) → CALENDAR EVENT
+// ============================================================================
+
+/**
+ * Η προθεσμία παράδοσης μιας ανοιχτής ανάθεσης ως ολοήμερο γεγονός. `null` χωρίς προθεσμία (Procore: χωρίς ημερομηνία
+ * ⇒ μόνο στη λίστα, ποτέ στο ημερολόγιο). Τίτλος από **δεδομένα** (ακίνητο · επαγγελματίας) — καμία μετάφραση εδώ.
+ */
+export function issuanceOpenItemToCalendarEvent(item: IssuanceOpenItem, companyId: string | null): CalendarEvent | null {
+  if (item.dueOn === null) return null;
+  const start = normalizeToDate(item.dueOn);
+  if (!start) return null;
+  const title = [item.propertyName, item.professionalName].filter((part): part is string => part !== null).join(' · ');
+  return {
+    id: item.id,
+    title: title === '' ? item.key : title,
+    start,
+    end: start,
+    allDay: true,
+    source: 'document-issuance',
+    eventType: 'document',
+    entityId: item.key,
+    description: '',
+    assignedTo: '',
+    status: item.lateness.tier,
+    companyId,
+    // Το πάνελ της γραμμής ανοίγει από τη διεύθυνση — η «Υπενθύμιση» είναι ήδη εκεί.
+    href: documentExpiryHref(undefined, { doc: item.key }),
   };
 }

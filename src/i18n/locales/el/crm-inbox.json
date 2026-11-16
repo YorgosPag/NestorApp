@@ -35,7 +35,8 @@
     },
     "source": {
       "task": "Εργασία",
-      "appointment": "Ραντεβού"
+      "appointment": "Ραντεβού",
+      "documentIssuance": "Μητρώο λήξεων — παράδοση εγγράφου"
     },
     "dialog": {
       "viewTitle": "Λεπτομέρειες Γεγονότος",

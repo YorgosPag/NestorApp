@@ -37,6 +37,7 @@ import type {
 } from '@fullcalendar/core';
 
 import type { CalendarEvent } from '@/types/calendar-event';
+import { isCalendarEventEditable } from '@/services/calendar/calendar-event-editability';
 import { CALENDAR_EVENT_COLORS } from './calendar-event-colors';
 import { CalendarEventDialog } from './CalendarEventDialog';
 import { CalendarCreateDialog } from './CalendarCreateDialog';
@@ -172,7 +173,7 @@ export function CrmCalendar({
           start: e.start,
           end: e.end,
           allDay: e.allDay,
-          editable: e.source !== 'appointment',
+          editable: isCalendarEventEditable(e.source),
           backgroundColor: colors.bg,
           borderColor: colors.border,
           textColor: colors.text,

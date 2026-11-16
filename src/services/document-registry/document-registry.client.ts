@@ -19,6 +19,7 @@ import type { UpkeepDeclarationBody } from '@/lib/document-validity/upkeep-decla
 import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
 import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
 import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
+import type { IssuanceOpenItemsResponse } from '@/lib/document-validity/issuance-open-item';
 import type { IssuancePreview } from '@/types/issuance-invitation';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
@@ -171,6 +172,14 @@ export async function sendIssuanceSpaceInvitation(
   } catch (cause) {
     return { kind: 'failed', code: logActionFailure('Ο νέος σύνδεσμος εισόδου δεν στάλθηκε', cause, { documentKind: body.documentKind }) };
   }
+}
+
+/** ADR-915 §45 Φ4 — οι ανοιχτές αναθέσεις ως εκκρεμότητες (ημερολόγιο · εργασίες CRM): ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_OPEN_ITEMS_URL = `${DOCUMENT_REGISTRY_URL}/open-items`;
+
+/** Πετά στην αποτυχία — ο καλών (ημερολόγιο) υποβαθμίζεται ομαλά, όπως με κάθε άλλη πηγή του (`Promise.allSettled`). */
+export function fetchIssuanceOpenItems(): Promise<IssuanceOpenItemsResponse> {
+  return apiClient.get<IssuanceOpenItemsResponse>(ISSUANCE_OPEN_ITEMS_URL);
 }
 
 /** ADR-915 §45.15 (1β-γ-2) — «Εφαρμογή στην επαφή» της διόρθωσης ΑΦΜ του ιδιοκτήτη: ΕΝΑ σημείο για τη διαδρομή. */

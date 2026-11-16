@@ -11,12 +11,17 @@
  * @see AppointmentDocument in types/appointment.ts
  */
 
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
+
 // ============================================================================
 // SOURCE & TYPE ENUMS
 // ============================================================================
 
-/** Tracks where a calendar event originated */
-export type CalendarEventSource = 'task' | 'appointment';
+/**
+ * Tracks where a calendar event originated. ADR-915 §45 Φ4 — `document-issuance`: η προθεσμία παράδοσης μιας ανάθεσης
+ * έκδοσης του μητρώου λήξεων (προβολή, ΟΧΙ εργασία· κάτοχος το μητρώο ⇒ μόνο ανάγνωση εδώ).
+ */
+export type CalendarEventSource = 'task' | 'appointment' | 'document-issuance';
 
 /** Event type for color coding in calendar views */
 export type CalendarEventType =
@@ -92,4 +97,10 @@ export interface CalendarEvent {
 
   /** Project display name (resolved from projectId) */
   projectName?: string;
+
+  /**
+   * ADR-915 §45 Φ4 — πού ζει το πρωτότυπο όταν **δεν** είναι οντότητα του CRM (π.χ. η γραμμή του μητρώου λήξεων με το
+   * πάνελ της ανοιχτό). Το «Άνοιγμα» του διαλόγου πηγαίνει εκεί.
+   */
+  href?: WorkspaceHref;
 }
