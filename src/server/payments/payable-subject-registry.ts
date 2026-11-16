@@ -13,6 +13,7 @@ import 'server-only';
  */
 
 import { recordInvoiceMovement } from '@/server/accounting/payments/invoice-payable-subject';
+import { recordIssuanceAdvanceMovement } from '@/services/document-registry/issuance-advance-payment.server';
 
 import type { PayableSubject } from './payable-subject';
 import type { PaymentCheckoutRecord } from './payment-checkout-store';
@@ -25,7 +26,12 @@ export type PayableMovementOutcome =
   /** Η κίνηση υπήρχε ήδη (ίδια αναφορά παρόχου) — καμία εγγραφή. */
   | 'duplicate'
   /** Χρήματα για αντικείμενο που δεν βρέθηκε — χρειάζεται άνθρωπο (ο handler το καταγράφει ως σφάλμα). */
-  | 'subject-absent';
+  | 'subject-absent'
+  /**
+   * ADR-943 §5.9 — ο γραφέας **αρνήθηκε** τα χρήματα (π.χ. προκαταβολή για ανάθεση που ακυρώθηκε στο μεταξύ, ή άλλο ποσό
+   * από το εγκεκριμένο). Τα χρήματα μπήκαν· χρειάζεται άνθρωπο (ή την επιστροφή της Φ5) — ο handler το καταγράφει ως σφάλμα.
+   */
+  | 'subject-refused';
 
 /** Η είσοδος ενός handler: η συνεδρία, το αντικείμενό της (ήδη στενεμένο στο είδος), η κίνηση και ο πάροχος. */
 export interface PayableMovementInput<S extends PayableSubject = PayableSubject> {
@@ -43,5 +49,7 @@ export function recordPayableMovement(
   switch (subject.kind) {
     case 'invoice':
       return recordInvoiceMovement({ checkout, subject, movement, provider });
+    case 'issuance-advance':
+      return recordIssuanceAdvanceMovement({ checkout, subject, movement, provider });
   }
 }

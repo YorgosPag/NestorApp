@@ -51,4 +51,9 @@ export abstract class AccountingIdGenerators extends DocumentRegistryIdGenerator
   generateDeterministicPaymentPayeeId(seed: string): string {
     return this.mintDeterministicV4Id(P.PAYMENT_PAYEE, `payment-payee:${seed}`);
   }
+
+  /** ADR-943 §5.9 — ο κάτοχος μιας μίσθωσης κρατημένης μεταφοράς: μοναδικός ανά καλούντα (webhook · cron · επιστροφή). */
+  generatePaymentTransferLeaseHolderId(): string {
+    return this.generateId(P.PAYMENT_TRANSFER_LEASE).id;
+  }
 }

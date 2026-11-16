@@ -19,6 +19,7 @@ import { ISSUER_QUALIFICATIONS } from '@/config/document-validity/document-issue
 import { DOCUMENT_KINDS } from '@/config/document-validity/document-validity';
 import { isValidGreekVat } from '@/lib/validation/greek-vat-number';
 import { GREEK_VAT_RATE_PERCENTS, type GreekVatRatePercent } from '@/subapps/accounting/services/config/vat-rates';
+import { ONLINE_PAYMENT_METHODS } from '@/subapps/accounting/types/online-payment';
 
 import {
   INSTRUCTION_CHANNELS,
@@ -225,6 +226,18 @@ export type IssuanceLinkAnswerBody = z.infer<typeof issuanceLinkAnswerBody>;
 export const issuanceLinkUnlockBody = z.object({ accessCode: typedAccessCode });
 
 export type IssuanceLinkUnlockBody = z.infer<typeof issuanceLinkUnlockBody>;
+
+/**
+ * ADR-943 §5.9 — η έναρξη πληρωμής προκαταβολής: τρόπος, γλώσσα, και το **ρητό αίτημα έναρξης** ως δύο `true` (Κ-6 ·
+ * ν.2251/1994 3ι §4 α ii · 3ιβ (α)) — `false` ή απουσία ⇒ το σώμα απορρίπτεται, η πληρωμή δεν ξεκινά. **Ποτέ** ποσό.
+ */
+export const issuanceAdvanceCheckoutBody = z.object({
+  method: z.enum(ONLINE_PAYMENT_METHODS),
+  locale: z.enum(['el', 'en']),
+  startRequested: z.literal(true),
+  acknowledgesWithdrawalLoss: z.literal(true),
+  accessCode: typedAccessCode.nullable().default(null),
+}).strict();
 
 /** Ποιο ακροατήριο δίνει κάθε απάντηση — ιδιοκτήτης εγκρίνει/αρνείται, επαγγελματίας προσφέρει/αρνείται. */
 export const LINK_ANSWER_AUDIENCE: Readonly<Record<IssuanceLinkAnswer, IssuanceAudience>> = {

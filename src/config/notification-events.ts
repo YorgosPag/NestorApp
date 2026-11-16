@@ -215,6 +215,16 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_DOCUMENT_ISSUANCE_DELIVERY_CHANGE_ANSWERED: 'properties.documentIssuanceDeliveryChangeAnswered',
   /**
+   * ADR-943 §5.9 — **η προκαταβολή κατατέθηκε και κρατείται** (ο πάροχος βεβαίωσε την είσπραξη): στον μηχανικό στον χώρο
+   * του («μπορείτε να ξεκινήσετε») και σε όποιον πρότεινε / έστειλε. Προτίμηση: `documentIssuancePayments`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_FUNDED: 'properties.documentIssuanceAdvanceFunded',
+  /**
+   * ADR-943 §5.9 — **ο ιδιοκτήτης θέλει να πληρώσει, αλλά ο μηχανικός δεν δέχεται ακόμη πληρωμές** (δικαιούχος όχι
+   * `authorized`): στον μηχανικό, προσγείωση στο προφίλ του. Μία ανά ανάθεση και ημέρα. Προτίμηση: `documentIssuancePayments`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_PAYEE_REQUIRED: 'properties.documentIssuanceAdvancePayeeRequired',
+  /**
    * ADR-916 §5.15 Φ-Δ.2 (Ο7) — **ο αγοραστής απάντησε στην πρόσκληση παράδοσης** (αποδοχή · άρνηση). Προς όποιον την
    * έστειλε (αν είναι άνθρωπος) + τους διαχειριστές του χώρου· προσγείωση στην καρτέλα «Παράδοση». Το σώμα λέει την
    * **επόμενη κίνηση** από την ίδια κρίση με την καρτέλα. Προτίμηση: `handoverInvitationAnswers`.
@@ -592,6 +602,19 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'documentIssuanceDelivery',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-943 §5.9 — χρήματα της προκαταβολής: η κατάθεση (ΠΛΗΡΟΦΟΡΙΑ) · ο δικαιούχος λείπει (ΠΡΟΕΙΔΟΠΟΙΗΣΗ — η πληρωμή περιμένει).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_FUNDED]: {
+    category: 'properties',
+    settingKey: 'documentIssuancePayments',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_PAYEE_REQUIRED]: {
+    category: 'properties',
+    settingKey: 'documentIssuancePayments',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },
   // ADR-916 Φ-Δ.2 — απάντηση αγοραστή στην πρόσκληση παράδοσης: ΠΛΗΡΟΦΟΡΙΑ· η άρνηση ανεβαίνει σε ΠΡΟΕΙΔΟΠΟΙΗΣΗ ανά αποστολή.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_HANDOVER_INVITATION_ANSWERED]: {

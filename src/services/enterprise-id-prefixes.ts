@@ -384,6 +384,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   PAYMENT_PROVIDER_EVENT: 'pevt',
   // ADR-943 §5.7 — δικαιούχος marketplace (ο μηχανικός στον PSP): ΕΝΑΣ ανά (πάροχος, χρήστης).
   PAYMENT_PAYEE: 'ppye',
+  // ADR-943 §5.9 — κάτοχος μίσθωσης της κρατημένης μεταφοράς (ποιος καλών μιλά στον πάροχο τώρα)· όχι έγγραφο.
+  PAYMENT_TRANSFER_LEASE: 'ptls',
   SERVICE_PRESET: 'sp',
   CUSTOM_CATEGORY: 'custcat',
   CUSTOMER_BALANCE: 'cbal',

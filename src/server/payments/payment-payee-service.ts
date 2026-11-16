@@ -16,6 +16,7 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { nowISO } from '@/lib/date-local';
+import type { PayoutAccountView, PayoutRegistration } from '@/lib/payments/payout-account';
 import { createModuleLogger } from '@/lib/telemetry';
 
 import type { PayeeRegistration } from './payment-marketplace';
@@ -23,6 +24,7 @@ import {
   completePaymentPayee,
   findPaymentPayeeByReference,
   observePaymentPayee,
+  readPaymentPayee,
   reservePaymentPayee,
   type PaymentPayeeRecord,
   type PayeeObservationOutcome,
@@ -50,6 +52,55 @@ export async function registerMarketplacePayee(
   const payee = await completePaymentPayee(db, provider.id, userId, account, nowISO());
   logger.info('Marketplace payee registered', { provider: provider.id, payeeId: payee.payeeId, status: payee.status });
   return { kind: 'registered', payee };
+}
+
+export type PayeeReadiness =
+  | { readonly kind: 'ready'; readonly payeeReference: string }
+  /** Κανένας δικαιούχος, εγγραφή σε εξέλιξη, ή ο πάροχος δεν τον έχει (ακόμη) `authorized`. */
+  | { readonly kind: 'not-ready' };
+
+/**
+ * **Δέχεται πληρωμές αυτός ο χρήστης τώρα;** — η ΜΙΑ κρίση πριν από κάθε πληρωμή marketplace (ADR-943 §5.9). Η αλήθεια
+ * από το **API** (`readPayee`, Κ-8)· η εγγραφή ενημερώνεται στον δρόμο. Ο πάροχος: «can receive transfers — `true` only
+ * if the status is `Authorized`» (EveryPay API reference). Σφάλμα παρόχου ⇒ ρίχνει (ποτέ «έτοιμος» από μαντεψιά).
+ */
+export async function readyPayeeOf(db: Firestore, provider: PaymentProvider, userId: string): Promise<PayeeReadiness> {
+  const marketplace = provider.marketplace;
+  const payee = marketplace === null ? null : await readPaymentPayee(db, provider.id, userId);
+  if (marketplace === null || payee === null || payee.providerReference === null) return { kind: 'not-ready' };
+  const account = await marketplace.readPayee(payee.providerReference);
+  if (account.status !== payee.status) {
+    await observePaymentPayee(db, payee.payeeId, { status: account.status }, nowISO());
+  }
+  return account.status === 'authorized' ? { kind: 'ready', payeeReference: account.reference } : { kind: 'not-ready' };
+}
+
+/** Ο δικαιούχος ⇒ ό,τι βλέπει ο άνθρωπος. Η εξουσιοδότηση (API) νικά την πορεία KYC (σήμα) — Κ-8. */
+export function payoutAccountViewOf(payee: PaymentPayeeRecord | null): PayoutAccountView {
+  if (payee === null) return { state: 'none', kycProcessUrl: null };
+  if (payee.providerReference === null) return { state: 'registering', kycProcessUrl: null };
+  if (payee.status === 'authorized') return { state: 'ready', kycProcessUrl: null };
+  if (payee.status === 'suspended' || payee.status === 'closed') return { state: 'blocked', kycProcessUrl: null };
+  return { state: payee.kycStatus === 'rejected' ? 'rejected' : 'verifying', kycProcessUrl: payee.kycProcessUrl };
+}
+
+/** «Λήψη πληρωμών» του χρήστη — από την εγγραφή, χωρίς κλήση στον πάροχο. */
+export async function readPayoutAccount(db: Firestore, provider: PaymentProvider | null, userId: string): Promise<PayoutAccountView> {
+  if (provider === null || provider.marketplace === null) return { state: 'unavailable', kycProcessUrl: null };
+  return payoutAccountViewOf(await readPaymentPayee(db, provider.id, userId));
+}
+
+/** Εγγραφή από τον ίδιο τον χρήστη: το email από τον λογαριασμό, τα υπόλοιπα από τη φόρμα. Ιδεμποτική. */
+export async function registerPayoutAccount(
+  db: Firestore, provider: PaymentProvider | null, identity: { readonly userId: string; readonly email: string }, form: PayoutRegistration,
+): Promise<PayoutAccountView> {
+  if (provider === null) return { state: 'unavailable', kycProcessUrl: null };
+  const outcome = await registerMarketplacePayee(db, provider, identity.userId, { ...form, email: identity.email });
+  switch (outcome.kind) {
+    case 'registered': case 'existing': return payoutAccountViewOf(outcome.payee);
+    case 'in-progress': return { state: 'registering', kycProcessUrl: null };
+    case 'marketplace-unavailable': return { state: 'unavailable', kycProcessUrl: null };
+  }
 }
 
 type PayeeKycSignal = Extract<WebhookSignal, { kind: 'payee-kyc' }>;

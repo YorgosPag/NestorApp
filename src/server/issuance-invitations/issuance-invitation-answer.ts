@@ -44,9 +44,10 @@ import { readInvitationByToken } from '@/server/invitations/invitation-redeem';
 import { readDocumentRegistry } from '@/services/document-registry/document-registry.service';
 import type { DocumentRegistryResponse, RegistryPropertyLabel } from '@/services/document-registry/document-registry.types';
 import { stageIssuanceAction, type StagedIssuanceWrite } from '@/services/document-registry/issuance-assignments.server';
-import type { IssuanceEmailFacts } from '@/services/email-templates/issuance-invitation-email';
+import type { IssuanceEmailFacts, IssuanceSpaceLink } from '@/services/email-templates/issuance-invitation-email';
 import type { InvitationCoreRefusal, InvitationDocumentCore } from '@/types/invitation-core';
 import type {
+  IssuanceAdvancePaymentView,
   IssuanceInvitation,
   IssuanceLinkLanding,
   IssuanceLinkRefusal,
@@ -54,6 +55,7 @@ import type {
   IssuanceSpaceView,
 } from '@/types/issuance-invitation';
 
+import { advancePaymentLinkOf, viewIssuanceAdvance } from './issuance-advance-checkout';
 import { announceIssuanceAnswer, type IssuanceLinkEvent } from './issuance-answer-notifier';
 import { sendIssuanceAnswerReceipt } from './issuance-answer-receipt';
 import { ISSUANCE_INVITATION_LOCATOR, isIssuanceLinkLocked, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
@@ -167,6 +169,7 @@ export type LinkViewOutcome =
  */
 export async function viewIssuanceLink(db: Firestore, token: string, now: Date): Promise<LinkViewOutcome> {
   const resolved = await resolveLink(db, token, now);
+  if (!resolved.ok && 'refusal' in resolved && resolved.refusal === 'already-used') return advanceLandingOf(db, token, now);
   if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
   const { link } = resolved;
   if (isIssuanceLinkLocked(link.invitation)) return { kind: 'refused', reason: 'code-locked', remaining: 0 };
@@ -203,10 +206,14 @@ export async function issuanceEmailFactsOf(link: ResolvedLink, note: string | nu
 }
 
 /** §30 — η απόδειξη στη διεύθυνση του συνδέσμου (§39: με τον σύνδεσμο εισόδου στον χώρο). Μετά το commit, ποτέ δεν πετά. */
-async function sendReceipt(link: ResolvedLink, answer: IssuanceLinkAnswerBody, verifiedBy: LinkVerification, answeredAt: string, space: IssuanceSpaceOutcome): Promise<void> {
+async function sendReceipt(
+  link: ResolvedLink, answer: IssuanceLinkAnswerBody,
+  outcome: { readonly verifiedBy: LinkVerification; readonly answeredAt: string; readonly space: IssuanceSpaceOutcome; readonly advancePayment: IssuanceSpaceLink | null },
+): Promise<void> {
   await sendIssuanceAnswerReceipt({
-    invitation: link.invitation, facts: await issuanceEmailFactsOf(link, null), answer: answer.answer, comment: answer.note, verifiedBy, answeredAt,
-    space: issuanceSpaceLinkOf(space),
+    invitation: link.invitation, facts: await issuanceEmailFactsOf(link, null), answer: answer.answer, comment: answer.note,
+    verifiedBy: outcome.verifiedBy, answeredAt: outcome.answeredAt, space: issuanceSpaceLinkOf(outcome.space),
+    advancePayment: outcome.advancePayment,
   });
 }
 
@@ -243,12 +250,34 @@ async function guardAccess(db: Firestore, link: ResolvedLink, attempt: string | 
 
 export type LinkUnlockOutcome =
   | { readonly kind: 'view'; readonly view: IssuanceLinkView }
+  | { readonly kind: 'advance'; readonly advance: IssuanceAdvancePaymentView }
   | LinkRefused
   | { readonly kind: 'unavailable' };
+
+/**
+ * ADR-943 §5.9 — ο σύνδεσμος **απαντήθηκε**: αν ενέκρινε προσφορά με προκαταβολή, η σελίδα δείχνει την πληρωμή της· αλλιώς
+ * η αρχική άρνηση (`already-used`), όπως πριν. Καμία εγγραφή — όπως κάθε όψη.
+ */
+async function advanceLandingOf(db: Firestore, token: string, now: Date): Promise<LinkViewOutcome> {
+  const landing = await viewIssuanceAdvance(db, token, null, now);
+  const noop = async (): Promise<void> => undefined;
+  if (landing.kind === 'advance') return { kind: 'view', landing: { access: 'advance', advance: landing.advance }, markOpened: noop };
+  if (landing.kind === 'code-required') return { kind: 'view', landing: { access: 'code-required', gate: landing.gate }, markOpened: noop };
+  return landing.kind === 'unavailable' ? landing : { kind: 'refused', reason: 'already-used' };
+}
+
+/** Το ξεκλείδωμα ενός **απαντημένου** συνδέσμου (ADR-943 §5.9): η πληρωμή της προκαταβολής, ή η αρχική άρνηση. */
+async function unlockAdvanceOf(db: Firestore, token: string, accessCode: string, now: Date): Promise<LinkUnlockOutcome> {
+  const landing = await viewIssuanceAdvance(db, token, accessCode, now);
+  if (landing.kind === 'advance' || landing.kind === 'unavailable') return landing;
+  if (landing.kind === 'refused' && landing.remaining !== undefined) return landing;
+  return { kind: 'refused', reason: 'already-used' };
+}
 
 /** **Το ξεκλείδωμα** (§29) — μία προσπάθεια κωδικού ⇒ η πλήρης όψη. Καμία πράξη στην ανάθεση. */
 export async function unlockIssuanceLink(db: Firestore, token: string, accessCode: string, now: Date): Promise<LinkUnlockOutcome> {
   const resolved = await resolveLink(db, token, now);
+  if (!resolved.ok && 'refusal' in resolved && resolved.refusal === 'already-used') return unlockAdvanceOf(db, token, accessCode, now);
   if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
   const check = await guardAccess(db, resolved.link, accessCode, now.toISOString());
   if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
@@ -339,7 +368,11 @@ export async function answerIssuanceLink(db: Firestore, token: string, answer: I
   // — με τον σύνδεσμο εισόδου στον χώρο όταν το «Αναλαμβάνω» τον άνοιξε (§39).
   await Promise.all([
     announceToOffice(link, answer.answer),
-    sendReceipt(link, answer, check.verifiedBy, now.toISOString(), outcome.effect.space),
+    sendReceipt(link, answer, {
+      verifiedBy: check.verifiedBy, answeredAt: now.toISOString(), space: outcome.effect.space,
+      // ADR-943 §5.9 — έγκριση με προκαταβολή ⇒ η απόδειξη φέρει τον σύνδεσμο πληρωμής (ο ίδιος σύνδεσμος).
+      advancePayment: outcome.effect.staged.outcome.ok ? advancePaymentLinkOf(token, link.invitation, outcome.effect.staged.outcome.record) : null,
+    }),
   ]);
   return { kind: 'answered', answer: answer.answer, space: issuanceSpaceViewOf(outcome.effect.space) };
 }

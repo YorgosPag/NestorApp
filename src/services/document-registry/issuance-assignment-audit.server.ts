@@ -124,7 +124,12 @@ function inspectionAuditChangesOf(fields: IssuanceAuditFields, t: IssuanceTransi
 
 /** Ποιος φαίνεται στο ιστορικό — ο άνθρωπος (γραφείου ή μηχανικός με συμμετοχή), ή ο σύνδεσμος (με το όνομα του αποδέκτη του). */
 function performerOf(writer: IssuanceWriter): string {
-  return writer.kind === 'link' ? `issuance-link:${writer.invitationId}` : writer.uid;
+  switch (writer.kind) {
+    case 'link': return `issuance-link:${writer.invitationId}`;
+    // ADR-943 §5.9 — ο δράστης ενός γεγονότος χρημάτων είναι ο πάροχος (`provider:everypay`), όπως στο τιμολόγιο.
+    case 'system': return `provider:${writer.provider}`;
+    case 'office': case 'engagement': return writer.uid;
+  }
 }
 
 export async function recordIssuanceAudit(write: IssuanceWrite, transition: IssuanceTransition): Promise<void> {

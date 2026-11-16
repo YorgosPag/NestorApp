@@ -33,6 +33,8 @@ export interface IssuanceAnswerReceipt {
   readonly answeredAt: string;
   /** §39 — ο σύνδεσμος εισόδου στον χώρο, όταν το «Αναλαμβάνω» τον άνοιξε· αλλιώς `null`. */
   readonly space: IssuanceSpaceLink | null;
+  /** ADR-943 §5.9 — έγκριση με προκαταβολή ⇒ ο σύνδεσμος πληρωμής (ο ίδιος που ενέκρινε)· αλλιώς `null`. */
+  readonly advancePayment: IssuanceSpaceLink | null;
 }
 
 /** **Στείλε την απόδειξη** στη διεύθυνση του συνδέσμου. Ποτέ δεν πετά. */
@@ -46,6 +48,7 @@ export function sendIssuanceAnswerReceipt(receipt: IssuanceAnswerReceipt): Promi
     compose: async (language) => buildIssuanceEmail({
       kind: 'receipt', language, facts: receipt.facts, answer: receipt.answer,
       answeredAt: receipt.answeredAt, verifiedBy: receipt.verifiedBy, comment: receipt.comment, space: receipt.space,
+      advancePayment: receipt.advancePayment,
     }),
   });
 }

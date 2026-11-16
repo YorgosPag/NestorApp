@@ -40,7 +40,9 @@ export type CheckoutSyncOutcome =
   /** Ο πάροχος έκλεισε τη συνεδρία χωρίς είσπραξη. */
   | 'closed'
   /** Χρήματα για πληρωτέο αντικείμενο που δεν βρέθηκε — χρειάζεται άνθρωπο (ο handler το καταγράφει ως σφάλμα). */
-  | 'subject-absent';
+  | 'subject-absent'
+  /** Ο γραφέας του είδους αρνήθηκε χρήματα που μπήκαν — χρειάζεται άνθρωπο (ADR-943 §5.9). */
+  | 'subject-refused';
 
 /**
  * Οι κινήσεις σε **χρονολογική** σειρά (η πληρωμή πριν από τις επιστροφές της σε ισοπαλία). Ο πάροχος τις δίνει
@@ -63,7 +65,7 @@ async function recordMovements(
   let recorded = false;
   for (const movement of chronologicalMovements(movements)) {
     const outcome = await recordPayableMovement(checkout, movement, provider);
-    if (outcome === 'subject-absent') return 'subject-absent';
+    if (outcome === 'subject-absent' || outcome === 'subject-refused') return outcome;
     recorded = recorded || outcome === 'recorded';
   }
   return recorded ? 'recorded' : 'unchanged';

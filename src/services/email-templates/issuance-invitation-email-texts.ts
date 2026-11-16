@@ -91,6 +91,15 @@ export interface IssuanceEmailWording {
     readonly next: string;
   };
   /**
+   * ADR-943 §5.9 — η απόδειξη έγκρισης **με προκαταβολή**: ένα κουμπί προς την πληρωμή, με τον **ίδιο** σύνδεσμο που
+   * ενέκρινε (μόνο ο κάτοχός του πληρώνει· τα χρήματα κρατούνται από τον πάροχο ως την έναρξη).
+   */
+  readonly advancePayment: InvitationEmailCoreWording & {
+    readonly nextLabel: string;
+    readonly next: string;
+    readonly expiresLabel: string;
+  };
+  /**
    * §45 Φ3 — **η υπενθύμιση παράδοσης** στον επαγγελματία (Vanta «due-date reminder» · DocuSign «Remind»): η στιγμή
    * (πριν · σήμερα · μετά · χωρίς προθεσμία) αλλάζει θέμα, επικεφαλίδα και εισαγωγή. Με χώρο ⇒ κουμπί «Άνοιγμα χώρου»
    * (δεμένο σε λογαριασμό)· χωρίς ⇒ καμία διεύθυνση, μόνο «ενημερώστε το γραφείο». 🔒 Ποτέ τηλέφωνο/email του γραφείου
@@ -194,6 +203,16 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       accessCodeHowTo: 'Χρησιμοποιήστε τον κωδικό που σας είπε το γραφείο. Αν τον χάσατε, ζητήστε από το γραφείο να ξαναστείλει το αίτημα.',
       stopLabel: 'Δεν θέλετε άλλες υπενθυμίσεις;',
       stop: (button) => `Πατήστε «${button}» στον σύνδεσμο ή ενημερώστε το γραφείο — οι υπενθυμίσεις σταματούν αμέσως.`,
+    },
+    advancePayment: {
+      nextLabel: 'Επόμενο βήμα: η προκαταβολή',
+      next: 'Η προσφορά που εγκρίνατε ζητά προκαταβολή. Πληρώνεται με τον ίδιο σύνδεσμο· τα χρήματα κρατούνται από τον '
+        + 'πάροχο πληρωμών και αποδίδονται στον επαγγελματία μόνο μετά την έναρξη (αυτοψία) και 48 ώρες χωρίς αντίρρηση.',
+      expiresLabel: 'Ο σύνδεσμος πληρωμής λήγει στις',
+      cta: 'Πληρωμή προκαταβολής',
+      onlyWord: 'μόνο',
+      boundToAddress: (onlyHtml) => `Ο σύνδεσμος είναι ${onlyHtml} δικός σας — μην τον προωθήσετε.`,
+      footnote: 'Ποτέ δεν σας ζητάμε στοιχεία κάρτας με email· η πληρωμή γίνεται στη σελίδα του αδειοδοτημένου παρόχου.',
     },
     space: {
       subject: (document, property) => `Ο χώρος της ανάθεσης: ${document} — ${property}`,
@@ -334,6 +353,16 @@ export const ISSUANCE_EMAIL_TEXTS: Readonly<Record<HumanLanguage, IssuanceEmailW
       accessCodeHowTo: 'Use the code the office gave you. If you lost it, ask the office to send the request again.',
       stopLabel: 'No more reminders?',
       stop: (button) => `Choose “${button}” on the link or tell the office — the reminders stop right away.`,
+    },
+    advancePayment: {
+      nextLabel: 'Next step: the advance',
+      next: 'The quote you approved asks for an advance. It is paid with the same link; the money is held by the payment '
+        + 'provider and released to the professional only after the start (site visit) and 48 hours without objection.',
+      expiresLabel: 'The payment link expires on',
+      cta: 'Pay the advance',
+      onlyWord: 'only',
+      boundToAddress: (onlyHtml) => `This link is for you ${onlyHtml} — do not forward it.`,
+      footnote: 'We never ask for card details by email; payment happens on the licensed payment provider’s page.',
     },
     space: {
       subject: (document, property) => `The assignment space: ${document} — ${property}`,

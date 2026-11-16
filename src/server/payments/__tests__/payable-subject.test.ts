@@ -11,6 +11,10 @@ const recordInvoicePaymentMock = jest.fn();
 jest.mock('@/subapps/accounting/services/repository/accounting-repo-invoice-payments', () => ({
   recordInvoicePayment: (...args: unknown[]) => recordInvoicePaymentMock(...args),
 }));
+const recordIssuanceAdvanceMovementMock = jest.fn();
+jest.mock('@/services/document-registry/issuance-advance-payment.server', () => ({
+  recordIssuanceAdvanceMovement: (...args: unknown[]) => recordIssuanceAdvanceMovementMock(...args),
+}));
 
 import {
   isPayableReturnPath,
@@ -19,6 +23,7 @@ import {
   sameAttemptScope,
   storedPayableSubjectOf,
   type InvoicePayableSubject,
+  type IssuanceAdvancePayableSubject,
 } from '../payable-subject';
 import { recordPayableMovement } from '../payable-subject-registry';
 import {
@@ -56,7 +61,7 @@ describe('payableSubjectOf — ο κωδικοποιητής', () => {
   });
 
   it('άγνωστο είδος ⇒ ανύπαρκτο, ΠΟΤΕ τιμολόγιο (κώδικας παλαιότερος από τα δεδομένα)', () => {
-    expect(payableSubjectOf(legacyDoc({ subjectKind: 'issuance-advance' }))).toBeNull();
+    expect(payableSubjectOf(legacyDoc({ subjectKind: 'escrow-unknown' }))).toBeNull();
     expect(payableSubjectOf(legacyDoc({ subjectKind: 42 }))).toBeNull();
   });
 
@@ -84,7 +89,7 @@ describe('συνεδρία ⇄ έγγραφο', () => {
   });
 
   it('έγγραφο με άγνωστο είδος ⇒ καμία συνεδρία', () => {
-    expect(checkoutRecordOf('pchk_1', legacyDoc({ subjectKind: 'issuance-advance' }))).toBeNull();
+    expect(checkoutRecordOf('pchk_1', legacyDoc({ subjectKind: 'escrow-unknown' }))).toBeNull();
   });
 });
 
@@ -134,7 +139,7 @@ describe('listPendingCheckoutsOf', () => {
       pchk_open: legacyDoc(),
       pchk_paid: legacyDoc({ status: 'paid' }),
       pchk_other_share: legacyDoc({ shareId: 'share_2' }),
-      pchk_unknown_kind: legacyDoc({ subjectKind: 'issuance-advance' }),
+      pchk_unknown_kind: legacyDoc({ subjectKind: 'escrow-unknown' }),
     });
     const pending = await listPendingCheckoutsOf(db, INVOICE);
     expect(queries).toEqual([['shareId', '==', 'share_1']]);
@@ -173,5 +178,96 @@ describe('recordPayableMovement — το μητρώο', () => {
   it('τιμολόγιο που λείπει ⇒ subject-absent (θέλει άνθρωπο)', async () => {
     recordInvoicePaymentMock.mockResolvedValue({ kind: 'invoice-absent' });
     await expect(recordPayableMovement(recordOf(legacyDoc()), movement, provider)).resolves.toBe('subject-absent');
+  });
+});
+
+// ─── ADR-943 §5.9 — η προκαταβολή ανάθεσης ως πληρωτέο αντικείμενο ───────────────────────────────────────────
+
+const ADVANCE: IssuanceAdvancePayableSubject = {
+  kind: 'issuance-advance', companyId: 'comp_1', assignmentId: 'dia_1', withdrawalWaiverAt: '2026-11-17T09:00:00.000Z',
+};
+const MARKETPLACE = { payeeReference: 'sel_1', transferReference: null, transferDue: false, lease: null };
+
+function advanceDoc(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    companyId: 'comp_1', subjectKind: 'issuance-advance', assignmentId: 'dia_1', withdrawalWaiverAt: '2026-11-17T09:00:00.000Z',
+    provider: 'everypay', method: 'card', amountMinor: 4000, currency: 'EUR', status: 'pending', providerReference: null,
+    paymentReference: null, lastFailure: null, marketplace: MARKETPLACE, createdAt: '2026-11-17T09:00:00.000Z',
+    expiresAt: '2026-11-17T09:30:00.000Z', ...overrides,
+  };
+}
+
+describe('issuance-advance — κωδικοποιητής και συνεδρία', () => {
+  it('γραφή ⇒ ανάγνωση = το ίδιο αντικείμενο· το ρητό αίτημα έναρξης (Κ-6) ταξιδεύει μαζί του', () => {
+    const stored = storedPayableSubjectOf(ADVANCE);
+    expect(stored).toEqual({ subjectKind: 'issuance-advance', companyId: 'comp_1', assignmentId: 'dia_1', withdrawalWaiverAt: '2026-11-17T09:00:00.000Z' });
+    expect(payableSubjectOf(stored)).toEqual(ADVANCE);
+  });
+
+  it('χωρίς ρητό αίτημα έναρξης ή ανάθεση ⇒ ανύπαρκτο (καμία πληρωμή χωρίς Κ-6)', () => {
+    expect(payableSubjectOf(advanceDoc({ withdrawalWaiverAt: undefined }))).toBeNull();
+    expect(payableSubjectOf(advanceDoc({ assignmentId: ' ' }))).toBeNull();
+  });
+
+  it('συνεδρία ⇄ έγγραφο: η κράτηση marketplace διαβάζεται και ξαναγράφεται αυτούσια', () => {
+    const record = recordOf(advanceDoc());
+    expect(record.subject).toEqual(ADVANCE);
+    expect(record.marketplace).toEqual(MARKETPLACE);
+    expect(checkoutRecordOf('pchk_1', storedCheckoutOf(record))).toEqual(record);
+  });
+
+  it('🔴 προκαταβολή ΧΩΡΙΣ κράτηση ⇒ ανύπαρκτη συνεδρία — ποτέ χρήματα τρίτου στον λογαριασμό εμπόρου', () => {
+    expect(checkoutRecordOf('pchk_1', advanceDoc({ marketplace: undefined }))).toBeNull();
+    expect(checkoutRecordOf('pchk_1', advanceDoc({ marketplace: { payeeReference: 'sel_1' } }))).toBeNull();
+  });
+
+  it('τιμολόγιο ΜΕ κράτηση ⇒ ανύπαρκτη συνεδρία (το είδος και η κράτηση πάνε μαζί)', () => {
+    expect(checkoutRecordOf('pchk_1', legacyDoc({ marketplace: MARKETPLACE }))).toBeNull();
+    expect(recordOf(legacyDoc()).marketplace).toBeNull();
+  });
+});
+
+describe('issuance-advance — επιστροφή και εμβέλεια', () => {
+  it('επιστροφή ΜΟΝΟ στη σελίδα έγκρισης, χωρίς διαπιστευτήριο', () => {
+    expect(isReturnPathOfKind('issuance-advance', '/document-request')).toBe(true);
+    expect(isReturnPathOfKind('issuance-advance', '/document-request#t=abc')).toBe(false);
+    expect(isReturnPathOfKind('issuance-advance', '/shared/abc')).toBe(false);
+    expect(isPayableReturnPath('/document-request')).toBe(true);
+  });
+
+  it('ίδια ανάθεση του ίδιου μισθωτή ⇒ ίδια εμβέλεια· άλλη ανάθεση / άλλος μισθωτής / τιμολόγιο ⇒ όχι', () => {
+    expect(sameAttemptScope(ADVANCE, { ...ADVANCE, withdrawalWaiverAt: '2026-11-18T00:00:00.000Z' })).toBe(true);
+    expect(sameAttemptScope(ADVANCE, { ...ADVANCE, assignmentId: 'dia_2' })).toBe(false);
+    expect(sameAttemptScope(ADVANCE, { ...ADVANCE, companyId: 'comp_2' })).toBe(false);
+    expect(sameAttemptScope(ADVANCE, INVOICE)).toBe(false);
+  });
+
+  it('ανοιχτές συνεδρίες: ΡΗΤΟ ερώτημα με μισθωτή ΚΑΙ ανάθεση (CHECK 3.10 · 3.35)', async () => {
+    const queries: Array<[string, string, unknown]> = [];
+    const docs: Record<string, Record<string, unknown>> = {
+      pchk_open: advanceDoc(), pchk_paid: advanceDoc({ status: 'paid' }), pchk_invoice: legacyDoc(),
+    };
+    const query = (filters: Array<[string, unknown]>): unknown => ({
+      where: (field: string, op: string, value: unknown) => { queries.push([field, op, value]); return query([...filters, [field, value]]); },
+      get: async () => ({
+        docs: Object.entries(docs)
+          .filter(([, data]) => filters.every(([field, value]) => data[field] === value))
+          .map(([id, data]) => ({ id, data: () => data })),
+      }),
+    });
+    const db = { collection: () => query([]) } as unknown as Firestore;
+    const pending = await listPendingCheckoutsOf(db, ADVANCE);
+    expect(queries).toEqual([['companyId', '==', 'comp_1'], ['assignmentId', '==', 'dia_1']]);
+    expect(pending.map((record) => record.checkoutId)).toEqual(['pchk_open']);
+  });
+
+  it('το μητρώο στέλνει την κίνηση στον ΕΝΑ γραφέα της προκαταβολής (όχι στο τιμολόγιο)', async () => {
+    recordInvoicePaymentMock.mockReset();
+    recordIssuanceAdvanceMovementMock.mockResolvedValue('recorded');
+    const provider = { id: 'everypay' } as unknown as PaymentProvider;
+    const movement: ProviderMovement = { kind: 'payment', reference: 'pmt_7', amountMinor: 4000, currency: 'EUR', occurredAt: '2026-11-17T09:05:00.000Z' };
+    await expect(recordPayableMovement(recordOf(advanceDoc()), movement, provider)).resolves.toBe('recorded');
+    expect(recordIssuanceAdvanceMovementMock).toHaveBeenCalledWith(expect.objectContaining({ subject: ADVANCE, movement }));
+    expect(recordInvoicePaymentMock).not.toHaveBeenCalled();
   });
 });

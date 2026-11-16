@@ -31,3 +31,12 @@ export function paymentProviderById(id: PaymentProviderId): PaymentProvider | nu
 export function paymentProviderForCompany(companyId: string): PaymentProvider | null {
   return companyId === '' ? null : paymentProviderById('everypay');
 }
+
+/**
+ * ADR-943 §5.9 — **ο πάροχος με ενεργό marketplace**: οι δικαιούχοι (μηχανικοί) είναι της **πλατφόρμας**, όχι γραφείου,
+ * άρα η «Λήψη πληρωμών» του προσωπικού χώρου ρωτά εδώ. `null` ⇒ κανένας λογαριασμός με marketplace.
+ */
+export function marketplacePaymentProvider(): PaymentProvider | null {
+  const provider = paymentProviderById('everypay');
+  return provider?.marketplace ? provider : null;
+}

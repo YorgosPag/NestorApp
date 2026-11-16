@@ -19,17 +19,11 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { nowISO } from '@/lib/date-local';
-import { joinOrigin } from '@/lib/http/public-origin';
 import { isPlausibleShareToken } from '@/lib/sharing/share-token';
-import { createModuleLogger } from '@/lib/telemetry';
 import { linkHolderActor } from '@/server/accounting/public-invoice/invoice-link-opened';
 import { readSharedInvoice } from '@/server/accounting/public-invoice/invoice-public-session';
-import {
-  startedCheckoutDiagnostics,
-  type PaymentProvider,
-  type StartedCheckout,
-} from '@/server/payments/payment-provider';
+import type { PaymentProvider } from '@/server/payments/payment-provider';
+import { CHECKOUT_LIFETIME_MS, launchCheckoutAtProvider } from '@/server/payments/payment-checkout-launch';
 import { paymentProviderForCompany } from '@/server/payments/payment-provider-registry';
 import { findActiveShareByToken } from '@/server/sharing/share-token-lookup';
 import { generatePaymentCheckoutId } from '@/services/enterprise-id.service';
@@ -41,21 +35,7 @@ import type { IAccountingRepository } from '@/subapps/accounting/types/interface
 
 import type { InvoicePayableSubject } from '@/server/payments/payable-subject';
 import { closePendingCheckoutsOf } from '@/server/payments/payment-checkout-closing';
-import {
-  createPaymentCheckout,
-  updatePaymentCheckout,
-  type PaymentCheckoutPatch,
-  type PaymentCheckoutRecord,
-} from '@/server/payments/payment-checkout-store';
-import { paymentReturnRoute, paymentWebhookRoute } from '@/lib/payments/payment-routes';
-
-const logger = createModuleLogger('InvoicePaymentCheckout');
-
-/**
- * Η λήξη που **ζητάμε**. Η Everypay ζητά ≥ 5′· 30′ αρκούν για τράπεζα + 3-D Secure. Όταν ο πάροχος δηλώσει δική
- * του λήξη (IRIS), αυτή αντικαθιστά τη ζητούμενη (`startedCheckoutPatch`).
- */
-const CHECKOUT_LIFETIME_MS = 30 * 60 * 1000;
+import { createPaymentCheckout, type PaymentCheckoutRecord } from '@/server/payments/payment-checkout-store';
 
 export interface StartInvoiceCheckoutInput extends InvoiceCheckoutRequestBody {
   readonly shareId: string;
@@ -85,7 +65,7 @@ function newCheckoutRecord(
   return {
     checkoutId: generatePaymentCheckoutId(), companyId, subject,
     provider: provider.id, method: input.method, amountMinor, currency: 'EUR', status: 'pending',
-    providerReference: null, paymentReference: null, lastFailure: null, createdAt,
+    providerReference: null, paymentReference: null, lastFailure: null, marketplace: null, createdAt,
     expiresAt: new Date(input.nowMs + CHECKOUT_LIFETIME_MS).toISOString(), updatedAt: createdAt,
   };
 }
@@ -103,40 +83,13 @@ async function recordCheckoutStarted(
   });
 }
 
-/**
- * Ό,τι έμαθε η συνεδρία από τον πάροχο. Η δηλωμένη λήξη του **νικά** τη ζητούμενη: η συμφιλίωση (§5.5) και η
- * σελίδα μετρούν από τη λήξη που ο πάροχος πράγματι τηρεί (IRIS: δεν δέχεται δική μας).
- */
-function startedCheckoutPatch(started: StartedCheckout): PaymentCheckoutPatch {
-  return started.providerExpiresAt === null
-    ? { providerReference: started.providerReference }
-    : { providerReference: started.providerReference, expiresAt: started.providerExpiresAt };
-}
-
-/** Ξεκινά τη συνεδρία στον πάροχο. Αποτυχία ⇒ `failed` στη συνεδρία και ονομασμένη άρνηση, ποτέ 500 στον πελάτη. */
-async function launchAtProvider(
+/** Ξεκινά τη συνεδρία στον πάροχο — ο ΕΝΑΣ δρόμος (`launchCheckoutAtProvider`). Αποτυχία ⇒ ονομασμένη άρνηση. */
+function launchAtProvider(
   db: Firestore, provider: PaymentProvider, record: PaymentCheckoutRecord, input: StartInvoiceCheckoutInput, invoice: Invoice,
 ): Promise<InvoiceCheckoutResponse> {
-  try {
-    const started = await provider.startCheckout({
-      checkoutId: record.checkoutId, method: record.method, amountMinor: record.amountMinor, currency: 'EUR',
-      description: `${invoice.series}-${invoice.number}`, locale: input.locale, expiresAt: record.expiresAt,
-      returnUrl: joinOrigin(input.origin, paymentReturnRoute(provider.id, record.checkoutId)),
-      webhookUrl: joinOrigin(input.origin, paymentWebhookRoute(provider.id)),
-    });
-    await updatePaymentCheckout(db, record.checkoutId, startedCheckoutPatch(started), nowISO());
-    logger.info('Checkout started at provider', {
-      checkoutId: record.checkoutId, provider: provider.id, method: record.method,
-      ...startedCheckoutDiagnostics(started, record.createdAt),
-    });
-    return { status: 'started', checkoutId: record.checkoutId, launch: started.launch };
-  } catch (error) {
-    logger.error('Provider refused to start a checkout', {
-      checkoutId: record.checkoutId, provider: provider.id, error: error instanceof Error ? error.message : String(error),
-    });
-    await updatePaymentCheckout(db, record.checkoutId, { status: 'failed' }, nowISO());
-    return { status: 'refused', reason: 'provider-unavailable' };
-  }
+  return launchCheckoutAtProvider(db, provider, record, {
+    description: `${invoice.series}-${invoice.number}`, locale: input.locale, origin: input.origin,
+  });
 }
 
 export async function startInvoicePaymentCheckout(

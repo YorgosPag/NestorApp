@@ -127,6 +127,18 @@ export function refusalOfStoredInvitation(
   return null;
 }
 
+/**
+ * **Γιατί αυτό το έγγραφο ΔΕΝ αποδεικνύει τον κάτοχο ενός ΕΞΑΡΓΥΡΩΜΕΝΟΥ συνδέσμου;** (ADR-943 §5.9) — `null` ⇔ ήταν
+ * `accepted` και το nonce δείχνει σε **αυτό**. Άρνηση/ανάκληση/λήξη ⇒ οι λόγοι της κατάστασης· ακόμη `pending` ⇒
+ * `invitation-unknown` (δεν απαντήθηκε — τίποτα να ακολουθήσει).
+ */
+export function refusalOfRedeemedInvitation(stored: InvitationDocumentCore, nonceHash: string): InvitationCoreRefusal | null {
+  const state = readStoredInvitationState(stored.state);
+  if (state === 'pending') return 'invitation-unknown';
+  if (state !== 'accepted') return REFUSAL_BY_STATE[state];
+  return nonceMatches(nonceHash, stored) ? null : 'link-invalid';
+}
+
 // =============================================================================
 // 2. Η ΑΠΟΔΕΙΞΗ ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟΥ
 // =============================================================================

@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { IssuanceLinkGateView, IssuanceLinkView } from '@/types/issuance-invitation';
+import type { IssuanceLinkGateView, IssuanceLinkUnlocked } from '@/types/issuance-invitation';
 
 import { DocumentRequestFailureState } from './DocumentRequestFailureState';
 import { unlockDocumentRequest, type DocumentRequestFailure } from './document-request-api';
@@ -37,7 +37,7 @@ type Phase =
 interface CodeStepProps {
   readonly token: string;
   readonly gate: IssuanceLinkGateView;
-  readonly onUnlocked: (view: IssuanceLinkView, accessCode: string) => void;
+  readonly onUnlocked: (unlocked: IssuanceLinkUnlocked, accessCode: string) => void;
 }
 
 function WrongCode({ remaining }: { readonly remaining: number }) {
@@ -65,7 +65,7 @@ export function DocumentRequestCodeStep({ token, gate, onUnlocked }: CodeStepPro
     event.preventDefault();
     setPhase({ kind: 'checking' });
     const outcome = await unlockDocumentRequest(token, { accessCode: code });
-    if (outcome.ok) return onUnlocked(outcome.data.view, code);
+    if (outcome.ok) return onUnlocked(outcome.data, code);
     if (outcome.failure !== 'code-wrong') return setPhase({ kind: 'failed', failure: outcome.failure });
     setCode('');
     setPhase({ kind: 'idle', remaining: outcome.remaining });

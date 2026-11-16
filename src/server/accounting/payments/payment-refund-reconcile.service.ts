@@ -54,7 +54,7 @@ async function reconcileRefundedPayment(
     if (checkout === null) return 'unmatched';
     const outcome = await syncCheckoutSettlement(db, provider, checkout);
     if (outcome === 'recorded') return 'recorded';
-    return outcome === 'subject-absent' ? 'failed' : 'unchanged';
+    return outcome === 'subject-absent' || outcome === 'subject-refused' ? 'failed' : 'unchanged';
   } catch (error) {
     logger.error('Refund reconciliation failed — next pass retries', {
       provider: provider.id, paymentReference, error: error instanceof Error ? error.message : String(error),

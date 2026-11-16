@@ -186,6 +186,12 @@ export function DocumentRequestCard({ token, view, accessCode }: { readonly toke
         <h1 className="m-0 text-lg font-semibold text-card-foreground">{doneText(t, phase.answer)}</h1>
         <p className="m-0 text-sm text-muted-foreground">{t('document-request:done.officeTold')}</p>
         <SpaceNextStep space={phase.space} />
+        {/* ADR-943 §5.9 — έγκριση με προκαταβολή ⇒ η πληρωμή της, με τον ΙΔΙΟ σύνδεσμο (η όψη ξαναφορτώνεται ως «advance»). */}
+        {phase.answer === 'approve' && view.quote?.advance ? (
+          <Button type="button" variant="outline" className={COLOR_BRIDGE.action.primary} onClick={() => window.location.reload()}>
+            {t('document-request:advance.continue')}
+          </Button>
+        ) : null}
       </AuthCardSection>
     );
   }

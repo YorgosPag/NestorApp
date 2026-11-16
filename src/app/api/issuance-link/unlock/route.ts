@@ -24,7 +24,9 @@ async function unlockHandler(request: NextRequest, token: string): Promise<NextR
   const outcome = await unlockIssuanceLink(getAdminFirestore(), token, parsed.data.accessCode, new Date());
   if (outcome.kind === 'unavailable') return issuanceLinkFailure('unavailable');
   if (outcome.kind === 'refused') return issuanceLinkFailure(outcome.reason, outcome.remaining);
-  return NextResponse.json({ success: true, data: { view: outcome.view } });
+  // ADR-943 §5.9 — απαντημένος σύνδεσμος με προκαταβολή ⇒ η πληρωμή της· αλλιώς η όψη της απάντησης.
+  const data = outcome.kind === 'advance' ? { advance: outcome.advance } : { view: outcome.view };
+  return NextResponse.json({ success: true, data });
 }
 
 export const POST = withHeavyRateLimit(withIssuanceLinkDoor({}, unlockHandler));

@@ -264,6 +264,8 @@ export interface PropertiesNotificationSettings {
    * (γραφείο, +1 και +7 ημέρες). Μία φορά ανά ορόσημο.
    */
   documentIssuanceDelivery: boolean;
+  /** 💶 ADR-943 §5.9 — η **προκαταβολή** μιας ανάθεσης έκδοσης: κατατέθηκε · ο μηχανικός πρέπει να δέχεται πληρωμές. */
+  documentIssuancePayments: boolean;
   /**
    * 🔑 ADR-916 §5.15 Φ-Δ.2 — «ο αγοραστής **απάντησε** στην πρόσκληση παράδοσης» (αποδοχή · άρνηση), με την επόμενη κίνηση.
    * Σε όποιον την έστειλε + στους διαχειριστές του χώρου.
@@ -535,6 +537,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   documentExpiryAlerts: true,
   documentIssuanceAnswers: true,
   documentIssuanceDelivery: true,
+  documentIssuancePayments: true,
   handoverInvitationAnswers: true,
   caseDocumentTransmitted: true,
   caseDocumentRequests: true,

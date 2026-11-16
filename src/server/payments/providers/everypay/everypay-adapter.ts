@@ -54,6 +54,15 @@ const NOTIFICATION_DESCRIPTION_MAX = 200;
 
 // ─── ΕΚΚΙΝΗΣΗ ────────────────────────────────────────────────────────────────
 
+/**
+ * `split=1` μόνο σε πληρωμή marketplace· αλλιώς **καμία** παράμετρος (το σώμα του τιμολογίου μένει αυτούσιο). Κάρτα:
+ * `POST /notifications` · IRIS: η χρέωση πηγής `POST /payments` — η συνεδρία `/iris/sessions` **δεν** έχει `split`
+ * (API reference, 2026-11-17). ⚠️ Split με IRIS ανεπαλήθευτο ζωντανά (ADR-943 §8 #2).
+ */
+function splitField(split: boolean): Record<string, string> {
+  return split ? { split: '1' } : {};
+}
+
 async function startCardCheckout(credentials: EverypayCredentials, request: CheckoutRequest): Promise<StartedCheckout> {
   const body = plainRecordOrNull(await everypayRequest(credentials, {
     method: 'POST',
@@ -64,6 +73,8 @@ async function startCardCheckout(credentials: EverypayCredentials, request: Chec
       skip_notify: '1',
       locale: request.locale,
       expiration_date: everypayDateTime(request.expiresAt),
+      // ADR-943 §5.9 — «Marketplace-only parameter» (API reference, `POST /notifications`).
+      ...splitField(request.split),
     },
   }));
   const reference = textField(body, 'token');
@@ -219,7 +230,7 @@ async function captureSource(credentials: EverypayCredentials, subject: Checkout
     await everypayRequest(credentials, {
       method: 'POST',
       path: '/payments',
-      form: { token: sourceToken, amount: String(subject.amountMinor), merchant_ref: subject.checkoutId },
+      form: { token: sourceToken, amount: String(subject.amountMinor), merchant_ref: subject.checkoutId, ...splitField(subject.split) },
     });
   } catch (error) {
     if (error instanceof EverypayApiError && error.providerCode === EVERYPAY_TOKEN_ALREADY_USED) return;

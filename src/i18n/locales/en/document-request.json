@@ -140,5 +140,30 @@
     "missingLabel": "Is an owner missing?",
     "missingHint": "Full name and, if you know it, tax ID. The office will add them to the owners.",
     "incomplete": "To approve, answer for each owner."
+  },
+  "advance": {
+    "providerDescription": "Advance — {property}",
+    "heading": "Pay the advance",
+    "intro": "The quote you approved asks for an advance. The money is held by a licensed payment provider and paid out to the professional only after the start (site visit) and 48 hours without objection.",
+    "amount": "Advance",
+    "consentHeading": "Request to start",
+    "consentStart": "I ask for the work to start within the 14-day withdrawal period.",
+    "consentWaiver": "I acknowledge that I lose the right of withdrawal once the service has been fully performed.",
+    "payCard": "Pay by card",
+    "payIris": "Pay with IRIS",
+    "payeeHint": "The professional has not turned on receiving payments yet; if the payment does not start, they will be notified.",
+    "continue": "Continue to the advance payment",
+    "refused": {
+      "notPayable": "The advance is no longer awaiting payment.",
+      "payeeNotReady": "The professional cannot receive payments yet. We notified them — please try again later.",
+      "methodUnavailable": "Online advance payment is not available.",
+      "providerUnavailable": "The payment provider did not respond. Please try again."
+    },
+    "watch": {
+      "waiting": "Waiting for the payment confirmation…",
+      "slow": "The confirmation is taking longer — do not pay again.",
+      "failed": "The payment was not completed. You can try again.",
+      "timedOut": "No confirmation yet. If you paid, it will appear shortly."
+    }
   }
 }

@@ -171,7 +171,8 @@
           "ownershipVerificationDecided": "My ownership verification was decided",
           "documentIssuanceAnswers": "Owner and professional answers to document issuance assignments",
           "documentIssuanceDelivery": "Delivery deadlines of document issuance assignments (due tomorrow · late)",
-          "handoverInvitationAnswers": "Buyer answers to handover invitations"
+          "handoverInvitationAnswers": "Buyer answers to handover invitations",
+          "documentIssuancePayments": "Advances on document issuance assignments (paid · turn on receiving payments)"
         },
         "tasks": {
           "title": "Tasks",
@@ -313,6 +314,34 @@
       "absentCta": "I want to be found",
       "presentLead": "You already have a workspace. Your showcase is configured inside it.",
       "presentCta": "Take me to my workspace"
+    },
+    "payouts": {
+      "title": "Receive payments",
+      "lead": "To accept advances from owners. The money is held by a licensed payment provider and paid out to you after the work starts.",
+      "loading": "Loading…",
+      "failed": "We could not reach the server. Please try again.",
+      "continueKyc": "Continue to verification",
+      "privacy": "Your details are sent to the payment provider and are not stored by us. Verification happens on the provider’s page.",
+      "submit": "Turn on receiving payments",
+      "state": {
+        "unavailable": "Receiving payments is not available yet.",
+        "none": "You have not turned on receiving payments.",
+        "registering": "Your registration with the provider is in progress…",
+        "verifying": "The provider is waiting for or checking your verification.",
+        "rejected": "The provider could not complete your verification. Continue on its page to fix it.",
+        "ready": "You can receive payments.",
+        "blocked": "Your payout account has been suspended by the provider."
+      },
+      "field": {
+        "legalName": "Full name or legal name",
+        "tradeName": "Trade name",
+        "taxNumber": "Tax number (AFM)",
+        "address": "Address",
+        "ibanBeneficiary": "Account holder",
+        "phone": "Phone",
+        "description": "Activity (e.g. energy inspector)",
+        "consumerToConsumer": "I do not act as a business (private individual)"
+      }
     }
   },
   "twoFactor": {

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🚧 IN PROGRESS — Φ0 ✅ · Φ1 τομέας ✅ · Φ2 γενίκευση checkout ✅ · Φ3 marketplace ✅ (2026-11-16) · Φ4α όροι + έγκριση ✅ (2026-11-17) · Φ4β (πληρωμή → κράτηση) – Φ6 εκκρεμούν |
+| **Status** | 🚧 IN PROGRESS — Φ0 ✅ · Φ1 τομέας ✅ · Φ2 γενίκευση checkout ✅ · Φ3 marketplace ✅ (2026-11-16) · Φ4α όροι + έγκριση ✅ (2026-11-17) · Φ4β πληρωμή → κράτηση ✅ (2026-11-17, jest εκκρεμεί έγκριση) · Φ5 – Φ6 εκκρεμούν |
 | **Date** | 2026-11-16 |
 | **Category** | Document Registry / Payments |
 | **Canonical Location** | `src/lib/document-validity/issuance-advance*.ts` (τομέας) · `src/server/payments/` (κράτηση, πληρωτέα αντικείμενα) |
@@ -264,6 +264,46 @@ transfers / payouts / reversals** στην τεκμηρίωση ⇒ η κατά�
 προϋπόθεση δικαιούχο `authorized` · `ensureTransfer({hold: true})` μετά την είσπραξη με lease · route + UI KYC στο
 `(me)/profile` · ειδοποιήσεις.
 
+### 5.9 Φ4β — τι υλοποιήθηκε (2026-11-17): πληρωμή → κράτηση
+
+Έρευνα (2026-11-17, [API reference](https://docs.everypay.gr/api-reference/) · [Basic concepts](https://docs.everypay.gr/marketplace-link/basic-concepts/)):
+`split` (0/1) υπάρχει στο `POST /notifications` («Marketplace-only parameter») **και** στο `POST /payments` (άρα και στη χρέωση
+πηγής IRIS)· το `POST /iris/sessions` **δεν** έχει `split`. Ο πωλητής «can receive transfers — `true` only if the status is
+`Authorized`». Τα αμεταβίβαστα «should be transferred promptly».
+
+**Αποφάσεις (με έρευνα — οδηγία Giorgio «όπως οι μεγάλοι»):**
+
+| # | Απόφαση | Γιατί |
+|---|---|---|
+| Ε-1 | **Πρώτα τρόπος απόδοσης, μετά χρήματα**: η πληρωμή ξεκινά **μόνο** αν ο μηχανικός είναι ενεργός στον χώρο της ανάθεσης και ο δικαιούχος του `authorized` **στο API** (`readyPayeeOf`)· αλλιώς ο ιδιοκτήτης ακούει «περιμένουμε τον μηχανικό» και ο μηχανικός ειδοποιείται (μία φορά/ημέρα) | Airbnb/Upwork ζητούν payout method πριν από την απόδοση· εδώ η μεταφορά γίνεται **στην πληρωμή** (Δ-2) και ο πάροχος δέχεται μεταφορές μόνο σε `Authorized` — άρα είσπραξη χωρίς δικαιούχο θα άφηνε χρήματα αμεταβίβαστα, αντίθετα με το «promptly» |
+| Ε-2 | **Πληρώνει ο σύνδεσμος που ενέκρινε** (`readRedeemedInvitationByToken`: ίδια υπογραφή + nonce, κατάσταση `accepted`), όσο η απόφαση της ανάθεσης δείχνει **αυτό** το `invitationId` | καμία νέα πρόσκληση/διαπιστευτήριο· η πληρωμή είναι **ακολουθία** της έγκρισης (Airbnb: πληρωμή μέσα στη ροή κράτησης) |
+| Ε-3 | **Κράτηση και lease στη ΣΥΝΕΔΡΙΑ** (`PaymentCheckoutRecord.marketplace`), όχι στην ανάθεση ούτε σε νέα συλλογή | η μεταφορά είναι «αυτής της πληρωμής»· το έγγραφο το βρίσκουν ήδη webhook/συμφιλίωση/επιστροφή· καμία νέα συλλογή, κανόνας ή δείκτης (μία ισότητα `marketplace.transferDue`) |
+| Ε-4 | **Οφειλή πριν από την πράξη**: `transferDue: true` γράφεται μαζί με τη μίσθωση· το cron (`sweepHeldTransfers`) ξαναπιάνει κάθε οφειλή | καμία πληρωμή αμεταβίβαστη σιωπηλά, ακόμη κι αν ο διακομιστής καταρρεύσει ανάμεσα σε είσπραξη και μεταφορά |
+| Ε-5 | **Κ-6 = ένα κουτί, δύο δηλώσεις** + σώμα με δύο `z.literal(true)` · η στιγμή = `withdrawalWaiverAt` της συνεδρίας ⇒ γεγονός `funded` | 3ι §4 α ii (ρητό αίτημα) **και** 3ιβ (α) (αναγνώριση) — ο διακομιστής αρνείται σώμα χωρίς τα δύο |
+
+| Πού | Τι |
+|---|---|
+| `payable-subject.ts` | είδος **`issuance-advance`** `{companyId, assignmentId, withdrawalWaiverAt}` · επιστροφή `^/document-request$` · εμβέλεια = ίδια ανάθεση ίδιου μισθωτή |
+| `payment-checkout-store.ts` | `CheckoutMarketplace {payeeReference, transferReference, transferDue, lease}` · **προκαταβολή χωρίς αναγνώσιμη κράτηση ⇒ ανύπαρκτη συνεδρία** (ποτέ χρήματα τρίτου ως πληρωμή εμπόρου) · ρητό ερώτημα `companyId ==` + `assignmentId ==` · `listCheckoutsAwaitingTransfer` |
+| `payment-provider.ts` · `everypay-adapter.ts` | `split` στο `CheckoutRequest` / `CheckoutSubject` · κάρτα `split=1` · IRIS `split=1` στη χρέωση πηγής· τιμολόγιο: **καμία** παράμετρος (σώμα αμετάβλητο) |
+| `payment-checkout-launch.ts` (**νέο**) | η εκκίνηση στον πάροχο — **μεταφέρθηκε** από το checkout τιμολογίου (δεύτερος καλών, κανένα δίδυμο) |
+| `payment-held-transfer.ts` (**νέο**) | `ensureHeldTransfer` (μίσθωση + δηλωτική `ensureTransfer({hold: true, commissionMinor: 0})`) · `sweepHeldTransfers` (cron) · ταυτότητα κατόχου `ptls` |
+| `issuance-assignments.server.ts` · `…-audit.server.ts` | γραφέας **`system`** (καμία CAS — τη δέσμευση την κρίνει ο μειωτής) · δράστης στο ιστορικό `provider:everypay` |
+| `issuance-advance-payment.server.ts` (**νέο**) | ο handler του είδους: πληρωμή ⇒ `advance-funded` · επιστροφή ⇒ `advance-refunded` · μετά την είσπραξη ⇒ κρατημένη μεταφορά (και στο `duplicate`) · άρνηση μειωτή ⇒ **`subject-refused`** (νέα έκβαση, θέλει άνθρωπο) · `readHostedIssuanceContext` |
+| `issuance-advance-checkout.ts` (**νέο**) · `api/issuance-link/advance-checkout` | όψη · έναρξη (ιδεμποτία στο σύνορο, CHECK 3.92) · έκβαση απόπειρας· §29 κωδικός και εδώ |
+| `issuance-invitation-answer.ts` · `api/issuance-link/unlock` | απαντημένος σύνδεσμος με προκαταβολή ⇒ η όψη `advance` (αλλιώς η αρχική άρνηση `already-used`) |
+| `invitation-redeem.ts` · `invitation-guards.ts` | `readRedeemedInvitationByToken` · `refusalOfRedeemedInvitation` |
+| `DocumentRequestAdvance.tsx` · `useAdvancePayment.ts` | το βήμα «Πληρωμή προκαταβολής» (πίνακας ακύρωσης ξανά · κουτί Κ-6 · κάρτα/IRIS · αναμονή επιβεβαίωσης) |
+| `components/shared/payments/*` (**νέα**) | `usePaymentAttemptWatch` · `checkout-launch` · `returned-attempt` — **μεταφέρθηκαν** από τη σελίδα του τιμολογίου (ο ΕΝΑΣ βρόχος, η ΜΙΑ οδήγηση) |
+| `issuance-answer-receipt.ts` · email | η απόδειξη έγκρισης με προκαταβολή φέρει **κουμπί πληρωμής** (ο ίδιος σύνδεσμος) |
+| `api/account/payouts` · `ReceivePaymentsCard` · `payout-account.ts` | **«Λήψη πληρωμών»** στο `(me)/profile` (όριο `next/dynamic` — η κάρτα φορτώνει ασύγχρονα): εγγραφή στον πάροχο · hosted KYC · email από το token, όχι από τη φόρμα · IBAN/ΑΦΜ **δεν** αποθηκεύονται |
+| `issuance-advance-notifier.ts` · `notification-events.ts` | `…_ADVANCE_FUNDED` (μηχανικός + γραφείο) · `…_ADVANCE_PAYEE_REQUIRED` (μηχανικός, προφίλ) · προτίμηση `documentIssuancePayments` |
+| `payment-reconcile.job.ts` | τρίτο πέρασμα: οφειλόμενες μεταφορές |
+
+**Επαλήθευση**: jest **δεν** τρέχτηκε σε αυτή τη συνεδρία (ο κανόνας N.(-2) ζητά ρητή έγκριση). Γράφτηκαν: `payment-held-transfer.test.ts`
+(νέα — μία μεταφορά κρατημένη · προμήθεια 0 · μίσθωση · μίσθωση που έληξε · οφειλή μετά από βλάβη · cron)· `payable-subject.test.ts`
+(+ είδος προκαταβολής · κράτηση υποχρεωτική · ρητό ερώτημα · μητρώο)· `everypay-adapter.test.ts` (+ `split`).
+
 ## 6. Πού ξεπερνάμε τους μεγάλους
 1. Πολιτική ακύρωσης **μέσα στην ίδια έγκριση** με την τιμή (ο Airbnb τη δείχνει, δεν την «υπογράφει» μαζί με όρους που αναθεωρούνται).
 2. Υπαναχώρηση καταναλωτή **ρητή και καταγεγραμμένη** τη στιγμή της πληρωμής.
@@ -271,6 +311,7 @@ transfers / payouts / reversals** στην τεκμηρίωση ⇒ η κατά�
 4. Ελάχιστα δεδομένα: IBAN/KYC στον PSP, όχι σε εμάς.
 5. Ιδεμποτία χρημάτων **χωρίς** κλειδί ιδεμποτίας του παρόχου: δηλωτικές πράξεις (§5.7).
 6. Πίνακας ακύρωσης **σε ποσά** πριν από την έγκριση, από τους ίδιους κανόνες με την πραγματική επιστροφή (§5.8).
+7. Μεταφορά **χωρίς** κλειδί ιδεμποτίας του παρόχου, ασφαλής και σε ταυτόχρονους καλούντες: δηλωτική πράξη + μίσθωση + οφειλή που τη βλέπει το cron (§5.9 Ε-3/Ε-4).
 
 ## 7. Εκτός εμβέλειας
 Ο φάκελος αρχείων της κατοικίας και το μοίρασμά του (άλλος πράκτορας) · διαβίβαση myDATA από την εφαρμογή · προμήθεια πλατφόρμας.
@@ -292,6 +333,16 @@ transfers / payouts / reversals** στην τεκμηρίωση ⇒ η κατά�
    με την ίδια κεφαλίδα — ζωντανά στη Φ6.
 10. Κατάρρευση μετά την επιτυχή εγγραφή πωλητή και πριν γραφτεί η αναφορά ⇒ πιθανός δεύτερος πωλητής (ο πάροχος δεν
     τεκμηριώνει αναζήτηση πωλητή με ΑΦΜ) — εντοπισμός στο dashboard.
+11. (§5.9) Ο σύνδεσμος πληρωμής λήγει με την **υπογραφή** της πρόσκλησης έγκρισης (7 ημέρες από την αποστολή)· έγκριση που
+    **κατέγραψε το γραφείο** (`recorded-instruction`) δεν έχει σύνδεσμο ιδιοκτήτη ⇒ καμία online πληρωμή ακόμη. Σχέδιο: αίτημα
+    πληρωμής από το γραφείο (νέος σύνδεσμος μόνο πληρωμής) — Φ5.
+12. (§5.9) Είσπραξη που ο μειωτής αρνείται (ακύρωση ανάμεσα σε πληρωμή και webhook, άλλο ποσό) ⇒ `subject-refused` + σφάλμα·
+    η αυτόματη επιστροφή είναι Φ5 (`reconcilePaymentRefund`).
+13. (§5.9) Ο δικαιούχος είναι **ανά χρήστη** (ο λογαριασμός της ενεργής συμμετοχής) — όχι ανά γραφείο του μηχανικού
+    (`actingFor`). Αν ο μηχανικός αναλαμβάνει για γραφείο του, η πληρωμή πάει στον προσωπικό του δικαιούχο· η τιμολόγηση
+    για το γραφείο είναι εκτός εμβέλειας.
+14. (§5.9) Η κάρτα «Λήψη πληρωμών» ζει στο `(me)/profile`· το προφίλ του γραφειακού κόσμου (`o/[workspace]/account/profile`) δεν
+    τη δείχνει ακόμη.
 
 ## Changelog
 
@@ -301,4 +352,5 @@ transfers / payouts / reversals** στην τεκμηρίωση ⇒ η κατά�
 | 2026-11-16 | Φ1: καθαρός τομέας (§5.5) — `issuance-advance.ts` · `issuance-advance-reducer.ts` · actor `system` · πεδία εγγραφής/σχήματος με defaults · τελικός ΜΑΡΚ με συμψηφισμό · σουίτα `issuance-advance.test.ts`. Απόκλιση: `advanceReceipt` αντί για `receipts[]`. |
 | 2026-11-16 | Φ2 (§5.6): γενίκευση checkout σε «πληρωτέο αντικείμενο» χωρίς αλλαγή συμπεριφοράς — `payable-subject.ts` (λεξιλόγιο + κωδικοποιητής) · `payable-subject-registry.ts` (γραφέας ανά είδος) · `invoice-payable-subject.ts` · `PaymentCheckoutRecord.subject` (στη βάση ίδια πεδία + `subjectKind`, καμία μετάπτωση) · `payment-checkout-closing.ts` μετακινήθηκε στο `server/payments/`. Απόφαση Giorgio Α1: το `issuance-advance` μπαίνει στη Φ4 μαζί με τον γραφέα του. Jest 12/104. |
 | 2026-11-16 | Φ3 (§5.7): έρευνα EveryPay Marketplace API (sellers · transfers · reversals · payouts · KYC webhook — κανένα webhook transfer/payout, κανένα κλειδί ιδεμποτίας) · `MarketplaceCapability` με **δηλωτικές** πράξεις χρημάτων · adapter + αναγνώστες · `EVERYPAY_MARKETPLACE` · συλλογή `payment_payees` (deny-all, `ppye`, κράτηση θέσης) · σήμα `payee-kyc`. Ποσοστά παρακράτησης 0/50/100 κρατήθηκαν μετά από έρευνα (ΑΚ 700, Airbnb, Οδηγία 2011/83 14(3))· §8 #7–#10 νέα. Απόκλιση: `split=1` στη Φ4. Jest 14/127. |
+| 2026-11-17 | Φ4β (§5.9): έρευνα EveryPay (`split` σε notifications + payments, όχι σε IRIS sessions · μεταφορά μόνο σε `Authorized`) · αποφάσεις Ε-1…Ε-5 · είδος `issuance-advance` + γραφέας `system` · `split=1` · κράτηση/μίσθωση/οφειλή στη συνεδρία + cron · πληρωμή από τον σύνδεσμο που ενέκρινε (όψη `advance`, §29 κωδικός) · email απόδειξης με κουμπί πληρωμής · «Λήψη πληρωμών» (KYC) στο προφίλ · ειδοποιήσεις `…_ADVANCE_FUNDED` / `…_PAYEE_REQUIRED` · κοινά client modules πληρωμής (μεταφορά από το τιμολόγιο). §8 #11–#14 νέα. Jest: γράφτηκαν, εκκρεμεί έγκριση εκτέλεσης. |
 | 2026-11-17 | Φ4α (§5.8): έρευνα (ν.2251/1994 3ε · 3ι · 3ιβ — η σωστή διάταξη για το αναλογικό ποσό είναι η **3ι §3**· Airbnb · Upwork · EveryPay) · αποφάσεις Δ-1…Δ-4 (Giorgio: «όπως οι μεγάλοι») · όριο 50% · αξία αυτοψίας · πλαφόν υπαναχώρησης · πίνακας ακύρωσης σε ποσά · πεδία ιστορικού χρημάτων (κλείνει §42.6) · πεδία στη φόρμα + όψη ιδιοκτήτη · νέα σφράγιση slice `/document-request`. §8 #4 (σχεδίαση) · #6 · #7 · #8 έκλεισαν. Jest 2/25. |

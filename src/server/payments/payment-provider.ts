@@ -42,6 +42,11 @@ export interface CheckoutRequest {
   readonly webhookUrl: string;
   /** Λήξη της συνεδρίας (ISO 8601). */
   readonly expiresAt: string;
+  /**
+   * ADR-943 §5.9 — πληρωμή marketplace: τα χρήματα είναι **τρίτου** και περιμένουν μεταφορά σε δικαιούχο (EveryPay
+   * `split=1`). `false` ⇒ στον λογαριασμό εμπόρου (τιμολόγιο). Ρητό, όχι προαιρετικό: κάθε καλών απαντά.
+   */
+  readonly split: boolean;
 }
 
 export interface StartedCheckout {
@@ -110,6 +115,8 @@ export interface CheckoutSubject {
   readonly amountMinor: number;
   readonly currency: CheckoutCurrency;
   readonly providerReference: string | null;
+  /** Πληρωμή marketplace (`CheckoutRequest.split`) — τη χρειάζεται και η χρέωση πηγής IRIS (`POST /payments`). */
+  readonly split: boolean;
 }
 
 /** Μία κίνηση χρημάτων στον πάροχο: η πληρωμή ή μια επιστροφή της. */

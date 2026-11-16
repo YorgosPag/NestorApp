@@ -101,7 +101,7 @@ describe('judgeReturn', () => {
 });
 
 describe('readSettlement (κάρτα)', () => {
-  const subject = { checkoutId: 'pchk_1', method: 'card' as const, amountMinor: 12400, currency: 'EUR' as const, providerReference: 'pnt_1' };
+  const subject = { checkoutId: 'pchk_1', method: 'card' as const, amountMinor: 12400, currency: 'EUR' as const, providerReference: 'pnt_1', split: false };
   const respond = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
   afterEach(() => jest.restoreAllMocks());
 
@@ -144,6 +144,7 @@ describe('startCheckout — λήξη του παρόχου', () => {
   const request = {
     checkoutId: 'pchk_9', amountMinor: 500, currency: 'EUR' as const, description: 'Α-13', locale: 'el' as const,
     returnUrl: 'https://example.test/r', webhookUrl: 'https://example.test/w', expiresAt: '2026-11-13T10:30:00.000Z',
+    split: false,
   };
   const respond = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
   afterEach(() => jest.restoreAllMocks());
@@ -170,5 +171,36 @@ describe('startCheckout — λήξη του παρόχου', () => {
     }));
     const started = await provider.startCheckout({ ...request, method: 'card' });
     expect(started).toMatchObject({ providerReference: 'pnt_9', providerExpiresAt: '2026-11-13T10:30:00.000Z' });
+  });
+});
+
+// ADR-943 §5.9 — πληρωμή marketplace: `split=1` στην ειδοποίηση (κάρτα) και στη χρέωση πηγής (IRIS)· ποτέ στο τιμολόγιο.
+describe('split — πληρωμή marketplace', () => {
+  const request = {
+    checkoutId: 'pchk_7', amountMinor: 4000, currency: 'EUR' as const, description: 'pchk_7', locale: 'el' as const,
+    returnUrl: 'https://example.test/r', webhookUrl: 'https://example.test/w', expiresAt: '2026-11-17T10:30:00.000Z',
+  };
+  const respond = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+  const sentForm = (spy: jest.SpyInstance): URLSearchParams => new URLSearchParams(String((spy.mock.calls[0][1] as RequestInit).body));
+  afterEach(() => jest.restoreAllMocks());
+
+  it('κάρτα με split ⇒ `split=1` στο `POST /notifications`', async () => {
+    const spy = jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({ token: 'pnt_7', payment_link_url: 'https://pay.test/pnt_7' }));
+    await provider.startCheckout({ ...request, method: 'card', split: true });
+    expect(sentForm(spy).get('split')).toBe('1');
+  });
+
+  it('κάρτα χωρίς split (τιμολόγιο) ⇒ ΚΑΜΙΑ παράμετρος split — το σώμα του τιμολογίου αμετάβλητο', async () => {
+    const spy = jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({ token: 'pnt_8', payment_link_url: 'https://pay.test/pnt_8' }));
+    await provider.startCheckout({ ...request, method: 'card', split: false });
+    expect(sentForm(spy).has('split')).toBe(false);
+  });
+
+  it('IRIS: η χρέωση πηγής μιας συνεδρίας marketplace στέλνει `split=1`', async () => {
+    const spy = jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({ token: 'pmt_7', status: 'Captured' }));
+    await provider.captureAuthorizedSource(
+      { checkoutId: 'pchk_7', method: 'iris', amountMinor: 4000, currency: 'EUR', providerReference: null, split: true }, 'src_7',
+    );
+    expect(sentForm(spy).get('split')).toBe('1');
   });
 });

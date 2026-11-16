@@ -10,7 +10,7 @@ import 'server-only';
  *   μοναδικό σε όλη την πλατφόρμα και η εταιρεία βγαίνει **από** το έγγραφο, άρα δεν υπάρχει μισθωτής να φιλτραριστεί.
  */
 
-import type { Firestore } from 'firebase-admin/firestore';
+import type { Firestore, QuerySnapshot } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isOneOf, plainRecordOrNull, trimmedStringOrNull } from '@/lib/type-guards';
@@ -36,6 +36,25 @@ export interface PaymentCheckoutFailure {
   readonly at: string;
 }
 
+/**
+ * ADR-943 §5.9 — η **κράτηση marketplace** μιας συνεδρίας: τα χρήματα είναι τρίτου (`split=1`) και περνούν στον δικαιούχο
+ * με **μία** κρατημένη μεταφορά μετά την είσπραξη. Ζει στη **συνεδρία** — η μεταφορά είναι «αυτής της πληρωμής», και το
+ * έγγραφο είναι ήδη αυτό που βρίσκουν webhook, συμφιλίωση και επιστροφή browser (καμία νέα συλλογή, κανένας νέος κανόνας).
+ */
+export interface CheckoutMarketplace {
+  /** Ο δικαιούχος στον πάροχο (EveryPay `sel_…`), κριμένος `authorized` στην έναρξη. */
+  readonly payeeReference: string;
+  /** Η μεταφορά, όταν δημιουργήθηκε (EveryPay `trn_…`). */
+  readonly transferReference: string | null;
+  /** Η είσπραξη καταγράφηκε και η μεταφορά **οφείλεται** — το πεδίο του διχτυού ασφαλείας (cron). */
+  readonly transferDue: boolean;
+  /**
+   * Η **μίσθωση** της δημιουργίας μεταφοράς: οι δηλωτικές πράξεις του παρόχου είναι ιδεμποτικές **διαδοχικά**, όχι
+   * ταυτόχρονα (webhook + cron + επιστροφή browser). Μόνο ο κάτοχος ζωντανής μίσθωσης μιλά στον πάροχο.
+   */
+  readonly lease: { readonly holder: string; readonly until: string } | null;
+}
+
 export interface PaymentCheckoutRecord {
   readonly checkoutId: string;
   readonly companyId: string;
@@ -51,6 +70,8 @@ export interface PaymentCheckoutRecord {
   /** Η πληρωμή στον πάροχο (π.χ. `pmt_…`), όταν εισπράχθηκε — δένει τις επιστροφές με τη συνεδρία. */
   readonly paymentReference: string | null;
   readonly lastFailure: PaymentCheckoutFailure | null;
+  /** ADR-943 — `null` ⇒ πληρωμή στον λογαριασμό εμπόρου (τιμολόγιο)· αλλιώς `split=1` και κρατημένη μεταφορά. */
+  readonly marketplace: CheckoutMarketplace | null;
   readonly createdAt: string;
   readonly expiresAt: string;
   readonly updatedAt: string;
@@ -74,6 +95,27 @@ function checkoutFailureOf(data: unknown): PaymentCheckoutFailure | null {
   return { code: 'authorization-failed', providerCode, at };
 }
 
+function leaseOf(data: unknown): CheckoutMarketplace['lease'] {
+  const raw = plainRecordOrNull(data);
+  const holder = trimmedStringOrNull(raw?.holder);
+  const until = trimmedStringOrNull(raw?.until);
+  return holder === null || until === null ? null : { holder, until };
+}
+
+/**
+ * Η κράτηση marketplace, ή `null` όταν λείπει (τιμολόγιο). ⚠️ Υπάρχει αλλά δεν διαβάζεται ⇒ `'unreadable'`: η συνεδρία
+ * είναι τότε **ανύπαρκτη** — ποτέ «χωρίς κράτηση», που θα έστελνε χρήματα τρίτου στον λογαριασμό εμπόρου.
+ */
+function checkoutMarketplaceOf(data: unknown): CheckoutMarketplace | null | 'unreadable' {
+  if (data === undefined || data === null) return null;
+  const raw = plainRecordOrNull(data);
+  const payeeReference = trimmedStringOrNull(raw?.payeeReference);
+  const transferReference = raw?.transferReference;
+  if (payeeReference === null || typeof raw?.transferDue !== 'boolean') return 'unreadable';
+  if (transferReference !== null && typeof transferReference !== 'string') return 'unreadable';
+  return { payeeReference, transferReference, transferDue: raw?.transferDue === true, lease: leaseOf(raw?.lease) };
+}
+
 /** Έγγραφο ⇒ συνεδρία, ή `null` όταν λείπει κάποιο υποχρεωτικό πεδίο ή έχει άλλη μορφή (και άγνωστο είδος αντικειμένου). */
 export function checkoutRecordOf(checkoutId: string, data: unknown): PaymentCheckoutRecord | null {
   const raw = plainRecordOrNull(data);
@@ -86,17 +128,21 @@ export function checkoutRecordOf(checkoutId: string, data: unknown): PaymentChec
   if (typeof amountMinor !== 'number' || !Number.isSafeInteger(amountMinor) || amountMinor <= 0) return null;
   if (!isPaymentProviderId(provider) || !isOnlinePaymentMethod(method)) return null;
   if (!isOneOf(PAYMENT_CHECKOUT_STATUSES, status) || currency !== 'EUR') return null;
+  const marketplace = checkoutMarketplaceOf(raw?.marketplace);
+  // Χρήματα τρίτου (προκαταβολή) χωρίς αναγνώσιμη κράτηση ⇒ ανύπαρκτη συνεδρία, ποτέ πληρωμή εμπόρου.
+  if (marketplace === 'unreadable' || (subject.kind === 'issuance-advance') !== (marketplace !== null)) return null;
   return {
     checkoutId, companyId, subject, provider, method, amountMinor,
     currency: 'EUR', status, providerReference: text('providerReference'),
-    paymentReference: text('paymentReference'), lastFailure: checkoutFailureOf(raw?.lastFailure), createdAt, expiresAt, updatedAt: text('updatedAt') ?? createdAt,
+    paymentReference: text('paymentReference'), lastFailure: checkoutFailureOf(raw?.lastFailure), marketplace,
+    createdAt, expiresAt, updatedAt: text('updatedAt') ?? createdAt,
   };
 }
 
 /** Ό,τι χρειάζεται ο πάροχος από μια συνεδρία. */
 export function checkoutSubjectOf(record: PaymentCheckoutRecord): CheckoutSubject {
   const { checkoutId, method, amountMinor, currency, providerReference } = record;
-  return { checkoutId, method, amountMinor, currency, providerReference };
+  return { checkoutId, method, amountMinor, currency, providerReference, split: record.marketplace !== null };
 }
 
 /** Συνεδρία ⇒ έγγραφο. Το αντικείμενο γράφεται με τον **έναν** κωδικοποιητή του (`storedPayableSubjectOf`). */
@@ -172,7 +218,20 @@ async function attemptScopeDocsOf(db: Firestore, subject: PayableSubject) {
       // tenant-scope-exempt: ο σύνδεσμος ΕΙΝΑΙ η εμβέλεια (ο ανώνυμος κάτοχός του δεν έχει μισθωτή)· ένα shareId ανήκει
       // σε έναν μισθωτή, και ο καλών έχει ήδη επαληθεύσει ότι ο σύνδεσμος είναι ενεργός (`findActiveShareOf`).
       return (await checkoutsOf(db).where('shareId', '==', subject.shareId).get()).docs;
+    case 'issuance-advance':
+      // Δύο ισότητες ⇒ συγχώνευση μονο-πεδιακών δεικτών, κανένας σύνθετος. Ο μισθωτής ρητά (CHECK 3.10 · 3.35).
+      return (await checkoutsOf(db)
+        .where('companyId', '==', subject.companyId)
+        .where('assignmentId', '==', subject.assignmentId)
+        .get()).docs;
   }
+}
+
+/** Οι συνεδρίες marketplace των οποίων η μεταφορά **οφείλεται** — το δίχτυ ασφαλείας του cron (ADR-943 §5.9). */
+export async function listCheckoutsAwaitingTransfer(db: Firestore, limit: number): Promise<PaymentCheckoutRecord[]> {
+  // tenant-scope-exempt: εργασία συστήματος (cron) πάνω σε ΚΑΘΕ μισθωτή εκ σχεδιασμού· ο μισθωτής κάθε συνεδρίας
+  // διαβάζεται από το έγγραφό της. Μία ισότητα ⇒ αυτόματος δείκτης.
+  return readableCheckoutsOf(await checkoutsOf(db).where('marketplace.transferDue', '==', true).limit(limit).get());
 }
 
 /**
@@ -188,17 +247,21 @@ export async function listPendingCheckoutsOf(db: Firestore, subject: PayableSubj
     ));
 }
 
+/** Στιγμιότυπο ερωτήματος ⇒ οι **αναγνώσιμες** συνεδρίες (η μη αναγνώσιμη είναι ανύπαρκτη). */
+function readableCheckoutsOf(snap: QuerySnapshot): PaymentCheckoutRecord[] {
+  return snap.docs
+    .map((doc) => checkoutRecordOf(doc.id, doc.data()))
+    .filter((record): record is PaymentCheckoutRecord => record !== null);
+}
+
 /** Ανοιχτές συνεδρίες που δημιουργήθηκαν πριν από το `beforeIso` — για τη συμφιλίωση (cron). */
 export async function listStalePendingCheckouts(db: Firestore, beforeIso: string, limit: number): Promise<PaymentCheckoutRecord[]> {
   // tenant-scope-exempt: εργασία συστήματος (cron συμφιλίωσης) που ελέγχει τις ανοιχτές συνεδρίες ΚΑΘΕ μισθωτή εκ
   // σχεδιασμού· ο μισθωτής κάθε συνεδρίας διαβάζεται από το έγγραφό της.
-  const snap = await checkoutsOf(db)
+  return readableCheckoutsOf(await checkoutsOf(db)
     .where('status', '==', 'pending')
     .where('createdAt', '<', beforeIso)
     .orderBy('createdAt', 'asc')
     .limit(limit)
-    .get();
-  return snap.docs
-    .map((doc) => checkoutRecordOf(doc.id, doc.data()))
-    .filter((record): record is PaymentCheckoutRecord => record !== null);
+    .get());
 }

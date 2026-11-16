@@ -797,9 +797,13 @@
   },
   "listingAvailability": {
     "quarter": "Q{ordinal} {year}",
-    "quarterOrdinals": { "1": "1", "2": "2", "3": "3", "4": "4" }
+    "quarterOrdinals": {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4"
+    }
   },
-
   "mandateDecision": {
     "confirmedTitle": "{client} approved the mandate for “{title}”",
     "declinedTitle": "{client} declined the mandate for “{title}”",
@@ -1084,5 +1088,11 @@
     "receivedTitle": "{who} requested a quote from you: {title}",
     "receivedBody": "The response link was sent to the email address you set for quote requests.",
     "unnamed": "A workspace"
+  },
+  "documentIssuanceAdvance": {
+    "funded": "Advance paid: {title}",
+    "fundedBody": "The owner paid the advance of {amount}. The money is held by the payment provider — you can start the site visit.",
+    "payeeRequired": "The owner wants to pay the advance: {title}",
+    "payeeRequiredBody": "Turn on “Receive payments” in your profile to accept the advance."
   }
 }

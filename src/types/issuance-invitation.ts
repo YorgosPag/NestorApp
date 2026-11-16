@@ -13,7 +13,9 @@
 import type { IssuerQualification } from '@/config/document-validity/document-issuers';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { EnergyClass } from '@/constants/energy-classes';
+import type { AdvanceStateKind, AdvanceTerms } from '@/lib/document-validity/issuance-advance';
 import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
+import type { CheckoutLaunch, InvoiceCheckoutAttemptResponse, OnlinePaymentMethod } from '@/subapps/accounting/types/online-payment';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
 import type { InvitationRecordCore, StoredAccessCode } from '@/types/invitation-core';
 
@@ -122,10 +124,68 @@ export interface IssuanceLinkGateView {
   readonly attemptsLeft: number;
 }
 
-/** Η απάντηση του `GET /api/issuance-link`: ανοιχτή όψη (σύνδεσμος χωρίς κωδικό) ή η πύλη του κωδικού. */
+/**
+ * ADR-943 §5.9 — **η πληρωμή της προκαταβολής**, όπως τη βλέπει ο υπεύθυνος με τον σύνδεσμο που **ενέκρινε**: οι όροι
+ * (ποσό · πολιτική · αξία αυτοψίας — ο πίνακας ακύρωσης παράγεται από αυτούς στον client, από τους ίδιους κανόνες),
+ * πού βρίσκεται τώρα η προκαταβολή, και αν μπορεί να πληρωθεί (τρόποι · ο μηχανικός δέχεται πληρωμές).
+ */
+export interface IssuanceAdvancePaymentView {
+  readonly recipientName: string | null;
+  readonly officeName: string | null;
+  readonly propertyLabel: string | null;
+  readonly documentKind: DocumentKind;
+  readonly professionalName: string | null;
+  readonly advance: AdvanceTerms;
+  readonly state: AdvanceStateKind;
+  /** Οι τρόποι που δέχεται ο λογαριασμός για πληρωμή **marketplace** — κενό ⇒ καμία online πληρωμή προκαταβολής. */
+  readonly methods: readonly OnlinePaymentMethod[];
+  /** Ο μηχανικός δέχεται πληρωμές (δικαιούχος `authorized`, όπως τον ξέρουμε) — αλλιώς «περιμένουμε τον μηχανικό». */
+  readonly payeeReady: boolean;
+}
+
+/**
+ * Η απάντηση του `GET /api/issuance-link`: ανοιχτή όψη (σύνδεσμος χωρίς κωδικό) ή η πύλη του κωδικού — και (ADR-943
+ * §5.9) μετά την **έγκριση με προκαταβολή**, το βήμα της πληρωμής με τον ίδιο σύνδεσμο.
+ */
 export type IssuanceLinkLanding =
   | { readonly access: 'open'; readonly view: IssuanceLinkView }
-  | { readonly access: 'code-required'; readonly gate: IssuanceLinkGateView };
+  | { readonly access: 'code-required'; readonly gate: IssuanceLinkGateView }
+  | { readonly access: 'advance'; readonly advance: IssuanceAdvancePaymentView };
+
+/** Τι ξεκλειδώνει ο κωδικός (§29): την όψη της απάντησης, ή (ADR-943) την πληρωμή της προκαταβολής. */
+export type IssuanceLinkUnlocked =
+  | { readonly view: IssuanceLinkView }
+  | { readonly advance: IssuanceAdvancePaymentView };
+
+/** Το σώμα του `POST /api/issuance-link/advance-checkout` — **ποτέ** ποσό· το ρητό αίτημα έναρξης ως δύο `true` (Κ-6). */
+export interface IssuanceAdvanceCheckoutBody {
+  readonly method: OnlinePaymentMethod;
+  readonly locale: 'el' | 'en';
+  /** «Ζητώ να ξεκινήσει η εργασία μέσα στις 14 ημέρες υπαναχώρησης» (ν.2251/1994 3ι §4 α ii). */
+  readonly startRequested: true;
+  /** «Αναγνωρίζω ότι χάνω το δικαίωμα υπαναχώρησης όταν η υπηρεσία παρασχεθεί πλήρως» (3ιβ (α)). */
+  readonly acknowledgesWithdrawalLoss: true;
+  readonly accessCode: string | null;
+}
+
+/**
+ * Οι αρνήσεις της έναρξης πληρωμής προκαταβολής (πέρα από του συνδέσμου):
+ * - `not-payable` — η προκαταβολή δεν περιμένει πληρωμή (πληρώθηκε · καμία · άλλαξε η ανάθεση)·
+ * - `payee-not-ready` — ο μηχανικός δεν δέχεται ακόμη πληρωμές (ειδοποιείται)·
+ * - `method-unavailable` — ο λογαριασμός δεν έχει marketplace ή τον τρόπο·
+ * - `provider-unavailable` — ο πάροχος αρνήθηκε την έναρξη (ξαναδοκιμάστε).
+ */
+export const ISSUANCE_ADVANCE_CHECKOUT_REFUSALS = ['not-payable', 'payee-not-ready', 'method-unavailable', 'provider-unavailable'] as const;
+export type IssuanceAdvanceCheckoutRefusal = (typeof ISSUANCE_ADVANCE_CHECKOUT_REFUSALS)[number];
+
+/** Η έκβαση μιας απόπειρας προκαταβολής — το ίδιο σχήμα με του τιμολογίου (ADR-ACC-030 §5.6), χωρίς την επίσκεψη. */
+export type IssuanceAdvanceAttemptResponse =
+  | Extract<InvoiceCheckoutAttemptResponse, { status: 'ok' }>
+  | { readonly status: 'refused'; readonly reason: 'unknown-attempt' };
+
+export type IssuanceAdvanceCheckoutResult =
+  | { readonly status: 'started'; readonly checkoutId: string; readonly launch: CheckoutLaunch }
+  | { readonly status: 'refused'; readonly reason: IssuanceAdvanceCheckoutRefusal };
 
 /**
  * Οι αρνήσεις του συνδέσμου πέρα από τις κοινές της πρόσκλησης:

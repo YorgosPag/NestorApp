@@ -79,6 +79,8 @@ export type IssuanceEmailInput =
     readonly answeredAt: string; readonly verifiedBy: LinkVerification; readonly comment: string | null;
     /** §39 — το «Αναλαμβάνω» άνοιξε **χώρο της ανάθεσης**: η απόδειξη φέρει τον σύνδεσμο εισόδου. `null` ⇒ καμία πρόσκληση. */
     readonly space: IssuanceSpaceLink | null;
+    /** ADR-943 §5.9 — έγκριση **με προκαταβολή**: η πληρωμή της, με τον ίδιο σύνδεσμο. `null` ⇒ καμία προκαταβολή. */
+    readonly advancePayment: IssuanceSpaceLink | null;
   }
   /** §39 — η πρόσκληση στον χώρο της ανάθεσης (επαναποστολή από το γραφείο). */
   | { readonly kind: 'space'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly space: IssuanceSpaceLink }
@@ -190,6 +192,19 @@ function receiptEmail(named: Named, input: Extract<IssuanceEmailInput, { kind: '
     invitationDetailLine(w.receipt.notYouLabel, w.receipt.notYou(office)),
   ];
   const framing = { language, subject: w.receipt.subject(document, property), heading: w.receipt.heading, intro: lineOf(w.receipt.intro[input.answer], [document, property, professional]) };
+  if (input.advancePayment !== null) {
+    const pay = w.advancePayment;
+    return composeInvitationEmail({
+      ...framing,
+      details: [
+        ...details,
+        invitationDetailLine(pay.nextLabel, pay.next),
+        invitationDetailLine(pay.expiresLabel, formatOperatorDate(input.advancePayment.expiresAt, language)),
+      ],
+      link: input.advancePayment.link,
+      core: pay,
+    });
+  }
   if (input.space === null) return composeNoticeEmail({ ...framing, details, footnote: w.receipt.footnote });
   return composeInvitationEmail({
     ...framing,

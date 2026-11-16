@@ -47,6 +47,7 @@
  * χρωστούν κείμενα.
  */
 
+import dynamic from 'next/dynamic';
 import React from 'react';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE. Δες την κεφαλίδα για το γιατί **εδώ**.
@@ -57,6 +58,16 @@ import { ProfilePageContent } from '@/components/account/pages/ProfilePageConten
 import { ShowcaseDoor } from '@/components/account/ShowcaseDoor';
 
 registerRouteSlice(routeSlice);
+
+/**
+ * ADR-943 §5.9 — «Λήψη πληρωμών»: ΟΡΙΟ `next/dynamic`, όχι στατικό. Η κάρτα φορτώνει **ήδη** ασύγχρονα τη δική της
+ * κατάσταση (`GET /api/account/payouts` ⇒ «Φόρτωση…»), άρα δεν ανήκει στο πρώτο καρέ του προφίλ· τα ~2 KB κειμένων της
+ * (φόρμα · επτά καταστάσεις) δεν ταξιδεύουν σε όποιον ανοίγει το προφίλ για όνομα/ΑΦΜ.
+ */
+const ReceivePaymentsCard = dynamic(
+  () => import('@/components/account/payouts/ReceivePaymentsCard').then((mod) => mod.ReceivePaymentsCard),
+  { ssr: false },
+);
 
 /**
  * ────────────────────────────────────────────────────────────────────────────
@@ -82,6 +93,8 @@ export function PrivateProfileContent(): React.ReactElement {
   return (
     <>
       <ProfilePageContent />
+      {/* ADR-943 §5.9 — «Λήψη πληρωμών»: ο μηχανικός γίνεται δικαιούχος για προκαταβολές με κράτηση. */}
+      <ReceivePaymentsCard />
       <ShowcaseDoor />
     </>
   );

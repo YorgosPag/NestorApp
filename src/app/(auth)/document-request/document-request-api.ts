@@ -13,11 +13,21 @@ import type { IssuanceLinkAnswerBody, IssuanceLinkUnlockBody } from '@/lib/docum
 import { isOneOf } from '@/lib/type-guards';
 import { generateIdempotencyKey } from '@/services/enterprise-id.service';
 import { CORE_INVITATION_REFUSALS } from '@/types/invitation-core';
-import { ISSUANCE_LINK_REFUSALS, type IssuanceLinkLanding, type IssuanceLinkView, type IssuanceSpaceView } from '@/types/issuance-invitation';
+import {
+  ISSUANCE_LINK_REFUSALS,
+  type IssuanceAdvanceAttemptResponse,
+  type IssuanceAdvanceCheckoutBody,
+  type IssuanceAdvanceCheckoutResult,
+  type IssuanceLinkLanding,
+  type IssuanceLinkUnlocked,
+  type IssuanceSpaceView,
+} from '@/types/issuance-invitation';
+import { INVOICE_CHECKOUT_ATTEMPT_PARAM } from '@/subapps/accounting/types/online-payment';
 
 const VIEW_API = '/api/issuance-link';
 const ANSWER_API = '/api/issuance-link/answer';
 const UNLOCK_API = '/api/issuance-link/unlock';
+const ADVANCE_CHECKOUT_API = '/api/issuance-link/advance-checkout';
 
 /** Κάθε αποτυχία που μπορεί να ονομάσει η σελίδα — ίδιοι κωδικοί με την πόρτα (`issuance-link-door.ts`). */
 export const DOCUMENT_REQUEST_FAILURES = [
@@ -71,7 +81,18 @@ export function answerDocumentRequest(token: string, body: IssuanceLinkAnswerBod
   return postWithLink(ANSWER_API, token, body);
 }
 
-/** §29 — μία προσπάθεια κωδικού ⇒ η πλήρης όψη. */
-export function unlockDocumentRequest(token: string, body: IssuanceLinkUnlockBody): Promise<ApiOutcome<{ readonly view: IssuanceLinkView }>> {
+/** §29 — μία προσπάθεια κωδικού ⇒ η πλήρης όψη (ή, ADR-943, η πληρωμή της προκαταβολής). */
+export function unlockDocumentRequest(token: string, body: IssuanceLinkUnlockBody): Promise<ApiOutcome<IssuanceLinkUnlocked>> {
   return postWithLink(UNLOCK_API, token, body);
+}
+
+/** ADR-943 §5.9 — έναρξη πληρωμής προκαταβολής: ένα κλειδί ιδεμποτίας ανά πάτημα, **ποτέ** ποσό. */
+export function startAdvanceCheckout(token: string, body: IssuanceAdvanceCheckoutBody): Promise<ApiOutcome<IssuanceAdvanceCheckoutResult>> {
+  return postWithLink(ADVANCE_CHECKOUT_API, token, body);
+}
+
+/** ADR-943 §5.9 — η έκβαση μιας απόπειρας προκαταβολής (GET, καμία πράξη). */
+export function readAdvanceAttempt(token: string, checkoutId: string): Promise<ApiOutcome<IssuanceAdvanceAttemptResponse>> {
+  const query = new URLSearchParams({ [INVOICE_CHECKOUT_ATTEMPT_PARAM]: checkoutId }).toString();
+  return guarded(() => fetch(`${ADVANCE_CHECKOUT_API}?${query}`, { method: 'GET', headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }));
 }

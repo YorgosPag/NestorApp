@@ -100,7 +100,12 @@ export type IssuanceWriter =
   /** `verifiedBy` (§29) — τι απέδειξε ο κάτοχος· ο μειωτής το συγκρίνει με ό,τι ζήτησε το αίτημα. */
   | { readonly kind: 'link'; readonly invitationId: string; readonly name: string | null; readonly verifiedBy: LinkVerification }
   /** §45.20 Φ6γ — ο μηχανικός από τη συμμετοχή του (αποδεδειγμένη από τον καλούντα)· CAS όπως το γραφείο. */
-  | { readonly kind: 'engagement'; readonly engagementId: string; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null };
+  | { readonly kind: 'engagement'; readonly engagementId: string; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null }
+  /**
+   * ADR-943 §5.9 — ο διακομιστής, **αφού** διάβασε την αλήθεια στο API του παρόχου (Κ-8). **Καμία CAS**: η δέσμευσή του
+   * είναι η αναφορά του παρόχου, που την κρίνει ο μειωτής (ιδεμποτία · ποσό · στάδιο). `provider` = ο δράστης στο ίχνος.
+   */
+  | { readonly kind: 'system'; readonly source: 'payments'; readonly provider: string; readonly name: null };
 
 export interface IssuanceWrite {
   readonly companyId: string;
@@ -154,9 +159,9 @@ export interface StagedIssuanceWrite {
 
 const NOTHING_TO_WRITE = { commit: (): void => undefined, audit: async (): Promise<void> => undefined };
 
-/** Η CAS του γραφείου και της συμμετοχής — ο σύνδεσμος δεσμεύεται αλλού (στον μειωτή, στο τρέχον αίτημα). */
+/** Η CAS του γραφείου και της συμμετοχής — ο σύνδεσμος και το σύστημα δεσμεύονται αλλού (στον μειωτή). */
 function casHolds(writer: IssuanceWriter, previousStage: IssuanceStage | null): boolean {
-  return writer.kind === 'link' || previousStage === writer.expectedStage;
+  return writer.kind === 'link' || writer.kind === 'system' || previousStage === writer.expectedStage;
 }
 
 function actorOf(writer: IssuanceWriter, nowIso: string): IssuanceActor {
@@ -164,6 +169,7 @@ function actorOf(writer: IssuanceWriter, nowIso: string): IssuanceActor {
     case 'office': return { kind: 'office', uid: writer.uid, nowIso };
     case 'link': return { kind: 'link', invitationId: writer.invitationId, verifiedBy: writer.verifiedBy, nowIso };
     case 'engagement': return { kind: 'engagement', engagementId: writer.engagementId, uid: writer.uid, nowIso };
+    case 'system': return { kind: 'system', source: writer.source, nowIso };
   }
 }
 

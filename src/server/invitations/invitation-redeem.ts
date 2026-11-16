@@ -28,7 +28,7 @@ import type {
   InvitationRecordCore,
 } from '@/types/invitation-core';
 
-import { proveMailboxByInvitation, refusalOfStoredInvitation } from './invitation-guards';
+import { proveMailboxByInvitation, refusalOfRedeemedInvitation, refusalOfStoredInvitation } from './invitation-guards';
 import { readInvitationToken } from './invitation-token';
 
 const logger = createModuleLogger('invitation-redeem');
@@ -145,14 +145,12 @@ type InvitationByToken<TDoc extends InvitationDocumentCore> =
   | { readonly kind: 'refused'; readonly reason: InvitationCoreRefusal }
   | { readonly kind: 'secret-missing' };
 
-/**
- * **Token → έγγραφο → οι κοινοί έλεγχοι.** Η υπογραφή κρίνεται **πριν** από κάθε ανάγνωση βάσης.
- * @param recipientEmail ο συνδεδεμένος — `null` στην **όψη** (δεν υπάρχει ακόμη ταυτότητα· η όψη δεν γράφει).
- */
-export async function readInvitationByToken<TDoc extends InvitationDocumentCore>(
-  db: Firestore,
-  kind: InvitationLocator<TDoc>,
-  input: { readonly token: string; readonly nowValue: string; readonly recipientEmail: string | null },
+/** Ο κριτής του αποθηκευμένου εγγράφου — `null` ⇔ δεκτό. Ο ΜΟΝΟΣ λόγος που διαφέρουν οι δύο αναγνώστες. */
+type StoredInvitationJudge = (stored: InvitationDocumentCore, nonceHash: string) => InvitationCoreRefusal | null;
+
+/** Token → έγγραφο: υπογραφή **πριν** από κάθε ανάγνωση βάσης, μετά εντοπισμός, «ανήκει;» και ο κριτής του καλούντα. */
+async function readByToken<TDoc extends InvitationDocumentCore>(
+  db: Firestore, kind: InvitationLocator<TDoc>, input: { readonly token: string; readonly nowValue: string }, judge: StoredInvitationJudge,
 ): Promise<InvitationByToken<TDoc>> {
   const reading = await readInvitationToken(kind.secretEnv, input.token, kind.locatorCount, input.nowValue);
   if (reading.kind !== 'read') return reading;
@@ -163,13 +161,39 @@ export async function readInvitationByToken<TDoc extends InvitationDocumentCore>
 
   const stored = snap.data() as TDoc;
   if (!location.belongs(stored)) return { kind: 'refused', reason: 'invitation-unknown' };
-  const refusal = refusalOfStoredInvitation(stored, {
-    nowValue: input.nowValue,
-    nonceHash: reading.nonceHash,
-    recipientEmail: input.recipientEmail,
-  });
+  const refusal = judge(stored, reading.nonceHash);
   if (refusal !== null) return { kind: 'refused', reason: refusal };
   return { kind: 'found', invitationId: reading.invitationId, location, stored, nonceHash: reading.nonceHash };
+}
+
+/**
+ * **Token → έγγραφο → οι κοινοί έλεγχοι.** Η υπογραφή κρίνεται **πριν** από κάθε ανάγνωση βάσης.
+ * @param recipientEmail ο συνδεδεμένος — `null` στην **όψη** (δεν υπάρχει ακόμη ταυτότητα· η όψη δεν γράφει).
+ */
+export function readInvitationByToken<TDoc extends InvitationDocumentCore>(
+  db: Firestore,
+  kind: InvitationLocator<TDoc>,
+  input: { readonly token: string; readonly nowValue: string; readonly recipientEmail: string | null },
+): Promise<InvitationByToken<TDoc>> {
+  return readByToken(db, kind, input, (stored, nonceHash) => refusalOfStoredInvitation(stored, {
+    nowValue: input.nowValue, nonceHash, recipientEmail: input.recipientEmail,
+  }));
+}
+
+/**
+ * **Ο κάτοχος ενός ΕΞΑΡΓΥΡΩΜΕΝΟΥ συνδέσμου** (ADR-943 §5.9) — η ίδια υπογραφή, το ίδιο έγγραφο, το ίδιο nonce· αλλά
+ * κατάσταση `accepted` **αντί** για `pending`. Αποδεικνύει «είσαι αυτός που απάντησε **ναι** με αυτόν τον σύνδεσμο»: η
+ * μόνη χρήση είναι **ακολουθία** της απάντησης (π.χ. η πληρωμή της προκαταβολής που μόλις εγκρίθηκε). Η λήξη είναι αυτή
+ * της **υπογραφής** (`readInvitationToken`) — η αποθηκευμένη λήξη αφορούσε την απάντηση, που δόθηκε.
+ * ⚠️ Ο καλών **πρέπει** να ξανακρίνει ότι η απάντηση αυτού του συνδέσμου είναι ακόμη η ισχύουσα (π.χ. η απόφαση της
+ * ανάθεσης δείχνει **αυτό** το `invitationId`).
+ */
+export function readRedeemedInvitationByToken<TDoc extends InvitationDocumentCore>(
+  db: Firestore,
+  kind: InvitationLocator<TDoc>,
+  input: { readonly token: string; readonly nowValue: string },
+): Promise<InvitationByToken<TDoc>> {
+  return readByToken(db, kind, input, refusalOfRedeemedInvitation);
 }
 
 // =============================================================================

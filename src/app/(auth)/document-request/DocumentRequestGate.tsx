@@ -24,8 +24,9 @@ import routeSlice from '@/i18n/generated/routes/document-request.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 import { DOCUMENT_REQUEST_STORAGE_KEY, noDocumentRequestExtras } from '@/lib/document-validity/document-request-link';
 import { useFragmentCredential } from '@/lib/tokens/useFragmentCredential';
-import type { IssuanceLinkLanding, IssuanceLinkView } from '@/types/issuance-invitation';
+import type { IssuanceLinkLanding, IssuanceLinkUnlocked } from '@/types/issuance-invitation';
 
+import { DocumentRequestAdvance } from './DocumentRequestAdvance';
 import { DocumentRequestCard } from './DocumentRequestCard';
 import { DocumentRequestCodeStep } from './DocumentRequestCodeStep';
 import { DocumentRequestFailureState } from './DocumentRequestFailureState';
@@ -65,7 +66,7 @@ function Loading() {
 /** Η όψη που ξεκλείδωσε ο κωδικός (§29) — **με** τον σύνδεσμο που την ξεκλείδωσε: άλλος σύνδεσμος ⇒ ποτέ η παλιά. */
 interface Unlocked {
   readonly token: string;
-  readonly view: IssuanceLinkView;
+  readonly unlocked: IssuanceLinkUnlocked;
   readonly accessCode: string;
 }
 
@@ -74,16 +75,21 @@ export function DocumentRequestGate() {
   const token = link.phase === 'ready' ? link.token : null;
   const load = useRequestView(token);
   const [unlocked, setUnlocked] = useState<Unlocked | null>(null);
-  const onUnlocked = useCallback((view: IssuanceLinkView, accessCode: string) => {
-    if (token !== null) setUnlocked({ token, view, accessCode });
+  const onUnlocked = useCallback((opened: IssuanceLinkUnlocked, accessCode: string) => {
+    if (token !== null) setUnlocked({ token, unlocked: opened, accessCode });
   }, [token]);
   if (link.phase === 'missing') return <DocumentRequestFailureState failure="missing-link" />;
   if (link.phase === 'reading' || load.phase === 'loading') return <Loading />;
   if (load.phase === 'failed') return <DocumentRequestFailureState failure={load.failure} />;
   const { landing } = load;
   if (landing.access === 'open') return <DocumentRequestCard key={link.token} token={link.token} view={landing.view} accessCode={null} />;
+  // ADR-943 §5.9 — ο σύνδεσμος ενέκρινε προσφορά με προκαταβολή ⇒ η πληρωμή της, με τον ίδιο σύνδεσμο.
+  if (landing.access === 'advance') return <DocumentRequestAdvance key={link.token} token={link.token} advance={landing.advance} accessCode={null} />;
   if (unlocked !== null && unlocked.token === link.token) {
-    return <DocumentRequestCard key={link.token} token={link.token} view={unlocked.view} accessCode={unlocked.accessCode} />;
+    const opened = unlocked.unlocked;
+    return 'advance' in opened
+      ? <DocumentRequestAdvance key={link.token} token={link.token} advance={opened.advance} accessCode={unlocked.accessCode} />
+      : <DocumentRequestCard key={link.token} token={link.token} view={opened.view} accessCode={unlocked.accessCode} />;
   }
   return <DocumentRequestCodeStep key={link.token} token={link.token} gate={landing.gate} onUnlocked={onUnlocked} />;
 }

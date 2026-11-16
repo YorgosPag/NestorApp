@@ -28,11 +28,10 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatOperatorDate } from '@/lib/operator-time-format';
-import { currentSearchParams, replaceUrlSearchParams } from '@/lib/url-query-state';
+import { forgetReturnedAttempt, returnedAttemptId } from '@/components/shared/payments/returned-attempt';
 import { cn } from '@/lib/utils';
 import type { InvoicePublicView } from '@/subapps/accounting/types/invoice-public-view';
 import type { InvoicePaymentShareResolvedData } from '@/services/sharing/resolvers/invoice-payment.resolver';
-import { PAYMENT_ATTEMPT_ID_PATTERN, PAYMENT_PAGE_ATTEMPT_PARAM } from '@/subapps/accounting/types/online-payment';
 import { formatAccountingCurrency } from '@/subapps/accounting/utils/format';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -133,21 +132,6 @@ function DocumentActions(
       </Button>
     </nav>
   );
-}
-
-/** Η απόπειρα στην οποία επέστρεψε ο browser από τον πάροχο (`?payment=pchk_…`, ADR-ACC-030), ή `null`. */
-function returnedAttemptId(): string | null {
-  const id = currentSearchParams().get(PAYMENT_PAGE_ATTEMPT_PARAM) ?? '';
-  return PAYMENT_ATTEMPT_ID_PATTERN.test(id) ? id : null;
-}
-
-/**
- * Τέλος αναμονής ⇒ σβήνει το `?payment=` χωρίς πλοήγηση, ώστε η ανανέωση να μην ξαναρχίσει κλειστή αναμονή. Μέσω
- * του ΕΝΟΣ γραφέα query state (κρατά hash, άσχετα κλειδιά και το `history.state` του App Router).
- */
-function forgetReturnedAttempt(): void {
-  if (!currentSearchParams().has(PAYMENT_PAGE_ATTEMPT_PARAM)) return;
-  replaceUrlSearchParams((params) => params.delete(PAYMENT_PAGE_ATTEMPT_PARAM));
 }
 
 /** Η έκβαση της απόπειρας για τον άνθρωπο. Το κείμενο φέρει πάντα το νόημα, όχι μόνο το χρώμα. */

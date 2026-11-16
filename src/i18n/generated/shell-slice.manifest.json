@@ -14,10 +14,10 @@
     "src/i18n/generated/routes/demands.el.json": "f15243c6529ea9be6b0a1a4d181ff19e7c5866fcc9953aa98635f63969f3d9e2",
     "src/i18n/generated/routes/demands__demandId.el.json": "4c206917e9429edff64b6d64d393521e17a6718fda664c1a7ca51d289f16a27a",
     "src/i18n/generated/routes/demands__new.el.json": "f85744543c4c75526818bd08771e4729c8a79fd26d564a081d9dc8eeb660a3ed",
-    "src/i18n/generated/routes/document-request.el.json": "fa22f536e7e2e602f060548457251a6c6c835e13aeebb371b4b74cf5a49b4266",
+    "src/i18n/generated/routes/document-request.el.json": "6bac6a655412fce938197a4a3b4211286e901d5e72ec8a11ec0589837515c4ff",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
-    "src/i18n/generated/routes/email__preferences__token.el.json": "9b9351afdb668ca198c1946ac98a0f7aab81bbec24ce1adb7079c29c446217de",
+    "src/i18n/generated/routes/email__preferences__token.el.json": "9b5d55434fde64f1b24fd2a82b48af474c5fe8eb3ffdcb5990f1ab08586ed7c0",
     "src/i18n/generated/routes/engagements.el.json": "fc15e30270245b5bdafb42ef7a53e6584a7d0857f7965bb56016d9cac844d5ae",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "4c3cdc4cca05efa2f10fe817b7b27c39a1549e1f19bffa3c47a3946dacdc72aa",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "40596e61521573fd794719dfc95fdc262294513339af9775778a06a3108f6461",
+  "inputsSha256": "e019e61fa5c037c363cd13ec7ba3c8826cd1dcc72f211df3efc6eaa60d482004",
   "languages": [
     "el"
   ],
@@ -2139,6 +2139,24 @@
         },
         "document-request": {
           "keys": [
+            "advance.amount",
+            "advance.consentHeading",
+            "advance.consentStart",
+            "advance.consentWaiver",
+            "advance.continue",
+            "advance.heading",
+            "advance.intro",
+            "advance.payCard",
+            "advance.payIris",
+            "advance.payeeHint",
+            "advance.refused.methodUnavailable",
+            "advance.refused.notPayable",
+            "advance.refused.payeeNotReady",
+            "advance.refused.providerUnavailable",
+            "advance.watch.failed",
+            "advance.watch.slow",
+            "advance.watch.timedOut",
+            "advance.watch.waiting",
             "brief.area",
             "brief.areaValue",
             "brief.energy",
@@ -2806,6 +2824,7 @@
             "account.notificationSettings.categories.properties.documentExpiryAlerts",
             "account.notificationSettings.categories.properties.documentIssuanceAnswers",
             "account.notificationSettings.categories.properties.documentIssuanceDelivery",
+            "account.notificationSettings.categories.properties.documentIssuancePayments",
             "account.notificationSettings.categories.properties.firstContactReceived",
             "account.notificationSettings.categories.properties.handoverInvitationAnswers",
             "account.notificationSettings.categories.properties.holidayHoursQuestion",
@@ -41039,7 +41058,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1346411
+    "sliceBytes": 1348942
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
