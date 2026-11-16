@@ -58,6 +58,10 @@ jest.mock('@/services/document-registry/document-registry.client', () => ({
   previewIssuanceMessage: (...args: unknown[]) => preview(...args),
   sendIssuanceMessage: (...args: unknown[]) => send(...args),
   applyIssuanceOwnerVat: (...args: unknown[]) => applyVat(...args),
+  // ADR-942 Φ1 — η ενότητα «Έγγραφα που ζήτησε ο μηχανικός» (αναληφθείσα ανάθεση) δεν είναι αντικείμενο αυτής της σουίτας:
+  // `unavailable` ⇒ δεν εμφανίζεται, και κάθε άλλη άγκυρα κρίνει ό,τι έκρινε πριν.
+  fetchIssuanceDocumentRequests: async () => ({ kind: 'unavailable' }),
+  announceIssuanceDocumentProvided: jest.fn(),
 }));
 // Η αναζήτηση επαφής φέρνει υπηρεσίες Firebase — εδώ αρκεί ότι ΔΕΝ χρειάζεται όταν υπάρχει γνωστός.
 jest.mock('@/components/contacts/relationships/ContactSearchManager', () => ({ ContactSearchManager: () => null }));
