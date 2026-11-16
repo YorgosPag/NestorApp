@@ -759,7 +759,11 @@
       "buildingIdentityIssuanceDeliveryChangeAnswer": "Ανάθεση ταυτότητας κτιρίου — απάντηση στο αίτημα αλλαγής προθεσμίας",
       "buildingIdentityIssuanceDeliveryChangeDeclineReason": "Ανάθεση ταυτότητας κτιρίου — αιτιολογία απόρριψης αιτήματος αλλαγής προθεσμίας",
       "electricalInstallationIssuanceDeliveryChangeAnswer": "Ανάθεση ΥΔΕ — απάντηση στο αίτημα αλλαγής προθεσμίας",
-      "electricalInstallationIssuanceDeliveryChangeDeclineReason": "Ανάθεση ΥΔΕ — αιτιολογία απόρριψης αιτήματος αλλαγής προθεσμίας"
+      "electricalInstallationIssuanceDeliveryChangeDeclineReason": "Ανάθεση ΥΔΕ — αιτιολογία απόρριψης αιτήματος αλλαγής προθεσμίας",
+      "energyCertificateIssuanceSpaceInvitation": "Ανάθεση έκδοσης ΠΕΑ — πρόσκληση στον χώρο συνεργασίας",
+      "buildingIdentityIssuanceSpaceInvitation": "Ανάθεση ταυτότητας κτιρίου — πρόσκληση στον χώρο συνεργασίας",
+      "electricalInstallationIssuanceSpaceInvitation": "Ανάθεση ΥΔΕ — πρόσκληση στον χώρο συνεργασίας",
+      "issuanceSpaceInvitation": "Ανάθεση έκδοσης — πρόσκληση στον χώρο συνεργασίας"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

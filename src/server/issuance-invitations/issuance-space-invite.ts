@@ -20,6 +20,7 @@ import type { DocumentKind } from '@/config/document-validity/document-validity'
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { primaryEmailOf } from '@/lib/contacts/primary-email';
 import { issuanceStageOf } from '@/lib/document-validity/issuance-assignment';
+import { ISSUANCE_AUDIT_FIELDS } from '@/lib/document-validity/issuance-audit-fields';
 import { issuanceSpaceStatusOf, canResendSpaceInvitation } from '@/lib/document-validity/issuance-space';
 import { issueEngagementInvitation, latestIssuanceSpaceInvitations } from '@/server/engagement-invitations/engagement-invitation-issue';
 import { notifyEngagementInvitation } from '@/server/engagement-invitations/engagement-invitation-notice';
@@ -90,13 +91,19 @@ async function mayResend(db: Firestore, assignment: DocumentIssuanceAssignment, 
   return canResendSpaceInvitation(issuanceSpaceStatusOf(byAssignment.get(assignment.id) ?? null));
 }
 
+/**
+ * §45.21.2 — το πεδίο είναι **ανά είδος** (η ΙΔΙΑ δήλωση με τα άλλα πεδία της ανάθεσης, `ISSUANCE_AUDIT_FIELDS`): ΠΕΑ και
+ * ΥΔΕ του ίδιου ακινήτου δεν γράφονται πια στο ίδιο όνομα. Η τιμή `invited:<email>` διαβάζεται «προσκλήθηκε · <email>».
+ */
 async function recordSpaceInviteAudit(assignment: DocumentIssuanceAssignment, sender: SpaceInviteSender, email: string): Promise<void> {
+  const fields = ISSUANCE_AUDIT_FIELDS[assignment.documentKind];
+  if (fields === null) return;
   await EntityAuditService.recordChange({
     entityType: assignment.scope === 'property' ? 'property' : 'owner_property',
     entityId: assignment.propertyId,
     entityName: null,
     action: 'updated',
-    changes: [{ field: 'issuanceSpaceInvitation', oldValue: null, newValue: `invited:${email}` }],
+    changes: [{ field: fields.spaceInvitation, oldValue: null, newValue: `invited:${email}` }],
     performedBy: sender.uid,
     performedByName: sender.name,
     companyId: assignment.companyId,

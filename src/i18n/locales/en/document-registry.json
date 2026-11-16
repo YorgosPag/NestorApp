@@ -216,6 +216,9 @@
         "NO_EMAIL": "The professional's contact has no email.",
         "SPACE_UNKNOWN": "Could not check whether they have already entered. Please try again shortly.",
         "generic": "The new link was not sent. Please try again."
+      },
+      "auditValues": {
+        "invited": "invited"
       }
     },
     "heading": "Issuance assignment",

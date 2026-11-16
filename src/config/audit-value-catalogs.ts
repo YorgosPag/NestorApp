@@ -169,6 +169,13 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   energyCertificateIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
   buildingIdentityIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
   electricalInstallationIssuanceDeliveryChangeAnswer: { ns: 'document-registry', path: 'issuance.delivery.change.outcome' },
+  // ── ADR-915 §39 · §45.21.2 — πρόσκληση στον χώρο της ανάθεσης: τιμή `invited:<email>` ⇒ «προσκλήθηκε · <email>»
+  //    (ταυτότητα με είδος του resolver: το είδος από τον κατάλογο, η ουρά όπως είναι). Ένα πεδίο ανά είδος· το παλιό
+  //    `issuanceSpaceInvitation` (ένα για όλα τα είδη) είναι αποσυρμένο (`audit-retired-fields.ts`) και διαβάζεται ίδια.
+  energyCertificateIssuanceSpaceInvitation: { ns: 'document-registry', path: 'issuance.space.auditValues' },
+  buildingIdentityIssuanceSpaceInvitation: { ns: 'document-registry', path: 'issuance.space.auditValues' },
+  electricalInstallationIssuanceSpaceInvitation: { ns: 'document-registry', path: 'issuance.space.auditValues' },
+  issuanceSpaceInvitation: { ns: 'document-registry', path: 'issuance.space.auditValues' },
 
   // ── Property: ADR-915 §35 — απόφαση μόνιμης υποχρέωσης (ένα πεδίο ανά είδος). Οι ΙΔΙΟΙ κατάλογοι με την ενότητα
   //    «Μόνιμες υποχρεώσεις» (μόνο camelCase· ο resolver κανονικοποιεί `not-required` → `notRequired`).

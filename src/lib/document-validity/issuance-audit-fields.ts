@@ -31,6 +31,12 @@ export interface IssuanceAuditFields {
    */
   readonly deliveryChangeAnswer: string;
   readonly deliveryChangeDeclineReason: string;
+  /**
+   * §39 · §45.21.2 — «Νέος σύνδεσμος εισόδου» στον χώρο της ανάθεσης: `— → invited:<email>` (κατάλογος
+   * `issuance.space.auditValues` ⇒ «προσκλήθηκε · <email>»). Ανά είδος, όπως κάθε πεδίο της ανάθεσης· το παλιό ενιαίο
+   * `issuanceSpaceInvitation` είναι αποσυρμένο (`config/audit-retired-fields.ts`).
+   */
+  readonly spaceInvitation: string;
 }
 
 /**
@@ -45,6 +51,7 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeRequest: 'energyCertificateIssuanceDeliveryChangeRequest',
     deliveryChangeAnswer: 'energyCertificateIssuanceDeliveryChangeAnswer',
     deliveryChangeDeclineReason: 'energyCertificateIssuanceDeliveryChangeDeclineReason',
+    spaceInvitation: 'energyCertificateIssuanceSpaceInvitation',
   },
   'building-identity': {
     stage: 'buildingIdentityIssuanceStage', professional: 'buildingIdentityIssuer', approvalRequest: 'buildingIdentityIssuanceApprovalRequest',
@@ -53,6 +60,7 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeRequest: 'buildingIdentityIssuanceDeliveryChangeRequest',
     deliveryChangeAnswer: 'buildingIdentityIssuanceDeliveryChangeAnswer',
     deliveryChangeDeclineReason: 'buildingIdentityIssuanceDeliveryChangeDeclineReason',
+    spaceInvitation: 'buildingIdentityIssuanceSpaceInvitation',
   },
   'tax-clearance': null,
   'insurance-clearance': null,
@@ -67,5 +75,6 @@ export const ISSUANCE_AUDIT_FIELDS: Readonly<Record<DocumentKind, IssuanceAuditF
     deliveryChangeRequest: 'electricalInstallationIssuanceDeliveryChangeRequest',
     deliveryChangeAnswer: 'electricalInstallationIssuanceDeliveryChangeAnswer',
     deliveryChangeDeclineReason: 'electricalInstallationIssuanceDeliveryChangeDeclineReason',
+    spaceInvitation: 'electricalInstallationIssuanceSpaceInvitation',
   },
 };

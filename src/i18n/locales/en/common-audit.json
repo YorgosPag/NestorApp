@@ -759,7 +759,11 @@
       "buildingIdentityIssuanceDeliveryChangeAnswer": "Building identity issuance — answer to the delivery date change request",
       "buildingIdentityIssuanceDeliveryChangeDeclineReason": "Building identity issuance — reason for declining the delivery date change request",
       "electricalInstallationIssuanceDeliveryChangeAnswer": "Electrical installation issuance — answer to the delivery date change request",
-      "electricalInstallationIssuanceDeliveryChangeDeclineReason": "Electrical installation issuance — reason for declining the delivery date change request"
+      "electricalInstallationIssuanceDeliveryChangeDeclineReason": "Electrical installation issuance — reason for declining the delivery date change request",
+      "energyCertificateIssuanceSpaceInvitation": "Energy certificate issuance — invitation to the collaboration space",
+      "buildingIdentityIssuanceSpaceInvitation": "Building identity issuance — invitation to the collaboration space",
+      "electricalInstallationIssuanceSpaceInvitation": "Electrical installation issuance — invitation to the collaboration space",
+      "issuanceSpaceInvitation": "Issuance assignment — invitation to the collaboration space"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

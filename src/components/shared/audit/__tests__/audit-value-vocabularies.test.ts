@@ -337,9 +337,21 @@ describe('Λ8 — αποσυρμένα πεδία: λέξεις για τις π
     return t(bareKey, namespace ? { ns: namespace } : { ns: 'common-audit' });
   };
 
-  it('ο πληθυσμός δεν είναι κενός (το ΠΕΑ ως ενιαίο αντικείμενο, σε ιδιώτη ΚΑΙ εταιρεία)', () => {
-    expect(RETIRED.map(([entityType, field]) => `${entityType}.${field}`)).toEqual(['property.energy', 'owner_property.energy']);
+  it('ο πληθυσμός δεν είναι κενός (ΠΕΑ ως ενιαίο αντικείμενο · πρόσκληση χώρου για όλα τα είδη — ιδιώτης ΚΑΙ εταιρεία)', () => {
+    expect(RETIRED.map(([entityType, field]) => `${entityType}.${field}`)).toEqual([
+      'property.energy', 'property.issuanceSpaceInvitation', 'owner_property.energy', 'owner_property.issuanceSpaceInvitation',
+    ]);
   });
+
+  // ADR-915 §45.21.2 — η παλιά γραμμή `issuanceSpaceInvitation: — → invited:<email>` διαβάζεται «λέξη · email».
+  it.each(LANGS)('%s · η παλιά πρόσκληση χώρου: ετικέτα + «λέξη · email», όχι ωμή τιμή', (lang) => inLang(lang, () => {
+    const value = 'invited:someone+arch1@example.com';
+    const resolved = resolveAuditValue('issuanceSpaceInvitation', value, t);
+    expect(resolved).toBe(`${mockNode(lang, 'document-registry', 'issuance.space.auditValues.invited')} · someone+arch1@example.com`);
+    for (const entityType of ['property', 'owner_property'] as const) {
+      expect(auditVocabularyNamespaces(entityType)).toContain('document-registry');
+    }
+  }));
 
   it.each(RETIRED)('%s.%s — ΛΕΙΠΕΙ από το ενεργό μητρώο και λέει από πού αποσύρθηκε', (entityType, field, entry) => {
     expect(Object.prototype.hasOwnProperty.call(getTrackedFieldsForEntityAuditType(entityType) ?? {}, field)).toBe(false);

@@ -35,9 +35,24 @@ const ENERGY_AS_ONE_OBJECT: RetiredTrackedField = {
   },
 };
 
+/**
+ * Η πρόσκληση στον χώρο της ανάθεσης ως ΕΝΑ πεδίο για όλα τα είδη (ADR-915 §39). Ετικέτα από το
+ * `audit.fields.issuanceSpaceInvitation`· η τιμή `invited:<email>` λύνεται από τον κατάλογο του ονόματος
+ * (`audit-value-catalogs.ts`) — ο ίδιος με τα νέα πεδία ανά είδος.
+ */
+const SPACE_INVITATION_FOR_ALL_KINDS: RetiredTrackedField = {
+  retiredBy: 'ADR-915 §45.21.2 — αντικαταστάθηκε από ένα πεδίο ανά είδος (`ISSUANCE_AUDIT_FIELDS[είδος].spaceInvitation`)',
+  def: { kind: 'scalar', label: 'issuanceSpaceInvitation' },
+};
+
+const PROPERTY_RETIRED_FIELDS: Readonly<Record<string, RetiredTrackedField>> = {
+  energy: ENERGY_AS_ONE_OBJECT,
+  issuanceSpaceInvitation: SPACE_INVITATION_FOR_ALL_KINDS,
+};
+
 const RETIRED_TRACKED_FIELDS: Readonly<Record<string, Readonly<Record<string, RetiredTrackedField>>>> = {
-  property: { energy: ENERGY_AS_ONE_OBJECT },
-  owner_property: { energy: ENERGY_AS_ONE_OBJECT },
+  property: PROPERTY_RETIRED_FIELDS,
+  owner_property: PROPERTY_RETIRED_FIELDS,
 };
 
 /** Τα αποσυρμένα πεδία ενός τύπου οντότητας (κενό αν δεν έχει) — μόνο own-property, ποτέ `constructor`. */
