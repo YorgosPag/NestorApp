@@ -69,7 +69,7 @@ async function reconcileOne(db: Firestore, checkout: PaymentCheckoutRecord, nowM
     const outcome = await syncCheckoutSettlement(db, provider, checkout);
     if (outcome === 'recorded' || outcome === 'unchanged') return 'recorded';
     if (outcome === 'closed') return 'expired';
-    if (outcome === 'invoice-absent') return 'failed';
+    if (outcome === 'subject-absent') return 'failed';
     return expireIfAbandoned(db, provider, checkout, nowMs);
   } catch (error) {
     logger.error('Checkout reconciliation failed — next pass retries', {

@@ -62,9 +62,9 @@ describe('reconcileRecentRefunds', () => {
     });
   });
 
-  it('τιμολόγιο που λείπει ⇒ failed (θέλει άνθρωπο), όχι «ενημερωμένο»', async () => {
+  it('πληρωτέο αντικείμενο που λείπει ⇒ failed (θέλει άνθρωπο), όχι «ενημερωμένο»', async () => {
     listMock.mockResolvedValue(['pmt_1']);
-    syncMock.mockResolvedValue('invoice-absent');
+    syncMock.mockResolvedValue('subject-absent');
     await expect(reconcileRecentRefunds(db, NOW)).resolves.toMatchObject({ failed: 1, recorded: 0 });
   });
 

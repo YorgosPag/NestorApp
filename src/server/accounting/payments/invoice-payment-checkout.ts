@@ -39,7 +39,8 @@ import type { Invoice } from '@/subapps/accounting/types';
 import type { InvoiceCheckoutRequestBody, InvoiceCheckoutResponse } from '@/subapps/accounting/types/online-payment';
 import type { IAccountingRepository } from '@/subapps/accounting/types/interfaces';
 
-import { closePendingCheckoutsOfShare } from './invoice-payment-checkout-closing';
+import type { InvoicePayableSubject } from '@/server/payments/payable-subject';
+import { closePendingCheckoutsOf } from '@/server/payments/payment-checkout-closing';
 import {
   createPaymentCheckout,
   updatePaymentCheckout,
@@ -78,23 +79,25 @@ function minorUnitsOf(amount: number): number {
 }
 
 function newCheckoutRecord(
-  input: StartInvoiceCheckoutInput, invoice: Invoice, companyId: string, provider: PaymentProvider, amountMinor: number,
+  input: StartInvoiceCheckoutInput, subject: InvoicePayableSubject, companyId: string, provider: PaymentProvider, amountMinor: number,
 ): PaymentCheckoutRecord {
   const createdAt = new Date(input.nowMs).toISOString();
   return {
-    checkoutId: generatePaymentCheckoutId(), companyId, invoiceId: invoice.invoiceId, shareId: input.shareId,
+    checkoutId: generatePaymentCheckoutId(), companyId, subject,
     provider: provider.id, method: input.method, amountMinor, currency: 'EUR', status: 'pending',
     providerReference: null, paymentReference: null, lastFailure: null, createdAt,
     expiresAt: new Date(input.nowMs + CHECKOUT_LIFETIME_MS).toISOString(), updatedAt: createdAt,
   };
 }
 
-async function recordCheckoutStarted(repository: IAccountingRepository, record: PaymentCheckoutRecord): Promise<void> {
+async function recordCheckoutStarted(
+  repository: IAccountingRepository, record: PaymentCheckoutRecord, subject: InvoicePayableSubject,
+): Promise<void> {
   await logAccountingEvent(repository, {
     eventType: 'INVOICE_PAYMENT_CHECKOUT_STARTED',
     entityType: 'invoice',
-    entityId: record.invoiceId,
-    userId: linkHolderActor(record.shareId),
+    entityId: subject.invoiceId,
+    userId: linkHolderActor(subject.shareId),
     details: `Online payment started (${record.method}, €${(record.amountMinor / 100).toFixed(2)})`,
     metadata: { checkoutId: record.checkoutId, provider: record.provider, method: record.method, amountMinor: record.amountMinor },
   });
@@ -148,9 +151,10 @@ export async function startInvoicePaymentCheckout(
   const amountMinor = minorUnitsOf(invoiceAmountDueNow(shared.invoice));
   if (shared.invoice.currency !== 'EUR' || amountMinor <= 0) return { status: 'refused', reason: 'not-payable' };
 
-  await closePendingCheckoutsOfShare(db, provider, input.shareId);
-  const record = newCheckoutRecord(input, shared.invoice, shared.share.companyId, provider, amountMinor);
+  const subject: InvoicePayableSubject = { kind: 'invoice', invoiceId: shared.invoice.invoiceId, shareId: input.shareId };
+  await closePendingCheckoutsOf(db, provider, subject);
+  const record = newCheckoutRecord(input, subject, shared.share.companyId, provider, amountMinor);
   await createPaymentCheckout(db, record);
-  await recordCheckoutStarted(shared.repository, record);
+  await recordCheckoutStarted(shared.repository, record, subject);
   return launchAtProvider(db, provider, record, input, shared.invoice);
 }

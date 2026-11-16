@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🚧 IN PROGRESS — Φ0 ✅ · Φ1 τομέας υλοποιημένος (2026-11-16) · Φ2–Φ6 εκκρεμούν |
+| **Status** | 🚧 IN PROGRESS — Φ0 ✅ · Φ1 τομέας ✅ · Φ2 γενίκευση checkout ✅ (2026-11-16) · Φ3–Φ6 εκκρεμούν |
 | **Date** | 2026-11-16 |
 | **Category** | Document Registry / Payments |
 | **Canonical Location** | `src/lib/document-validity/issuance-advance*.ts` (τομέας) · `src/server/payments/` (κράτηση, πληρωτέα αντικείμενα) |
@@ -138,6 +138,39 @@ Checkout με `subject` (`invoice` | `issuance-advance`) · μητρώο `payabl
 ⚠️ **Προς επιβεβαίωση Giorgio**: τα ποσοστά παρακράτησης μετά την έναρξη — ευέλικτη **0%** · μέτρια **50%** · αυστηρή
 **100%** (`RETAINED_AFTER_START_PERCENT`, ένα σημείο). Πριν από την έναρξη: πάντα πλήρης επιστροφή (Κ-5).
 
+### 5.6 Φ2 — τι υλοποιήθηκε (2026-11-16): το checkout πληρώνει «πληρωτέο αντικείμενο»
+
+Στόχος: η πληρωμή τιμολογίου **αμετάβλητη στη συμπεριφορά**, και το checkout έτοιμο να δεχτεί δεύτερο είδος χωρίς να
+αγγιχτεί ξανά ο πυρήνας του (συγχρονισμός · webhook · συμφιλίωση · κλείσιμο · επιστροφή browser).
+
+| Πού | Τι |
+|---|---|
+| `server/payments/payable-subject.ts` (**νέο**, καθαρό) | `PAYABLE_SUBJECT_KINDS` (κλειστό) · `PayableSubject` (διάκριση `kind`) · **ο ένας κωδικοποιητής** `payableSubjectOf` / `storedPayableSubjectOf` · διαδρομή επιστροφής ανά είδος (`isReturnPathOfKind` · `isPayableReturnPath`) · εμβέλεια απόπειρας (`sameAttemptScope`) |
+| `server/payments/payable-subject-registry.ts` (**νέο**) | `recordPayableMovement` — εξαντλητικό `switch` στο είδος ⇒ ο ΕΝΑΣ γραφέας του είδους· `PayableMovementOutcome` `recorded` · `duplicate` · `subject-absent` |
+| `server/accounting/payments/invoice-payable-subject.ts` (**νέο**) | ο handler του τιμολογίου: `recordInvoicePayment` με ντετερμινιστικό `paymentId` και δράστη τον πάροχο — **μεταφερμένος αυτούσιος** από τον συγχρονισμό |
+| `payment-checkout-store.ts` | `PaymentCheckoutRecord.subject` αντί για `invoiceId`/`shareId` · `storedCheckoutOf` · `listPendingCheckoutsOf(subject)` (ένα **ρητό** ερώτημα ανά είδος — ορατό στις πύλες δεικτών 3.15/3.91, όχι μεταβλητό όνομα πεδίου) |
+| `payment-checkout-closing.ts` | μετακινήθηκε από `accounting/payments/` (ήταν ήδη ουδέτερο ως προς είδος) · `closePendingCheckoutsOf(subject)` |
+| συγχρονισμός · συμφιλίωση · επιστροφές · έκβαση απόπειρας · cookie | ρωτούν το μητρώο / τον κωδικοποιητή· `invoice-absent` → `subject-absent` |
+
+**Μορφή στη βάση — γιατί όχι ένθετο `subject` στο έγγραφο**: τα πεδία μένουν στο πάνω επίπεδο (`invoiceId`, `shareId`) και
+το είδος γράφεται στο `subjectKind`· έγγραφο **χωρίς** `subjectKind` = τιμολόγιο. Έτσι: **καμία μετάπτωση** παλιών
+εγγράφων, η αναζήτηση `shareId ==` δεν αλλάζει, **κανένας** νέος δείκτης. Στη **μνήμη** όμως το αντικείμενο είναι ένα πεδίο με
+διάκριση, ώστε ο compiler να αναγκάζει κάθε αναγνώστη να ρωτήσει «ποιο είδος;». Είδος που δεν ξέρει ο κώδικας ⇒ η συνεδρία
+είναι **ανύπαρκτη** (ποτέ «διαβάζεται ως τιμολόγιο»).
+
+**Ονομασία**: `PayableSubject`, **όχι** `CheckoutSubject` — το δεύτερο υπάρχει ήδη στο port με άλλη σημασία (ό,τι χρειάζεται ο
+πάροχος για να ρωτήσει). Ο πάροχος δεν μαθαίνει ποτέ **τι** πληρώνεται.
+
+**Απόφαση Giorgio (2026-11-16, Α1)**: το είδος `issuance-advance` **δεν** μπαίνει στη Φ2. Μπαίνει στη **Φ4**, μαζί με τον
+πραγματικό γραφέα του (actor `system` στο `stageIssuanceAction`). Λόγος: κανένα είδος που δέχεται χρήματα χωρίς γραφέα, και
+κανένας κώδικας που δεν εκτελείται. Το εξαντλητικό `switch` και οι εξαντλητικοί πίνακες (`RETURN_PATH_OF_KIND`) θα
+**αναγκάσουν** τη Φ4 να δηλώσει γραφέα, διαδρομή επιστροφής (`/document-request` — `DOCUMENT_REQUEST_PATH`, χωρίς
+διαπιστευτήριο: η σελίδα κρατά τον σύνδεσμο στο `sessionStorage` της καρτέλας) και εμβέλεια (`assignmentId`).
+
+**Επαλήθευση**: jest 12 σουίτες / 104 tests (με έγκριση Giorgio) — οι υπάρχουσες του ACC-030 αμετάβλητες εκτός από ένα
+όνομα αποτελέσματος (`subject-absent`), και η νέα `payable-subject.test.ts` (παλιό έγγραφο ⇒ τιμολόγιο · άγνωστο είδος ⇒
+ανύπαρκτο · γραφή ⇄ ανάγνωση · ανοιχτή ανακατεύθυνση · ρητό ερώτημα εμβέλειας · ιδεμποτία γραφέα).
+
 ## 6. Πού ξεπερνάμε τους μεγάλους
 1. Πολιτική ακύρωσης **μέσα στην ίδια έγκριση** με την τιμή (ο Airbnb τη δείχνει, δεν την «υπογράφει» μαζί με όρους που αναθεωρούνται).
 2. Υπαναχώρηση καταναλωτή **ρητή και καταγεγραμμένη** τη στιγμή της πληρωμής.
@@ -161,3 +194,4 @@ Checkout με `subject` (`invoice` | `issuance-advance`) · μητρώο `payabl
 |---|---|
 | 2026-11-16 | Φ0: έρευνα (ΚΦΑ 16, ν.4308 11/13, ΔΕΔ 843/2023, PSD2/EBA, EveryPay Marketplace, Airbnb/Upwork/Houzz/Stripe, Οδηγία 2011/83) · SSoT audit · αποφάσεις Κ-1…Κ-8 (Giorgio: αποδέσμευση στην έναρξη · τυποποιημένες πολιτικές · προμήθεια 0) · σχέδιο Φ1–Φ6. |
 | 2026-11-16 | Φ1: καθαρός τομέας (§5.5) — `issuance-advance.ts` · `issuance-advance-reducer.ts` · actor `system` · πεδία εγγραφής/σχήματος με defaults · τελικός ΜΑΡΚ με συμψηφισμό · σουίτα `issuance-advance.test.ts`. Απόκλιση: `advanceReceipt` αντί για `receipts[]`. |
+| 2026-11-16 | Φ2 (§5.6): γενίκευση checkout σε «πληρωτέο αντικείμενο» χωρίς αλλαγή συμπεριφοράς — `payable-subject.ts` (λεξιλόγιο + κωδικοποιητής) · `payable-subject-registry.ts` (γραφέας ανά είδος) · `invoice-payable-subject.ts` · `PaymentCheckoutRecord.subject` (στη βάση ίδια πεδία + `subjectKind`, καμία μετάπτωση) · `payment-checkout-closing.ts` μετακινήθηκε στο `server/payments/`. Απόφαση Giorgio Α1: το `issuance-advance` μπαίνει στη Φ4 μαζί με τον γραφέα του. Jest 12/104. |

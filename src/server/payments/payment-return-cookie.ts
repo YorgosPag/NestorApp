@@ -16,16 +16,19 @@ import type { NextRequest, NextResponse } from 'next/server';
 
 import { PAYMENT_PROVIDER_ROUTE_PREFIX } from '@/lib/payments/payment-routes';
 
+import { isPayableReturnPath } from './payable-subject';
+
 export const PAYMENT_RETURN_COOKIE = 'nestor_payment_return';
 
 /** Όσο ζει μια συνεδρία πληρωμής (30′) + περιθώριο για την τράπεζα. */
 const PAYMENT_RETURN_MAX_AGE_SECONDS = 60 * 60;
 
-/** Μόνο διαδρομή σελίδας συνδέσμου — ποτέ εξωτερική διεύθυνση (καμία ανοιχτή ανακατεύθυνση). */
-const SHARED_PAGE_PATH = /^\/shared\/[A-Za-z0-9_\-%]+$/;
-
+/**
+ * Μόνο διαδρομή σελίδας που δηλώνει **κάποιο** πληρωτέο αντικείμενο (`payable-subject.ts`, ADR-943 §5.6) — ποτέ εξωτερική
+ * διεύθυνση (καμία ανοιχτή ανακατεύθυνση). Τιμολόγιο: `/shared/<token>`. Η αυθεντία των διαδρομών ζει στο μητρώο, όχι εδώ.
+ */
 export function isPaymentReturnPath(path: string): boolean {
-  return SHARED_PAGE_PATH.test(path);
+  return isPayableReturnPath(path);
 }
 
 export function setPaymentReturnCookie(response: NextResponse, returnPath: string): void {

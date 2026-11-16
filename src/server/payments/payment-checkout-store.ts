@@ -16,6 +16,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { isOneOf, plainRecordOrNull, trimmedStringOrNull } from '@/lib/type-guards';
 import { isOnlinePaymentMethod, type OnlinePaymentMethod } from '@/subapps/accounting/types/online-payment';
 
+import { payableSubjectOf, sameAttemptScope, storedPayableSubjectOf, type PayableSubject } from './payable-subject';
 import { isPaymentProviderId, type CheckoutSubject, type PaymentProviderId } from './payment-provider';
 
 export const PAYMENT_CHECKOUT_STATUSES = ['pending', 'paid', 'failed', 'expired', 'canceled'] as const;
@@ -38,8 +39,8 @@ export interface PaymentCheckoutFailure {
 export interface PaymentCheckoutRecord {
   readonly checkoutId: string;
   readonly companyId: string;
-  readonly invoiceId: string;
-  readonly shareId: string;
+  /** Τι πληρώνεται (ADR-943 §5.6) — στη βάση: πεδία στο πάνω επίπεδο + `subjectKind` (`payable-subject.ts`). */
+  readonly subject: PayableSubject;
   readonly provider: PaymentProviderId;
   readonly method: OnlinePaymentMethod;
   readonly amountMinor: number;
@@ -73,20 +74,20 @@ function checkoutFailureOf(data: unknown): PaymentCheckoutFailure | null {
   return { code: 'authorization-failed', providerCode, at };
 }
 
-/** Έγγραφο ⇒ συνεδρία, ή `null` όταν λείπει κάποιο υποχρεωτικό πεδίο ή έχει άλλη μορφή. */
+/** Έγγραφο ⇒ συνεδρία, ή `null` όταν λείπει κάποιο υποχρεωτικό πεδίο ή έχει άλλη μορφή (και άγνωστο είδος αντικειμένου). */
 export function checkoutRecordOf(checkoutId: string, data: unknown): PaymentCheckoutRecord | null {
   const raw = plainRecordOrNull(data);
   const text = (key: string) => trimmedStringOrNull(raw?.[key]);
-  const [companyId, invoiceId, shareId, createdAt, expiresAt] =
-    ['companyId', 'invoiceId', 'shareId', 'createdAt', 'expiresAt'].map(text);
+  const [companyId, createdAt, expiresAt] = ['companyId', 'createdAt', 'expiresAt'].map(text);
+  const subject = payableSubjectOf(raw);
   const fields: Record<string, unknown> = raw ?? {};
   const { amountMinor, provider, method, status, currency } = fields;
-  if (!companyId || !invoiceId || !shareId || !createdAt || !expiresAt) return null;
+  if (!companyId || subject === null || !createdAt || !expiresAt) return null;
   if (typeof amountMinor !== 'number' || !Number.isSafeInteger(amountMinor) || amountMinor <= 0) return null;
   if (!isPaymentProviderId(provider) || !isOnlinePaymentMethod(method)) return null;
   if (!isOneOf(PAYMENT_CHECKOUT_STATUSES, status) || currency !== 'EUR') return null;
   return {
-    checkoutId, companyId, invoiceId, shareId, provider, method, amountMinor,
+    checkoutId, companyId, subject, provider, method, amountMinor,
     currency: 'EUR', status, providerReference: text('providerReference'),
     paymentReference: text('paymentReference'), lastFailure: checkoutFailureOf(raw?.lastFailure), createdAt, expiresAt, updatedAt: text('updatedAt') ?? createdAt,
   };
@@ -98,8 +99,14 @@ export function checkoutSubjectOf(record: PaymentCheckoutRecord): CheckoutSubjec
   return { checkoutId, method, amountMinor, currency, providerReference };
 }
 
+/** Συνεδρία ⇒ έγγραφο. Το αντικείμενο γράφεται με τον **έναν** κωδικοποιητή του (`storedPayableSubjectOf`). */
+export function storedCheckoutOf(record: PaymentCheckoutRecord): Record<string, unknown> {
+  const { subject, ...rest } = record;
+  return { ...rest, ...storedPayableSubjectOf(subject) };
+}
+
 export async function createPaymentCheckout(db: Firestore, record: PaymentCheckoutRecord): Promise<void> {
-  await checkoutsOf(db).doc(record.checkoutId).create(record);
+  await checkoutsOf(db).doc(record.checkoutId).create(storedCheckoutOf(record));
 }
 
 export async function readPaymentCheckout(db: Firestore, checkoutId: string): Promise<PaymentCheckoutRecord | null> {
@@ -158,14 +165,27 @@ export async function findPaymentCheckoutBy(
   return records.length === 1 ? records[0] : null;
 }
 
-/** Οι ανοιχτές συνεδρίες ενός συνδέσμου — για να κλείσουν όταν ξεκινά νέα (καμία διπλή πληρωμή από ξεχασμένη καρτέλα). */
-export async function listPendingCheckoutsOfShare(db: Firestore, shareId: string): Promise<PaymentCheckoutRecord[]> {
-  // tenant-scope-exempt: ο σύνδεσμος ΕΙΝΑΙ η εμβέλεια (ο ανώνυμος κάτοχός του δεν έχει μισθωτή)· ένα shareId ανήκει
-  // σε έναν μισθωτή, και ο καλών έχει ήδη επαληθεύσει ότι ο σύνδεσμος είναι ενεργός (`findActiveShareOf`).
-  const snap = await checkoutsOf(db).where('shareId', '==', shareId).get();
-  return snap.docs
+/** Τα έγγραφα της εμβέλειας απόπειρας ενός αντικειμένου — ένα ρητό ερώτημα ανά είδος (ορατό στις πύλες δεικτών). */
+async function attemptScopeDocsOf(db: Firestore, subject: PayableSubject) {
+  switch (subject.kind) {
+    case 'invoice':
+      // tenant-scope-exempt: ο σύνδεσμος ΕΙΝΑΙ η εμβέλεια (ο ανώνυμος κάτοχός του δεν έχει μισθωτή)· ένα shareId ανήκει
+      // σε έναν μισθωτή, και ο καλών έχει ήδη επαληθεύσει ότι ο σύνδεσμος είναι ενεργός (`findActiveShareOf`).
+      return (await checkoutsOf(db).where('shareId', '==', subject.shareId).get()).docs;
+  }
+}
+
+/**
+ * Οι ανοιχτές συνεδρίες της **ίδιας εμβέλειας απόπειρας** (`sameAttemptScope` — τιμολόγιο: ίδιος σύνδεσμος) — για να
+ * κλείσουν όταν ξεκινά νέα (καμία διπλή πληρωμή από ξεχασμένη καρτέλα).
+ */
+export async function listPendingCheckoutsOf(db: Firestore, subject: PayableSubject): Promise<PaymentCheckoutRecord[]> {
+  const docs = await attemptScopeDocsOf(db, subject);
+  return docs
     .map((doc) => checkoutRecordOf(doc.id, doc.data()))
-    .filter((record): record is PaymentCheckoutRecord => record !== null && record.status === 'pending');
+    .filter((record): record is PaymentCheckoutRecord => (
+      record !== null && record.status === 'pending' && sameAttemptScope(record.subject, subject)
+    ));
 }
 
 /** Ανοιχτές συνεδρίες που δημιουργήθηκαν πριν από το `beforeIso` — για τη συμφιλίωση (cron). */

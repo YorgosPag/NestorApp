@@ -1,8 +1,9 @@
 import 'server-only';
 
 /**
- * @fileoverview Κλείσιμο ανοιχτών συνεδριών πληρωμής ενός συνδέσμου (ADR-ACC-030 §5)
- * @description Όταν ο πελάτης ξεκινά **νέα** πληρωμή, οι προηγούμενες ανοιχτές του ίδιου συνδέσμου ακυρώνονται στον
+ * @fileoverview Κλείσιμο ανοιχτών συνεδριών πληρωμής της ίδιας εμβέλειας απόπειρας (ADR-ACC-030 §5 · ADR-943 §5.6)
+ * @description Όταν ο πελάτης ξεκινά **νέα** πληρωμή, οι προηγούμενες ανοιχτές της ίδιας εμβέλειας (τιμολόγιο: ίδιος
+ *   σύνδεσμος — `sameAttemptScope`) ακυρώνονται στον
  *   πάροχο και σημειώνονται `canceled`. Αλλιώς μια ξεχασμένη καρτέλα κάρτας θα μπορούσε να πληρωθεί **αφού** ο
  *   πελάτης πλήρωσε ήδη με IRIS — διπλή είσπραξη (Stripe: ένα ενεργό Checkout Session ανά απόπειρα).
  *
@@ -15,17 +16,15 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { PaymentProvider } from '@/server/payments/payment-provider';
-import {
-  checkoutSubjectOf,
-  listPendingCheckoutsOfShare,
-  updatePaymentCheckout,
-} from '@/server/payments/payment-checkout-store';
 
-const logger = createModuleLogger('InvoicePaymentCheckoutClosing');
+import type { PayableSubject } from './payable-subject';
+import { checkoutSubjectOf, listPendingCheckoutsOf, updatePaymentCheckout } from './payment-checkout-store';
+import type { PaymentProvider } from './payment-provider';
 
-export async function closePendingCheckoutsOfShare(db: Firestore, provider: PaymentProvider, shareId: string): Promise<void> {
-  const pending = await listPendingCheckoutsOfShare(db, shareId);
+const logger = createModuleLogger('PaymentCheckoutClosing');
+
+export async function closePendingCheckoutsOf(db: Firestore, provider: PaymentProvider, subject: PayableSubject): Promise<void> {
+  const pending = await listPendingCheckoutsOf(db, subject);
   for (const checkout of pending.filter((record) => record.provider === provider.id)) {
     try {
       if (await provider.cancelCheckout(checkoutSubjectOf(checkout))) {

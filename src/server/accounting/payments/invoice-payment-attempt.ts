@@ -43,6 +43,9 @@ export async function readInvoicePaymentAttempt(
   db: Firestore, input: { readonly shareId: string; readonly checkoutId: string; readonly nowMs: number },
 ): Promise<InvoiceCheckoutAttemptResponse> {
   const record = await readPaymentCheckout(db, input.checkoutId);
-  if (record === null || record.shareId !== input.shareId) return { status: 'refused', reason: 'unknown-attempt' };
+  const subject = record?.subject;
+  if (record === null || subject?.kind !== 'invoice' || subject.shareId !== input.shareId) {
+    return { status: 'refused', reason: 'unknown-attempt' };
+  }
   return { status: 'ok', attempt: paymentAttemptOutcomeOf(record), expiresInMs: attemptExpiresInMs(record, input.nowMs) };
 }
