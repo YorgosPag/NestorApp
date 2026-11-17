@@ -18,7 +18,7 @@ import 'server-only';
 
 import type { DossierShareDays } from '@/config/engagement-policy';
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
-import { resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
+import { HUMAN_LANGUAGES, resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 import { caseInvitationHref } from '@/lib/conveyance/conveyance-routes';
 import { publicUrl } from '@/lib/http/public-origin';
 import { formatOperatorDate } from '@/lib/operator-time-format';
@@ -141,5 +141,19 @@ export function buildDossierInvitationEmail(input: DossierInvitationEmailInput):
     details: detailsOf(input, w, language),
     link,
     core: w,
+  });
+}
+
+/** **Έχει κάθε γλώσσα ΟΛΑ τα λόγια της;** — άγκυρα που **εκτελείται**, και ελέγχει και τις συναρτήσεις. */
+export function everyLanguageHasDossierInvitationWording(): boolean {
+  return HUMAN_LANGUAGES.every((language) => {
+    const w = TEXTS[language];
+    if (!w) return false;
+    const texts = [
+      w.subject('χ', 'ψ'), w.heading, w.intro('χ', 'ψ'), ...Object.values(w.roles), ...Object.values(w.tabs),
+      w.tabsLabel, w.durationLabel, w.duration(30), w.purposeLabel, w.purpose, w.noAccount, w.expiresLabel,
+      w.cta, w.onlyWord, w.boundToAddress(w.onlyWord), w.footnote, w.unnamedDossier,
+    ];
+    return texts.every((text) => typeof text === 'string' && text.length > 0);
   });
 }
