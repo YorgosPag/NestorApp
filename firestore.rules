@@ -1995,6 +1995,27 @@ service cloud.firestore {
 
       allow create, update: if false;
       allow delete: if false;
+
+      // =========================================================================
+      // 🤝 ADR-916 Φ-Ε1 — ΣΥΜΜΕΤΟΧΕΣ ΣΤΟΝ ΦΑΚΕΛΟ ΙΔΙΩΤΗ (ADR-862 · Α1: η άδεια ζει ΚΑΤΩ από τον πόρο)
+      // =========================================================================
+      // `property_dossiers/{pdos}/engagements/{eng_…}` — ο ΕΝΑΣ γραφέας: `lib/auth/engagement-write.ts`.
+      //
+      // ✍️ WRITE: `false`. Όποιος γράφει εδώ, αυτο-προσκαλείται στο σπίτι ενός ανθρώπου.
+      // 📖 READ: ΜΟΝΟ η ΔΙΚΗ σου συμμετοχή (`uid`) · ο ΣΗΜΕΡΙΝΟΣ κάτοχος του φακέλου (διαβάζεται από τον
+      //    γονέα, όχι από αντίγραφο στο έγγραφο: ο φάκελος αλλάζει χέρια, ADR-866 Φ4).
+      //    ⚠️ ΚΑΝΕΝΑ σκέλος super_admin ή γραφείου (ADR-866 §5.8 — ίδιο σύνορο με τον γονέα).
+      //    ⚠️ Η ανάγνωση του εγγράφου ΔΕΝ δίνει πρόσβαση σε αρχεία: τα `files_personal` μένουν μόνο του
+      //    κατόχου· ο επαγγελματίας ανοίγει ΜΟΝΟ από την πόρτα του server (`decideEngagement` + ίχνος).
+      match /engagements/{engagementId} {
+        allow read: if isAuthenticated()
+                    && (
+                         resource.data.uid == request.auth.uid
+                         || get(/databases/$(database)/documents/property_dossiers/$(dossierId)).data.userId == request.auth.uid
+                       );
+
+        allow write: if false;
+      }
     }
 
     // ADR-916 §5.2 — Η ΠΑΡΑΔΟΣΗ ΦΑΚΕΛΟΥ ΑΠΟ ΠΩΛΗΣΗ (`phov_*`). Εταιρικό έγγραφο: διαβάζει ΜΟΝΟ ο

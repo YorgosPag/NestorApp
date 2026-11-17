@@ -155,4 +155,59 @@ describe('property_dossiers.rules — τον φάκελο τον διαβάζε�
       await assertFails(env.authenticatedContext(CITIZEN_UID, {}).firestore().collection(COLLECTION).doc(DOC_ID).get());
     });
   });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ADR-916 Φ-Ε1 — `property_dossiers/{pdos}/engagements/{eng}`: η άδεια ζει ΚΑΤΩ από τον πόρο (Α1).
+  // Φωλιασμένο μπλοκ ⇒ ελέγχεται εδώ, όπως οι συμμετοχές έργου στο `companies.rules.test.ts`.
+  // ────────────────────────────────────────────────────────────────────────────
+  describe('🤝 Π6 — συμμετοχές του φακέλου: ο καλεσμένος τη ΔΙΚΗ του, ο ΣΗΜΕΡΙΝΟΣ κάτοχος όλες, κανείς δεν γράφει', () => {
+    const ENGAGEMENT_ID = 'eng-seeded-1';
+    const PRO_UID = 'invited-lawyer';
+
+    async function seedDossierEngagement(dossierOwner: string): Promise<void> {
+      await seedPropertyDossier(env, DOC_ID, dossierOwner);
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore().collection(COLLECTION).doc(DOC_ID).collection('engagements').doc(ENGAGEMENT_ID).set({
+          id: ENGAGEMENT_ID, uid: PRO_UID, state: 'active', subject: { kind: 'property_dossier', dossierId: DOC_ID },
+        });
+      });
+    }
+
+    function engagementsOf(uid: string) {
+      return env.authenticatedContext(uid, {}).firestore().collection(COLLECTION).doc(DOC_ID).collection('engagements');
+    }
+
+    it('ο καλεσμένος διαβάζει τη ΔΙΚΗ του συμμετοχή → allow', async () => {
+      await seedDossierEngagement(CITIZEN_UID);
+      await assertSucceeds(engagementsOf(PRO_UID).doc(ENGAGEMENT_ID).get());
+    });
+
+    it('ο κάτοχος βλέπει ΟΛΕΣ τις συμμετοχές του φακέλου του (λίστα χωρίς φίλτρο) → allow', async () => {
+      await seedDossierEngagement(CITIZEN_UID);
+      const snap = await assertSucceeds(engagementsOf(CITIZEN_UID).get());
+      expect(snap.size).toBe(1);
+    });
+
+    it('🔴 ο ΠΡΩΗΝ κάτοχος (ο φάκελος άλλαξε χέρια) → deny — ο κάτοχος διαβάζεται από τον γονέα, όχι από αντίγραφο', async () => {
+      await seedDossierEngagement('new-owner');
+      await assertFails(engagementsOf(CITIZEN_UID).doc(ENGAGEMENT_ID).get());
+    });
+
+    it('🔴 ξένος · admin εταιρείας · super admin → deny', async () => {
+      await seedDossierEngagement(OWNER_UID);
+      await assertFails(engagementsOf('another-citizen').doc(ENGAGEMENT_ID).get());
+      for (const persona of ['same_tenant_admin', 'super_admin'] as const) {
+        await assertFails(
+          getContext(env, persona).firestore().collection(COLLECTION).doc(DOC_ID).collection('engagements').doc(ENGAGEMENT_ID).get(),
+        );
+      }
+    });
+
+    it('🔴 ΚΑΝΕΙΣ δεν γράφει — ούτε ο κάτοχος, ούτε ο καλεσμένος (αυτο-πρόσκληση / αυτο-ανανέωση)', async () => {
+      await seedDossierEngagement(CITIZEN_UID);
+      await assertFails(engagementsOf(CITIZEN_UID).doc('eng-self').set({ uid: CITIZEN_UID, state: 'active' }));
+      await assertFails(engagementsOf(PRO_UID).doc(ENGAGEMENT_ID).update({ expiresAt: '2099-01-01T00:00:00.000Z' }));
+      await assertFails(engagementsOf(CITIZEN_UID).doc(ENGAGEMENT_ID).delete());
+    });
+  });
 });
