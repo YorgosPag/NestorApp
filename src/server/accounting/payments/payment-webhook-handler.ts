@@ -16,6 +16,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { syncPayeeFromKycSignal } from '@/server/payments/payment-payee-service';
+import { wakeSettlementsAfterPayeeVerified } from '@/server/payments/payment-settlement';
 import type { PayeeObservationOutcome } from '@/server/payments/payment-payee-store';
 import type { PaymentProvider, WebhookSignal } from '@/server/payments/payment-provider';
 import {
@@ -65,13 +66,22 @@ async function checkoutOfSignal(
   }
 }
 
+/** Σήμα KYC ⇒ ο δικαιούχος· μόλις γίνει `verified`, ξυπνούν οι αποδεσμεύσεις που τον περίμεναν (ADR-943 §5.14). */
+async function syncPayeeKyc(
+  db: Firestore, provider: PaymentProvider, signal: Extract<WebhookSignal, { kind: 'payee-kyc' }>,
+): Promise<PayeeObservationOutcome> {
+  const outcome = await syncPayeeFromKycSignal(db, provider, signal);
+  if (outcome === 'payee-updated' && signal.kycStatus === 'verified') wakeSettlementsAfterPayeeVerified(db, provider, Date.now());
+  return outcome;
+}
+
 /** Εκτελεί ένα επαληθευμένο σήμα. Ιδεμποτικό. Σφάλμα παρόχου/βάσης ⇒ ρίχνει (ο πάροχος ξαναδοκιμάζει). */
 export async function handlePaymentSignal(
   db: Firestore, provider: PaymentProvider, signal: WebhookSignal,
 ): Promise<PaymentSignalOutcome> {
   if (signal.kind === 'ignored') return 'ignored';
   if (signal.kind === 'authorization-failed') return notePaymentAttemptFailure(db, provider, signal, nowISO());
-  if (signal.kind === 'payee-kyc') return syncPayeeFromKycSignal(db, provider, signal);
+  if (signal.kind === 'payee-kyc') return syncPayeeKyc(db, provider, signal);
   const checkout = await checkoutOfSignal(db, provider, signal);
   if (checkout === null) {
     logger.warn('Signed provider event for an unknown checkout', { provider: provider.id, signal: signal.kind });

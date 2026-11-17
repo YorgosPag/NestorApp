@@ -3,6 +3,7 @@
  *
  * ADR-943 Φ5 (Ζ-6 · Ζ-7) — ο ΕΝΑΣ εκτελεστής κρατημένων χρημάτων: η εντολή γράφεται πριν από τα χρήματα, ο τομέας
  * ξαναρωτιέται, η σειρά είναι αντιλογισμός → επιστροφή → αποδέσμευση, και η εντολή μένει όταν κάτι αποτύχει.
+ * ADR-943 Φ6α (§5.14) — αποδέσμευση ΜΟΝΟ σε ταυτοποιημένο δικαιούχο· οι επιστροφές δεν περιμένουν ποτέ.
  */
 
 import type { PayeeTransfer, MarketplaceCapability } from '../payment-marketplace';
@@ -17,6 +18,9 @@ jest.mock('../payable-subject-registry', () => ({
 }));
 
 const registry = jest.requireMock('../payable-subject-registry') as { judgePayableSettlement: jest.Mock; recordPayableSettlement: jest.Mock };
+
+jest.mock('../payment-payee-service', () => ({ payeePayoutsOpen: jest.fn() }));
+const payees = jest.requireMock('../payment-payee-service') as { payeePayoutsOpen: jest.Mock };
 
 const NOW_MS = Date.parse('2026-11-19T10:00:00.000Z');
 const DUE = '2026-11-19T09:00:00.000Z';
@@ -46,6 +50,7 @@ function marketplaceMock(transfer: PayeeTransfer = transferOf()) {
 beforeEach(() => {
   registry.judgePayableSettlement.mockReset().mockResolvedValue('proceed');
   registry.recordPayableSettlement.mockClear();
+  payees.payeePayoutsOpen.mockReset().mockResolvedValue(true);
 });
 
 describe('scheduleSettlement — η εντολή πριν από τα χρήματα', () => {
@@ -205,5 +210,39 @@ describe('ADR-943 Φ5γ — επιστροφή χωρίς μεταφορά (Θ-6
     await expect(executeSettlement(db, provider, 'pchk_1', NOW_MS)).resolves.toBe('held');
     expect(calls).toEqual([]);
     expect(read()?.marketplace).toEqual({ ...HELD, settlement: RELEASE_ALL, lease: null });
+  });
+});
+
+describe('ADR-943 Φ6α — αποδέσμευση μόνο σε ταυτοποιημένο δικαιούχο (§5.14)', () => {
+  it('δικαιούχος χωρίς ταυτοποίηση ⇒ awaiting-payee: ΚΑΜΙΑ αποδέσμευση, η εντολή ΜΕΝΕΙ, η αλήθεια δεν γράφεται', async () => {
+    payees.payeePayoutsOpen.mockResolvedValue(false);
+    const { db, read } = fakeCheckoutDb(advanceCheckoutDoc({ ...HELD, settlement: RELEASE_ALL }));
+    const { provider, calls } = marketplaceMock();
+    await expect(executeSettlement(db, provider, 'pchk_1', NOW_MS)).resolves.toBe('awaiting-payee');
+    expect(calls).toEqual([]);
+    expect(registry.recordPayableSettlement).not.toHaveBeenCalled();
+    expect(read()?.marketplace).toEqual({ ...HELD, settlement: RELEASE_ALL, lease: null });
+  });
+
+  it('διαίρεση με μη ταυτοποιημένο δικαιούχο ⇒ η ΕΠΙΣΤΡΟΦΗ γίνεται τώρα, η αποδέσμευση περιμένει· μετά την ταυτοποίηση μόνο η αποδέσμευση', async () => {
+    const split = { ...RELEASE_ALL, refundMinor: 1000, releaseMinor: 3000 };
+    const { db } = fakeCheckoutDb(advanceCheckoutDoc({ ...HELD, settlement: split }));
+    payees.payeePayoutsOpen.mockResolvedValue(false);
+    const first = marketplaceMock();
+    await expect(executeSettlement(db, first.provider, 'pchk_1', NOW_MS)).resolves.toBe('awaiting-payee');
+    expect(first.calls).toEqual(['reversal', 'refund']);
+    payees.payeePayoutsOpen.mockResolvedValue(true);
+    const second = marketplaceMock(transferOf({ reversedMinor: 1000 }));
+    await expect(executeSettlement(db, second.provider, 'pchk_1', NOW_MS)).resolves.toBe('settled');
+    expect(second.calls).toContain('release');
+    expect(second.capability.reconcileTransferReversal).toHaveBeenCalledWith(expect.objectContaining({ reversedTotalMinor: 1000 }));
+  });
+
+  it('εντολή χωρίς αποδέσμευση (μόνο επιστροφή) ⇒ ο δικαιούχος ΔΕΝ ρωτιέται', async () => {
+    const refundOnly = { ...RELEASE_ALL, refundMinor: 4000, releaseMinor: 0 };
+    const { db } = fakeCheckoutDb(advanceCheckoutDoc({ ...HELD, settlement: refundOnly }));
+    const { provider } = marketplaceMock();
+    await expect(executeSettlement(db, provider, 'pchk_1', NOW_MS)).resolves.toBe('settled');
+    expect(payees.payeePayoutsOpen).not.toHaveBeenCalled();
   });
 });

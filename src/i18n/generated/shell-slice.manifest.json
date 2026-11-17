@@ -17,7 +17,7 @@
     "src/i18n/generated/routes/document-request.el.json": "e0032fbada3df61400e5bd93f23ec9ab9c3a6d537d650ea8b5aa98af39c84317",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
-    "src/i18n/generated/routes/email__preferences__token.el.json": "9b5d55434fde64f1b24fd2a82b48af474c5fe8eb3ffdcb5990f1ab08586ed7c0",
+    "src/i18n/generated/routes/email__preferences__token.el.json": "95ad8b3c951ab6fa8db90e0701424325016f2c62a6600aa576ee80197a6c35ad",
     "src/i18n/generated/routes/engagements.el.json": "76e20123c51827a315c646031ff3b33e4f1567fee847125cae0b6de31cf4f3d0",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "3e070c1b1274fc21eabc274b6bcfa61837a0851327f34798801fc571b4fcd018",
     "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "f430b58d8427830f6f00eb4b807237852b5845a01ae9baf2b0500b42be47ffef",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "0dc6b21602c188a25fd08d922e619c9b3de5cc75330392656530fc458dae98dd",
+  "inputsSha256": "5768d48edc7c75fbffa5aecfbe7f0e1a4a55ae1a19d2563a05505dcd8a4796c0",
   "languages": [
     "el"
   ],
@@ -2950,6 +2950,7 @@
             "account.notificationSettings.categories.security.newDeviceLogin",
             "account.notificationSettings.categories.security.ownershipLost",
             "account.notificationSettings.categories.security.passwordChange",
+            "account.notificationSettings.categories.security.payoutDetailsChanged",
             "account.notificationSettings.categories.security.suspiciousActivity",
             "account.notificationSettings.categories.security.title",
             "account.notificationSettings.categories.security.twoFactorChange",
@@ -41222,7 +41223,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1355601
+    "sliceBytes": 1355693
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

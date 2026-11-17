@@ -18,6 +18,11 @@ import 'server-only';
  *      συγχρονισμό που διαβάζει τις επιστροφές στο API (Κ-8).
  *   🔑 Φ5γ (Θ-2) — **η εντολή συγκλίνει στον τομέα**: κρίση `reschedule` ⇒ η εντολή ξαναγράφεται υπό την ίδια μίσθωση και
  *      (αν οφείλεται ήδη) εκτελείται στο ίδιο κάλεσμα.
+ *   🔑 Φ6α (§5.14) — **αποδέσμευση μόνο σε ταυτοποιημένο δικαιούχο** (Stripe Connect `payouts_enabled`): πριν από την
+ *      αποδέσμευση ρωτιέται ο ΕΝΑΣ κριτής (`payeePayoutsOpen`). Όχι ⇒ οι **επιστροφές** της εντολής γίνονται κανονικά (ο
+ *      ιδιοκτήτης δεν περιμένει ποτέ το KYC του μηχανικού), η αποδέσμευση **περιμένει**, η εντολή μένει (`awaiting-payee`).
+ *      Οι πράξεις είναι δηλωτικές ⇒ στο επόμενο πέρασμα οι επιστροφές είναι ήδη στον στόχο (καμία κίνηση) και γίνεται μόνο
+ *      η αποδέσμευση. Ξύπνημα: το webhook KYC `verified` (αμέσως) **και** το cron (δίχτυ).
  *   🔑 Φ5γ (Θ-6) — **επιστροφή χωρίς μεταφορά**: χρήματα που ο τομέας δεν δέχτηκε δεν απέκτησαν ποτέ μεταφορά· επιστρέφονται
  *      ολόκληρα κατευθείαν, **μόνο** αν καμία μεταφορά δεν είναι καν οφειλόμενη (`transferDue`) — αλλιώς περιμένουμε τη
  *      μεταφορά και ακολουθούμε τη σειρά αντιλογισμός → επιστροφή.
@@ -38,6 +43,7 @@ import {
   type PaymentCheckoutRecord,
 } from './payment-checkout-store';
 import type { MarketplaceCapability } from './payment-marketplace';
+import { payeePayoutsOpen } from './payment-payee-service';
 import type { PaymentProvider } from './payment-provider';
 
 const logger = createModuleLogger('PaymentSettlement');
@@ -51,6 +57,8 @@ export type SettlementOutcome =
   | 'held'
   /** Φ5γ — ο τομέας ζήτησε άλλη εντολή· γράφτηκε, και δεν οφείλεται ακόμη (ή περιμένει μεταφορά). */
   | 'rescheduled'
+  /** Φ6α — οι επιστροφές έγιναν· η αποδέσμευση περιμένει την ταυτοποίηση του δικαιούχου. Η εντολή μένει. */
+  | 'awaiting-payee'
   /** Δεν υπάρχει εντολή · δεν ήρθε η ώρα της · η μεταφορά δεν έγινε ακόμη · άλλος κρατά τη μίσθωση · όχι marketplace. */
   | 'nothing' | 'not-due' | 'awaiting-transfer' | 'busy' | 'not-applicable';
 
@@ -73,7 +81,7 @@ function readinessOf(checkout: PaymentCheckoutRecord, nowMs: number): Declined |
 /** Οι κινήσεις στον πάροχο — δηλωτικές, με τη σειρά της κεφαλίδας. Σφάλμα ⇒ ρίχνει (η εντολή μένει). */
 async function moveMoney(
   marketplace: MarketplaceCapability, checkout: PaymentCheckoutRecord, order: CheckoutSettlementOrder,
-  transferReference: string | null, paymentReference: string,
+  transferReference: string | null, paymentReference: string, releaseAllowed: boolean,
 ): Promise<void> {
   if (transferReference === null) {
     // Θ-6 — καμία μεταφορά δεν υπάρχει ούτε οφείλεται: η πληρωμή είναι ανεκκαθάριστη, επιστρέφεται κατευθείαν.
@@ -87,7 +95,14 @@ async function moveMoney(
     await marketplace.reconcileTransferReversal({ transferReference, reversedTotalMinor: order.refundMinor, description: checkout.checkoutId });
     await marketplace.reconcilePaymentRefund({ paymentReference, refundedTotalMinor: order.refundMinor });
   }
-  if (order.releaseMinor > 0) await marketplace.releaseTransfer(transferReference);
+  if (order.releaseMinor > 0 && releaseAllowed) await marketplace.releaseTransfer(transferReference);
+}
+
+/** Φ6α — επιτρέπεται η αποδέσμευση της εντολής; Χωρίς αποδέσμευση ⇒ ναι (καμία ερώτηση στον πάροχο). */
+async function releaseAllowedFor(db: Firestore, provider: PaymentProvider, checkout: PaymentCheckoutRecord, order: CheckoutSettlementOrder): Promise<boolean> {
+  const payeeReference = checkout.marketplace?.payeeReference ?? null;
+  if (order.releaseMinor === 0) return true;
+  return payeeReference !== null && payeePayoutsOpen(db, provider, payeeReference);
 }
 
 /** Η εκτέλεση μίας εντολής κάτω από τη μίσθωση: ο τομέας κρίνει, τα χρήματα κινούνται, η αλήθεια γράφεται, η εντολή σβήνει. */
@@ -102,7 +117,13 @@ async function settleUnderLease(db: Firestore, provider: PaymentProvider, market
   }
   if (typeof judgement === 'object') return rescheduleUnderLease(db, checkout, holder, judgement.reschedule);
   if (judgement === 'proceed') {
-    await moveMoney(marketplace, checkout, order, transferReference, checkout.paymentReference);
+    const releaseAllowed = await releaseAllowedFor(db, provider, checkout, order);
+    await moveMoney(marketplace, checkout, order, transferReference, checkout.paymentReference, releaseAllowed);
+    if (!releaseAllowed) {
+      await releaseCheckoutLease(db, checkout.checkoutId, holder, nowISO());
+      logger.info('Release awaits payee verification', { checkoutId: checkout.checkoutId, basis: order.basis });
+      return 'awaiting-payee';
+    }
     await recordPayableSettlement(checkout, order, provider, transferReference);
   }
   await releaseCheckoutLease(db, checkout.checkoutId, holder, nowISO(), { 'marketplace.settlement': null });
@@ -188,4 +209,18 @@ export async function sweepDueSettlements(db: Firestore, providerOf: ProviderLoo
   const tally: Record<SweepVerdict, number> = { settled: 0, voided: 0, waiting: 0, failed: 0 };
   for (const checkout of due) tally[await sweepOne(db, checkout, providerOf, nowMs)] += 1;
   return { considered: due.length, ...tally, truncated: due.length === SETTLEMENT_SWEEP_BATCH };
+}
+
+/**
+ * Φ6α (§5.14) — **ταυτοποιήθηκε δικαιούχος** ⇒ οι αποδεσμεύσεις που περίμεναν (`awaiting-payee`) εκτελούνται **τώρα**,
+ * όχι στον επόμενο κύκλο του cron. Δεν μπλοκάρει την απάντηση του webhook (ο πάροχος θέλει γρήγορο 200)· σφάλμα ⇒
+ * καταγραφή, και το cron (δίχτυ ασφαλείας) τις παίρνει στο επόμενο πέρασμα. Ιδεμποτικό όπως κάθε εκτέλεση εντολής.
+ */
+export function wakeSettlementsAfterPayeeVerified(db: Firestore, provider: PaymentProvider, nowMs: number): void {
+  const providerOf: ProviderLookup = (id) => (id === provider.id ? provider : null);
+  void sweepDueSettlements(db, providerOf, nowMs).catch((error: unknown) => {
+    logger.error('Settlement wake-up after payee verification failed — cron retries', {
+      provider: provider.id, error: error instanceof Error ? error.message : String(error),
+    });
+  });
 }

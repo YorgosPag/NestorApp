@@ -19,16 +19,14 @@ import 'server-only';
  *   🔑 **API = αλήθεια** (Κ-8): η εξουσιοδότηση δικαιούχου διαβάζεται από το API (`readPayee`), όχι από το webhook KYC.
  */
 
+import type { PayoutAccountDetails, PayoutUpdate } from '@/lib/payments/payout-account';
+
 /** Η κατάσταση λογαριασμού του δικαιούχου στον πάροχο. Μόνο `authorized` δέχεται μεταφορές. `unknown` ⇒ τιμή που δεν ξέρουμε. */
 export const PAYEE_STATUSES = ['authorized', 'suspended', 'closed', 'unknown'] as const;
 export type PayeeStatus = (typeof PAYEE_STATUSES)[number];
 
-/**
- * Η πορεία KYC του δικαιούχου (EveryPay `SELLER_KYC.STATUS`). Πληροφορία για τον άνθρωπο («τι λείπει;») — **όχι**
- * κριτήριο χρημάτων· κριτήριο είναι το `PayeeStatus` από το API.
- */
-export const PAYEE_KYC_STATUSES = ['initial', 'existing', 'in-progress', 'pending', 'verified', 'rejected', 'unknown'] as const;
-export type PayeeKycStatus = (typeof PAYEE_KYC_STATUSES)[number];
+// ADR-943 §5.14 — το λεξιλόγιο KYC (κατάσταση · δικαιολογητικά) ζει στο κοινό `lib/payments/payee-kyc.ts`: το δείχνει
+// και η κάρτα του πελάτη. Εισάγεται **απευθείας** από εκεί — καμία επανεξαγωγή, ένας δρόμος.
 
 /**
  * Τα στοιχεία εγγραφής δικαιούχου. Περνούν **διαμέσου** του διακομιστή προς τον πάροχο και **δεν** αποθηκεύονται από εμάς
@@ -51,13 +49,28 @@ export interface PayeeRegistration {
   readonly consumerToConsumer: boolean;
 }
 
+/**
+ * Ό,τι δηλώθηκε στον πάροχο, **για ανάγνωση από τον ίδιο τον δικαιούχο** — ο κοινός τύπος της κάρτας (ΕΝΑΣ ορισμός).
+ * Διαβάζεται από το API κάθε φορά, δεν αποθηκεύεται· το IBAN φεύγει από τον adapter **μόνο** μασκαρισμένο.
+ */
+export type PayeeDetails = PayoutAccountDetails;
+
 export interface PayeeAccount {
   /** Το αναγνωριστικό του δικαιούχου στον πάροχο (EveryPay `sel_…`). */
   readonly reference: string;
   readonly status: PayeeStatus;
-  /** Η hosted σελίδα KYC του παρόχου, όταν τη δίνει. */
+  /** Η hosted σελίδα KYC του παρόχου, όταν τη δίνει (EveryPay: **μόνο** στο webhook KYC). */
   readonly kycProcessUrl: string | null;
+  /** Τα δηλωμένα στοιχεία· `null` όταν η απάντηση δεν τα περιέχει. */
+  readonly details: PayeeDetails | null;
 }
+
+/**
+ * Αλλαγή στοιχείων δικαιούχου — ο κοινός τύπος του σχήματος (`payoutUpdateSchema`, ΕΝΑΣ ορισμός). Ό,τι λείπει μένει ως
+ * έχει· το ΑΦΜ δεν αλλάζει (νέο ΑΦΜ = νέος δικαιούχος)· ο λογαριασμός πίστωσης αλλάζει μόνο μαζί με τον δικαιούχο του και
+ * ο πάροχος τον ξαναελέγχει με KYC πριν ισχύσει.
+ */
+export type PayeeUpdate = PayoutUpdate;
 
 /** Η **επιθυμητή** μεταφορά: «από αυτή την πληρωμή, τόσα στον δικαιούχο, κρατημένα ή όχι». */
 export interface PayeeTransferTarget {
@@ -108,8 +121,10 @@ export type ReconcileOutcome =
 export interface MarketplaceCapability {
   /** Εγγραφή δικαιούχου· η εξουσιοδότηση έρχεται μετά το KYC του παρόχου. Τα στοιχεία δεν αποθηκεύονται από εμάς. */
   registerPayee(registration: PayeeRegistration): Promise<PayeeAccount>;
-  /** Η αλήθεια για τον δικαιούχο (εξουσιοδότηση) — από το API. */
+  /** Η αλήθεια για τον δικαιούχο (εξουσιοδότηση + δηλωμένα στοιχεία) — από το API. */
   readPayee(payeeReference: string): Promise<PayeeAccount>;
+  /** Αλλαγή στοιχείων (βλ. `PayeeUpdate`). Ιδεμποτική: ίδια στοιχεία ⇒ ίδια κατάσταση. */
+  updatePayee(payeeReference: string, update: PayeeUpdate): Promise<PayeeAccount>;
   /** Υπάρχει (ή δημιουργείται) **η** μεταφορά της πληρωμής προς τον δικαιούχο. Δεύτερη κλήση ⇒ η ίδια μεταφορά. */
   ensureTransfer(target: PayeeTransferTarget): Promise<PayeeTransfer>;
   readTransfer(transferReference: string): Promise<PayeeTransfer>;

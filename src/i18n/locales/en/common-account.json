@@ -190,7 +190,8 @@
           "twoFactorChange": "2FA change",
           "suspiciousActivity": "Suspicious activity",
           "workspaceMembershipEnded": "Workspace access",
-          "ownershipLost": "Loss of verified ownership"
+          "ownershipLost": "Loss of verified ownership",
+          "payoutDetailsChanged": "Payout bank account change"
         },
         "network": {
           "title": "Partner messages",
@@ -327,9 +328,10 @@
         "unavailable": "Receiving payments is not available yet.",
         "none": "You have not turned on receiving payments.",
         "registering": "Your registration with the provider is in progress…",
-        "verifying": "The provider is waiting for or checking your verification.",
+        "action-required": "You can receive payments. To get paid out, complete verification with the provider.",
+        "verifying": "The provider is checking your verification — nothing to do on your side.",
         "rejected": "The provider could not complete your verification. Continue on its page to fix it.",
-        "ready": "You can receive payments.",
+        "ready": "You can receive payments and your money is paid out normally.",
         "blocked": "Your payout account has been suspended by the provider."
       },
       "field": {
@@ -341,6 +343,43 @@
         "phone": "Phone",
         "description": "Activity (e.g. energy inspector)",
         "consumerToConsumer": "I do not act as a business (private individual)"
+      },
+      "capability": {
+        "chargesOn": "Payments: on — owners can pay an advance.",
+        "chargesOff": "Payments: not yet.",
+        "payoutsOn": "Payouts: on — money is credited to your account.",
+        "payoutsOff": "Payouts: on hold — the money is kept safe until verification is complete."
+      },
+      "due": {
+        "title": "What verification still needs",
+        "linkPending": "The verification link will appear here as soon as the provider sends it.",
+        "requirement": {
+          "company_info": "Business details",
+          "gov_kyc": "Identity confirmation via gov.gr",
+          "gov_kyb": "Business registry (GEMI) check",
+          "proof_of_id": "ID of the legal representative",
+          "proof_of_residence": "Proof of address",
+          "proof_of_financials": "Financial information",
+          "proof_of_business_establishment": "Business registration",
+          "proof_of_funds": "Source of funds",
+          "proof_of_funds_individual": "Source of funds (individual)",
+          "other_documents": "Other documents"
+        }
+      },
+      "details": {
+        "title": "Details with the provider",
+        "iban": "Payout account",
+        "ibanMasked": "•••• {last4}",
+        "taxNumberLocked": "The tax number cannot be changed. A different tax number needs a new registration — contact us."
+      },
+      "edit": {
+        "open": "Change details",
+        "cancel": "Cancel",
+        "save": "Save changes",
+        "changeBank": "Change payout account",
+        "bankNotice": "The new account takes effect once verification is completed again; until then no payouts are made. You will get a security notification.",
+        "saved": "Your changes were sent to the provider.",
+        "failed": "The change did not go through. Please try again."
       }
     }
   },

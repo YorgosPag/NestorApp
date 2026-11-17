@@ -167,6 +167,8 @@ export const NOTIFICATION_PREFERENCE_GROUPS: readonly NotificationPreferenceGrou
       { key: 'workspaceMembershipEnded', labelKey: 'common-account:account.notificationSettings.categories.security.workspaceMembershipEnded' },
       // ADR-900 §8 #2 Β3 — απώλεια επαληθευμένης κατοχής (υποχρεωτική).
       { key: 'ownershipLost', labelKey: 'common-account:account.notificationSettings.categories.security.ownershipLost' },
+      // ADR-943 §5.14 — αλλαγή λογαριασμού πίστωσης (υποχρεωτική).
+      { key: 'payoutDetailsChanged', labelKey: 'common-account:account.notificationSettings.categories.security.payoutDetailsChanged' },
     ],
   },
 ];

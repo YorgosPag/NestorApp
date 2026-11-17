@@ -296,6 +296,11 @@ export const NOTIFICATION_EVENT_TYPES = {
    * (σχήμα Google Business Profile: ο υπάρχων κάτοχος μαθαίνει πάντα).
    */
   SECURITY_OWNERSHIP_LOST: 'security.ownershipLost',
+  /**
+   * ADR-943 §5.14 — **άλλαξε ο λογαριασμός πίστωσης** της «Λήψης πληρωμών» (σχήμα τραπεζών / Stripe: ο κάτοχος μαθαίνει
+   * πάντα — κλεμμένος λογαριασμός που αλλάζει IBAN είναι η κλασική απάτη αποδόσεων).
+   */
+  SECURITY_PAYOUT_DETAILS_CHANGED: 'security.payoutDetailsChanged',
   // Procurement Events (ADR-267 Phase B)
   PROCUREMENT_APPROVAL_NEEDED: 'procurement.approvalNeeded',
   PROCUREMENT_PO_APPROVED: 'procurement.poApproved',
@@ -796,6 +801,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.SECURITY_OWNERSHIP_LOST]: {
     category: 'security',
     settingKey: 'ownershipLost',
+    isMandatory: true,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-943 §5.14 — ΥΠΟΧΡΕΩΤΙΚΟ: αλλαγή λογαριασμού πίστωσης (όπως η αλλαγή κωδικού — καμία σιωπηλή αλλαγή IBAN).
+  [NOTIFICATION_EVENT_TYPES.SECURITY_PAYOUT_DETAILS_CHANGED]: {
+    category: 'security',
+    settingKey: 'payoutDetailsChanged',
     isMandatory: true,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },

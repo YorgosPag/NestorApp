@@ -7,9 +7,17 @@
  * @see https://docs.everypay.gr/api-reference/ (Sellers · Transfers · Reversals) · https://docs.everypay.gr/marketplace-link/seller-kyc/
  */
 
+import {
+  PAYEE_KYC_REQUIREMENTS,
+  type PayeeKycRequirement,
+  type PayeeKycRequirements,
+  type PayeeKycStatus,
+  type PayeeRequirementState,
+} from '@/lib/payments/payee-kyc';
 import { isNonEmptyTrimmedString, plainRecordOrNull } from '@/lib/type-guards';
+import { cleanIBAN } from '@/types/contacts/banking';
 
-import type { PayeeAccount, PayeeKycStatus, PayeeStatus, PayeeTransfer } from '../../payment-marketplace';
+import type { PayeeAccount, PayeeDetails, PayeeStatus, PayeeTransfer } from '../../payment-marketplace';
 import { minorAmountField, statusField, textField } from './everypay-readers';
 
 /** Το event του webhook KYC (docs «Seller KYC», `event_type`). */
@@ -55,6 +63,59 @@ export function payeeKycStatusOf(raw: unknown): PayeeKycStatus {
   return status === null ? 'unknown' : PAYEE_KYC_STATUS_OF[status] ?? 'unknown';
 }
 
+/** Κατάσταση δικαιολογητικού (`pending` · `in progress`/`in-progress` · `approved` · `rejected` · `bypass`). */
+const REQUIREMENT_STATE_OF: Readonly<Record<string, PayeeRequirementState>> = {
+  pending: 'pending',
+  inprogress: 'in-progress',
+  approved: 'approved',
+  rejected: 'rejected',
+  bypass: 'bypass',
+};
+
+/**
+ * `category_status` του webhook KYC ⇒ δικαιολογητικά. `null` του παρόχου ⇒ «δεν εφαρμόζεται» (παραλείπεται)· άγνωστη
+ * κατηγορία ⇒ αγνοείται· άγνωστη κατάσταση ⇒ `unknown` (ποτέ `approved`).
+ */
+export function payeeKycRequirementsOf(raw: unknown): PayeeKycRequirements {
+  const categories = plainRecordOrNull(raw);
+  const requirements: Partial<Record<PayeeKycRequirement, PayeeRequirementState>> = {};
+  for (const requirement of PAYEE_KYC_REQUIREMENTS) {
+    const value = categories?.[requirement];
+    if (value === undefined || value === null) continue;
+    const state = statusField({ status: value });
+    requirements[requirement] = state === null ? 'unknown' : REQUIREMENT_STATE_OF[state] ?? 'unknown';
+  }
+  return requirements;
+}
+
+/** Επίπεδο (`business_name`) ή φωλιασμένο (`business.name`) — η τεκμηρίωση δείχνει και τα δύο. */
+function businessField(seller: Record<string, unknown> | null, key: string): string | null {
+  return textField(plainRecordOrNull(seller?.business), key) ?? textField(seller, `business_${key}`);
+}
+
+/** Ο προεπιλεγμένος λογαριασμός πίστωσης (`bank_accounts[].is_default`), αλλιώς ο μόνος. */
+function defaultBankAccountOf(seller: Record<string, unknown> | null): Record<string, unknown> | null {
+  const accounts = Array.isArray(seller?.bank_accounts) ? seller.bank_accounts.map(plainRecordOrNull) : [];
+  const usable = accounts.filter((account): account is Record<string, unknown> => account !== null);
+  return usable.find((account) => account.is_default === true) ?? (usable.length === 1 ? usable[0] : null);
+}
+
+/** Τα δηλωμένα στοιχεία· το IBAN φεύγει **μόνο** ως τελευταία 4 ψηφία (ελαχιστοποίηση — ADR-943 §6.4). */
+function payeeDetailsOf(seller: Record<string, unknown> | null): PayeeDetails | null {
+  const bank = defaultBankAccountOf(seller);
+  const iban = textField(bank, 'iban');
+  const details: PayeeDetails = {
+    legalName: businessField(seller, 'name'),
+    tradeName: businessField(seller, 'title'),
+    address: businessField(seller, 'address'),
+    taxNumber: businessField(seller, 'tax_number'),
+    ibanLast4: iban === null ? null : cleanIBAN(iban).slice(-4),
+    ibanBeneficiary: textField(bank, 'beneficiary_name') ?? textField(seller, 'bank_account_beneficiary'),
+    bankName: textField(bank, 'bank_name'),
+  };
+  return Object.values(details).every((value) => value === null) ? null : details;
+}
+
 /** Πωλητής ⇒ δικαιούχος, ή `null` χωρίς αναγνωριστικό. Άγνωστη κατάσταση ⇒ `unknown` (ποτέ «εξουσιοδοτημένος»). */
 export function payeeAccountOf(body: unknown): PayeeAccount | null {
   const seller = plainRecordOrNull(body);
@@ -65,6 +126,7 @@ export function payeeAccountOf(body: unknown): PayeeAccount | null {
     reference,
     status: status === null ? 'unknown' : PAYEE_STATUS_OF[status] ?? 'unknown',
     kycProcessUrl: textField(seller, 'kyc_process_url'),
+    details: payeeDetailsOf(seller),
   };
 }
 
@@ -91,7 +153,10 @@ export function payeeTransferOf(body: unknown): PayeeTransfer | null {
 /** Το υπογεγραμμένο webhook KYC ⇒ τα πεδία του σήματος, ή `null` όταν δεν είναι αυτό το event / λείπει ο πωλητής. */
 export function sellerKycEventOf(
   body: Record<string, unknown>,
-): { readonly payeeReference: string; readonly kycStatus: PayeeKycStatus; readonly kycProcessUrl: string | null } | null {
+): {
+  readonly payeeReference: string; readonly kycStatus: PayeeKycStatus; readonly kycProcessUrl: string | null;
+  readonly kycRequirements: PayeeKycRequirements;
+} | null {
   if (textField(body, 'event_type') !== EVERYPAY_SELLER_KYC_EVENT) return null;
   const payload = plainRecordOrNull(body.payload);
   const payeeReference = textField(payload, 'seller_token');
@@ -100,5 +165,6 @@ export function sellerKycEventOf(
     payeeReference,
     kycStatus: payeeKycStatusOf(payload?.status),
     kycProcessUrl: textField(payload, 'kyc_process_url'),
+    kycRequirements: payeeKycRequirementsOf(payload?.category_status),
   };
 }

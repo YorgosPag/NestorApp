@@ -13,10 +13,11 @@ import 'server-only';
  */
 
 import { normalizeToDate } from '@/lib/date-local';
+import type { PayeeKycRequirements, PayeeKycStatus } from '@/lib/payments/payee-kyc';
 import type { PaymentProviderId } from '@/lib/payments/payment-routes';
 import type { CheckoutLaunch, OnlinePaymentMethod } from '@/subapps/accounting/types/online-payment';
 
-import type { MarketplaceCapability, PayeeKycStatus } from './payment-marketplace';
+import type { MarketplaceCapability } from './payment-marketplace';
 
 export { isPaymentProviderId, PAYMENT_PROVIDER_IDS } from '@/lib/payments/payment-routes';
 export type { CheckoutLaunch, OnlinePaymentMethod, PaymentProviderId };
@@ -163,13 +164,16 @@ export type WebhookSignal =
   }
   /**
    * Άλλαξε η πορεία KYC ενός δικαιούχου marketplace (ADR-943 §5.7). Σήμα, όχι αλήθεια: η **εξουσιοδότηση** ξαναδιαβάζεται
-   * από το API (`MarketplaceCapability.readPayee`). Η κατάσταση KYC και η σελίδα KYC είναι πληροφορία για τον άνθρωπο.
+   * από το API (`MarketplaceCapability.readPayee`). Η κατάσταση KYC κρίνει τις **αποδόσεις** (ADR-943 §5.14) — ο πάροχος
+   * δεν την εκθέτει σε κανένα endpoint, άρα το υπογεγραμμένο σήμα είναι η μόνη πηγή της.
    */
   | {
     readonly kind: 'payee-kyc';
     readonly payeeReference: string;
     readonly kycStatus: PayeeKycStatus;
     readonly kycProcessUrl: string | null;
+    /** Τα δικαιολογητικά (`category_status`) — μόνο καταστάσεις, κανένα προσωπικό δεδομένο. */
+    readonly kycRequirements: PayeeKycRequirements;
   }
   /** Υπογεγραμμένο αλλά άσχετο / ελλιπές συμβάν — καμία ενέργεια. */
   | { readonly kind: 'ignored'; readonly reason: string };

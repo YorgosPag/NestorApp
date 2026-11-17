@@ -20,12 +20,16 @@ import { isOneOf, plainRecordOrNull, trimmedStringOrNull } from '@/lib/type-guar
 import { generateDeterministicPaymentPayeeId } from '@/services/enterprise-id.service';
 
 import {
+  PAYEE_KYC_REQUIREMENTS,
   PAYEE_KYC_STATUSES,
-  PAYEE_STATUSES,
-  type PayeeAccount,
+  PAYEE_REQUIREMENT_STATES,
+  type PayeeKycRequirement,
+  type PayeeKycRequirements,
   type PayeeKycStatus,
-  type PayeeStatus,
-} from './payment-marketplace';
+  type PayeeRequirementState,
+} from '@/lib/payments/payee-kyc';
+
+import { PAYEE_STATUSES, type PayeeAccount, type PayeeStatus } from './payment-marketplace';
 import { isPaymentProviderId, type PaymentProviderId } from './payment-provider';
 
 /** Πόσο ζει μια κράτηση θέσης εγγραφής πριν αναληφθεί ξανά (ο πάροχος απαντά σε ≤ 15″· περιθώριο για κατάρρευση). */
@@ -39,15 +43,17 @@ export interface PaymentPayeeRecord {
   readonly providerReference: string | null;
   /** Από το API (`readPayee`) — το **μόνο** κριτήριο για μεταφορά χρημάτων. */
   readonly status: PayeeStatus;
-  /** Από το webhook KYC — πληροφορία για τον άνθρωπο. */
+  /** Από το webhook KYC — κρίνει τις **αποδόσεις** (ADR-943 §5.14 · `payment-payee-capabilities.ts`). */
   readonly kycStatus: PayeeKycStatus;
   readonly kycProcessUrl: string | null;
+  /** Από το webhook KYC — «τι εκκρεμεί» ανά δικαιολογητικό. Παλιό έγγραφο χωρίς το πεδίο ⇒ `{}`. */
+  readonly kycRequirements: PayeeKycRequirements;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
 
 /** Ό,τι μαθαίνουμε από τον πάροχο για έναν δικαιούχο (API και/ή webhook). */
-export type PayeeObservation = Partial<Pick<PaymentPayeeRecord, 'status' | 'kycStatus' | 'kycProcessUrl'>>;
+export type PayeeObservation = Partial<Pick<PaymentPayeeRecord, 'status' | 'kycStatus' | 'kycProcessUrl' | 'kycRequirements'>>;
 
 function payeesOf(db: Firestore) {
   return db.collection(COLLECTIONS.PAYMENT_PAYEES);
@@ -55,6 +61,22 @@ function payeesOf(db: Firestore) {
 
 export function paymentPayeeIdOf(provider: PaymentProviderId, userId: string): string {
   return generateDeterministicPaymentPayeeId(`${provider}:${userId}`);
+}
+
+/** Χάρτης δικαιολογητικών από τη βάση· άγνωστο κλειδί ή τιμή ⇒ παραλείπεται (ποτέ «εγκρίθηκε» από μαντεψιά). */
+function kycRequirementsOf(raw: unknown): PayeeKycRequirements {
+  const record = plainRecordOrNull(raw);
+  const requirements: Partial<Record<PayeeKycRequirement, PayeeRequirementState>> = {};
+  for (const requirement of PAYEE_KYC_REQUIREMENTS) {
+    const state = record?.[requirement];
+    if (isOneOf(PAYEE_REQUIREMENT_STATES, state)) requirements[requirement] = state;
+  }
+  return requirements;
+}
+
+/** Κανονική μορφή για σύγκριση «άλλαξε;» — ανεξάρτητη από τη σειρά των κλειδιών. */
+function requirementsKey(requirements: PayeeKycRequirements): string {
+  return PAYEE_KYC_REQUIREMENTS.map((requirement) => `${requirement}=${requirements[requirement] ?? ''}`).join('&');
 }
 
 /** Έγγραφο ⇒ δικαιούχος, ή `null` όταν λείπει υποχρεωτικό πεδίο ή έχει άλλη μορφή. */
@@ -67,7 +89,8 @@ export function payeeRecordOf(payeeId: string, data: unknown): PaymentPayeeRecor
   if (!isOneOf(PAYEE_STATUSES, status) || !isOneOf(PAYEE_KYC_STATUSES, kycStatus)) return null;
   return {
     payeeId, userId, provider, providerReference: text('providerReference'), status, kycStatus,
-    kycProcessUrl: text('kycProcessUrl'), createdAt, updatedAt: text('updatedAt') ?? createdAt,
+    kycProcessUrl: text('kycProcessUrl'), kycRequirements: kycRequirementsOf(raw?.kycRequirements),
+    createdAt, updatedAt: text('updatedAt') ?? createdAt,
   };
 }
 
@@ -102,7 +125,7 @@ export type PayeeReservation =
 function reservationOf(userId: string, provider: PaymentProviderId, nowIso: string): Omit<PaymentPayeeRecord, 'payeeId'> {
   return {
     userId, provider, providerReference: null, status: 'unknown', kycStatus: 'unknown',
-    kycProcessUrl: null, createdAt: nowIso, updatedAt: nowIso,
+    kycProcessUrl: null, kycRequirements: {}, createdAt: nowIso, updatedAt: nowIso,
   };
 }
 
@@ -149,10 +172,14 @@ export async function observePaymentPayee(
     const snap = await tx.get(ref);
     const record = snap.exists ? payeeRecordOf(snap.id, snap.data()) : null;
     if (record === null) return 'unknown';
-    const patch: Record<string, string | null> = {};
+    const patch: Record<string, string | null | PayeeKycRequirements> = {};
     for (const key of OBSERVED_FIELDS) {
       const value = observation[key];
       if (value !== undefined && value !== record[key]) patch[key] = value;
+    }
+    const requirements = observation.kycRequirements;
+    if (requirements !== undefined && requirementsKey(requirements) !== requirementsKey(record.kycRequirements)) {
+      patch.kycRequirements = requirements;
     }
     if (Object.keys(patch).length === 0) return 'unchanged';
     tx.update(ref, { ...patch, updatedAt: nowIso });

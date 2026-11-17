@@ -104,6 +104,7 @@
             "newDeviceLogin": "Σύνδεση από νέα συσκευή",
             "ownershipLost": "Απώλεια επαληθευμένης ιδιοκτησίας",
             "passwordChange": "Αλλαγή κωδικού",
+            "payoutDetailsChanged": "Αλλαγή λογαριασμού πίστωσης",
             "suspiciousActivity": "Ύποπτη δραστηριότητα",
             "title": "Ασφάλεια",
             "twoFactorChange": "Αλλαγή 2FA",

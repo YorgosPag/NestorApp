@@ -366,6 +366,8 @@ export interface SecurityNotificationSettings {
   workspaceMembershipEnded: boolean;
   /** ADR-900 §8 #2 Β3 — verified ownership revoked or taken over (mandatory) */
   ownershipLost: boolean;
+  /** ADR-943 §5.14 — the payout bank account was changed (mandatory) */
+  payoutDetailsChanged: boolean;
 }
 
 /**
@@ -586,6 +588,7 @@ export const DEFAULT_SECURITY_SETTINGS: SecurityNotificationSettings = {
   suspiciousActivity: true,
   workspaceMembershipEnded: true,
   ownershipLost: true,
+  payoutDetailsChanged: true,
 };
 
 /**

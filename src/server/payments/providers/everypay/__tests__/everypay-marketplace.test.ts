@@ -3,6 +3,7 @@
  *
  * ADR-943 §5.7 — EveryPay Marketplace: αναγνώστες (κανένα «εξουσιοδοτημένος» από ελλιπή δεδομένα), webhook KYC ⇒ σήμα,
  * και **δηλωτικές** πράξεις χρημάτων — δεύτερη εκτέλεση = καμία κίνηση (ο πάροχος δεν έχει κλειδί ιδεμποτίας).
+ * ADR-943 §5.14 — στοιχεία πωλητή (IBAN ΜΟΝΟ μασκαρισμένο) · δικαιολογητικά KYC · `PUT /sellers/{id}`.
  */
 
 import { createHmac } from 'crypto';
@@ -10,7 +11,13 @@ import { createHmac } from 'crypto';
 import { createEverypayProvider } from '../everypay-adapter';
 import { EVERYPAY_ENDPOINTS, type EverypayCredentials } from '../everypay-config';
 import { createEverypayMarketplace } from '../everypay-marketplace';
-import { payeeAccountOf, payeeKycStatusOf, payeeTransferOf, sellerKycEventOf } from '../everypay-marketplace-readers';
+import {
+  payeeAccountOf,
+  payeeKycRequirementsOf,
+  payeeKycStatusOf,
+  payeeTransferOf,
+  sellerKycEventOf,
+} from '../everypay-marketplace-readers';
 
 const credentials: EverypayCredentials = {
   mode: 'sandbox', secretKey: 'sk_test', publicKey: 'pk_test', endpoints: EVERYPAY_ENDPOINTS.sandbox, marketplace: true,
@@ -52,7 +59,7 @@ describe('ενεργοποίηση', () => {
 describe('αναγνώστες', () => {
   it('πωλητής: γνωστή κατάσταση ⇒ πεζά· άγνωστη ή απούσα ⇒ unknown, ΠΟΤΕ authorized', () => {
     expect(payeeAccountOf({ token: 'sel_1', status: 'Authorized', kyc_process_url: 'https://kyc/x' }))
-      .toEqual({ reference: 'sel_1', status: 'authorized', kycProcessUrl: 'https://kyc/x' });
+      .toEqual({ reference: 'sel_1', status: 'authorized', kycProcessUrl: 'https://kyc/x', details: null });
     expect(payeeAccountOf({ token: 'sel_1', status: 'Pending review' })?.status).toBe('unknown');
     expect(payeeAccountOf({ token: 'sel_1' })?.status).toBe('unknown');
     expect(payeeAccountOf({ status: 'Authorized' })).toBeNull();
@@ -74,7 +81,9 @@ describe('αναγνώστες', () => {
 
   it('webhook KYC: μόνο το SELLER_KYC.STATUS με πωλητή', () => {
     const event = { event_type: 'SELLER_KYC.STATUS', payload: { seller_token: 'sel_1', status: 'Pending', kyc_process_url: 'https://kyc/x' } };
-    expect(sellerKycEventOf(event)).toEqual({ payeeReference: 'sel_1', kycStatus: 'pending', kycProcessUrl: 'https://kyc/x' });
+    expect(sellerKycEventOf(event)).toEqual({
+      payeeReference: 'sel_1', kycStatus: 'pending', kycProcessUrl: 'https://kyc/x', kycRequirements: {},
+    });
     expect(sellerKycEventOf({ event_type: 'OTHER', payload: event.payload })).toBeNull();
     expect(sellerKycEventOf({ event_type: 'SELLER_KYC.STATUS', payload: {} })).toBeNull();
   });
@@ -91,7 +100,7 @@ describe('judgeWebhook — KYC', () => {
     const body = JSON.stringify({ event_type: 'SELLER_KYC.STATUS', version: 'v1', payload: { seller_token: 'sel_1', status: 'Verified' } });
     expect(provider.judgeWebhook(body, signed(body))).toEqual({
       valid: true,
-      signal: { kind: 'payee-kyc', payeeReference: 'sel_1', kycStatus: 'verified', kycProcessUrl: null },
+      signal: { kind: 'payee-kyc', payeeReference: 'sel_1', kycStatus: 'verified', kycProcessUrl: null, kycRequirements: {} },
       signatureScheme: 'webhook-header',
     });
   });
@@ -191,5 +200,49 @@ describe('δηλωτικός αντιλογισμός / επιστροφή — �
     expect(sentCalls(spy).filter((call) => call.method === 'POST')).toEqual([
       expect.objectContaining({ path: '/refunds', form: new URLSearchParams({ payment: 'pmt_1', amount: '3000' }) }),
     ]);
+  });
+});
+
+describe('ADR-943 §5.14 — στοιχεία πωλητή · δικαιολογητικά · αλλαγή', () => {
+  const SELLER = {
+    token: 'sel_1', status: 'Authorized', is_authorized: true,
+    business: { name: 'Acme Α.Ε.', title: 'Acme', tax_number: '999000999', address: 'Οδός 23' },
+    bank_accounts: [
+      { token: 'bnk_old', iban: 'GR65 0110 1100 0000 1104 7025 496', bank_name: 'NBG', beneficiary_name: 'Ά', is_default: false },
+      { token: 'bnk_1', iban: 'GR1601101250000000012300695', bank_name: 'NATIONAL BANK OF GREECE S.A.', beneficiary_name: 'John Doe', is_default: true },
+    ],
+  };
+
+  it('στοιχεία από τον πάροχο: ο ΠΡΟΕΠΙΛΕΓΜΕΝΟΣ λογαριασμός, το IBAN ΜΟΝΟ ως 4 τελευταία ψηφία', () => {
+    const account = payeeAccountOf(SELLER);
+    expect(account?.details).toEqual({
+      legalName: 'Acme Α.Ε.', tradeName: 'Acme', address: 'Οδός 23', taxNumber: '999000999',
+      ibanLast4: '0695', ibanBeneficiary: 'John Doe', bankName: 'NATIONAL BANK OF GREECE S.A.',
+    });
+    expect(JSON.stringify(account)).not.toContain('GR1601101250000000012300695');
+  });
+
+  it('και η επίπεδη μορφή της τεκμηρίωσης (`business_name` …) διαβάζεται', () => {
+    expect(payeeAccountOf({ token: 'sel_1', business_name: 'Β', business_tax_number: '111' })?.details)
+      .toMatchObject({ legalName: 'Β', taxNumber: '111', ibanLast4: null });
+  });
+
+  it('δικαιολογητικά: null ⇒ δεν εφαρμόζεται· άγνωστη κατάσταση ⇒ unknown, ΠΟΤΕ approved· άγνωστη κατηγορία ⇒ αγνοείται', () => {
+    expect(payeeKycRequirementsOf({
+      company_info: 'in progress', proof_of_id: 'Rejected', gov_kyb: null, proof_of_funds: 'weird', mystery: 'approved',
+    })).toEqual({ company_info: 'in-progress', proof_of_id: 'rejected', proof_of_funds: 'unknown' });
+    expect(payeeKycRequirementsOf(undefined)).toEqual({});
+  });
+
+  it('PUT /sellers/{id}: μόνο ό,τι δόθηκε· IBAN ΜΑΖΙ με δικαιούχο· κενή αλλαγή ⇒ μόνο ανάγνωση', async () => {
+    const spy = jest.spyOn(global, 'fetch').mockImplementation(() => respond(SELLER));
+    await marketplace().updatePayee('sel_1', { address: 'Νέα 1', bankAccount: { iban: 'GR1601101250000000012300695', beneficiary: 'John Doe' } });
+    await marketplace().updatePayee('sel_1', {});
+    const [put, read] = sentCalls(spy);
+    expect(put).toMatchObject({ method: 'PUT', path: '/sellers/sel_1' });
+    expect(Object.fromEntries(put.form)).toEqual({
+      business_address: 'Νέα 1', bank_account_iban: 'GR1601101250000000012300695', bank_account_beneficiary: 'John Doe',
+    });
+    expect(read).toMatchObject({ method: 'GET', path: '/sellers/sel_1' });
   });
 });

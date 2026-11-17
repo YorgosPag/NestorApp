@@ -3,8 +3,9 @@ import 'server-only';
 /**
  * @fileoverview Ο adapter **EveryPay Marketplace** — υλοποίηση του `MarketplaceCapability` (ADR-943 §5.7)
  * @description
- *   - **Δικαιούχος** = πωλητής (`POST /sellers` · `GET /sellers/{id}`). Τα στοιχεία (IBAN, ΑΦΜ) περνούν διαμέσου και
- *     **δεν** αποθηκεύονται από εμάς· η ταυτοποίηση γίνεται στη hosted σελίδα KYC του παρόχου.
+ *   - **Δικαιούχος** = πωλητής (`POST /sellers` · `GET /sellers/{id}` · `PUT /sellers/{id}`). Τα στοιχεία (IBAN, ΑΦΜ)
+ *     περνούν διαμέσου και **δεν** αποθηκεύονται από εμάς· η ταυτοποίηση γίνεται στη hosted σελίδα KYC του παρόχου, της
+ *     οποίας ο σύνδεσμος φτάνει **μόνο** με το webhook KYC (το αντικείμενο πωλητή δεν έχει πεδία KYC — ADR-943 §5.14).
  *   - **Κράτηση** = μεταφορά πληρωμής με `on_hold=1` (`POST /payments/{id}/transfers`) · **αποδέσμευση** =
  *     `PUT /transfers/{id}` με `on_hold=0`.
  *   - **Αντιλογισμός** = `POST /reversals` (μετά την εκκαθάριση η επιστροφή στον πελάτη δεν γίνεται απευθείας) ·
@@ -28,6 +29,7 @@ import type {
   PayeeRegistration,
   PayeeTransfer,
   PayeeTransferTarget,
+  PayeeUpdate,
   PaymentRefundTarget,
   ReconcileOutcome,
   TransferReversalTarget,
@@ -81,6 +83,30 @@ async function registerPayee(credentials: EverypayCredentials, registration: Pay
 
 async function readPayee(credentials: EverypayCredentials, payeeReference: string): Promise<PayeeAccount> {
   return payeeOrThrow(await everypayRequest(credentials, { method: 'GET', path: path('/sellers', payeeReference) }));
+}
+
+/** `PayeeUpdate` ⇒ πεδία φόρμας `PUT /sellers/{id}`. Μόνο ό,τι δόθηκε· IBAN **πάντα** μαζί με δικαιούχο (docs). */
+function payeeUpdateForm(update: PayeeUpdate): Record<string, string> {
+  const form: Record<string, string> = {};
+  if (update.legalName !== undefined) form.business_name = update.legalName;
+  if (update.tradeName !== undefined) form.business_title = update.tradeName;
+  if (update.address !== undefined) form.business_address = update.address;
+  if (update.description !== undefined) form.description = update.description;
+  if (update.bankAccount !== undefined) {
+    form.bank_account_iban = update.bankAccount.iban;
+    form.bank_account_beneficiary = update.bankAccount.beneficiary;
+  }
+  return form;
+}
+
+/**
+ * Αλλαγή στοιχείων πωλητή. Δηλωτική εκ φύσεως (PUT): ίδια στοιχεία ⇒ ίδια κατάσταση. Κενή αλλαγή ⇒ απλή ανάγνωση
+ * (καμία κλήση εγγραφής). Νέο IBAN **δεν** ισχύει αμέσως — ο πάροχος το ξαναελέγχει με KYC (docs «Update a seller»).
+ */
+async function updatePayee(credentials: EverypayCredentials, payeeReference: string, update: PayeeUpdate): Promise<PayeeAccount> {
+  const form = payeeUpdateForm(update);
+  if (Object.keys(form).length === 0) return readPayee(credentials, payeeReference);
+  return payeeOrThrow(await everypayRequest(credentials, { method: 'PUT', path: path('/sellers', payeeReference), form }));
 }
 
 // ─── ΜΕΤΑΦΟΡΑ (ΚΡΑΤΗΣΗ / ΑΠΟΔΕΣΜΕΥΣΗ) ────────────────────────────────────────
@@ -193,6 +219,7 @@ export function createEverypayMarketplace(credentials: EverypayCredentials): Mar
   return {
     registerPayee: (registration) => registerPayee(credentials, registration),
     readPayee: (payeeReference) => readPayee(credentials, payeeReference),
+    updatePayee: (payeeReference, update) => updatePayee(credentials, payeeReference, update),
     ensureTransfer: (target) => ensureTransfer(credentials, target),
     readTransfer: (transferReference) => readTransfer(credentials, transferReference),
     releaseTransfer: (transferReference) => releaseTransfer(credentials, transferReference),
