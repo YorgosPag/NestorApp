@@ -454,14 +454,6 @@
   `conveyance/my-cases/MyCaseCardView` · `owner-property/OwnerPropertyDetailContent` · `stay-calendar/StayCalendarContent`.
   Όλα χωρίς `TOUCH_TARGET_MIN` (ύψος ~20 px < 24 px του WCAG 2.5.8).
 
-- 🟠 **26/09 — `findContactByEmail`: ΣΩΣΤΟ ΤΩΡΑ, ΑΛΛΑ O(n) ΑΝΑΓΝΩΣΕΙΣ ΑΝΑ ΕΛΕΓΧΟ** *(ADR-884 §4.6 · ADR-827)*
-
-  Ήταν `.limit(50)` χωρίς σελιδοποίηση ⇒ σε γραφείο με >50 επαφές δεύτερη καρτέλα για τον ίδιο άνθρωπο (διορθώθηκε:
-  πλήρης σελιδοποίηση, σελίδα 500). Μένει το **κόστος**: κάθε αποδοχή εντολής / έγκριση θέασης σαρώνει **όλες** τις
-  επαφές του γραφείου. Θεραπεία: πεδίο `emailKeys: string[]` (πεζά, trim) σε **κάθε** γραφέα επαφής (`contact-document-builder`
-  + πελατικός γραφέας + αλλαγές email) + backfill + `where('emailKeys','array-contains',email)` + δείκτης. Μέτρα πρώτα
-  πόσοι γραφείς γράφουν `emails` (`grep -rn "emails:" src/services src/server`).
-
 - 🟡 **26/09 — ΤΡΙΑ ΜΟΤΙΒΑ ΑΙΣΙΟΔΟΞΗΣ ΑΛΛΑΓΗΣ, ΕΝΑ ΚΟΙΝΟ HOOK** *(N.0.2 · ADR-884 §4.6)*
 
   Το `hooks/useReconciledResource.ts` (εξαγμένο από το `useShareLinks`, 3 καταναλωτές) είναι πλέον ο **ένας** τρόπος.

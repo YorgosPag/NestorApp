@@ -40,7 +40,8 @@ import type {
   RoutingResolution,
 } from './types';
 import { processAttachments } from './email-inbound-attachments';
-import { CONTACT_EMAIL_KEYS_FIELD, contactEmailKeys } from '@/lib/contacts/contact-email-keys';
+import { findContactByEmail } from '@/services/ai-pipeline/shared/contact-lookup-search';
+import { CONTACT_EMAIL_KEYS_FIELD, contactEmailKeys, emailKeyOf } from '@/lib/contacts/contact-email-keys';
 
 const logger = createModuleLogger('EMAIL_INBOUND_SERVICE');
 
@@ -48,8 +49,9 @@ const logger = createModuleLogger('EMAIL_INBOUND_SERVICE');
 // EMAIL ADDRESS UTILITIES
 // ============================================================================
 
+/** Ο κανόνας είναι του `emailKeyOf` (ADR-944) — ένα σημείο· εδώ μόνο το «κενό ⇒ ''» της σύμβασης του inbound. */
 export function normalizeEmail(email: string): string {
-  return email.toLowerCase().trim();
+  return emailKeyOf(email) ?? '';
 }
 
 export function parseAddress(raw?: string): ParsedAddress | null {
@@ -159,28 +161,6 @@ export async function resolveCompanyIdFromRecipients(recipients: string[]): Prom
 // CONTACT RESOLUTION
 // ============================================================================
 
-async function findContactByEmail(companyId: string, email: string): Promise<string | null> {
-  const adminDb = getAdminFirestore();
-  const contactsRef = adminDb.collection(COLLECTIONS.CONTACTS);
-  const normalizedEmail = normalizeEmail(email);
-
-  const candidateFields = ['email', 'primaryEmail', 'contactEmail', 'officialEmail'];
-
-  for (const field of candidateFields) {
-    const snapshot = await contactsRef
-      .where(FIELDS.COMPANY_ID, '==', companyId)
-      .where(field, '==', normalizedEmail)
-      .limit(1)
-      .get();
-
-    if (!snapshot.empty) {
-      return snapshot.docs[0].id;
-    }
-  }
-
-  return null;
-}
-
 function splitName(fullName?: string): { firstName: string; lastName: string } {
   if (!fullName || fullName.trim().length === 0) {
     return { firstName: DEFAULTS.UNKNOWN_SENDER, lastName: DEFAULTS.UNKNOWN_SENDER };
@@ -198,7 +178,8 @@ function splitName(fullName?: string): { firstName: string; lastName: string } {
 }
 
 async function ensureContactForSender(companyId: string, sender: ParsedAddress): Promise<string> {
-  const existingContactId = await findContactByEmail(companyId, sender.email);
+  // ADR-944: ο ΕΝΑΣ αναζητητής (δείκτης `emailKeys`) — καλύπτει `emails[]` + επίπεδο `email`, όχι μόνο επίπεδα πεδία.
+  const existingContactId = (await findContactByEmail(sender.email, companyId))?.contactId ?? null;
   if (existingContactId) {
     return existingContactId;
   }

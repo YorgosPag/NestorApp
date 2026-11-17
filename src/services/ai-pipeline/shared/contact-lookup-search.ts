@@ -20,6 +20,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { extractContactPrimaryPhone } from '@/server/lib/contact-doc-fields';
 import { fuzzyGreekMatch } from './greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
+import { CONTACT_EMAIL_KEYS_FIELD, emailKeyOf } from '@/lib/contacts/contact-email-keys';
 
 import type {
   ContactMatch,
@@ -101,28 +102,21 @@ function extractContactFields(data: FirebaseFirestore.DocumentData, docId: strin
 // CONTACT LOOKUP BY EMAIL
 // ============================================================================
 
-/** Μέγεθος σελίδας της σάρωσης email — κάθε σελίδα, μέχρι το τέλος (ορθότητα πριν από το κόστος). */
-const EMAIL_SCAN_PAGE_SIZE = 500;
-
-/** Ταιριάζει αυτή η επαφή στο email; (πίνακας `emails[]` **ή** επίπεδο `email`) */
-function contactMatchByEmail(normalizedEmail: string) {
-  return (doc: FirebaseFirestore.QueryDocumentSnapshot): ContactMatch | null => {
-    const data = doc.data();
-    const emails = data.emails as Array<{ email?: string }> | undefined;
-    const flatEmail = data.email as string | undefined;
-    const hit = emails?.some((e) => e.email?.toLowerCase().trim() === normalizedEmail)
-      || flatEmail?.toLowerCase().trim() === normalizedEmail;
-    return hit
-      ? { contactId: doc.id, name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string }
-      : null;
-  };
+/** Το όνομα που επιστρέφει η αναζήτηση — ίδια σειρά προτίμησης με πριν το ADR-944. */
+function contactMatchOf(doc: FirebaseFirestore.QueryDocumentSnapshot): ContactMatch {
+  const data = doc.data();
+  return { contactId: doc.id, name: (data.displayName ?? data.firstName ?? data.companyName ?? 'Unknown') as string };
 }
 
 /**
- * Server-side contact lookup by email using Admin SDK.
+ * Server-side αναζήτηση επαφής με email — **ερώτημα δείκτη**, όχι σάρωση (ADR-944 §3.6 · κλείνει ADR-884 §4.6).
  *
- * Searches the contacts collection for a matching email address.
- * Checks both the `emails` array field and the flat `email` field.
+ * `companyId ==` + `emailKeys array-contains` (δείκτης στο `firestore.indexes.json`). Το `emailKeys` γράφεται από
+ * **κάθε** γραφέα επαφής και καλύπτει και τον πίνακα `emails[]` και το επίπεδο `email`.
+ *
+ * ⚠️ **Προϋπόθεση ορθότητας**: η συμπλήρωση (`scripts/backfill-contact-email-keys.ts`) έχει τρέξει — επαφή χωρίς
+ *    `emailKeys` **δεν** βρίσκεται και ο καλών (αποδοχή εντολής · έγκριση θέασης) θα έφτιαχνε δεύτερη καρτέλα.
+ * 🔑 Κάθε σφάλμα **ανεβαίνει** στον καλούντα (π.χ. δείκτης που δεν αναπτύχθηκε) — «δεν ξέρω» δεν είναι ποτέ «δεν υπάρχει».
  *
  * @param email - Email address to search for
  * @param companyId - Tenant isolation (company ID)
@@ -132,27 +126,17 @@ export async function findContactByEmail(
   email: string,
   companyId: string
 ): Promise<ContactMatch | null> {
-  const adminDb = getAdminFirestore();
-  const normalizedEmail = email.toLowerCase().trim();
-
-  // 🔴 ADR-884 Κ3β: ήταν `.limit(50)` ΧΩΡΙΣ σελιδοποίηση — σε γραφείο με >50 επαφές η υπάρχουσα καρτέλα
-  //    δεν βρισκόταν και ο καλών (αποδοχή εντολής ADR-827 · έγκριση θέασης ADR-884) έφτιαχνε ΔΕΥΤΕΡΗ για
-  //    τον ίδιο άνθρωπο. Πλέον σαρώνονται ΟΛΕΣ οι σελίδες. ⏳ Δείκτης κανονικοποιημένων email: pending-ratchet.
-  let cursor: FirebaseFirestore.QueryDocumentSnapshot | null = null;
-  for (;;) {
-    let page = adminDb
-      .collection(COLLECTIONS.CONTACTS)
-      .where(FIELDS.COMPANY_ID, '==', companyId)
-      .limit(EMAIL_SCAN_PAGE_SIZE);
-    if (cursor !== null) page = page.startAfter(cursor);
-    const snapshot = await page.get();
-    const match = snapshot.docs.map(contactMatchByEmail(normalizedEmail)).find((found) => found !== null);
-    if (match) return match;
-    if (snapshot.docs.length < EMAIL_SCAN_PAGE_SIZE) break;
-    cursor = snapshot.docs[snapshot.docs.length - 1] ?? null;
-  }
-
-  logger.debug('Contact not found by email', { email: normalizedEmail, companyId });
+  const key = emailKeyOf(email);
+  if (key === null) return null;
+  const snapshot = await getAdminFirestore()
+    .collection(COLLECTIONS.CONTACTS)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
+    .where(CONTACT_EMAIL_KEYS_FIELD, 'array-contains', key)
+    .limit(1)
+    .get();
+  const doc = snapshot.docs[0];
+  if (doc) return contactMatchOf(doc);
+  logger.debug('Contact not found by email', { email: key, companyId });
   return null;
 }
 

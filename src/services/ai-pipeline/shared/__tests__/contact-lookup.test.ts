@@ -66,6 +66,7 @@ import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { processPerformer } from '@/lib/audit/audit-performer';
+import { contactEmailKeys } from '@/lib/contacts/contact-email-keys';
 import {
   findContactByEmail,
   findContactByPhone,
@@ -87,9 +88,14 @@ const COMPANY_ID = 'comp_test_001';
 /** ADR-195 — ο βοηθός εκ μέρους του διαχειριστή (σύγχρονος φορέας: καμία ανάγνωση `/users`). */
 const ADMIN = processPerformer(SYSTEM_IDENTITY.AI_AGENT_ID, 'Admin');
 
+/** Οι επαφές όπως είναι μετά τη συμπλήρωση (ADR-944): κάθε γραφέας γράφει `emailKeys` από το ΕΝΑ SSoT. */
+function withEmailKeys(contacts: Record<string, Record<string, unknown>>): Record<string, Record<string, unknown>> {
+  return Object.fromEntries(Object.entries(contacts).map(([id, c]) => [id, { ...c, emailKeys: contactEmailKeys(c.emails, c.email) }]));
+}
+
 function setupFirestore(contacts: Record<string, Record<string, unknown>>) {
   const kit = new FakeFirestore();
-  kit.seedCollection('contacts', contacts);
+  kit.seedCollection('contacts', withEmailKeys(contacts));
   (getAdminFirestore as jest.Mock).mockReturnValue(kit);
   return kit;
 }
@@ -184,7 +190,7 @@ describe('contact-lookup', () => {
       expect(result!.name).toBe('Flat Contact');
     });
 
-    it('finds a contact BEYOND the first page (was: silent miss after 50 → duplicate card)', async () => {
+    it('finds a contact among 1200 (ADR-884 Κ3β: ποτέ σιωπηλή αστοχία μετά από σελίδα)', async () => {
       const crowd: Record<string, Record<string, unknown>> = {};
       for (let i = 0; i < 1200; i += 1) {
         crowd[`cont_${String(i).padStart(4, '0')}`] = { companyId: COMPANY_ID, displayName: `Άνθρωπος ${i}` };
@@ -194,6 +200,18 @@ describe('contact-lookup', () => {
 
       const result = await findContactByEmail('late@example.com', COMPANY_ID);
       expect(result?.contactId).toBe('cont_last');
+    });
+
+    it('ADR-944 — επαφή ΧΩΡΙΣ `emailKeys` (πριν τη συμπλήρωση) δεν βρίσκεται: η προϋπόθεση, ρητή', async () => {
+      const kit = new FakeFirestore();
+      kit.seedCollection('contacts', { cont_old: DIMITRIS });
+      (getAdminFirestore as jest.Mock).mockReturnValue(kit);
+      expect(await findContactByEmail('dimitris@example.com', COMPANY_ID)).toBeNull();
+    });
+
+    it('κενό email ⇒ null χωρίς ερώτημα', async () => {
+      setupFirestore({ cont_001: DIMITRIS });
+      expect(await findContactByEmail('   ', COMPANY_ID)).toBeNull();
     });
 
     it('should return null when email not found', async () => {

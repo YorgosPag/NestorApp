@@ -86,7 +86,10 @@ async function collectPending(db: admin.firestore.Firestore): Promise<{ scanned:
 
 async function main(): Promise<number> {
   const env = loadEnvLocal();
-  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_KEY)) });
+  // Σε worktree δεν υπάρχει `.env.local` — δεκτό και από το περιβάλλον της διεργασίας.
+  const serviceAccountKey = env.FIREBASE_SERVICE_ACCOUNT_KEY ?? process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!serviceAccountKey) throw new Error('Λείπει το FIREBASE_SERVICE_ACCOUNT_KEY (.env.local ή περιβάλλον)');
+  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(serviceAccountKey)) });
   const db = admin.firestore();
   const { scanned, pending } = await collectPending(db);
   console.log(`[${SCRIPT_NAME}] Σαρώθηκαν ${scanned} επαφές · χρειάζονται κλειδιά: ${pending.length}`);
