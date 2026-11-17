@@ -87,6 +87,21 @@ export const quoteTermsBody = z.object({
 
 export type QuoteTermsBody = z.infer<typeof quoteTermsBody>;
 
+/**
+ * Τα πεδία ενός παραστατικού (ΜΑΡΚ myDATA · ημέρα έκδοσης · σύνολο σε λεπτά) — **ένα** σχήμα για το τελικό (§42) και για
+ * την προκαταβολή (ADR-943 Κ-7), από γραφείο και από μηχανικό.
+ */
+export const receiptFields = {
+  mark: z.string().trim().regex(MYDATA_MARK_PATTERN),
+  issuedOn: isoDay,
+  totalMinor: positiveMinor,
+};
+
+/** ADR-943 Φ5δ — ο μηχανικός καταγράφει τον ΜΑΡΚ της προκαταβολής από τον χώρο της συμμετοχής του (CAS όπως το γραφείο). */
+export const issuanceAdvanceReceiptBody = z.object({ expectedStage: z.enum(ISSUANCE_STAGES).nullable(), ...receiptFields });
+
+export type IssuanceAdvanceReceiptBody = z.infer<typeof issuanceAdvanceReceiptBody>;
+
 /** Οι όροι + η σημείωση → οι όροι του μειωτή. */
 export function quoteTermsOf(terms: QuoteTermsBody, note: string | null): QuoteTerms {
   return { ...terms, note };
@@ -115,13 +130,7 @@ export const issuanceAssignmentBody = z.discriminatedUnion('action', [
   /** §42 — προσφορά που έφτασε στο γραφείο εκτός συνδέσμου (τηλέφωνο · email) και **καταγράφεται**. */
   z.object({ action: z.literal('record-quote'), ...target, terms: quoteTermsBody, note: optionalText(ISSUANCE_NOTE_MAX) }),
   /** §42 — το παραστατικό της εγκεκριμένης τιμής: ΜΑΡΚ myDATA · ημέρα έκδοσης · σύνολο σε λεπτά. */
-  z.object({
-    action: z.literal('record-receipt'),
-    ...target,
-    mark: z.string().trim().regex(MYDATA_MARK_PATTERN),
-    issuedOn: isoDay,
-    totalMinor: positiveMinor,
-  }),
+  z.object({ action: z.literal('record-receipt'), ...target, ...receiptFields }),
   /**
    * §45 Φ2 — ορισμός (χωρίς δέσμευση στην προσφορά) ή **αλλαγή** της προθεσμίας παράδοσης. Η αιτιολογία είναι
    * υποχρεωτική στην αλλαγή — την κρίνει ο μειωτής, που ξέρει αν υπάρχει ήδη προθεσμία.
@@ -150,6 +159,16 @@ export const issuanceAssignmentBody = z.discriminatedUnion('action', [
     releaseMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     reason: requiredText(ADVANCE_POLICY.resolutionReasonMax),
   }),
+  /**
+   * ADR-943 Φ5δ (Κ-7) — το παραστατικό της **προκαταβολής**: ΜΑΡΚ · ημέρα έκδοσης · ποσό. Το ποσό = ό,τι εισπράχθηκε — το
+   * κρίνει ο μειωτής, που ξέρει τα γεγονότα (`receipt-mismatch` αλλιώς).
+   */
+  z.object({ action: z.literal('record-advance-receipt'), ...target, ...receiptFields }),
+  /**
+   * ADR-943 Φ5δ (Ζ-3) — αντίρρηση στην αυτοψία **για λογαριασμό του ιδιοκτήτη** (π.χ. τηλεφώνησε στο γραφείο). Παράθυρο
+   * και μοναδικότητα τα κρίνει ο μειωτής (`canObjectToStart`).
+   */
+  z.object({ action: z.literal('object-start'), ...target, reason: requiredText(ADVANCE_POLICY.objectionReasonMax) }),
   z.object({ action: z.literal('cancel'), ...target }),
 ]);
 
@@ -318,6 +337,8 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
     case 'set-inspection-contact': return { kind: 'set-inspection-contact', contactId: request.contactId, role: request.role, roleOther: request.roleOther };
     case 'decline-delivery-change': return { kind: 'decline-delivery-change', reason: request.reason };
     case 'resolve-advance-dispute': return { kind: 'resolve-advance-dispute', releaseMinor: request.releaseMinor, reason: request.reason };
+    case 'record-advance-receipt': return { kind: 'record-advance-receipt', mark: request.mark, issuedOn: request.issuedOn, totalMinor: request.totalMinor };
+    case 'object-start': return { kind: 'object-start', reason: request.reason };
     case 'cancel': return { kind: 'cancel' };
   }
 }

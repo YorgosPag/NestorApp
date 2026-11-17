@@ -12,7 +12,7 @@
  */
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
-import type { AdvanceGlance } from '@/lib/document-validity/issuance-advance';
+import type { AdvanceGlance, AdvanceTimelineEntry } from '@/lib/document-validity/issuance-advance';
 import type { BallInCourtParty, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
 import type { DeliveryChangeGlance } from '@/lib/document-validity/issuance-delivery-change';
 import type { IssuanceLateness } from '@/lib/document-validity/issuance-delivery-due';
@@ -129,6 +129,8 @@ export interface IssuanceAgreementView {
    * προκαταβολή. 🔒 Ε-9′: μόνο ποσά και στιγμές — καμία αιτιολογία αντίρρησης του ιδιοκτήτη (ό,τι ειπώθηκε ανήκει στο γραφείο).
    */
   readonly advance: AdvanceGlance | null;
+  /** ADR-943 Φ5δ — το χρονολόγιο των χρημάτων (`advanceTimelineOf`, η ΙΔΙΑ λίστα με γραφείο και ιδιοκτήτη· χωρίς αιτιολογίες). */
+  readonly advanceTimeline: readonly AdvanceTimelineEntry[];
 }
 
 /**

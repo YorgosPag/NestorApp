@@ -14,14 +14,12 @@
 import React, { useId, useState } from 'react';
 
 import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { ISSUANCE_NOTE_MAX } from '@/lib/document-validity/issuance-assignment';
-import { MYDATA_MARK_PATTERN } from '@/lib/document-validity/issuance-quote';
 import { useIssuanceAssignmentActions } from '@/components/document-registry/issuance-assignment-context';
+import { IssuanceReceiptFields, useReceiptDraft } from '@/components/document-registry/IssuanceReceiptFields';
 import { IssuanceQuoteFields } from '@/components/document-registry/IssuanceQuoteFields';
 import { emptyQuoteDraft, quoteTermsFromDraft, type QuoteDraft } from '@/components/document-registry/issuance-quote-draft';
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
@@ -58,25 +56,22 @@ export function QuoteRecordForm({ view, close }: FormProps): React.ReactElement 
   );
 }
 
-export function ReceiptForm({ view, close, totalMinor }: FormProps & { readonly totalMinor: number }): React.ReactElement {
+/**
+ * Το παραστατικό στο γραφείο — το **τελικό** (`record-receipt`, σύνολο = συμφωνία − προκαταβολή) ή, ADR-943 Φ5δ, της
+ * **προκαταβολής** (`record-advance-receipt`, σύνολο = ό,τι εισπράχθηκε). Ίδια πεδία, ίδια φόρμα.
+ */
+export function ReceiptForm({ view, close, totalMinor, purpose = 'final' }: FormProps & { readonly totalMinor: number; readonly purpose?: 'final' | 'advance' }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
-  const [mark, setMark] = useState('');
-  const [issuedOn, setIssuedOn] = useState(() => conveyanceToday());
-  const markId = useId();
-  const dateId = useId();
-  const valid = MYDATA_MARK_PATTERN.test(mark.trim()) && issuedOn !== '';
+  const { draft, setDraft, valid, value } = useReceiptDraft();
   const submit = () => {
     if (actions === null || !valid) return;
     close();
-    actions.act({ action: 'record-receipt', ...issuanceTargetOf(view), mark: mark.trim(), issuedOn, totalMinor });
+    actions.act({ action: purpose === 'advance' ? 'record-advance-receipt' : 'record-receipt', ...issuanceTargetOf(view), ...value, totalMinor });
   };
   return (
     <>
-      <Label htmlFor={markId} className="text-sm font-medium">{t(RECEIPT_KEYS.markLabel)}</Label>
-      <Input id={markId} inputMode="numeric" autoComplete="off" maxLength={15} value={mark} onChange={(event) => setMark(event.target.value)} />
-      <Label htmlFor={dateId} className="text-sm font-medium">{t(RECEIPT_KEYS.issuedOnLabel)}</Label>
-      <Input id={dateId} type="date" value={issuedOn} max={conveyanceToday()} onChange={(event) => setIssuedOn(event.target.value)} />
+      <IssuanceReceiptFields draft={draft} onChange={setDraft} />
       <DialogActionFooter
         cancelLabel={t(PROPOSE_KEYS.cancel)} confirmLabel={t(RECEIPT_KEYS.submit)} busyLabel={t(ISSUANCE_KEYS.saving)}
         onCancel={close} onConfirm={submit} isSubmitting={false} canSubmit={valid}

@@ -12,10 +12,10 @@
 
 import React from 'react';
 
+import { IssuanceAdvanceTimelineList } from '@/components/document-registry/IssuanceAdvanceTimelineList';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { AdvanceTimelineEntry } from '@/lib/document-validity/issuance-advance';
 import { formatMinor } from '@/lib/money/money';
-import { formatOperatorDateTime } from '@/lib/operator-time-format';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
@@ -31,23 +31,18 @@ function entryText(t: Translate, entry: AdvanceTimelineEntry): string {
     case 'refunded': return t('document-request:advance.timeline.refunded', { amount: formatMinor(entry.amountMinor) });
     case 'dispute-resolved':
       return t('document-request:advance.timeline.disputeResolved', { refund: formatMinor(entry.refundMinor), release: formatMinor(entry.releaseMinor) });
+    case 'receipted':
+      return t('document-request:advance.timeline.receipted', { mark: entry.mark, amount: formatMinor(entry.amountMinor) });
   }
 }
 
 export function DocumentRequestAdvanceTimeline({ timeline }: { readonly timeline: readonly AdvanceTimelineEntry[] }): React.ReactElement | null {
-  const { t, i18n } = useTranslation(['document-request']);
+  const { t } = useTranslation(['document-request']);
   if (timeline.length === 0) return null;
   return (
     <section aria-labelledby="advance-timeline-heading" className="flex flex-col gap-1">
       <h2 id="advance-timeline-heading" className="m-0 text-sm font-semibold text-card-foreground">{t('document-request:advance.timeline.heading')}</h2>
-      <ol className="m-0 flex list-none flex-col gap-1 p-0">
-        {timeline.map((entry) => (
-          <li key={`${entry.kind}:${entry.at}`} className="flex flex-col text-sm text-card-foreground">
-            <time dateTime={entry.at} className="text-xs text-muted-foreground">{formatOperatorDateTime(entry.at, i18n.language)}</time>
-            <span>{entryText(t, entry)}</span>
-          </li>
-        ))}
-      </ol>
+      <IssuanceAdvanceTimelineList timeline={timeline} textOf={(entry) => entryText(t, entry)} />
     </section>
   );
 }

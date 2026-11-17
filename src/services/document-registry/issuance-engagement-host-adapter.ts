@@ -22,7 +22,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { listEngagementsOfUser, selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
-import { advanceGlanceOf } from '@/lib/document-validity/issuance-advance';
+import { advanceGlanceOf, advanceTimelineOf } from '@/lib/document-validity/issuance-advance';
 import { ballInCourtOf, issuanceStageOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
 import { deliveryChangeGlanceOf } from '@/lib/document-validity/issuance-delivery-change';
 import { issuanceDeliveryOf, issuanceDeliveryStatusOf, issuanceLatenessOf } from '@/lib/document-validity/issuance-delivery-due';
@@ -259,7 +259,7 @@ async function agreementOf(
   const lateness = issuanceLatenessOf(dueOn, conveyanceToday(now));
   return {
     siteAddress, ownerName, totals: quote ? quoteTotalsOf(quote) : null, dueOn, lateness, ...parties,
-    deliveryChange: deliveryChangeGlanceOf(record, engagementId), advance: advanceGlanceOf(record),
+    deliveryChange: deliveryChangeGlanceOf(record, engagementId), advance: advanceGlanceOf(record), advanceTimeline: advanceTimelineOf(record),
   };
 }
 

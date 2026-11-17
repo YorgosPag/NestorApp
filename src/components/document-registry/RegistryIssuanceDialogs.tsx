@@ -36,6 +36,7 @@ import {
   NOTICE_KEYS,
   PROPOSE_KEYS,
   QUOTE_KEYS,
+  ISSUANCE_ADVANCE_PANEL_KEYS,
   RECEIPT_KEYS,
   SEND_KEYS,
 } from '@/components/document-registry/issuance-labels';
@@ -45,6 +46,7 @@ import type { IssuanceInspectionContactEntry } from '@/lib/document-validity/iss
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
 import { nowISO } from '@/lib/date-local';
 import { cancellationPreviewOf } from '@/lib/document-validity/issuance-advance-settlement';
+import type { IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { formatMinor } from '@/lib/money/money';
 
 const DecisionForm = dynamic(() => import('./RegistryIssuanceDecisionForms').then((mod) => mod.DecisionForm), { ssr: false });
@@ -55,6 +57,7 @@ const QuoteRecordForm = dynamic(() => import('./RegistryIssuanceQuoteForms').the
 const ReceiptForm = dynamic(() => import('./RegistryIssuanceQuoteForms').then((mod) => mod.ReceiptForm), { ssr: false });
 const DeliveryScheduleForm = dynamic(() => import('./RegistryIssuanceDeliveryForm').then((mod) => mod.DeliveryScheduleForm), { ssr: false });
 const DeclineDeliveryChangeForm = dynamic(() => import('./RegistryIssuanceDeliveryForm').then((mod) => mod.DeclineDeliveryChangeForm), { ssr: false });
+const AdvancePanel = dynamic(() => import('./RegistryIssuanceAdvancePanel').then((mod) => mod.RegistryIssuanceAdvancePanel), { ssr: false });
 const InspectionContactForm = dynamic(() => import('./RegistryIssuanceInspectionForm').then((mod) => mod.InspectionContactForm), { ssr: false });
 
 export interface IssuanceDialogShellProps {
@@ -147,6 +150,29 @@ export function IssuanceReceiptDialog({ view, totalMinor }: { readonly view: Reg
   return (
     <IssuanceDialogShell trigger={t(QUOTE_KEYS.recordReceipt)} title={t(RECEIPT_KEYS.title)} description={t(RECEIPT_KEYS.description, { total: formatMinor(totalMinor) })}>
       {(close) => <ReceiptForm view={view} close={close} totalMinor={totalMinor} />}
+    </IssuanceDialogShell>
+  );
+}
+
+/** ADR-943 Φ5δ — το παραστατικό της **προκαταβολής**: ίδια φόρμα, σύνολο = ό,τι εισπράχθηκε (ο διάλογος το λέει). */
+export function IssuanceAdvanceReceiptDialog({ view, collectedMinor }: { readonly view: RegistryIssuanceView; readonly collectedMinor: number }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  return (
+    <IssuanceDialogShell
+      trigger={t(ISSUANCE_ADVANCE_PANEL_KEYS.recordReceipt)} title={t(ISSUANCE_ADVANCE_PANEL_KEYS.receiptTitle)}
+      description={t(ISSUANCE_ADVANCE_PANEL_KEYS.receiptDescription, { total: formatMinor(collectedMinor) })}
+    >
+      {(close) => <ReceiptForm view={view} close={close} totalMinor={collectedMinor} purpose="advance" />}
+    </IssuanceDialogShell>
+  );
+}
+
+/** ADR-943 Φ5δ — ο πίνακας «Προκαταβολή» (μόνο ανάγνωση), φορτωμένος όταν ανοίξει. */
+export function IssuanceAdvancePanelDialog({ record }: { readonly record: IssuanceAssignmentRecord }): React.ReactElement {
+  const { t } = useTranslation([REGISTRY_NS]);
+  return (
+    <IssuanceDialogShell trigger={t(ISSUANCE_ADVANCE_PANEL_KEYS.trigger)} triggerVariant="ghost" title={t(ISSUANCE_ADVANCE_PANEL_KEYS.title)} description={t(ISSUANCE_ADVANCE_PANEL_KEYS.description)}>
+      {() => <AdvancePanel record={record} />}
     </IssuanceDialogShell>
   );
 }

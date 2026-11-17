@@ -343,6 +343,37 @@ export const ISSUANCE_ADVANCE_DISPUTE_KEYS = {
   decided: `${K}issuance.advance.dispute.decided`,
 } as const;
 
+/** ADR-943 Φ5δ — ο πίνακας «Προκαταβολή» του γραφείου (ποσά · εκκρεμής κίνηση · ΜΑΡΚ · χρονολόγιο). */
+export const ISSUANCE_ADVANCE_PANEL_KEYS = {
+  trigger: `${K}issuance.advance.panel.trigger`,
+  title: `${K}issuance.advance.panel.title`,
+  description: `${K}issuance.advance.panel.description`,
+  terms: `${K}issuance.advance.panel.terms`,
+  amountsHeading: `${K}issuance.advance.panel.amountsHeading`,
+  funded: `${K}issuance.advance.panel.funded`,
+  refunded: `${K}issuance.advance.panel.refunded`,
+  released: `${K}issuance.advance.panel.released`,
+  held: `${K}issuance.advance.panel.held`,
+  pending: `${K}issuance.advance.panel.pending`,
+  receiptHeading: `${K}issuance.advance.panel.receiptHeading`,
+  receipt: `${K}issuance.advance.panel.receipt`,
+  receiptDue: `${K}issuance.advance.panel.receiptDue`,
+  refundedAfterReceipt: `${K}issuance.advance.panel.refundedAfterReceipt`,
+  timelineHeading: `${K}issuance.advance.panel.timelineHeading`,
+  recordReceipt: `${K}issuance.advance.panel.recordReceipt`,
+  receiptTitle: `${K}issuance.advance.panel.receiptTitle`,
+  receiptDescription: `${K}issuance.advance.panel.receiptDescription`,
+} as const;
+
+/** ADR-943 Φ5δ (Ζ-3) — αντίρρηση στην αυτοψία από το γραφείο, για λογαριασμό του ιδιοκτήτη. */
+export const ISSUANCE_ADVANCE_OBJECTION_KEYS = {
+  trigger: `${K}issuance.advance.objection.trigger`,
+  title: `${K}issuance.advance.objection.title`,
+  description: `${K}issuance.advance.objection.description`,
+  reasonLabel: `${K}issuance.advance.objection.reasonLabel`,
+  submit: `${K}issuance.advance.objection.submit`,
+} as const;
+
 /** Οι αρνήσεις της πόρτας (`ADVANCE_LINK_REFUSAL_STATUS`) — ο κωδικός είναι και το κλειδί· άγνωστος ⇒ `generic`. */
 export const ISSUANCE_ADVANCE_LINK_REFUSAL_KEYS: Readonly<Record<string, string>> = {
   NOT_FOUND: `${K}issuance.advance.ownerLink.refusals.NOT_FOUND`,

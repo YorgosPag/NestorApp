@@ -709,6 +709,48 @@
         "after-start-within-withdrawal": "After the site visit, within 14 days of approval",
         "after-start-later": "After the site visit, after 14 days",
         "escrow": "The money does not reach the professional before the site visit; a licensed payment provider holds it. Once the site visit is declared you have 48 hours to object."
+      },
+      "timeline": {
+        "funded": "{amount} collected",
+        "workStarted": "The engineer declared the site visit done",
+        "objectedByOwner": "The owner objected to the site visit",
+        "objectedByOffice": "The office recorded an objection on behalf of the owner",
+        "released": "{amount} paid out to the engineer",
+        "refunded": "{amount} refunded to the owner",
+        "disputeResolved": "Office decision: {refund} refunded, {release} to the engineer",
+        "receipted": "Advance receipt recorded for {amount} (MARK {mark})"
+      },
+      "panel": {
+        "trigger": "Details",
+        "title": "Advance payment",
+        "description": "Where the advance payment is and what happens next.",
+        "terms": "Agreed advance {amount} — cancellation policy: {policy}",
+        "amountsHeading": "Amounts",
+        "funded": "Collected",
+        "refunded": "Refunded to the owner",
+        "released": "Paid out to the engineer",
+        "held": "Held",
+        "pending": "Pending ({basis}): refund {refund} · payout {release} — from {date}",
+        "receiptHeading": "Advance receipt",
+        "receipt": "MARK {mark} · issued {date}",
+        "receiptDue": "No MARK recorded yet for the {amount} collected.",
+        "refundedAfterReceipt": "Money was refunded after the receipt was issued — a credit note is needed for the difference.",
+        "timelineHeading": "Timeline",
+        "recordReceipt": "Record advance MARK",
+        "receiptTitle": "Advance receipt",
+        "receiptDescription": "The receipt covers what was collected: {total}. The advance is offset on the final receipt.",
+        "basis": {
+          "windowElapsed": "objection window ended",
+          "officeResolution": "office decision",
+          "cancellation": "cancellation"
+        }
+      },
+      "objection": {
+        "trigger": "Object on behalf of the owner",
+        "title": "Objection to the site visit",
+        "description": "Record the objection the owner passed on to you. The automatic payout stops and the money stays held until the office decides. The engineer is told, without the reason.",
+        "reasonLabel": "What the owner said",
+        "submit": "Record objection"
       }
     }
   },

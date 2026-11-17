@@ -240,7 +240,7 @@ function Agreement({ agreement, view, onChanged }: {
       />
       {/* ADR-943 Φ5α — η προκαταβολή: πού είναι τα χρήματα + «Έγινε η αυτοψία». */}
       {agreement.advance !== null && (
-        <EngagedAdvance engagementId={view.engagementId} stage={view.stage} advance={agreement.advance} onChanged={onChanged} />
+        <EngagedAdvance engagementId={view.engagementId} stage={view.stage} advance={agreement.advance} timeline={agreement.advanceTimeline} onChanged={onChanged} />
       )}
     </section>
   );

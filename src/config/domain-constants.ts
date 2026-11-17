@@ -1178,6 +1178,8 @@ export const API_ROUTES = {
     ISSUANCE_DELIVERY_CHANGE: (engagementId: string) => `/api/engagements/${engagementId}/issuance/delivery-change` as const,
     // ADR-943 Φ5α — ο μηχανικός δηλώνει «έγινε η αυτοψία» (ανοίγει το παράθυρο αντίρρησης της προκαταβολής).
     ISSUANCE_START_WORK: (engagementId: string) => `/api/engagements/${engagementId}/issuance/start-work` as const,
+    // ADR-943 Φ5δ — ο μηχανικός καταγράφει τον ΜΑΡΚ του παραστατικού της προκαταβολής.
+    ISSUANCE_ADVANCE_RECEIPT: (engagementId: string) => `/api/engagements/${engagementId}/issuance/advance-receipt` as const,
     // ADR-901 Φ3 — η εξαργύρωση πρόσκλησης με email (ο επαγγελματίας, από `/case-invite/[token]`).
     INVITATION_REDEEM: '/api/engagement-invitations/redeem',
   },

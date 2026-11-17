@@ -173,7 +173,8 @@
       "objectedByOffice": "The office recorded an objection — the office decides",
       "released": "{amount} paid out to the professional",
       "refunded": "{amount} refunded to you",
-      "disputeResolved": "The office decided on the objection: {refund} back to you, {release} to the professional"
+      "disputeResolved": "The office decided on the objection: {refund} back to you, {release} to the professional",
+      "receipted": "The engineer issued a receipt for {amount} (MARK {mark})"
     },
     "objection": {
       "releaseAt": "If everything went well, you need to do nothing: the advance is paid out automatically on {date} ({relative}).",

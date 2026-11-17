@@ -11,6 +11,8 @@
  *    να κάνει· η κατάσταση και το κουμπί βγαίνουν από την **ίδια** ματιά του τομέα με τις οθόνες μηχανικού και ιδιοκτήτη.
  * 🔑 Η πράξη **δεν** είναι αισιόδοξη: το αποτέλεσμα (email δεκτό ή όχι) το λέει ο διακομιστής, και το μητρώο ξαναδιαβάζεται.
  * Χωρίς δικαίωμα (`canAct: false`) η γραμμή λέει την κατάσταση **χωρίς** κουμπί (εργονομία, όχι ασφάλεια — ADR-801).
+ * Φ5δ: + «Αντίρρηση για λογαριασμό του ιδιοκτήτη» (μέσα στο παράθυρο) · «Καταγραφή ΜΑΡΚ προκαταβολής» (όταν οφείλεται) ·
+ *   «Λεπτομέρειες» (ο πίνακας «Προκαταβολή» — ποσά, εκκρεμής κίνηση, χρονολόγιο· και χωρίς δικαίωμα: είναι ανάγνωση).
  */
 
 import React, { useState } from 'react';
@@ -21,6 +23,8 @@ import { REGISTRY_NS } from '@/components/document-registry/document-registry-la
 import { ISSUANCE_ADVANCE_LINK_KEYS, ISSUANCE_ADVANCE_LINK_REFUSAL_KEYS } from '@/components/document-registry/issuance-labels';
 import type { RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { RegistryIssuanceAdvanceDispute } from '@/components/document-registry/RegistryIssuanceAdvanceDispute';
+import { RegistryIssuanceAdvanceObjection } from '@/components/document-registry/RegistryIssuanceAdvanceObjection';
+import { IssuanceAdvancePanelDialog, IssuanceAdvanceReceiptDialog } from '@/components/document-registry/RegistryIssuanceDialogs';
 import { AccessCodeToggle, IssuedAccessCode } from '@/components/document-registry/RegistryIssuanceAccessCode';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -90,7 +94,10 @@ export function RegistryIssuanceAdvanceLine({ view, record, ownerName }: Advance
       {canAct && actionKey !== null ? (
         <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>{t(actionKey)}</Button>
       ) : null}
+      <RegistryIssuanceAdvanceObjection view={view} record={record} />
       <RegistryIssuanceAdvanceDispute view={view} record={record} />
+      {canAct && glance.receiptDue ? <IssuanceAdvanceReceiptDialog view={view} collectedMinor={glance.collectedMinor} /> : null}
+      <IssuanceAdvancePanelDialog record={record} />
       <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}>
         <DialogContent>
           {code === null ? (

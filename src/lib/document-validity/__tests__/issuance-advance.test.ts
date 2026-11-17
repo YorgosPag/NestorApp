@@ -7,6 +7,7 @@
 import {
   advanceCollectedMinor,
   advanceGlanceOf,
+  advanceLedgerOf,
   advanceSettledAtOf,
   advanceStateOf,
   advanceTimelineOf,
@@ -173,7 +174,9 @@ describe('ADR-943 Κ-4 — έναρξη, παράθυρο αντίρρησης, 
 describe('ADR-943 Φ5α — η ματιά της προκαταβολής (μία για κάθε οθόνη)', () => {
   it('χωρίς προκαταβολή ⇒ null· εγκρίθηκε ⇒ αναμένεται πληρωμή με τους όρους της συμφωνίας', () => {
     expect(advanceGlanceOf(runAll(ASSIGNED.slice(0, 1)))).toBeNull();
-    expect(advanceGlanceOf(assigned())).toEqual({ terms: TERMS.advance, state: 'awaiting-payment', releaseAt: null, collectedMinor: 0 });
+    expect(advanceGlanceOf(assigned())).toEqual({
+      terms: TERMS.advance, state: 'awaiting-payment', releaseAt: null, collectedMinor: 0, receipt: null, receiptDue: false, refundedAfterReceipt: false,
+    });
   });
 
   it('μετά την αυτοψία ⇒ πότε αποδεσμεύεται (το ΙΔΙΟ `objectionUntil` με τον μειωτή)· μετά την αποδέσμευση ⇒ καμία ώρα', () => {
@@ -298,5 +301,47 @@ describe('ADR-943 Κ-7 — ο ΜΑΡΚ δεμένος στα χρήματα', ()
     const finalReceipt = (totalMinor: number): IssuanceAction => ({ kind: 'record-receipt', mark: MARK, issuedOn: '2026-11-20', totalMinor });
     expect(refusalOf(funded(), finalReceipt(12_400), OFFICE)).toBe('receipt-mismatch');
     expect(apply(funded(), finalReceipt(8_400), OFFICE).receipt?.totalMinor).toBe(8_400);
+  });
+});
+
+describe('ADR-943 Φ5δ — ΜΑΡΚ προκαταβολής στις όψεις · ποσά του γραφείου · αντίρρηση από το γραφείο', () => {
+  const T1 = '2026-11-16T10:00:00.000Z';
+  const RECEIPT: IssuanceAction = { kind: 'record-advance-receipt', mark: MARK, issuedOn: '2026-11-16', totalMinor: 4_000 };
+
+  it('η ματιά: ΜΑΡΚ οφείλεται μόνο όταν εισπράχθηκαν χρήματα· μετά την καταγραφή φαίνεται και παύει να οφείλεται', () => {
+    expect(advanceGlanceOf(assigned())).toMatchObject({ receipt: null, receiptDue: false, refundedAfterReceipt: false });
+    expect(advanceGlanceOf(funded())).toMatchObject({ receipt: null, receiptDue: true });
+    const receipted = apply(funded(), RECEIPT, at(ENGINEER, T1));
+    expect(advanceGlanceOf(receipted)).toMatchObject({ receipt: { mark: MARK, issuedOn: '2026-11-16' }, receiptDue: false, refundedAfterReceipt: false });
+    // Ο ίδιος ΜΑΡΚ από το γραφείο ⇒ τίποτα δεν αλλάζει (ιδεμποτία στον ΜΑΡΚ).
+    const again = act(receipted, RECEIPT, OFFICE);
+    expect(again.ok && again.changed).toBe(false);
+  });
+
+  it('επιστροφή ΜΕΤΑ τον ΜΑΡΚ ⇒ η ματιά το λέει (χρειάζεται πιστωτικό)· ο ΜΑΡΚ δεν αλλάζει', () => {
+    const receipted = apply(funded(), RECEIPT, at(ENGINEER, T1));
+    const refunded = apply(receipted, { kind: 'advance-refunded', amountMinor: 1_000, reference: 'ref_1' }, at(SYSTEM, '2026-11-17T09:00:00.000Z'));
+    expect(advanceGlanceOf(refunded)).toMatchObject({ collectedMinor: 3_000, refundedAfterReceipt: true, receipt: { mark: MARK } });
+  });
+
+  it('το χρονολόγιο βάζει τον ΜΑΡΚ στη θέση του χρόνου του (ανάμεσα στα γεγονότα)', () => {
+    const receipted = apply(funded(), RECEIPT, at(ENGINEER, T1));
+    const startedLater = apply(receipted, START, at(ENGINEER, '2026-11-16T11:00:00.000Z'));
+    expect(advanceTimelineOf(startedLater).map((entry) => entry.kind)).toEqual(['funded', 'receipted', 'work-started']);
+    expect(advanceTimelineOf(startedLater)[1]).toEqual({ kind: 'receipted', at: T1, mark: MARK, issuedOn: '2026-11-16', amountMinor: 4_000 });
+  });
+
+  it('τα ποσά του γραφείου: εισπράχθηκαν · επεστράφησαν · αποδόθηκαν · κρατούνται', () => {
+    expect(advanceLedgerOf(funded())).toEqual({ fundedMinor: 4_000, refundedMinor: 0, releasedMinor: 0, heldMinor: 4_000 });
+    const decided = apply(apply(started(), { kind: 'object-start', reason: 'Δεν ήρθε κανείς' }, OFFICE), { kind: 'resolve-advance-dispute', releaseMinor: 1_000, reason: 'Μερικώς' }, OFFICE);
+    const refunded = apply(decided, { kind: 'advance-refunded', amountMinor: 3_000, reference: 'ref_1' }, SYSTEM);
+    expect(advanceLedgerOf(refunded)).toEqual({ fundedMinor: 4_000, refundedMinor: 3_000, releasedMinor: 0, heldMinor: 1_000 });
+  });
+
+  it('αντίρρηση από το γραφείο ⇒ δράστης `office` με το uid του (ποτέ από το αίτημα)· χρονολόγιο «από το γραφείο»', () => {
+    const disputed = apply(started(), { kind: 'object-start', reason: 'Τηλεφώνησε ο ιδιοκτήτης' }, OFFICE);
+    expect(disputed.advanceEvents.at(-1)).toMatchObject({ kind: 'start-objected', objection: { by: 'office', uid: 'uid_agent' } });
+    expect(advanceTimelineOf(disputed).at(-1)).toEqual({ kind: 'start-objected', at: T0, by: 'office' });
+    expect(refusalOf(started(), { kind: 'object-start', reason: 'x' }, ENGINEER)).toBe('actor-refused');
   });
 });

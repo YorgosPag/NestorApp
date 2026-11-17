@@ -91,3 +91,18 @@ export async function announceOfficeMoneyAction(db: Firestore, input: OfficeMone
   });
   if (!told.ok) logger.warn('Owner not emailed about the advance settlement', { assignmentId: assignment.id, refusal: told.refusal });
 }
+
+/**
+ * Φ5δ (Ζ-3) — η αντίρρηση που κατέγραψε το γραφείο **για λογαριασμό του ιδιοκτήτη** ανακοινώνεται με την ΙΔΙΑ ειδοποίηση με
+ * την αντίρρηση από σύνδεσμο (γραφείο με αιτιολογία, μηχανικός χωρίς — Ε-9′). Καμία κίνηση χρημάτων: η εντολή αυτόματης
+ * αποδέσμευσης σβήνει μόνη της όταν ο εκτελεστής ξαναρωτήσει τον τομέα (Ζ-7). Ποτέ δεν πετά.
+ */
+export async function announceOfficeObjection(db: Firestore, input: OfficeMoneyNoticeInput): Promise<void> {
+  const { body, record, registry, companyId, now } = input;
+  if (body.action !== 'object-start') return;
+  const milestone = latestAdvanceMilestone(record, 'start-objected');
+  const label = registry.properties[body.propertyId];
+  if (milestone === null || label === undefined) return;
+  const assignment = await readHostedIssuanceAssignment(db, companyId, issuanceAssignmentIdOf(companyId, body.propertyId, body.documentKind));
+  if (assignment !== null) await announceAdvanceMilestone(db, { context: { assignment, registry, label }, record, milestone, now });
+}

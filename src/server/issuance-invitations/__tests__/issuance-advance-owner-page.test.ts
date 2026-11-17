@@ -3,7 +3,8 @@
  *
  * @fileoverview ADR-943 Φ5β — **η σελίδα προκαταβολής του ιδιοκτήτη** πάνω στο fake Firestore, χωρίς mocks βάσης: ποιος
  *   είναι ο πληρωτής (Ζ-2) · ο σύνδεσμος `advance` (Ζ-1: νέος σε κάθε email, φραγμένος, δεμένος στην απόφαση, ζωή χρημάτων)
- *   · ο κωδικός §29 του φακέλου (DocuSign) · η αντίρρηση (Ζ-3) · το αίτημα πληρωμής του γραφείου (§8 #11). Μόνο το email
+ *   · ο κωδικός §29 του φακέλου (DocuSign) · η αντίρρηση (Ζ-3) · το αίτημα πληρωμής του γραφείου (§8 #11) · Φ5δ: ΜΑΡΚ
+ *   προκαταβολής και αντίρρηση από την πόρτα του γραφείου (ίδιο setup — κανένα δίδυμο σουίτας). Μόνο το email
  *   και ο orchestrator είναι mocks — τα σύνορα με τον έξω κόσμο. Τα γεγονότα χρημάτων γράφονται κατευθείαν στην ανάθεση
  *   (τα γράφει ο πάροχος — έχει δική του σουίτα). Όλα τα δεδομένα είναι **συνθετικά**.
  */
@@ -276,5 +277,60 @@ describe('ADR-943 Φ5β2 — το αίτημα πληρωμής του γραφ�
     seedMoney(['funded', 'started']);
     expect(await officeRequest(LATER)).toMatchObject({ ok: true });
     expect(lastOfKind(ADVANCE_LINK)?.text).toContain('Αποδεσμεύεται αυτόματα');
+  });
+});
+
+describe('ADR-943 Φ5δ — οι πράξεις του γραφείου: ΜΑΡΚ προκαταβολής · αντίρρηση για λογαριασμό του ιδιοκτήτη', () => {
+  const MARK = '400001234567890';
+  const advanceReceipt = (totalMinor: number, mark = MARK) =>
+    actOnIssuanceAssignment(db(), OFFICE, { action: 'record-advance-receipt', ...TARGET, expectedStage: 'accepted', mark, issuedOn: '2026-10-17', totalMinor }, LATER);
+  const objectFromOffice = (at: Date, reason = 'Τηλεφώνησε ο ιδιοκτήτης: δεν ήρθε κανείς') =>
+    actOnIssuanceAssignment(db(), OFFICE, { action: 'object-start', ...TARGET, expectedStage: 'accepted', reason }, at);
+  const objectedNotices = () => dispatchNotification.mock.calls.map(([input]) => input as { recipientId: string; eventType: string; body: string })
+    .filter((input) => input.eventType === 'properties.documentIssuanceAdvanceObjected');
+
+  it('ΜΑΡΚ προκαταβολής από το γραφείο = ό,τι εισπράχθηκε· άλλο ποσό ⇒ `receipt-mismatch`· ίδιος ΜΑΡΚ ⇒ `unchanged`· άλλος ⇒ άρνηση', async () => {
+    await approvedByOwnerLink();
+    seedMoney(['funded']);
+    expect(await advanceReceipt(4_001)).toEqual({ ok: false, refusal: 'receipt-mismatch' });
+    expect(await advanceReceipt(4_000)).toMatchObject({ ok: true, outcome: 'changed' });
+    expect(assignment().advanceReceipt).toMatchObject({ mark: MARK, totalMinor: 4_000, recordedByUid: 'user_1' });
+    expect(await advanceReceipt(4_000)).toMatchObject({ ok: true, outcome: 'unchanged' });
+    expect(await advanceReceipt(4_000, '400009999999999')).toEqual({ ok: false, refusal: 'transition-refused' });
+  });
+
+  it('πριν από την πληρωμή ⇒ κανένας ΜΑΡΚ προκαταβολής (δεν εισπράχθηκε τίποτα)', async () => {
+    await approvedByOwnerLink();
+    expect(await advanceReceipt(4_000)).toEqual({ ok: false, refusal: 'receipt-mismatch' });
+    expect(assignment().advanceReceipt ?? null).toBeNull();
+  });
+
+  it('ο τελικός ΜΑΡΚ μετά τον ΜΑΡΚ προκαταβολής = συμφωνία − εισπραχθέν (124,00 − 40,00)', async () => {
+    await approvedByOwnerLink();
+    seedMoney(['funded']);
+    await advanceReceipt(4_000);
+    const finalReceipt = (totalMinor: number) =>
+      actOnIssuanceAssignment(db(), OFFICE, { action: 'record-receipt', ...TARGET, expectedStage: 'accepted', mark: '400001111111111', issuedOn: '2026-10-20', totalMinor }, LATER);
+    expect(await finalReceipt(12_400)).toEqual({ ok: false, refusal: 'receipt-mismatch' });
+    expect(await finalReceipt(8_400)).toMatchObject({ ok: true, outcome: 'changed' });
+  });
+
+  it('αντίρρηση από το γραφείο μέσα στο παράθυρο ⇒ `disputed`, δράστης `office`· η ίδια ειδοποίηση με του συνδέσμου', async () => {
+    await approvedByOwnerLink();
+    seedMoney(['funded', 'started']);
+    expect(await objectFromOffice(LATER)).toMatchObject({ ok: true, outcome: 'changed' });
+    expect((assignment().advanceEvents as Stored[]).at(-1)).toMatchObject({ kind: 'start-objected', objection: { by: 'office', uid: 'user_1' } });
+    expect(objectedNotices().find((input) => input.recipientId === 'user_1')?.body).toContain('δεν ήρθε κανείς');
+  });
+
+  it('έξω από το παράθυρο ή δεύτερη φορά ⇒ άρνηση, καμία νέα ειδοποίηση', async () => {
+    await approvedByOwnerLink();
+    seedMoney(['funded', 'started']);
+    expect(await objectFromOffice(AFTER_WINDOW)).toEqual({ ok: false, refusal: 'transition-refused' });
+    await objectFromOffice(LATER);
+    const notices = objectedNotices().length;
+    expect(await objectFromOffice(LATER, 'Ξανά')).toEqual({ ok: false, refusal: 'transition-refused' });
+    expect(objectedNotices()).toHaveLength(notices);
+    expect((assignment().advanceEvents as Stored[]).filter((event) => event.kind === 'start-objected')).toHaveLength(1);
   });
 });

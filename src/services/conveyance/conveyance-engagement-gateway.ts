@@ -241,6 +241,31 @@ export function startWorkRejectionOf(error: unknown): StartWorkRejection | null 
 }
 
 // =============================================================================
+// ΠΡΟΚΑΤΑΒΟΛΗ — ΜΑΡΚ του παραστατικού (ADR-943 Φ5δ)
+// =============================================================================
+
+export const ADVANCE_RECEIPT_REJECTIONS = [
+  'NOT_FOUND', 'ENGAGEMENT_NOT_ACTIVE', 'UNAVAILABLE', 'STALE', 'TRANSITION_REFUSED', 'RECEIPT_MISMATCH',
+] as const;
+export type AdvanceReceiptRejection = (typeof ADVANCE_RECEIPT_REJECTIONS)[number];
+
+export interface AdvanceReceiptRequestBody {
+  readonly expectedStage: IssuanceStage | null;
+  readonly mark: string;
+  readonly issuedOn: string;
+  /** Ό,τι εισπράχθηκε (`AdvanceGlance.collectedMinor`) — ο μειωτής το ξανακρίνει. */
+  readonly totalMinor: number;
+}
+
+export function recordIssuanceAdvanceReceipt(engagementId: string, body: AdvanceReceiptRequestBody): Promise<{ readonly outcome: 'changed' | 'unchanged' }> {
+  return apiClient.post(API_ROUTES.ENGAGEMENTS.ISSUANCE_ADVANCE_RECEIPT(engagementId), body);
+}
+
+export function advanceReceiptRejectionOf(error: unknown): AdvanceReceiptRejection | null {
+  return namedError(error, ADVANCE_RECEIPT_REJECTIONS);
+}
+
+// =============================================================================
 // ΠΡΟΣΚΛΗΣΗ ΜΕ EMAIL — ο επαγγελματίας (ADR-901 Φ3)
 // =============================================================================
 

@@ -24,7 +24,7 @@ import { addDaysToDateKey } from '@/lib/calendar/date-key';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
 
-import { agreedQuoteOf, quoteTotalsOf, type QuoteAgreementFacts } from './issuance-quote';
+import { agreedQuoteOf, quoteTotalsOf, type IssuanceReceipt, type QuoteAgreementFacts } from './issuance-quote';
 
 // ---------------------------------------------------------------------------
 // Οι όροι
@@ -194,6 +194,11 @@ export interface AdvanceFacts extends QuoteAgreementFacts {
   readonly advanceEvents: readonly AdvanceEvent[];
 }
 
+/** Φ5δ — + το παραστατικό της προκαταβολής (ΜΑΡΚ, Κ-7): ό,τι χρειάζονται η ματιά και το χρονολόγιο κάθε οθόνης. */
+export interface AdvanceReceiptFacts extends AdvanceFacts {
+  readonly advanceReceipt: IssuanceReceipt | null;
+}
+
 function sumOf(events: readonly AdvanceEvent[], kind: 'funded' | 'released' | 'refunded'): MinorAmount {
   return events.reduce((sum, event) => (event.kind === kind ? sum + event.amountMinor : sum), 0);
 }
@@ -272,16 +277,30 @@ export interface AdvanceGlance {
   readonly releaseAt: string | null;
   /** Ό,τι εισπράχθηκε και δεν επεστράφη (`advanceCollectedMinor`). */
   readonly collectedMinor: MinorAmount;
+  /** Φ5δ — το παραστατικό της προκαταβολής, αν καταγράφηκε. */
+  readonly receipt: { readonly mark: string; readonly issuedOn: string } | null;
+  /** Φ5δ — εισπράχθηκαν χρήματα χωρίς ΜΑΡΚ: το παραστατικό οφείλεται (ποσό = `collectedMinor`). */
+  readonly receiptDue: boolean;
+  /**
+   * Φ5δ — ο ΜΑΡΚ γράφει **περισσότερα** από όσα κρατήθηκαν τελικά (επιστροφή μετά την έκδοση): χρειάζεται πιστωτικό
+   * παραστατικό — λογιστική πράξη εκτός εφαρμογής (ADR-943 §8 #5)· η οθόνη απλώς το λέει.
+   */
+  readonly refundedAfterReceipt: boolean;
 }
 
-export function advanceGlanceOf(facts: AdvanceFacts): AdvanceGlance | null {
+export function advanceGlanceOf(facts: AdvanceReceiptFacts): AdvanceGlance | null {
   const state = advanceStateOf(facts);
   if (state.kind === 'none') return null;
+  const collectedMinor = advanceCollectedMinor(state);
+  const receipt = facts.advanceReceipt;
   return {
     terms: agreedQuoteOf(facts)?.advance ?? null,
     state: state.kind,
     releaseAt: state.kind === 'release-pending' ? state.objectionUntil : null,
-    collectedMinor: advanceCollectedMinor(state),
+    collectedMinor,
+    receipt: receipt === null ? null : { mark: receipt.mark, issuedOn: receipt.issuedOn },
+    receiptDue: receipt === null && collectedMinor > 0,
+    refundedAfterReceipt: receipt !== null && receipt.totalMinor > collectedMinor,
   };
 }
 
@@ -317,21 +336,31 @@ export type AdvanceTimelineEntry =
   | { readonly kind: 'funded' | 'released' | 'refunded'; readonly at: string; readonly amountMinor: MinorAmount }
   | { readonly kind: 'work-started'; readonly at: string }
   | { readonly kind: 'start-objected'; readonly at: string; readonly by: StartObjectionBy['by'] }
-  | { readonly kind: 'dispute-resolved'; readonly at: string; readonly releaseMinor: MinorAmount; readonly refundMinor: MinorAmount };
+  | { readonly kind: 'dispute-resolved'; readonly at: string; readonly releaseMinor: MinorAmount; readonly refundMinor: MinorAmount }
+  /** Φ5δ — καταγράφηκε το παραστατικό της προκαταβολής (ΜΑΡΚ · ημέρα έκδοσης · ποσό). */
+  | { readonly kind: 'receipted'; readonly at: string; readonly mark: string; readonly issuedOn: string; readonly amountMinor: MinorAmount };
+
+function timelineEntryOf(event: AdvanceEvent): AdvanceTimelineEntry {
+  switch (event.kind) {
+    case 'funded': case 'released': case 'refunded': return { kind: event.kind, at: event.at, amountMinor: event.amountMinor };
+    case 'work-started': return { kind: 'work-started', at: event.at };
+    case 'start-objected': return { kind: 'start-objected', at: event.at, by: event.objection.by };
+    case 'dispute-resolved': return { kind: 'dispute-resolved', at: event.at, releaseMinor: event.releaseMinor, refundMinor: event.refundMinor };
+  }
+}
 
 /**
  * Φ5β — **το χρονολόγιο των χρημάτων** (πληρώθηκε → αυτοψία → αντίρρηση → αποδέσμευση/επιστροφή) για κάθε οθόνη. Από τα
  * γεγονότα, με τη σειρά τους· **χωρίς** αιτιολογίες ή ταυτότητες ανθρώπων (Ε-9′: η ίδια λίστα δείχνεται παντού).
+ * Φ5δ: + το παραστατικό στη θέση του χρόνου του (ίδια στιγμή ⇒ μετά το γεγονός).
  */
-export function advanceTimelineOf(facts: AdvanceFacts): readonly AdvanceTimelineEntry[] {
-  return facts.advanceEvents.map((event): AdvanceTimelineEntry => {
-    switch (event.kind) {
-      case 'funded': case 'released': case 'refunded': return { kind: event.kind, at: event.at, amountMinor: event.amountMinor };
-      case 'work-started': return { kind: 'work-started', at: event.at };
-      case 'start-objected': return { kind: 'start-objected', at: event.at, by: event.objection.by };
-      case 'dispute-resolved': return { kind: 'dispute-resolved', at: event.at, releaseMinor: event.releaseMinor, refundMinor: event.refundMinor };
-    }
-  });
+export function advanceTimelineOf(facts: AdvanceReceiptFacts): readonly AdvanceTimelineEntry[] {
+  const entries = facts.advanceEvents.map(timelineEntryOf);
+  const receipt = facts.advanceReceipt;
+  if (receipt === null) return entries;
+  const receipted: AdvanceTimelineEntry = { kind: 'receipted', at: receipt.at, mark: receipt.mark, issuedOn: receipt.issuedOn, amountMinor: receipt.totalMinor };
+  const index = entries.findIndex((entry) => entry.at > receipt.at);
+  return index === -1 ? [...entries, receipted] : [...entries.slice(0, index), receipted, ...entries.slice(index)];
 }
 
 /** Τα γεγονότα της ακύρωσης — και **πότε** εγκρίθηκε η προσφορά (η σύναψη της σύμβασης). */
@@ -397,6 +426,21 @@ export function advanceFundedMinor(facts: AdvanceFacts): MinorAmount {
 /** Ό,τι έχει ήδη επιστραφεί / αποδεσμευτεί (βεβαιωμένο από τον πάροχο). */
 export function advanceMovedMinor(facts: AdvanceFacts): { readonly refundedMinor: MinorAmount; readonly releasedMinor: MinorAmount } {
   return { refundedMinor: sumOf(facts.advanceEvents, 'refunded'), releasedMinor: sumOf(facts.advanceEvents, 'released') };
+}
+
+/** Φ5δ — τα ποσά με μια ματιά (πίνακας γραφείου, πρότυπο Stripe «payment»): εισπράχθηκαν · επεστράφησαν · αποδόθηκαν · κρατούνται. */
+export interface AdvanceLedger {
+  readonly fundedMinor: MinorAmount;
+  readonly refundedMinor: MinorAmount;
+  readonly releasedMinor: MinorAmount;
+  /** Ό,τι κρατά ακόμη ο πάροχος — ούτε επεστράφη ούτε αποδόθηκε. */
+  readonly heldMinor: MinorAmount;
+}
+
+export function advanceLedgerOf(facts: AdvanceFacts): AdvanceLedger {
+  const fundedMinor = advanceFundedMinor(facts);
+  const { refundedMinor, releasedMinor } = advanceMovedMinor(facts);
+  return { fundedMinor, refundedMinor, releasedMinor, heldMinor: Math.max(0, fundedMinor - refundedMinor - releasedMinor) };
 }
 
 /** Μία γραμμή του πίνακα ακύρωσης που βλέπει ο ιδιοκτήτης **πριν** εγκρίνει — ποσά, όχι κείμενο πολιτικής. */

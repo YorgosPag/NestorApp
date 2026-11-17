@@ -521,6 +521,25 @@
         "confirm": "Declare the site visit",
         "sending": "Recording…",
         "sent": "The site visit was recorded. The advance is released at {date}.",
+        "receiptLine": "Advance receipt: MARK {mark} ({date})",
+        "receipt": {
+          "trigger": "Record advance MARK",
+          "title": "Advance receipt",
+          "description": "Record the MARK of the receipt you issued for the advance. Its amount is what was collected: {amount}.",
+          "cancel": "Cancel",
+          "confirm": "Record",
+          "sending": "Recording…",
+          "sent": "The MARK was recorded.",
+          "errors": {
+            "NOT_FOUND": "The assignment was not found.",
+            "ENGAGEMENT_NOT_ACTIVE": "Your engagement is no longer active.",
+            "UNAVAILABLE": "The service is not available right now. Try again shortly.",
+            "STALE": "The assignment changed in the meantime. Check it and try again.",
+            "TRANSITION_REFUSED": "A different MARK is already recorded for the advance.",
+            "RECEIPT_MISMATCH": "The MARK needs 15 digits and the amount must be what was collected.",
+            "generic": "The MARK was not recorded. Try again."
+          }
+        },
         "errors": {
           "NOT_FOUND": "The assignment was not found.",
           "ENGAGEMENT_NOT_ACTIVE": "Your access to this assignment is no longer active.",

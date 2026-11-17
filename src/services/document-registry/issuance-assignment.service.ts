@@ -26,7 +26,7 @@ import { engageApprovedProfessional } from '@/server/issuance-invitations/issuan
 import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { readDocumentRegistry } from './document-registry.service';
-import { announceOfficeMoneyAction, orderMoneyBeforeOfficeAction, settleAfterOfficeAction } from './issuance-advance-office-money.server';
+import { announceOfficeMoneyAction, announceOfficeObjection, orderMoneyBeforeOfficeAction, settleAfterOfficeAction } from './issuance-advance-office-money.server';
 import type { DocumentRegistryResponse } from './document-registry.types';
 import { issuanceAssignmentIdOf } from './issuance-assignment-schema';
 import { writeIssuanceAction, type IssuanceWriteOutcome } from './issuance-assignments.server';
@@ -126,6 +126,8 @@ export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequ
     await settleAfterOfficeAction(db, money, now);
   }
   if (result.ok && result.outcome === 'changed') {
+    // ADR-943 Φ5δ (Ζ-3) — αντίρρηση για λογαριασμό του ιδιοκτήτη ⇒ η ίδια ειδοποίηση με του συνδέσμου (ποτέ δεν πετά).
+    await announceOfficeObjection(db, { companyId: actor.companyId, body, record: result.record, registry, uid: actor.uid, now });
     // §45.20 Φ6γ — νέα ημερομηνία ή απόρριψη που απάντησε σε αίτημα του μηχανικού ⇒ ο μηχανικός μαθαίνει (ποτέ δεν πετά).
     await announceDeliveryChange(db, {
       assignmentId: issuanceAssignmentIdOf(actor.companyId, body.propertyId, body.documentKind),

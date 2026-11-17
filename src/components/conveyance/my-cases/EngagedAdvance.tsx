@@ -18,12 +18,15 @@
 import React, { useState } from 'react';
 
 import { policyText } from '@/components/document-registry/issuance-advance-labels';
+import { advanceTimelineText } from '@/components/document-registry/issuance-advance-timeline-labels';
+import { IssuanceAdvanceTimelineList } from '@/components/document-registry/IssuanceAdvanceTimelineList';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { AdvanceGlance } from '@/lib/document-validity/issuance-advance';
+import type { AdvanceGlance, AdvanceTimelineEntry } from '@/lib/document-validity/issuance-advance';
 import type { IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import { formatDate } from '@/lib/intl-formatting';
 import { formatMinor } from '@/lib/money/money';
 import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -32,6 +35,7 @@ import {
   startWorkRejectionOf,
   type StartWorkRejection,
 } from '@/services/conveyance/conveyance-engagement-gateway';
+import { EngagedAdvanceReceipt } from './EngagedAdvanceReceipt';
 
 const K = 'conveyance:engagement.issuance.advance.';
 
@@ -49,6 +53,7 @@ const KEYS = {
   confirm: `${K}confirm`,
   sending: `${K}sending`,
   sent: `${K}sent`,
+  receipt: `${K}receiptLine`,
 } as const;
 
 const ERROR_KEYS: Readonly<Record<StartWorkRejection | 'generic', string>> = {
@@ -65,6 +70,8 @@ export interface EngagedAdvanceProps {
   readonly engagementId: string;
   readonly stage: IssuanceStage;
   readonly advance: AdvanceGlance;
+  /** Φ5δ — το χρονολόγιο των χρημάτων (η ΙΔΙΑ λίστα με γραφείο και ιδιοκτήτη). */
+  readonly timeline: readonly AdvanceTimelineEntry[];
   /** Ξαναδιάβασμα της όψης μετά από επιτυχία ή `STALE`. */
   readonly onChanged: () => void;
 }
@@ -125,6 +132,13 @@ export function EngagedAdvance(props: EngagedAdvanceProps): React.ReactElement {
       {props.advance.state === 'held' && (
         <Button type="button" size="sm" className="w-fit" onClick={() => setOpen(true)}>{t(KEYS.trigger)}</Button>
       )}
+      {props.advance.receipt !== null && (
+        <p className="m-0 text-xs text-muted-foreground">{t(KEYS.receipt, { mark: props.advance.receipt.mark, date: formatDate(props.advance.receipt.issuedOn) })}</p>
+      )}
+      {props.advance.receiptDue && (
+        <EngagedAdvanceReceipt engagementId={props.engagementId} stage={props.stage} collectedMinor={props.advance.collectedMinor} onChanged={props.onChanged} />
+      )}
+      <IssuanceAdvanceTimelineList timeline={props.timeline} textOf={(entry) => advanceTimelineText(t, entry)} />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
