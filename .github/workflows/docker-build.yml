@@ -104,8 +104,12 @@ jobs:
       # production deploy to Netcup stopped shipping. `build:ci` omits cross-env
       # so the env below actually reaches the process.
       # Any workflow calling build:ci MUST set NODE_OPTIONS itself.
+      # 🔬 [CI OOM 2026-11-17] `--experimental-debug-memory-usage` (Next.js): prints heap
+      # usage + GC stats throughout the build, so we can see WHICH compile phase peaks.
+      # pnpm appends the flag to the last command of build:ci ⇒ `next build --experimental-debug-memory-usage`.
+      # Diagnostic only — remove once the memory peak is understood.
       - name: Build Next.js app
-        run: pnpm run build:ci
+        run: pnpm run build:ci --experimental-debug-memory-usage
         env:
           NODE_OPTIONS: '--max-old-space-size=12288'
           NODE_ENV: production

@@ -161,6 +161,11 @@ const nextConfig = {
     // worker process for webpack compilation. On low-RAM VPS builds, the extra
     // fork doubles peak heap usage and triggers OOM killer (exit 137).
     webpackBuildWorker: false,
+    // [CI OOM 2026-11-17] Official Next.js 15 option: lowers peak webpack heap at the
+    // cost of slightly slower compiles. Production build hit the 12 GB heap ceiling
+    // in the compile phase (run 44115503819, 2/2 attempts).
+    // Ref: https://nextjs.org/docs/app/guides/memory-usage
+    webpackMemoryOptimizations: true,
     // [ENTERPRISE] Optimized imports - Prevents barrel export overhead
     // These packages have heavy barrel exports that slow down dev compilation
     optimizePackageImports: [
