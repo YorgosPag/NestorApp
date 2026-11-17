@@ -239,10 +239,16 @@ export function storagePathCustody(storagePath: string): StoragePathCustody {
 // Η ΕΡΩΤΗΣΗ ΠΟΥ ΚΑΝΕΙ Ο PEP
 // =============================================================================
 
-/** Ποιος ρωτά — ταυτότητα **ήδη επαληθευμένη** (`withAuth`). */
+/**
+ * Ποιος ρωτά — ταυτότητα **ήδη επαληθευμένη** (`withAuth` ή `withPersonalOrOrgAuth`).
+ *
+ * 🔑 `companyId: null` = **άνθρωπος χωρίς οργανισμό** (ADR-916 Φ-Ε1 — ο κάτοχος-πολίτης του φακέλου του). Το `null`
+ *    **δεν ταιριάζει με καμία** εταιρική ρίζα (το τμήμα μισθωτή της διαδρομής είναι πάντα μη κενό), άρα ο πολίτης
+ *    παίρνει μόνο `own-user` στα δικά του. ⛔ Ποτέ `?? ''` — ίδιο δόγμα με το `actorWorkspace`.
+ */
 export interface StorageCustodyCaller {
   readonly uid: string;
-  readonly companyId: string;
+  readonly companyId: string | null;
 }
 
 /**
@@ -272,6 +278,21 @@ const SERVABLE_VERDICTS: readonly StorageCustodyVerdict[] = [
 /** Επιτρέπει αυτή η ετυμηγορία τη λήψη; */
 export function isStorageCustodyServable(verdict: StorageCustodyVerdict): boolean {
   return SERVABLE_VERDICTS.includes(verdict);
+}
+
+/** Οι ετυμηγορίες «**ο καλών είναι ο κάτοχος**» — του σπιτιού του ή του εαυτού του. */
+const OWN_VERDICTS: readonly StorageCustodyVerdict[] = ['own-company', 'own-user'];
+
+/**
+ * **Είναι ο καλών ο ίδιος ο κάτοχος της διαδρομής;** — η πολιτική του γενικού proxy (`/api/storage/file`).
+ *
+ * 🔴 **Στενότερη από το {@link isStorageCustodyServable}, επίτηδες** (ADR-916 Φ-Ε1): ο proxy σερβίρει κατά
+ *    **μονοπάτι** σε κάθε συνδεδεμένο, χωρίς `FileRecord` και χωρίς ίχνος. Οι ρίζες `server-only`
+ *    (`mandate-evidence`, `catalog-publications`, `tour-*`) έχουν **δική τους** πόρτα με κριτή και δεν ανοίγουν εδώ·
+ *    ο τρίτος (επαγγελματίας φακέλου) περνά **μόνο** από το `openDossierFile` (εύρος · λήξη · ίχνος).
+ */
+export function isOwnStorageCustody(verdict: StorageCustodyVerdict): boolean {
+  return OWN_VERDICTS.includes(verdict);
 }
 
 /**

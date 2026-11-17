@@ -4,7 +4,8 @@
  * @fileoverview **ΤΟ EMAIL ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ ΦΑΚΕΛΟΥ ΙΔΙΩΤΗ** (ADR-916 Φ-Ε1) — πάνω στον κοινό σκελετό.
  *
  * - **Λ** κάθε γλώσσα έχει ΟΛΑ τα λόγια (άγκυρα που εκτελείται — και τις συναρτήσεις).
- * - **Ε** λέει ρόλο · φάκελο · καρτέλες · διάρκεια — και **κανένα** στοιχείο του κατόχου.
+ * - **Ε** λέει ρόλο · φάκελο · καρτέλες · διάρκεια.
+ * - **Κ** λέει **ποιος καλεί** (όνομα κατόχου, απόφαση 2026-11-17) — χωρίς όνομα ⇒ η ανώνυμη φράση, ποτέ κενό ή email.
  * - **Ι** τα ονόματα καρτελών = οι λέξεις της σελίδας του κατόχου (τα emails κρατούν inline κείμενο by design — η
  *   ισοτιμία δένεται εδώ) — **και** σε οικόπεδο, όπου η κάτοψη λέγεται «Τοπογραφικό» (`floorplanTabKind`).
  * - **Δ** χωρίς δημόσια διεύθυνση ⇒ `null` (ποτέ σύνδεσμος που δεν οδηγεί πουθενά).
@@ -35,6 +36,7 @@ afterAll(() => {
 const INPUT: DossierInvitationEmailInput = {
   language: 'el',
   role: 'owner_lawyer',
+  ownerName: 'Γεώργιος Παγώνης',
   dossierLabel: 'Σπίτι Καλαμαριάς',
   tabs: ['documents', 'floorplan'],
   floorplanKind: 'floorplan',
@@ -61,6 +63,19 @@ describe('ADR-916 Φ-Ε1 — το email της πρόσκλησης φακέλο
     expect(text).toContain('Έγγραφα · Κάτοψη');
     expect(text).toContain('30 ημέρες');
     expect(build({ language: 'en' }).subject).toContain("the owner's lawyer");
+  });
+
+  it('Κ — ο παραλήπτης μαθαίνει ΠΟΙΟΣ τον καλεί, στο κείμενο και (τονισμένο, escaped) στο HTML', () => {
+    const { text, html } = build({ ownerName: 'Γεώργιος <Παγώνης>' });
+    expect(text).toContain('Γεώργιος <Παγώνης>, κάτοχος του φακέλου Σπίτι Καλαμαριάς, σας καλεί ως δικηγόρο του ιδιοκτήτη.');
+    expect(html).toContain('<strong>Γεώργιος &lt;Παγώνης&gt;</strong>');
+    expect(build({ language: 'en' }).text).toContain('Γεώργιος Παγώνης, owner of the property file');
+  });
+
+  it.each([null, '   '])('Κ — χωρίς όνομα (%p) ⇒ η ανώνυμη φράση, ποτέ κενό όνομα', (ownerName) => {
+    const { text } = build({ ownerName });
+    expect(text).toContain('Ο κάτοχος του φακέλου Σπίτι Καλαμαριάς σας καλεί ως δικηγόρο του ιδιοκτήτη.');
+    expect(text).not.toMatch(/^\s*, κάτοχος/m);
   });
 
   it('Ε — φάκελος που δεν διαβάστηκε ⇒ λέξη, ποτέ κενό', () => {

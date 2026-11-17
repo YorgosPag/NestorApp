@@ -88,6 +88,7 @@ async function composeDossier(db: Firestore, invitation: DossierEngagementInvita
   return buildDossierInvitationEmail({
     language,
     role: invitation.role,
+    ownerName: description.hostName,
     dossierLabel: description.propertyLabel,
     tabs: invitation.reach.tabs,
     floorplanKind: description.subject.floorplanKind,

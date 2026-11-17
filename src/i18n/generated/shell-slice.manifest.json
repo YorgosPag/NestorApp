@@ -6,7 +6,7 @@
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
     "src/i18n/generated/routes/card-email__token.el.json": "46bb991ee24b3cb42dfa9c710624f71afd2198a3d64806f4e554658db414caa9",
-    "src/i18n/generated/routes/case-invite__token.el.json": "b530d3abf0dfe3bc7a9b600992cc994a41e28ae36de091d952abc874e10f6b99",
+    "src/i18n/generated/routes/case-invite__token.el.json": "7e13923f260825f24809f259dd0e621e1c0ae3ae45a9168a370f61880d6f4510",
     "src/i18n/generated/routes/contact__token.el.json": "f389d8908242d005cdb52f48dcc2d3db0b2aa2754bb892d15428227084c78b20",
     "src/i18n/generated/routes/data-deletion.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/data-deletion__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "5768d48edc7c75fbffa5aecfbe7f0e1a4a55ae1a19d2563a05505dcd8a4796c0",
+  "inputsSha256": "7200607aba0b410111784b582d81c97c899f8da447b4ab9156f7ad2349696b9e",
   "languages": [
     "el"
   ],
@@ -41223,7 +41223,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1355693
+    "sliceBytes": 1355675
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -46,6 +46,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 import {
+  isOwnStorageCustody,
   isStorageCustodyServable,
   judgeStorageCustody,
   storagePathCustody,
@@ -230,5 +231,29 @@ describe('Α — ό,τι δεν δηλώθηκε, δεν σερβίρεται', 
     // ο καλών αντέγραψε τη μορφή του κανόνα.
     expect(judgeStorageCustody(`/companies/${COMPANY}/entities/a/b/c.pdf`, caller))
       .toBe('own-company');
+  });
+});
+
+// =============================================================================
+// Π — Ο ΠΟΛΙΤΗΣ ΚΑΙ Η ΠΟΛΙΤΙΚΗ ΤΟΥ PROXY (ADR-916 Φ-Ε1)
+// =============================================================================
+
+describe('Π — πολίτης χωρίς οργανισμό · «είναι ο κάτοχος;»', () => {
+  const citizen: StorageCustodyCaller = { uid: UID, companyId: null };
+
+  it('Π1 — πολίτης ⇒ own-user στα δικά του people/{uid}/…', () => {
+    expect(judgeStorageCustody(`people/${UID}/entities/pdos_1/a.pdf`, citizen)).toBe('own-user');
+  });
+
+  it('🔴 Π2 — ο πολίτης (`companyId: null`) ΔΕΝ ταιριάζει με καμία εταιρική ρίζα', () => {
+    expect(judgeStorageCustody(`companies/${COMPANY}/entities/a/b/c.pdf`, citizen)).toBe('foreign-company');
+  });
+
+  it.each([
+    ['own-company', true], ['own-user', true],
+    ['shared-catalog', false], ['server-mediated', false],
+    ['foreign-company', false], ['foreign-user', false], ['undeclared-root', false],
+  ] as const)('🔴 Π3 — isOwnStorageCustody(%s) = %s (ο proxy ΔΕΝ ανοίγει server-only/κοινόχρηστα)', (verdict, own) => {
+    expect(isOwnStorageCustody(verdict)).toBe(own);
   });
 });

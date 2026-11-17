@@ -7,9 +7,12 @@
  * @note Οι ελληνικές/αγγλικές συμβολοσειρές εδώ **ΔΕΝ** είναι παράβαση του N.11: τα server-side πρότυπα email
  *       φέρουν το κείμενό τους inline by design (δες `server/comms/email-texts.ts`). Η γλώσσα είναι **παράμετρος**.
  *
- * 🔑 Ό,τι λέει: ποιος ρόλος → ποιος φάκελος → **ποιες καρτέλες** (το εύρος, ποτέ ονόματα αρχείων) → για πόσες ημέρες
- *    → σκοπός (ΓΚΠΔ) → κουμπί → ασφάλεια → «δεν το αναλαμβάνω».
- * ⛔ Κανένα όνομα, τηλέφωνο ή email του κατόχου, κανένα συνημμένο: ένα προωθημένο email δεν αποκαλύπτει σε τρίτον τίποτα.
+ * 🔑 Ό,τι λέει: **ποιος καλεί** (όνομα κατόχου) → ποιος ρόλος → ποιος φάκελος → **ποιες καρτέλες** (το εύρος, ποτέ
+ *    ονόματα αρχείων) → για πόσες ημέρες → σκοπός (ΓΚΠΔ) → κουμπί → ασφάλεια → «δεν το αναλαμβάνω».
+ * 🔑 **Το όνομα του κατόχου ΜΠΑΙΝΕΙ** (απόφαση Giorgio 2026-11-17 — πρακτική Google Drive / Dropbox / DocuSign): ανώνυμη
+ *    πρόσκληση μοιάζει με phishing και ο επαγγελματίας δεν ξέρει για ποιον πελάτη πρόκειται. Χωρίς όνομα στο προφίλ ⇒ η
+ *    ανώνυμη φράση, ποτέ email στη θέση του.
+ * ⛔ Κανένα τηλέφωνο ή email του κατόχου, κανένα συνημμένο.
  * ⚖️ Η διατύπωση του **σκοπού** (`purpose`) είναι **προς νομικό έλεγχο πριν την παραγωγή** — όπως το `purposeNotice`
  *    του ADR-942 Φ2.
  */
@@ -40,6 +43,8 @@ interface DossierInvitationWording extends InvitationEmailCoreWording {
   readonly heading: string;
   /** Τα ορίσματα είναι είτε ωμό κείμενο είτε **ήδη ασφαλές HTML** — ο renderer αποφασίζει. */
   readonly intro: (role: string, dossier: string) => string;
+  /** Η εισαγωγή **με όνομα** κατόχου — η κανονική· η `intro` μένει για προφίλ χωρίς όνομα. */
+  readonly introNamed: (owner: string, role: string, dossier: string) => string;
   readonly roles: Readonly<Record<DossierEngagementRole, string>>;
   /** Ανά **λέξη** καρτέλας (`dossierTabWord`): η κάτοψη σε οικόπεδο λέγεται «Τοπογραφικό», όπως στη σελίδα του κατόχου. */
   readonly tabs: Readonly<Record<DossierTabWord, string>>;
@@ -59,6 +64,7 @@ const TEXTS: Readonly<Record<HumanLanguage, DossierInvitationWording>> = {
     subject: (role, dossier) => `Πρόσβαση ως ${role} — ${dossier}`,
     heading: 'Σας δίνουν πρόσβαση στον φάκελο ενός ακινήτου',
     intro: (role, dossier) => `Ο κάτοχος του φακέλου ${dossier} σας καλεί ως ${role}.`,
+    introNamed: (owner, role, dossier) => `${owner}, κάτοχος του φακέλου ${dossier}, σας καλεί ως ${role}.`,
     roles: { owner_lawyer: 'δικηγόρο του ιδιοκτήτη', notary: 'συμβολαιογράφο' },
     tabs: { floorplan: 'Κάτοψη', topographic: 'Τοπογραφικό', documents: 'Έγγραφα', photos: 'Φωτογραφίες', videos: 'Βίντεο' },
     tabsLabel: 'Τι θα δείτε',
@@ -82,6 +88,7 @@ const TEXTS: Readonly<Record<HumanLanguage, DossierInvitationWording>> = {
     subject: (role, dossier) => `Access as ${role} — ${dossier}`,
     heading: 'You are being given access to a property file',
     intro: (role, dossier) => `The owner of the property file ${dossier} invites you as ${role}.`,
+    introNamed: (owner, role, dossier) => `${owner}, owner of the property file ${dossier}, invites you as ${role}.`,
     roles: { owner_lawyer: "the owner's lawyer", notary: 'the notary' },
     tabs: { floorplan: 'Floor plan', topographic: 'Site survey', documents: 'Documents', photos: 'Photos', videos: 'Videos' },
     tabsLabel: 'What you will see',
@@ -107,6 +114,8 @@ export interface DossierInvitationEmailInput {
   /** Η γλώσσα του παραλήπτη — από **δεδομένα**, άρα `unknown` (άγνωστη ⇒ προεπιλογή). */
   readonly language: unknown;
   readonly role: DossierEngagementRole;
+  /** Το όνομα του κατόχου από το προφίλ του — `null` ⇒ η ανώνυμη φράση (ποτέ email στη θέση του). */
+  readonly ownerName: string | null;
   /** `null` ⇒ ο φάκελος δεν διαβάστηκε — λέξη αντί για όνομα, ποτέ κενό. */
   readonly dossierLabel: string | null;
   readonly tabs: readonly PropertyDossierFileTab[];
@@ -137,11 +146,14 @@ export function buildDossierInvitationEmail(input: DossierInvitationEmailInput):
   const w = TEXTS[language];
   const dossier = input.dossierLabel?.trim() || w.unnamedDossier;
   const role = w.roles[input.role];
+  const owner = input.ownerName?.trim() || null;
   return composeInvitationEmail({
     language,
     subject: w.subject(role, dossier),
     heading: w.heading,
-    intro: emphasizedInvitationLine(w.intro, [{ plain: role }, dossier]),
+    intro: owner === null
+      ? emphasizedInvitationLine(w.intro, [{ plain: role }, dossier])
+      : emphasizedInvitationLine(w.introNamed, [owner, { plain: role }, dossier]),
     details: detailsOf(input, w, language),
     link,
     core: w,
@@ -154,7 +166,7 @@ export function everyLanguageHasDossierInvitationWording(): boolean {
     const w = TEXTS[language];
     if (!w) return false;
     const texts = [
-      w.subject('χ', 'ψ'), w.heading, w.intro('χ', 'ψ'), ...Object.values(w.roles), ...Object.values(w.tabs),
+      w.subject('χ', 'ψ'), w.heading, w.intro('χ', 'ψ'), w.introNamed('χ', 'ψ', 'ω'), ...Object.values(w.roles), ...Object.values(w.tabs),
       w.tabsLabel, w.durationLabel, w.duration(30), w.purposeLabel, w.purpose, w.noAccount, w.expiresLabel,
       w.cta, w.onlyWord, w.boundToAddress(w.onlyWord), w.footnote, w.unnamedDossier,
     ];

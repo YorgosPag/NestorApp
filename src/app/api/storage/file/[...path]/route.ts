@@ -3,10 +3,13 @@
  *
  * Browser-friendly URL produced by `uploadPublicFile()`. The bytes live in a
  * private bucket — this proxy authenticates the user via session cookie,
- * verifies the path's `companyId` matches the user's claim, and streams the
- * object back with the original `Content-Type` and `Cache-Control`.
+ * asks the ONE path judge (`judgeStorageCustody`) whether the caller OWNS the
+ * path, and streams the object back with the original `Content-Type` and `Cache-Control`.
  *
- * Path scheme (must match `buildStoragePath`): `companies/{companyId}/...`.
+ * Κάτοχος = `companies/{companyId}/…` της εταιρείας του **ή** προσωπική ρίζα (`people/{uid}/…` κ.ά.) του ίδιου
+ * `uid` (ADR-916 Φ-Ε1: μέχρι τότε ένας inline έλεγχος `segments[0] !== 'companies'` έδινε 403 σε **κάθε**
+ * προσωπικό αρχείο — ο κάτοχος δεν έβλεπε τον φάκελό του). Η πόρτα είναι `withPersonalOrOrgAuth`: ο κάτοχος
+ * μπορεί να είναι πολίτης χωρίς οργανισμό.
  *
  * `?w=<πλάτος κλίμακας>` ⇒ παράγωγο webp κατ' απαίτηση αντί για το πρωτότυπο (ADR-899).
  * Πλάτος εκτός `FILE_PREVIEW_ENCODING.widths` ⇒ 400 (κλειστή κλίμακα — όχι cache-busting).
@@ -19,8 +22,8 @@ import 'server-only';
 
 import type { Bucket } from '@google-cloud/storage';
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { actorWorkspace, withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
+import { isOwnStorageCustody, judgeStorageCustody } from '@/lib/storage/storage-path-custody';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { openStorageObject } from '@/lib/storage/storage-object-stream';
 import {
@@ -112,10 +115,12 @@ async function handleGet(
   const segments = rawSegments.map((s) => decodeURIComponent(s));
   const storagePath = segments.join('/');
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      // 🔒 Ο μισθωτής ΠΡΩΤΑ — πριν από θέση, πλάτος ή οποιαδήποτε cache (ADR-899 §3.5).
-      if (segments[0] !== 'companies' || segments[1] !== ctx.companyId) {
+  const handler = withPersonalOrOrgAuth(
+    async (_req: NextRequest, actor: ApiActor): Promise<NextResponse> => {
+      // 🔒 Ο κάτοχος ΠΡΩΤΑ — πριν από θέση, πλάτος ή οποιαδήποτε cache (ADR-899 §3.5), από τον ΕΝΑ κριτή διαδρομής.
+      const verdict = judgeStorageCustody(storagePath, { uid: actor.ctx.uid, companyId: actorWorkspace(actor) });
+      if (!isOwnStorageCustody(verdict)) {
+        logger.warn('Storage proxy refused: caller does not own the path', { verdict, uid: actor.ctx.uid });
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 

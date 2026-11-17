@@ -369,7 +369,7 @@
       },
       "dossier": {
         "title": "Access to a property file",
-        "intro": "The owner of the property file {property} is giving you access to its files.",
+        "intro": "{host} is giving you access to the files of the property file {property}.",
         "scope": "Accepting gives access only to the tabs listed here, for as long as the owner decides — not to the rest of the file. Every view and download is logged and visible to the owner.",
         "tabsLabel": "What you will see",
         "durationLabel": "Duration",

@@ -8,15 +8,23 @@
  * - Δ2: δεκτό πλάτος εκτός κλίμακας ⇒ cache-busting / μία κωδικοποίηση ανά αίτημα.
  * - Δ3: ο κλάδος χωρίς `w` αλλάζει (δεν ανοίγει ροή πρωτοτύπου / χάνει την πολιτική cache του).
  * - Δ4: οι εκβάσεις της υπηρεσίας χάνουν τον κωδικό HTTP τους.
+ * - Δ5 (ADR-916 Φ-Ε1): ο κάτοχος (μέλος ή πολίτης) δεν παίρνει τα δικά του `people/{uid}/…` · ξένος `uid`, ρίζα
+ *   `server-only` ή εταιρική ρίζα από πολίτη περνούν.
  */
 
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }));
-jest.mock('@/lib/auth', () => ({
-  withAuth: (handler: (req: unknown, ctx: unknown, cache: unknown) => unknown) => (req: unknown) =>
-    handler(req, { companyId: 'c1', uid: 'u1' }, {}),
+type TestActor =
+  | { scope: 'organization'; ctx: { uid: string; companyId: string } }
+  | { scope: 'personal'; ctx: { uid: string } };
+const MEMBER: TestActor = { scope: 'organization', ctx: { uid: 'u1', companyId: 'c1' } };
+const CITIZEN: TestActor = { scope: 'personal', ctx: { uid: 'u9' } };
+let mockActor: TestActor = MEMBER;
+jest.mock('@/lib/auth/personal-scope-middleware', () => ({
+  withPersonalOrOrgAuth: (handler: (req: unknown, actor: unknown) => unknown) => (req: unknown) => handler(req, mockActor),
+  actorWorkspace: (actor: { ctx: { companyId?: string } }) => actor.ctx.companyId ?? null,
 }));
 jest.mock('@/lib/middleware/with-rate-limit', () => ({ withStandardRateLimit: (handler: unknown) => handler }));
 jest.mock('@/server/files/file-record-bucket', () => ({
@@ -41,7 +49,14 @@ function get(segments: string[], query = '', headers: Record<string, string> = {
 beforeEach(() => {
   openMock.mockReset();
   previewMock.mockReset();
+  mockActor = MEMBER;
 });
+
+function foundOriginal() {
+  openMock.mockResolvedValue({
+    kind: 'found', stream: new ReadableStream(), contentType: 'application/pdf', contentLength: 4, storedCacheControl: null,
+  });
+}
 
 describe('proxy ιδιωτικών αρχείων', () => {
   it('🔴 Δ1 ξένος μισθωτής ⇒ 403 ΠΡΙΝ αγγιχτεί cache ή κάδος', async () => {
@@ -91,5 +106,33 @@ describe('proxy ιδιωτικών αρχείων', () => {
     previewMock.mockResolvedValue({ kind, etag: '"e1"' });
     const response = await get(OWN, '?w=320');
     expect(response.status).toBe(status);
+  });
+});
+
+describe('🔴 Δ5 προσωπικά αρχεία — ο κάτοχος ΚΑΙ μόνο αυτός (ADR-916 Φ-Ε1)', () => {
+  it('μέλος εταιρείας ⇒ τα ΔΙΚΑ του people/{uid}/… σερβίρονται', async () => {
+    foundOriginal();
+    const response = await get(['people', 'u1', 'entities', 'pdos_1', 'a.pdf']);
+    expect(response.status).toBe(200);
+    expect(openMock).toHaveBeenCalledWith('people/u1/entities/pdos_1/a.pdf', null, expect.anything());
+  });
+
+  it('πολίτης χωρίς οργανισμό ⇒ τα ΔΙΚΑ του σερβίρονται', async () => {
+    mockActor = CITIZEN;
+    foundOriginal();
+    expect((await get(['people', 'u9', 'entities', 'pdos_1', 'a.pdf'])).status).toBe(200);
+  });
+
+  it.each<[string, TestActor, string[]]>([
+    ['ξένος uid', MEMBER, ['people', 'u2', 'entities', 'pdos_1', 'a.pdf']],
+    ['πολίτης σε εταιρική ρίζα', CITIZEN, ['companies', 'c1', 'files', 'f1.jpg']],
+    ['ρίζα server-only', MEMBER, ['mandate-evidence', 'c1', 'e.pdf']],
+    ['αδήλωτη ρίζα', MEMBER, ['kainourio-dentro', 'c1', 'x.pdf']],
+  ])('%s ⇒ 403 ΠΡΙΝ αγγιχτεί κάδος', async (_label, actor, segments) => {
+    mockActor = actor;
+    const response = await get(segments, '?w=640');
+    expect(response.status).toBe(403);
+    expect(openMock).not.toHaveBeenCalled();
+    expect(previewMock).not.toHaveBeenCalled();
   });
 });

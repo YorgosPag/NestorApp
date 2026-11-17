@@ -10,7 +10,12 @@ import 'server-only';
  *    χεριών ⇒ η πρόσκληση δεν εξαργυρώνεται και η όψη απαντά «δεν υπάρχει» (ADR-866 Φ4 — το κλείσιμο των εγγράφων εκεί).
  * 🔑 **Μητρώο από τον ρόλο** (`DOSSIER_ROLE_REGISTRY_AUTHORITY`): δικηγόρος ⇒ σύλλογος · συμβολαιογράφος ⇒ σύλλογος.
  * 🔑 **Ό,τι βλέπει ο επαγγελματίας = ό,τι ανοίγει**: η όψη φιλτράρει με τον **ίδιο** κριτή εύρους με την πόρτα αρχείων.
- * 🔒 Καμία πληροφορία επικοινωνίας του κατόχου (Ε-9′). Το όνομα του κατόχου **δεν** δίνεται: η όψη λέει τον φάκελο.
+ * 🔒 Καμία πληροφορία επικοινωνίας του κατόχου (Ε-9′): ούτε email ούτε τηλέφωνο.
+ * 🔑 **Το ΟΝΟΜΑ του κατόχου όμως δίνεται** στην πρόσκληση (`hostName` — σελίδα αποδοχής **και** email), απόφαση Giorgio
+ *    2026-11-17: όπως το Google Drive / Dropbox / DocuSign («ο Χ μοιράστηκε…»), ο παραλήπτης πρέπει να ξέρει **ποιος**
+ *    τον καλεί — ένα ανώνυμο «ο κάτοχος σας καλεί» μοιάζει με phishing. Το προωθημένο email δεν διαρρέει: ο σύνδεσμος
+ *    δουλεύει μόνο για τη διεύθυνση του παραλήπτη. Πηγή: το `displayName` του προφίλ (`resolveUserDisplayName`, εφεδρεία
+ *    `null` ⇒ **ποτέ** email στη θέση του ονόματος).
  *
  * ⚠️ **Δηλωμένα όρια (όχι παραλείψεις)**:
  * - Η κάρτα «Πρόσβαση» του κατόχου (Σ4) διαβάζει στο άνοιγμα και μετά από κάθε πράξη του — **όχι** ζωντανά: το σήμα του
@@ -37,6 +42,7 @@ import type {
 } from '@/server/engagements/engagement-host-adapter';
 import type { ActingViews } from '@/services/conveyance/conveyance-acting-workspace.server';
 import { placementRejectionOf, shownCardsPerSubject, type CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
+import { resolveUserDisplayName } from '@/services/entity-audit.service';
 import { answerChanges, recordEngagementAudit } from '@/services/conveyance/conveyance-engagement-support';
 import {
   DOSSIER_ROLE_REGISTRY_AUTHORITY,
@@ -101,9 +107,11 @@ type DossierInvitationDescription = EngagementInvitationDescription & {
 /** Η **μία** περιγραφή της πρόσκλησης φακέλου — για την όψη (`describe`) **και** το email της. */
 export async function describeDossierInvitation(db: Firestore, invitation: DossierEngagementInvitation): Promise<DossierInvitationDescription> {
   const dossier = openDossier(await readPropertyDossier(db, invitation.subject.dossierId).catch(() => null), invitation.invitedByUid);
+  // Όνομα **μόνο** για ζωντανό φάκελο του ίδιου κατόχου — φάκελος που έκλεισε ή άλλαξε χέρια δεν ονομάζει κανέναν.
+  const hostName = dossier === null ? null : await resolveUserDisplayName(dossier.userId, null);
   return {
     propertyLabel: dossier?.label ?? null,
-    hostName: null,
+    hostName,
     subject: {
       kind: 'property_dossier',
       role: invitation.role,
