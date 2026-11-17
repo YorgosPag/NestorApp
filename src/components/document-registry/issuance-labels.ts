@@ -304,6 +304,32 @@ export const ISSUANCE_SPACE_KEYS = {
   sentUndelivered: `${K}issuance.space.sentUndelivered`,
 } as const;
 
+/** ADR-943 Φ5β2 — «Αίτημα πληρωμής / Νέος σύνδεσμος» της προκαταβολής στην κάρτα ανάθεσης. */
+export const ISSUANCE_ADVANCE_LINK_KEYS = {
+  label: `${K}issuance.advance.ownerLink.label`,
+  requestPayment: `${K}issuance.advance.ownerLink.requestPayment`,
+  resend: `${K}issuance.advance.ownerLink.resend`,
+  confirmTitle: `${K}issuance.advance.ownerLink.confirmTitle`,
+  confirmBody: `${K}issuance.advance.ownerLink.confirmBody`,
+  cancel: `${K}issuance.advance.ownerLink.cancel`,
+  send: `${K}issuance.advance.ownerLink.send`,
+  sending: `${K}issuance.advance.ownerLink.sending`,
+  sent: `${K}issuance.advance.ownerLink.sent`,
+  sentUndelivered: `${K}issuance.advance.ownerLink.sentUndelivered`,
+} as const;
+
+/** Οι αρνήσεις της πόρτας (`ADVANCE_LINK_REFUSAL_STATUS`) — ο κωδικός είναι και το κλειδί· άγνωστος ⇒ `generic`. */
+export const ISSUANCE_ADVANCE_LINK_REFUSAL_KEYS: Readonly<Record<string, string>> = {
+  NOT_FOUND: `${K}issuance.advance.ownerLink.refusals.NOT_FOUND`,
+  NOT_ACCEPTED: `${K}issuance.advance.ownerLink.refusals.NOT_ACCEPTED`,
+  NOTHING_TO_DO: `${K}issuance.advance.ownerLink.refusals.NOTHING_TO_DO`,
+  NO_ADVANCE: `${K}issuance.advance.ownerLink.refusals.NO_ADVANCE`,
+  SETTLED: `${K}issuance.advance.ownerLink.refusals.SETTLED`,
+  NO_EMAIL: `${K}issuance.advance.ownerLink.refusals.NO_EMAIL`,
+  UNAVAILABLE: `${K}issuance.advance.ownerLink.refusals.UNAVAILABLE`,
+  generic: `${K}issuance.advance.ownerLink.refusals.generic`,
+};
+
 /** Οι αρνήσεις της πόρτας (`SPACE_INVITE_REFUSAL_STATUS`) — ο κωδικός είναι και το κλειδί· άγνωστος ⇒ `generic`. */
 export const ISSUANCE_SPACE_REFUSAL_KEYS: Readonly<Record<string, string>> = {
   NOT_FOUND: `${K}issuance.space.refusals.NOT_FOUND`,

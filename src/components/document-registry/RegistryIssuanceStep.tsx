@@ -39,6 +39,7 @@ import { useIssuanceAssignmentActions } from '@/components/document-registry/iss
 import { issuanceTargetOf, type RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
 import { registryPersonOf } from '@/components/document-registry/registry-obligors';
 import { ObligorPerson } from '@/components/document-registry/registry-links';
+import { RegistryIssuanceAdvanceLine } from '@/components/document-registry/RegistryIssuanceAdvanceLine';
 import { RegistryIssuanceSpaceLine } from '@/components/document-registry/RegistryIssuanceSpaceLine';
 import { RegistryIssuanceDocumentRequests } from '@/components/document-registry/RegistryIssuanceDocumentRequests';
 import { InspectorFitLine } from '@/components/document-registry/RegistryInspectorFitLine';
@@ -331,6 +332,10 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
       <BallInCourtLine state={state} view={view} registry={registry} />
       {/* §39 — μετά το «Αναλαμβάνω»: μπήκε ο επαγγελματίας στον χώρο της ανάθεσης; */}
       {state.stage === 'accepted' ? <RegistryIssuanceSpaceLine view={view} /> : null}
+      {/* ADR-943 Φ5β2 — πού είναι η προκαταβολή · αίτημα πληρωμής / νέος σύνδεσμος στον ιδιοκτήτη. */}
+      {state.stage === 'accepted' && state.record.decision !== null ? (
+        <RegistryIssuanceAdvanceLine view={view} ownerName={nameOf(t, state.record.decision.ownerContactId, registry)} />
+      ) : null}
       {/* ADR-942 Φ1 — τι ζήτησε ο μηχανικός· ανέβασμα κατευθείαν στον φάκελο του ακινήτου (θεματοφυλακή του κατόχου). */}
       {state.stage === 'accepted' ? <RegistryIssuanceDocumentRequests view={view} canAct={(actions?.canAct ?? false) && !saving} /> : null}
       {/* §45 Φ2 — έως πότε · καθυστερεί · προλαβαίνει την υπογραφή · ορισμός/αλλαγή προθεσμίας. */}

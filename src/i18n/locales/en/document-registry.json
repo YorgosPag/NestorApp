@@ -628,6 +628,28 @@
       }
     },
     "advance": {
+      "ownerLink": {
+        "label": "Advance:",
+        "requestPayment": "Request payment",
+        "resend": "New link to the owner",
+        "confirmTitle": "Advance link to “{name}”",
+        "confirmBody": "An email will be sent with a new link to the advance page (payment · when it is released · objection). Earlier links keep working, up to three.",
+        "cancel": "Cancel",
+        "send": "Send",
+        "sending": "Sending…",
+        "sent": "A new advance link was sent to the owner.",
+        "sentUndelivered": "The link was created, but the email was not sent. Please try again shortly.",
+        "refusals": {
+          "NOT_FOUND": "The assignment was not found.",
+          "NOT_ACCEPTED": "The assignment is no longer accepted — refresh the page.",
+          "NOTHING_TO_DO": "The owner has nothing to do on the advance page right now — refresh the page.",
+          "NO_ADVANCE": "The agreement has no advance payment.",
+          "SETTLED": "The advance money has already moved for good.",
+          "NO_EMAIL": "The owner's contact has no email.",
+          "UNAVAILABLE": "The link was not created. Please try again shortly.",
+          "generic": "The link was not sent. Please try again."
+        }
+      },
       "legend": "Advance payment",
       "request": "I ask for an advance payment before I start",
       "amountLabel": "Advance amount (€, incl. VAT)",

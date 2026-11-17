@@ -175,6 +175,20 @@ export async function sendIssuanceSpaceInvitation(
   }
 }
 
+/** ADR-943 Φ5β2 — «Αίτημα πληρωμής / Νέος σύνδεσμος» της προκαταβολής: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_ADVANCE_LINK_URL = `${ISSUANCE_ASSIGNMENTS_URL}/advance-link`;
+
+/** **Ένα** πάτημα ⇒ νέος σύνδεσμος προκαταβολής στον ιδιοκτήτη· `accessCode` μία φορά, αν ζητήθηκε (§29). */
+export async function sendIssuanceAdvanceLink(
+  body: { readonly propertyId: string; readonly documentKind: DocumentKind; readonly requireAccessCode: boolean },
+): Promise<IssuanceMessageResult<{ readonly delivery: InvitationNoticeOutcome; readonly expiresAt: string; readonly accessCode: string | null }>> {
+  try {
+    return { kind: 'ok', data: await apiClient.post(ISSUANCE_ADVANCE_LINK_URL, body) };
+  } catch (cause) {
+    return { kind: 'failed', code: logActionFailure('Ο σύνδεσμος προκαταβολής δεν στάλθηκε', cause, { documentKind: body.documentKind }) };
+  }
+}
+
 /** ADR-915 §45 Φ4 — οι ανοιχτές αναθέσεις ως εκκρεμότητες (ημερολόγιο · εργασίες CRM): ΕΝΑ σημείο για τη διαδρομή. */
 export const ISSUANCE_OPEN_ITEMS_URL = `${DOCUMENT_REGISTRY_URL}/open-items`;
 
