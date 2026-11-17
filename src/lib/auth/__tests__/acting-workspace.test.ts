@@ -130,10 +130,13 @@ describe('ADR-901 §15.7 — η ΜΙΑ ερμηνεία της απουσίας 
     expect(matching(/\bactingFor\s*(\?\?|\|\|)/)).toEqual(['src/lib/auth/acting-workspace.ts']);
 
     // (β) Κλειστό σύνολο όσων αγγίζουν `.actingFor` εκτός οθόνης (η οθόνη διαβάζει το `card.actingFor`, άλλο πεδίο —
-    //     έτοιμη όψη, ποτέ το έγγραφο): η ΜΙΑ ερμηνεία · το σχήμα · ο γραφέας και οι δύο πόρτες που του το δίνουν.
+    //     έτοιμη όψη, ποτέ το έγγραφο): η ΜΙΑ ερμηνεία · το σχήμα · ο γραφέας (+ οι καθαροί σχεδιασμοί του φακέλου,
+    //     χωρισμένοι για το όριο μεγέθους) και οι δύο πόρτες που του το δίνουν.
+    //     Η **κλήση** `acting.actingFor(e)` (ActingViews — ρωτά τη ΜΙΑ ερμηνεία) ΔΕΝ είναι ανάγνωση του πεδίου ⇒ εξαιρείται.
     const offScreen = (path: string) => !path.startsWith('src/components/') && !path.startsWith('src/hooks/');
-    expect(matching(/\.actingFor\b/, offScreen)).toEqual([
+    expect(matching(/\.actingFor\b(?!\s*\()/, offScreen)).toEqual([
       'src/lib/auth/acting-workspace.ts',
+      'src/lib/auth/engagement-dossier-plan.ts',
       'src/lib/auth/engagement-schema.ts',
       'src/lib/auth/engagement-write.ts',
       'src/server/engagement-invitations/engagement-invitation-redeem.ts',
