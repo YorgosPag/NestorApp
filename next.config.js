@@ -160,7 +160,12 @@ const nextConfig = {
     // [COOLIFY] Disable webpack build worker: prevents forking a separate Node.js
     // worker process for webpack compilation. On low-RAM VPS builds, the extra
     // fork doubles peak heap usage and triggers OOM killer (exit 137).
-    webpackBuildWorker: false,
+    // [CI OOM 2026-11-17] Re-enabled (was false for a low-RAM Coolify VPS, no longer the
+    // build host). With it off, server + edge + client compiles share ONE Node heap and
+    // the production build died 3/3 at the 12 GB ceiling (runs 44115503819, 44150340077).
+    // The worker runs each compilation in its own process, freed when it ends —
+    // the first recommendation of https://nextjs.org/docs/app/guides/memory-usage
+    webpackBuildWorker: true,
     // [CI OOM 2026-11-17] Official Next.js 15 option: lowers peak webpack heap at the
     // cost of slightly slower compiles. Production build hit the 12 GB heap ceiling
     // in the compile phase (run 44115503819, 2/2 attempts).
