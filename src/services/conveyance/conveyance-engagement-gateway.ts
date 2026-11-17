@@ -10,7 +10,7 @@
  */
 
 import { API_ROUTES } from '@/config/domain-constants';
-import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
+import { apiClient, apiErrorBodyOf, apiErrorCodeOf } from '@/lib/api/enterprise-api-client';
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import { invitationLinkRefusalOf } from '@/lib/invitations/invitation-link-refusal';
 import { CASE_HOME_PARAM, ENGAGEMENTS_VIEW_PARAM, type CaseHome } from '@/lib/conveyance/conveyance-routes';
@@ -158,17 +158,12 @@ export type OfferRejection = (typeof OFFER_REJECTIONS)[number];
 export const RESPOND_REJECTIONS = ['not-found', 'unknown', 'offer-expired', 'not-allowed', 'acting-choice-required', 'acting-refused'] as const;
 export type RespondRejection = (typeof RESPOND_REJECTIONS)[number];
 
-function namedError<T extends string>(error: unknown, allowed: readonly T[]): T | null {
-  const value = apiErrorBodyOf(error)?.error;
-  return typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : null;
-}
-
 export function offerRejectionOf(error: unknown): OfferRejection | null {
-  return namedError(error, OFFER_REJECTIONS);
+  return apiErrorCodeOf(error, OFFER_REJECTIONS);
 }
 
 export function respondRejectionOf(error: unknown): RespondRejection | null {
-  return namedError(error, RESPOND_REJECTIONS);
+  return apiErrorCodeOf(error, RESPOND_REJECTIONS);
 }
 
 /**
@@ -187,7 +182,7 @@ export const CONTRIBUTION_REJECTIONS = [
 export type ContributionRejection = (typeof CONTRIBUTION_REJECTIONS)[number];
 
 export function contributionRejectionOf(error: unknown): ContributionRejection | null {
-  return namedError(error, CONTRIBUTION_REJECTIONS);
+  return apiErrorCodeOf(error, CONTRIBUTION_REJECTIONS);
 }
 
 // =============================================================================
@@ -215,7 +210,7 @@ export function requestIssuanceDeliveryChange(
 }
 
 export function deliveryChangeRejectionOf(error: unknown): DeliveryChangeRejection | null {
-  return namedError(error, DELIVERY_CHANGE_REJECTIONS);
+  return apiErrorCodeOf(error, DELIVERY_CHANGE_REJECTIONS);
 }
 
 // =============================================================================

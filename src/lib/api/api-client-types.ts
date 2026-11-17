@@ -320,6 +320,16 @@ export function apiErrorBodyOf(cause: unknown): Record<string, unknown> | null {
 }
 
 /**
+ * **Ο ονομασμένος κωδικός άρνησης** (`{ error: '…' }`) — μόνο αν ανήκει στο **κλειστό** σύνολο του καλούντα, αλλιώς
+ * `null` (μάθημα ADR-844: ποτέ ελεύθερο κείμενο διακομιστή στην οθόνη). Ο ΕΝΑΣ αναγνώστης για κάθε πελάτη πορτών·
+ * διαβάζει **μόνο** το πεδίο `error` — για τον `reason` πίσω από `DECISION_REFUSED` ισχύει η σημείωση του `apiErrorBodyOf`.
+ */
+export function apiErrorCodeOf<T extends string>(cause: unknown, allowed: readonly T[]): T | null {
+  const value = apiErrorBodyOf(cause)?.error;
+  return allowed.find((known) => known === value) ?? null;
+}
+
+/**
  * **Άρνηση του διακομιστή (4xx), όχι βλάβη.** Ο ΕΝΑΣ ορισμός για το «ποιο επίπεδο log»: ένα ονομασμένο «όχι» (π.χ.
  * `NO_EMAIL`) είναι **αναμενόμενη** έκβαση που η οθόνη το λέει στον άνθρωπο· σε `error` θα άνοιγε το overlay του dev
  * server και θα φούσκωνε την τηλεμετρία βλαβών (ADR-915 §29.1, εύρημα σε browser).

@@ -51,6 +51,7 @@ export {
   // 🔴 ADR-834 §6.5.ε — ο ΕΝΑΣ κριτής του σώματος άρνησης, για τους τρεις αναγνώστες
   //    που τον παρέκαμπταν ο καθένας με δικό του δομικό cast.
   apiErrorBodyOf,
+  apiErrorCodeOf,
   errorFieldsFrom,
   isClientRefusal,
 } from './api-client-types';

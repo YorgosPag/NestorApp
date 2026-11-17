@@ -43,9 +43,21 @@ function livesInDossier(dossier: DossierReachOwner, file: DossierReachFile): boo
 }
 
 /**
+ * **Καλύπτει το εύρος ένα αρχείο ΓΝΩΣΤΗΣ καρτέλας;** — όχι εξαιρεμένο, και η καρτέλα του ανήκει στο εύρος. Το ΙΔΙΟ
+ * ερώτημα κάνουν η πόρτα (`dossierFileReach`) **και** η προεπισκόπηση του κατόχου («θα δει N αρχεία»), πάνω στην
+ * καρτέλα που έδωσε ο server — ώστε αυτό που υπόσχεται ο διάλογος να είναι αυτό που ανοίγει η πόρτα.
+ */
+export function reachCovers(reach: DossierShareReach, fileId: string, tab: PropertyDossierFileTab): boolean {
+  return !reach.excludedFileIds.includes(fileId) && reach.tabs.includes(tab);
+}
+
+/** Το εύρος που φτάνει **παντού** — η ταξινόμηση των αρχείων του κατόχου ανά καρτέλα, χωρίς καμία εξαίρεση. */
+export const FULL_DOSSIER_REACH: DossierShareReach = { tabs: PROPERTY_DOSSIER_FILE_TABS, excludedFileIds: [] };
+
+/**
  * Η καρτέλα όπου **φτάνει** το αρχείο σε αυτή τη συμμετοχή — ή `null` (δεν φτάνει ⇒ για τον επαγγελματία δεν υπάρχει).
  *
- * Σειρά: ζει στον φάκελο του κατόχου → δεν είναι εξαιρεμένο → η καρτέλα του (κατά τη σελίδα) ανήκει στο εύρος.
+ * Σειρά: ζει στον φάκελο του κατόχου → η καρτέλα του (κατά τη σελίδα) → καλύπτεται από το εύρος (`reachCovers`).
  */
 export function dossierFileReach(
   dossier: DossierReachOwner,
@@ -53,7 +65,6 @@ export function dossierFileReach(
   reach: DossierShareReach,
 ): PropertyDossierFileTab | null {
   if (!livesInDossier(dossier, file)) return null;
-  if (reach.excludedFileIds.includes(file.id)) return null;
   const tab = propertyDossierFileTabOf(dossier, file, PROPERTY_DOSSIER_FILE_TABS);
-  return tab !== null && reach.tabs.includes(tab) ? tab : null;
+  return tab !== null && reachCovers(reach, file.id, tab) ? tab : null;
 }
