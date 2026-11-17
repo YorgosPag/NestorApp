@@ -41,6 +41,9 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # ⏱️ [2026-11-17] Without a cap a starved runner hangs "in progress" up to 6h
+    # (run 44144125433). Green builds take ~20-25 min end to end.
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write
@@ -104,12 +107,12 @@ jobs:
       # production deploy to Netcup stopped shipping. `build:ci` omits cross-env
       # so the env below actually reaches the process.
       # Any workflow calling build:ci MUST set NODE_OPTIONS itself.
-      # 🔬 [CI OOM 2026-11-17] `--experimental-debug-memory-usage` (Next.js): prints heap
-      # usage + GC stats throughout the build, so we can see WHICH compile phase peaks.
-      # pnpm appends the flag to the last command of build:ci ⇒ `next build --experimental-debug-memory-usage`.
-      # Diagnostic only — remove once the memory peak is understood.
+      # ⚠️ [CI OOM 2026-11-17] NEVER add `--experimental-debug-memory-usage` here: at 70%
+      # heap it writes a heap snapshot, and with RSS already ~12.4 GB of the runner's
+      # 15 GB RAM the runner starved and hung (run 44144125433). RSS ≈ heap + ~3.5 GB,
+      # so the runner's RAM — not the heap flag — is the real ceiling.
       - name: Build Next.js app
-        run: pnpm run build:ci --experimental-debug-memory-usage
+        run: pnpm run build:ci
         env:
           NODE_OPTIONS: '--max-old-space-size=12288'
           NODE_ENV: production
