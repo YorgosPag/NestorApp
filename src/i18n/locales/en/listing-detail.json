@@ -203,7 +203,11 @@
       "valid": "The certificate is valid",
       "expired": "The certificate has expired",
       "unknown": "The certificate's issue date has not been declared"
-    }
+    },
+    "projectedMarker": "expected",
+    "projectedLead": "Expected energy class: {energyClass}",
+    "projectedDisclaimer": "Estimate from the Energy Performance Study, as declared by the advertiser. It is not a certificate: the final class is set by the certificate issued when construction is completed (Law 4122/2013 art. 12 §3) and may differ.",
+    "projectedScopeBuilding": "The estimate covers the whole building."
   },
   "energyCost": {
     "heading": "Estimated annual cost of heating, cooling and hot water",

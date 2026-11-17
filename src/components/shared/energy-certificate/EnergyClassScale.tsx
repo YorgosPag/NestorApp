@@ -30,12 +30,26 @@ export interface EnergyClassScaleProps {
   readonly label: string;
   /** Η λέξη δίπλα στη βαθμίδα του ακινήτου. */
   readonly currentMarker: string;
+  /**
+   * `'certified'` (προεπιλογή): η κλάση του ΠΕΑ. `'projected'`: η **αναμενόμενη** κλάση της ΜΕΑ (ADR-777 §8.102) —
+   * διακεκομμένο περίγραμμα αντί για συμπαγές, ώστε η εκτίμηση να μη διαβάζεται ποτέ ως πιστοποίηση, ούτε με μια ματιά.
+   */
+  readonly variant?: EnergyClassScaleVariant;
 }
 
-function ScaleStep({ energyClass, isCurrent, currentMarker }: {
+export type EnergyClassScaleVariant = 'certified' | 'projected';
+
+/** Η σήμανση της βαθμίδας: συμπαγής για το ΠΕΑ, διακεκομμένη για την εκτίμηση. */
+const CURRENT_STEP_CLASS: Readonly<Record<EnergyClassScaleVariant, string>> = {
+  certified: 'h-4 ring-2 ring-foreground ring-offset-1 ring-offset-card',
+  projected: 'h-4 opacity-70 outline-dashed outline-2 outline-offset-2 outline-foreground',
+};
+
+function ScaleStep({ energyClass, isCurrent, currentMarker, variant }: {
   readonly energyClass: EnergyClass;
   readonly isCurrent: boolean;
   readonly currentMarker: string;
+  readonly variant: EnergyClassScaleVariant;
 }) {
   const { t } = useTranslation(['properties-enums']);
 
@@ -49,7 +63,7 @@ function ScaleStep({ energyClass, isCurrent, currentMarker }: {
           aria-hidden="true"
           className={cn(
             'block rounded-r-sm',
-            isCurrent ? 'h-4 ring-2 ring-foreground ring-offset-1 ring-offset-card' : 'h-2.5',
+            isCurrent ? CURRENT_STEP_CLASS[variant] : 'h-2.5',
             ENERGY_CLASS_BAR_CLASS[energyClass],
             ENERGY_CLASS_BAR_WIDTH_CLASS[energyClass],
           )}
@@ -60,7 +74,7 @@ function ScaleStep({ energyClass, isCurrent, currentMarker }: {
   );
 }
 
-export function EnergyClassScale({ current, label, currentMarker }: EnergyClassScaleProps) {
+export function EnergyClassScale({ current, label, currentMarker, variant = 'certified' }: EnergyClassScaleProps) {
   return (
     <ol className="m-0 flex list-none flex-col gap-1 p-0" aria-label={label}>
       {ENERGY_CLASSES.map((energyClass) => (
@@ -69,6 +83,7 @@ export function EnergyClassScale({ current, label, currentMarker }: EnergyClassS
           energyClass={energyClass}
           isCurrent={energyClass === current}
           currentMarker={currentMarker}
+          variant={variant}
         />
       ))}
     </ol>

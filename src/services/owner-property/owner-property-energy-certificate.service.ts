@@ -25,7 +25,11 @@ import {
 } from '@/lib/energy-certificate/energy-certificate-claim';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { createModuleLogger } from '@/lib/telemetry';
-import { ownerPeaFileScope, peaSourceFacts } from '@/server/energy-certificate/energy-certificate-file-scope';
+import {
+  ownerPeaFileScope,
+  peaSourceFacts,
+  projectionSourceAccepted,
+} from '@/server/energy-certificate/energy-certificate-file-scope';
 import { amendOwnerProperty } from '@/services/owner-property/owner-property-amendment';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 
@@ -52,6 +56,14 @@ export function setOwnerPropertyEnergyCertificate(
         return {
           kind: 'refuse',
           result: { kind: 'invalid-energy-certificate', violations: ['issued-on-contradicts-document'] },
+        };
+      }
+      // ADR-777 §8.102 — ο ιδιώτης δεν έχει έργο με μελέτες: δοχείο ΜΕΑ δεν υπάρχει (`null`), άρα κάθε παραπομπή
+      // απορρίπτεται. Η εκτίμηση χωρίς παραπομπή στέκει. Μόνο μπαγιάτικο ή πλαστό σώμα φτάνει εδώ.
+      if (!(await projectionSourceAccepted(adminDb, null, energy))) {
+        return {
+          kind: 'refuse',
+          result: { kind: 'invalid-energy-certificate', violations: ['projection-source-not-in-project'] },
         };
       }
       return {

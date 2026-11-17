@@ -110,6 +110,7 @@ describe('Τ3 — το δημόσιο κουτί και ο κρίκος 23', () 
       // ADR-777 §8.96 — η εμβέλεια (μονάδα/κτήριο) ταξιδεύει μαζί· αδήλωτη ⇒ `null`.
       scope: null,
       absence: null,
+      projection: null,
     });
     expect(listedEnergyCertificateOf({ type: 'land', offerKinds: ['sell'] }, raw)).toBeNull();
   });

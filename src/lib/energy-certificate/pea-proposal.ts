@@ -144,6 +144,8 @@ export function peaPatchOf(
     scope: chosen.scope,
     sourceFileId: proposal.fileId,
     absence: null,
+    // ADR-777 §8.102 — το ΠΕΑ της ολοκλήρωσης αντικαθιστά και την εκτίμηση της ΜΕΑ: ρητά, όχι μόνο μέσω του αναγνώστη.
+    projection: null,
   };
   const parsed = energyCertificatePatchSchema.safeParse(patch);
   return parsed.success ? parsed.data : null;

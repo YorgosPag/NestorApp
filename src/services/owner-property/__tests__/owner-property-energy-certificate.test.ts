@@ -73,7 +73,7 @@ describe('Ε1 — θεματοφυλακή και εγγραφή', () => {
     expect(docOf(db, COLLECTIONS.OWNER_PROPERTIES, property.id)?.energy).toMatchObject({ class: 'B+', primaryEnergy: null });
     const listing = docOf(db, COLLECTIONS.PUBLIC_LISTINGS, property.id);
     expect(listing?.energyClass).toBe('B+');
-    expect(listing?.energyCertificate).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null });
+    expect(listing?.energyCertificate).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null, projection: null });
   });
 
   it('ξένος ή ανύπαρκτη αγγελία ⇒ `absent` — και τίποτα δεν γράφεται', async () => {
@@ -106,6 +106,7 @@ describe('Ε2 — 🔴 μερική διόρθωση: καμία απάντησ�
       scope: null,
       sourceFileId: null,
       absence: null,
+      projection: null,
     });
     expect(docOf(db, COLLECTIONS.PUBLIC_LISTINGS, property.id)?.energyCertificate).toEqual({
       primaryEnergy: 180.5,
@@ -114,6 +115,7 @@ describe('Ε2 — 🔴 μερική διόρθωση: καμία απάντησ�
       finalEnergy: null,
       scope: null,
       absence: null,
+      projection: null,
     });
   });
 

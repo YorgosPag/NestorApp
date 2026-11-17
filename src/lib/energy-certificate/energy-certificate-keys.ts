@@ -50,6 +50,7 @@ export const CERTIFICATE_ENERGY_SOURCE_KEY: Readonly<Record<CertificateEnergySou
 export const ENERGY_CERTIFICATE_ABSENCE_KEY: Readonly<Record<EnergyCertificateAbsence, string>> = {
   pending: 'properties-enums:energyCertificate.absence.pending',
   exempt: 'properties-enums:energyCertificate.absence.exempt',
+  'under-construction': 'properties-enums:energyCertificate.absence.underConstruction',
 };
 
 /** Τα πεδία του εντύπου που διαβάζει η εισαγωγή (ADR-777 §8.96) — για το «δεν διαβάστηκαν: …». */

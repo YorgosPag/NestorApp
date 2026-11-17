@@ -22,8 +22,11 @@ import type { MandateInvariant } from '@/types/owner-property-mandate';
 import type { MandateConflict } from '@/lib/mandate/mandate-conflict';
 import type { ObjectiveValuePatchViolation } from '@/lib/objective-value/objective-value-declarations';
 
-/** Γιατί δεν στέκει μια δήλωση ΠΕΑ (ADR-915 Φ3β-2). Κλειστό σύνολο — κάθε κωδικός είναι όνομα, όχι κείμενο. */
-export type EnergyCertificateViolation = 'issued-on-contradicts-document';
+/**
+ * Γιατί δεν στέκει μια δήλωση ΠΕΑ (ADR-915 Φ3β-2 · ADR-777 §8.102). Κλειστό σύνολο — κάθε κωδικός είναι όνομα, όχι κείμενο.
+ * `projection-source-not-in-project`: η εκτίμηση ΜΕΑ παραπέμπει σε αρχείο, αλλά ο ιδιώτης δεν έχει έργο με μελέτες.
+ */
+export type EnergyCertificateViolation = 'issued-on-contradicts-document' | 'projection-source-not-in-project';
 
 // =============================================================================
 // 1. ΤΟ ΑΠΟΤΕΛΕΣΜΑ — ρητές καταστάσεις, ποτέ εξαίρεση ως ροή ελέγχου

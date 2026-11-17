@@ -79,7 +79,7 @@ describe('Φόρμα ακινήτου → κοινόχρηστα (ADR-777 §8.93
 describe('Φόρμα ακινήτου → ενεργειακό πιστοποιητικό (ADR-777 §8.94)', () => {
   const figures = {
     primaryEnergy: 132.4, co2Emissions: 38.1, issuedOn: '2024-03-12', usefulArea: null, finalEnergy: null,
-    scope: null, sourceFileId: null, absence: null,
+    scope: null, sourceFileId: null, absence: null, projection: null,
   };
 
   it('Ε1 — καμία αλλαγή ⇒ ΚΑΝΕΝΑ `energy` στο σώμα', () => {

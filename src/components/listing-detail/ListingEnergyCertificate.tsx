@@ -8,13 +8,15 @@
  *   `components/shared/energy-certificate/EnergyClassScale.tsx` (η κλίμακα) · `./ListingLegality.tsx` (το ίδιο σήμα
  *   νομιμότητας, στην ενότητα «Νομικά»)
  *
- * 🔴 **ΠΕΝΤΕ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΜΙΑ ΣΙΩΠΗΛΗ**
+ * 🔴 **ΕΠΤΑ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΜΙΑ ΣΙΩΠΗΛΗ** (πέντε έως το §8.102)
  *
  * | Κουτί · κλάση | Τι γράφει |
  * |---|---|
  * | κουτί `null` | τίποτα — η ερώτηση **δεν τίθεται** (γη, ή διάθεση που δεν σηκώνει ΠΕΑ) |
  * | χωρίς κλάση, `pending` | «Το πιστοποιητικό είναι υπό έκδοση» |
  * | χωρίς κλάση, `exempt` | «Το ακίνητο εξαιρείται από την υποχρέωση» |
+ * | χωρίς κλάση, `under-construction` | «Υπό κατασκευή· το πιστοποιητικό εκδίδεται με την ολοκλήρωση» (§8.102) |
+ * | ↳ με εκτίμηση ΜΕΑ | + «Αναμενόμενη κατηγορία Χ» · κλίμακα σε **διακεκομμένη** όψη · αποποίηση «δεν είναι ΠΕΑ» |
  * | χωρίς κλάση, τίποτα | «Δεν έχει δηλωθεί» — το κενό έχει όνομα |
  * | με κλάση | κλίμακα · αριθμοί (ή «δεν έχει δηλωθεί» ο καθένας) · «ΠΕΑ κτηρίου» αν ισχύει · ισχύς · «από το ΠΕΑ, κατά δήλωση» |
  *
@@ -31,8 +33,8 @@ import React from 'react';
 import { EnergyClassScale } from '@/components/shared/energy-certificate/EnergyClassScale';
 import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { ListedEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
-import { ENERGY_CERTIFICATE_ABSENCE_KEY } from '@/lib/energy-certificate/energy-certificate-keys';
+import type { ListedEnergyCertificate, ListedEnergyProjection } from '@/lib/energy-certificate/energy-certificate';
+import { ENERGY_CERTIFICATE_ABSENCE_KEY, ENERGY_CLASS_LABEL_KEY } from '@/lib/energy-certificate/energy-certificate-keys';
 import { formatNumber } from '@/lib/intl-formatting';
 import type { LegalitySignalState } from '@/lib/legality/legality-signal';
 import type { PublicListing } from '@/types/public-listing';
@@ -86,6 +88,35 @@ function AbsenceLine({ certificate }: { readonly certificate: ListedEnergyCertif
   return <p className="m-0 mt-2 text-sm text-foreground">{text}</p>;
 }
 
+/**
+ * **Υπό κατασκευή, με εκτίμηση της ΜΕΑ** (ADR-777 §8.102) — η κλίμακα σε «αναμενόμενη» όψη, η κλάση **ως εκτίμηση**,
+ * και πάντα η αποποίηση: δεν είναι πιστοποιητικό, η τελική κλάση έρχεται με το ΠΕΑ της ολοκλήρωσης και μπορεί να
+ * διαφέρει (ίδια υποχρεωτική φράση με το Predicted Energy Assessment του Ηνωμένου Βασιλείου).
+ */
+function ProjectionBlock({ projection }: { readonly projection: ListedEnergyProjection }) {
+  const { t } = useTranslation(['listing-detail', 'properties-enums']);
+  const energyClass = t(ENERGY_CLASS_LABEL_KEY[projection.class]);
+  return (
+    <>
+      <p className="m-0 mt-2 text-sm font-medium text-foreground">
+        {t('listing-detail:energyCertificate.projectedLead', { energyClass })}
+      </p>
+      <div className="mt-3 max-w-md">
+        <EnergyClassScale
+          current={projection.class}
+          label={t('listing-detail:energyCertificate.scaleLabel')}
+          currentMarker={t('listing-detail:energyCertificate.projectedMarker')}
+          variant="projected"
+        />
+      </div>
+      {projection.scope === 'building' && (
+        <p className="m-0 mt-2 text-sm text-foreground">{t('listing-detail:energyCertificate.projectedScopeBuilding')}</p>
+      )}
+      <p className="m-0 mt-2 text-xs text-muted-foreground">{t('listing-detail:energyCertificate.projectedDisclaimer')}</p>
+    </>
+  );
+}
+
 /** Οι δύο αριθμοί με τη μονάδα τους — ή, ρητά για τον καθένα, ότι δεν δηλώθηκε. */
 function Figures({ certificate }: { readonly certificate: ListedEnergyCertificate }) {
   const { t } = useTranslation(['listing-detail']);
@@ -129,7 +160,10 @@ export function ListingEnergyCertificate({ listing }: { readonly listing: Public
       titleSize="sm"
     >
       {energyClass === null ? (
-        <AbsenceLine certificate={certificate} />
+        <>
+          <AbsenceLine certificate={certificate} />
+          {certificate.projection !== null && <ProjectionBlock projection={certificate.projection} />}
+        </>
       ) : (
         <>
           <div className="mt-3 max-w-md">

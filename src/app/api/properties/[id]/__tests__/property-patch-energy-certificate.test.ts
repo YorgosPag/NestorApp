@@ -25,7 +25,7 @@ import { PropertyPatchSchema } from '../property-patch-helpers';
 
 const UNDECLARED = {
   class: null, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null,
-  scope: null, sourceFileId: null, absence: null,
+  scope: null, sourceFileId: null, absence: null, projection: null,
 };
 const FULL = { ...UNDECLARED, class: 'B+', primaryEnergy: 132.4, co2Emissions: 38.1, issuedOn: '2024-03-12' };
 const AT = '2026-10-13T18:00:00.000Z';

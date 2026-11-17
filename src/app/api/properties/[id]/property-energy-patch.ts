@@ -15,6 +15,7 @@
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { ApiError } from '@/lib/api/api-error-types';
+import { nonEmptyText } from '@/lib/api/space-building-project-guard';
 import { readEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
 import {
   energyIssuedOnContradicts,
@@ -23,7 +24,12 @@ import {
 } from '@/lib/energy-certificate/energy-certificate-claim';
 import { readLegalityClaims } from '@/lib/legality/legality-claim-reading';
 import { isPlainRecord } from '@/lib/type-guards';
-import { companyPeaFileScope, peaSourceFacts } from '@/server/energy-certificate/energy-certificate-file-scope';
+import {
+  companyMeaFileScope,
+  companyPeaFileScope,
+  peaSourceFacts,
+  projectionSourceAccepted,
+} from '@/server/energy-certificate/energy-certificate-file-scope';
 
 /** Τα πεδία του παλιού σχήματος που το μπλοκ δεν κατέχει — επιβιώνουν αυτούσια. */
 const LEGACY_ENERGY_KEYS = ['certificateId', 'certificateDate', 'validUntil'] as const;
@@ -82,5 +88,16 @@ export async function companyEnergyDeclarationPatch(
   if (energyIssuedOnContradicts(certificate, facts)) {
     throw new ApiError(422, 'Energy certificate issue date contradicts its source document', ENERGY_ISSUED_ON_CONTRADICTS_DOCUMENT);
   }
+  const meaScope = companyMeaFileScope(scope.companyId, nonEmptyText(existing.projectId));
+  if (!(await projectionSourceAccepted(db, meaScope, certificate))) {
+    throw new ApiError(422, 'Energy study reference is not a study of this property’s project', ENERGY_PROJECTION_SOURCE_NOT_IN_PROJECT);
+  }
   return energyDeclarationPatch(scope.propertyId, declared, existing, at, facts);
 }
+
+/**
+ * Ο κωδικός της άρνησης (ADR-777 §8.102): η εκτίμηση παραπέμπει σε αρχείο που **δεν** είναι ΜΕΑ του έργου του
+ * ακινήτου — ξένο, σβησμένο, άλλου τύπου, ή ακίνητο χωρίς έργο. Ο τίμιος πελάτης δεν φτάνει εδώ: η οθόνη προσφέρει μόνο
+ * τις ΜΕΑ του έργου.
+ */
+export const ENERGY_PROJECTION_SOURCE_NOT_IN_PROJECT = 'ENERGY_PROJECTION_SOURCE_NOT_IN_PROJECT';

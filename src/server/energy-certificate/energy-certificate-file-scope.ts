@@ -18,8 +18,10 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { energyStudySlot } from '@/config/upload-entry-points/energy-certificate-slot';
 import type { DocumentFacts } from '@/lib/document-validity/document-facts';
 import type { EnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
+import { judgeContainerFile } from '@/lib/files/container-file-verdict';
 import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { readContainerDocumentFacts, type ContainerFileScope } from '@/server/files/document-facts-read';
 import { PDF_CONTENT_TYPE } from '@/server/files/download-file-record-bytes';
@@ -58,6 +60,43 @@ export function ownerPeaFileScope(uid: string, property: OwnerProperty): Contain
       contentType: PEA_CONTENT_TYPE,
     },
   };
+}
+
+/**
+ * **Πού ζει η ΜΕΑ ενός ακινήτου του γραφείου** (ADR-777 §8.102): στα «Έγγραφα» του **έργου** του, ως αρχείο του τύπου
+ * `study-energy-mea` — η μελέτη συντάσσεται για το κτήριο με την άδεια δόμησης, όχι για τη μονάδα. Ακίνητο χωρίς έργο
+ * ⇒ `entityId: null` ⇒ κανένα αρχείο δεν του ανήκει. Ο τύπος κρίνεται από το `purpose` του καταλόγου (`energyStudySlot`),
+ * όχι από MIME: η μελέτη δεν διαβάζεται, μόνο παραπέμπεται.
+ */
+export function companyMeaFileScope(companyId: string, projectId: string | null): ContainerFileScope {
+  const purpose = energyStudySlot()?.purpose ?? null;
+  return {
+    fileCollection: COLLECTIONS.FILES,
+    container: {
+      owner: { kind: 'company', companyId },
+      entityType: ENTITY_TYPES.PROJECT,
+      entityId: purpose === null ? null : projectId,
+      contentType: (data) => data.purpose === purpose,
+    },
+  };
+}
+
+/**
+ * **Παραπέμπει η εκτίμηση σε αρχείο που της ανήκει;** Χωρίς παραπομπή ⇒ `true` (η εκτίμηση στέκει και μόνη της, όπως
+ * δηλώνεται). Με παραπομπή ⇒ μόνο αν το αρχείο περνά τον **ίδιο** κριτή δοχείου με το ΠΕΑ (`judgeContainerFile`).
+ * `scope === null` = δεν υπάρχει δοχείο ΜΕΑ για αυτόν τον κάτοχο (ιδιώτης) ⇒ κάθε παραπομπή απορρίπτεται.
+ */
+export async function projectionSourceAccepted(
+  db: AdminFirestore,
+  scope: ContainerFileScope | null,
+  certificate: EnergyCertificate,
+): Promise<boolean> {
+  const fileId = certificate.projection?.sourceFileId ?? null;
+  if (fileId === null) return true;
+  if (scope === null) return false;
+  const snap = await db.collection(scope.fileCollection).doc(fileId).get();
+  const data = snap.exists ? (snap.data() ?? null) : null;
+  return judgeContainerFile(fileId, data, scope.container).kind === 'accepted';
 }
 
 /** Τα γεγονότα του ΠΕΑ από το οποίο ήρθε το μπλοκ — `null` όταν το μπλοκ δεν δηλώνει πηγή (καμία ανάγνωση). */

@@ -40,8 +40,15 @@ import {
   type FinalEnergyLine,
 } from './certificate-final-energy';
 
-/** Γιατί δεν υπάρχει κλάση: το πιστοποιητικό **εκδίδεται**, ή το ακίνητο **εξαιρείται** (άρθ. 4 §7 ν. 4122/2013). */
-export const ENERGY_CERTIFICATE_ABSENCES = ['pending', 'exempt'] as const;
+/**
+ * Γιατί δεν υπάρχει κλάση: το πιστοποιητικό **εκδίδεται**, το ακίνητο **εξαιρείται** (άρθ. 4 §7 ν. 4122/2013), ή το
+ * ακίνητο **χτίζεται** — ΠΕΑ **δεν μπορεί** να εκδοθεί πριν την ολοκλήρωση (άρθ. 12 §3· εγκύκλιος ΔΕΠΕΑ/111748/705/2020
+ * §7), και ο πωλητής γνωστοποιεί την **εκτίμηση της ΜΕΑ** (δες {@link EnergyProjection}). ADR-777 §8.102.
+ *
+ * ⚠️ Το `'under-construction'` **δεν** είναι «υπό έκδοση»: εκείνο υπόσχεται πιστοποιητικό σύντομα· εδώ ο νόμος λέει ότι
+ * πιστοποιητικό **δεν υπάρχει ακόμη ως δυνατότητα**.
+ */
+export const ENERGY_CERTIFICATE_ABSENCES = ['pending', 'exempt', 'under-construction'] as const;
 export type EnergyCertificateAbsence = (typeof ENERGY_CERTIFICATE_ABSENCES)[number];
 
 /**
@@ -81,6 +88,35 @@ export interface EnergyCertificate {
   readonly sourceFileId: string | null;
   /** Γιατί δεν υπάρχει κλάση. **Μόνο** χωρίς κλάση· `null` = δεν απαντήθηκε. */
   readonly absence: EnergyCertificateAbsence | null;
+  /**
+   * Η **αναμενόμενη** κλάση από τη Μελέτη Ενεργειακής Απόδοσης (ADR-777 §8.102). **Μόνο** χωρίς κλάση **και** με
+   * `absence === 'under-construction'`· `null` = δεν δηλώθηκε.
+   */
+  readonly projection: EnergyProjection | null;
+}
+
+/**
+ * **Η εκτίμηση της ΜΕΑ για ακίνητο που χτίζεται** (ADR-777 §8.102) — ό,τι ο νόμος υποχρεώνει τον πωλητή να γνωστοποιήσει
+ * πριν την ολοκλήρωση (ν. 4122/2013 άρθ. 12 §3). Ίδια πρακτική με το «certificado del proyecto» της Ισπανίας
+ * (RD 390/2021) και το Predicted Energy Assessment του Ηνωμένου Βασιλείου.
+ *
+ * ⛔ **Δεν είναι ΠΕΑ, και δεν γίνεται ποτέ ΠΕΑ**: δεν γεμίζει το `energyClass` της αγγελίας (φίλτρα · πληρότητα ·
+ * αποκάλυψη), δεν γράφει αξίωση νομιμότητας (`energyPerformanceClaimOf` κοιτά **μόνο** την κλάση).
+ *
+ * 🔑 **Η κλάση εδώ τη δηλώνει ο άνθρωπος, με παραπομπή σε μελέτη** — η ΜΕΑ δεν έχει τυποποιημένο έντυπο που να
+ * διαβάζεται όπως το ΠΕΑ. Γι' αυτό ο κανόνας «αλλαγή τιμής σβήνει την προέλευση» του ΠΕΑ (§8.96) **δεν** ισχύει εδώ:
+ * το `sourceFileId` είναι **παραπομπή**, όχι εγγύηση ότι το αρχείο γράφει την κλάση.
+ */
+export interface EnergyProjection {
+  /** Η αναμενόμενη ενεργειακή κατηγορία, όπως την υπολογίζει η ΜΕΑ. */
+  readonly class: EnergyClass;
+  /**
+   * Μονάδα ή ολόκληρο κτήριο — η ΜΕΑ συντάσσεται για το κτήριο, και το αν δίνει κλάση ανά μονάδα **δεν** το υποθέτουμε.
+   * `null` = δεν δηλώθηκε.
+   */
+  readonly scope: EnergyCertificateScope | null;
+  /** Το αρχείο της ΜΕΑ στα «Έγγραφα» του **έργου** (`study-mea`). 🔒 Ιδιωτικό — δεν ταξιδεύει δημόσια. */
+  readonly sourceFileId: string | null;
 }
 
 /**
@@ -106,6 +142,7 @@ export const UNDECLARED_ENERGY_CERTIFICATE: EnergyCertificate = {
   scope: null,
   sourceFileId: null,
   absence: null,
+  projection: null,
 };
 
 // ============================================================================
@@ -151,16 +188,29 @@ function issuedOnOf(record: Record<string, unknown>): string | null {
   return legacyMs === null ? null : utcDateOf(legacyMs);
 }
 
+/** Η εκτίμηση της ΜΕΑ — χωρίς αναμενόμενη κλάση δεν υπάρχει εκτίμηση (ποτέ ορφανή εμβέλεια ή παραπομπή). */
+function readEnergyProjection(raw: unknown): EnergyProjection | null {
+  if (!isPlainRecord(raw) || !isEnergyClass(raw.class)) return null;
+  return {
+    class: raw.class,
+    scope: isEnergyCertificateScope(raw.scope) ? raw.scope : null,
+    sourceFileId: isSourceFileId(raw.sourceFileId) ? raw.sourceFileId : null,
+  };
+}
+
 /**
  * Ό,τι είναι αποθηκευμένο (ή λείπει) → κανονικοποιημένο μπλοκ. Το σύνορο ανάγνωσης κάθε εγγράφου το καλεί.
  *
  * ⚠️ **Ποτέ ορφανός προσδιοριστής** (ίδιος κανόνας με τα κοινόχρηστα, ADR-777 §8.93): αριθμοί ή ημερομηνία χωρίς
- * κλάση, και «υπό έκδοση» δίπλα σε κλάση, δεν προσδιορίζουν τίποτα ⇒ `null`.
+ * κλάση, και «υπό έκδοση» δίπλα σε κλάση, δεν προσδιορίζουν τίποτα ⇒ `null`. Το ίδιο η εκτίμηση της ΜΕΑ (§8.102):
+ * υπάρχει **μόνο** δίπλα στο «υπό κατασκευή» — μόλις δηλωθεί ΠΕΑ, η εκτίμηση δεν λέει πια τίποτα.
  */
 export function readEnergyCertificate(raw: unknown): EnergyCertificate {
   const record = isPlainRecord(raw) ? raw : {};
   if (!isEnergyClass(record.class)) {
-    return { ...UNDECLARED_ENERGY_CERTIFICATE, absence: isAbsence(record.absence) ? record.absence : null };
+    const absence = isAbsence(record.absence) ? record.absence : null;
+    const projection = absence === 'under-construction' ? readEnergyProjection(record.projection) : null;
+    return { ...UNDECLARED_ENERGY_CERTIFICATE, absence, projection };
   }
   return {
     class: record.class,
@@ -172,6 +222,7 @@ export function readEnergyCertificate(raw: unknown): EnergyCertificate {
     scope: isEnergyCertificateScope(record.scope) ? record.scope : null,
     sourceFileId: isSourceFileId(record.sourceFileId) ? record.sourceFileId : null,
     absence: null,
+    projection: null,
   };
 }
 
@@ -191,6 +242,15 @@ export function certificateValidUntil(issuedOn: string | null): string | null {
 
 // Η ημερομηνία έκδοσης: υπαρκτή `YYYY-MM-DD` — το κοινό σχήμα (ADR-919), όχι τοπικό αντίγραφο.
 
+/** Η εκτίμηση της ΜΕΑ (§8.102) — ακέραιη· η κλάση είναι υποχρεωτική, γιατί χωρίς αυτήν εκτίμηση δεν υπάρχει. */
+const energyProjectionSchema = z
+  .object({
+    class: z.enum(ENERGY_CLASSES),
+    scope: z.enum(ENERGY_CERTIFICATE_SCOPES).nullable(),
+    sourceFileId: z.string().regex(SOURCE_FILE_ID).nullable(),
+  })
+  .strict();
+
 /** Ολόκληρο το μπλοκ — η φόρμα της εταιρείας το στέλνει ακέραιο. `.strict()`: άγνωστο κλειδί ⇒ απόρριψη. */
 export const energyCertificateSchema = z
   .object({
@@ -205,6 +265,8 @@ export const energyCertificateSchema = z
     scope: z.enum(ENERGY_CERTIFICATE_SCOPES).nullable().optional(),
     sourceFileId: z.string().regex(SOURCE_FILE_ID).nullable().optional(),
     absence: z.enum(ENERGY_CERTIFICATE_ABSENCES).nullable(),
+    // ADR-777 §8.102 — προαιρετικό για τον ίδιο λόγο με το `scope`: η χθεσινή καρτέλα δεν το στέλνει.
+    projection: energyProjectionSchema.nullable().optional(),
   })
   .strict();
 
@@ -256,8 +318,14 @@ export function sameEnergyCertificate(a: EnergyCertificate, b: EnergyCertificate
     sameDocumentFigures(a, b) &&
     a.scope === b.scope &&
     a.sourceFileId === b.sourceFileId &&
-    a.absence === b.absence
+    a.absence === b.absence &&
+    sameEnergyProjection(a.projection, b.projection)
   );
+}
+
+function sameEnergyProjection(a: EnergyProjection | null, b: EnergyProjection | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.class === b.class && a.scope === b.scope && a.sourceFileId === b.sourceFileId;
 }
 
 // ============================================================================
@@ -289,16 +357,30 @@ export function raisesEnergyCertificateQuestion({ type, offerKinds }: EnergyCert
  *
  * ⛔ Η `issuedOn` λείπει επίτηδες: η ισχύς φεύγει **μόνο** ως κατάσταση του καναλιού νομιμότητας.
  */
-export type ListedEnergyCertificate = Pick<
-  EnergyCertificate,
-  'primaryEnergy' | 'co2Emissions' | 'usefulArea' | 'finalEnergy' | 'scope' | 'absence'
->;
+export type ListedEnergyCertificate = ListedEnergyFiguresV24 & {
+  /** Η εκτίμηση της ΜΕΑ (§8.102), **χωρίς** την παραπομπή στο αρχείο — εκείνη μένει ιδιωτική. */
+  readonly projection: ListedEnergyProjection | null;
+};
+
+/** Η εκτίμηση της ΜΕΑ όπως ταξιδεύει δημόσια — η παραπομπή στο αρχείο του έργου **δεν** φεύγει. */
+export type ListedEnergyProjection = Omit<EnergyProjection, 'sourceFileId'>;
 
 /** Το κουτί **όπως το έγραφε η έκδοση 22** του σχήματος — το σχήμα που δίνει ο παγωμένος κρίκος 22. */
 export type ListedEnergyFiguresV22 = Pick<EnergyCertificate, 'primaryEnergy' | 'co2Emissions' | 'absence'>;
 
+/** Το κουτί **όπως το έγραφε η έκδοση 24** — το σχήμα που δίνει ο παγωμένος κρίκος 24 (χωρίς `projection`). */
+export type ListedEnergyFiguresV24 = Pick<
+  EnergyCertificate,
+  'primaryEnergy' | 'co2Emissions' | 'usefulArea' | 'finalEnergy' | 'scope' | 'absence'
+>;
+
 /** Το κουτί **όπως το έγραφε η έκδοση 23** — το σχήμα που δίνει ο παγωμένος κρίκος 23 (χωρίς `scope`). */
-export type ListedEnergyFiguresV23 = Omit<ListedEnergyCertificate, 'scope'>;
+export type ListedEnergyFiguresV23 = Omit<ListedEnergyFiguresV24, 'scope'>;
+
+/** Δημόσια μορφή της εκτίμησης — ο ΕΝΑΣ τόπος που αφαιρεί την ιδιωτική παραπομπή. */
+function listedProjectionOf(projection: EnergyProjection | null): ListedEnergyProjection | null {
+  return projection === null ? null : { class: projection.class, scope: projection.scope };
+}
 
 /**
  * **Το κουτί της δημόσιας αγγελίας**, από το μπλοκ της **πηγής**: `null` ⇔ η ερώτηση δεν τίθεται· αλλιώς ό,τι
@@ -309,8 +391,8 @@ export function listedEnergyCertificateOf(
   raw: unknown,
 ): ListedEnergyCertificate | null {
   if (!raisesEnergyCertificateQuestion(subject)) return null;
-  const { primaryEnergy, co2Emissions, usefulArea, finalEnergy, scope, absence } = readEnergyCertificate(raw);
-  return { primaryEnergy, co2Emissions, usefulArea, finalEnergy, scope, absence };
+  const { primaryEnergy, co2Emissions, usefulArea, finalEnergy, scope, absence, projection } = readEnergyCertificate(raw);
+  return { primaryEnergy, co2Emissions, usefulArea, finalEnergy, scope, absence, projection: listedProjectionOf(projection) };
 }
 
 /**
@@ -358,9 +440,24 @@ export function relistedFinalEnergyOf(
  * **Το κουτί της έκδοσης 24** (ADR-777 §8.96): ό,τι έδινε ο κρίκος 23, **συν** την εμβέλεια του πιστοποιητικού —
  * `null` («δεν δηλώθηκε») όπου κανείς δεν είχε πού να τη γράψει. Χτίζεται **πάνω** στον παγωμένο κρίκο 23.
  */
-export function relistedScopeOf(subject: EnergyCertificateSubject, stored: unknown): ListedEnergyCertificate | null {
+export function relistedScopeOf(subject: EnergyCertificateSubject, stored: unknown): ListedEnergyFiguresV24 | null {
   const figures = relistedFinalEnergyOf(subject, stored);
   if (figures === null) return null;
   const record = isPlainRecord(stored) ? stored : {};
   return { ...figures, scope: isEnergyCertificateScope(record.scope) ? record.scope : null };
+}
+
+/**
+ * **Το κουτί της έκδοσης 30** (ADR-777 §8.102): ό,τι έδινε ο κρίκος 24, **συν** την εκτίμηση της ΜΕΑ — `null` («δεν
+ * δηλώθηκε») όπου κανείς δεν είχε πού να τη γράψει. Χτίζεται **πάνω** στον παγωμένο κρίκο 24.
+ *
+ * 🔑 Ο ίδιος κανόνας ορφανού με τον αναγνώστη: εκτίμηση **μόνο** δίπλα στο «υπό κατασκευή». Ό,τι έγραψε ήδη ο
+ * γραφέας (με `projection`) διαβάζεται και μένει (Κ3)· η παραπομπή στο αρχείο δεν περνά ποτέ.
+ */
+export function relistedProjectionOf(subject: EnergyCertificateSubject, stored: unknown): ListedEnergyCertificate | null {
+  const figures = relistedScopeOf(subject, stored);
+  if (figures === null) return null;
+  const record = isPlainRecord(stored) ? stored : {};
+  const projection = figures.absence === 'under-construction' ? readEnergyProjection(record.projection) : null;
+  return { ...figures, projection: listedProjectionOf(projection) };
 }

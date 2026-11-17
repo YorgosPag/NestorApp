@@ -416,7 +416,24 @@
   "energyCertificate": {
     "absence": {
       "pending": "The certificate is being issued",
-      "exempt": "The property is exempt from the certificate requirement"
+      "exempt": "The property is exempt from the certificate requirement",
+      "underConstruction": "The property is under construction; the certificate is issued on completion"
+    },
+    "projection": {
+      "legend": "Estimate from the Energy Performance Study (MEA)",
+      "class": "Expected energy class, as in the study",
+      "classPlaceholder": "No estimate",
+      "classHint": "The law requires the study estimate to be disclosed to the buyer (Law 4122/2013 art. 12 §3). It is not a certificate and is not shown as the property’s energy class.",
+      "scope": "What the estimate covers",
+      "scopePlaceholder": "Not declared",
+      "source": "Study file",
+      "sourcePlaceholder": "Choose from the project’s documents",
+      "sourceHint": "The study is uploaded to the project’s Documents, under energy. The reference is not shown in the listing.",
+      "sourceEmpty": "There is no energy study in the project’s documents yet.",
+      "sourceNoProject": "The unit does not belong to a project, so there are no project documents to reference.",
+      "suggestion": "The unit is declared under construction, so a certificate cannot be issued yet. Choose “under construction” and declare the study estimate.",
+      "completedTitle": "Construction completed?",
+      "completed": "The unit is declared ready, but this still says “under construction”. Upload the certificate issued on completion."
     },
     "form": {
       "class": "Energy class, as on the certificate",

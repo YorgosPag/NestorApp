@@ -21,7 +21,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => {
 });
 
 const L = 'listing-detail:energyCertificate';
-const UNDECLARED_BOX = { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null };
+const UNDECLARED_BOX = { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null, projection: null };
 
 function energySignal(signal: Omit<LegalitySignal, 'kind'>): readonly LegalitySignal[] {
   return [{ ...signal, kind: 'energy-performance' } as LegalitySignal];

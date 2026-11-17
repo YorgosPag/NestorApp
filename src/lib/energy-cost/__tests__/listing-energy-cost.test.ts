@@ -25,7 +25,7 @@ const TODAY = '2026-10-13';
 function subject(finalEnergy: readonly FinalEnergyLine[] | null, usefulArea: number | null = 100): EnergyCostSubject {
   return {
     energyClass: 'C',
-    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea, finalEnergy, scope: null, absence: null },
+    energyCertificate: { primaryEnergy: null, co2Emissions: null, usefulArea, finalEnergy, scope: null, absence: null, projection: null },
     commonCharges: null,
   };
 }

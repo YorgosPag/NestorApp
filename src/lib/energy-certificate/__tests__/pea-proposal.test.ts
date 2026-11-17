@@ -81,6 +81,7 @@ describe('Π4 — η διόρθωση που εφαρμόζεται', () => {
       scope: 'unit',
       sourceFileId: 'file_pea_new',
       absence: null,
+      projection: null,
     });
   });
 

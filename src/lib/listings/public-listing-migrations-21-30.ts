@@ -8,6 +8,7 @@ import { listedCommonChargesOf } from '@/lib/common-charges/common-charges';
 import {
   relistedEnergyCertificateOf,
   relistedFinalEnergyOf,
+  relistedProjectionOf,
   relistedScopeOf,
 } from '@/lib/energy-certificate/energy-certificate';
 import { readStoredAvailability, readStoredTerrain } from './public-listing-shape-judges';
@@ -187,6 +188,26 @@ export const LISTING_MIGRATIONS_21_30: readonly ListingMigration[] = [
      * 🔑 **Ιδιοδύναμο (Κ3)**: ό,τι έγραψε ήδη ο γραφέας περνά από τον κριτή (`readStoredGrossBasisKind`) αυτούσιο.
      */
     apply: (doc) => ({ ...doc, areaKind: readStoredGrossBasisKind(doc.areaKind, doc.areaSqm) }),
+  },
+  {
+    to: 30,
+    adr: 'ADR-777 §8.102',
+    adds: ['energyCertificate.projection'],
+    /**
+     * 🔴 **ΤΟ ΚΟΥΤΙ ΤΟΥ ΠΕΑ ΑΠΕΚΤΗΣΕ ΤΗΝ ΕΚΤΙΜΗΣΗ ΤΗΣ ΜΕΑ (ακίνητο υπό κατασκευή) — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΗΝ ΕΧΟΥΝ.**
+     *
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΛΩΘΗΚΕ»** (`null`): κανείς δεν είχε πού να γράψει αναμενόμενη κλάση,
+     * ούτε καν να πει «υπό κατασκευή». Κλάση «συμπερασμένη» από οτιδήποτε άλλο θα ήταν επινόηση σε δημόσια αγγελία.
+     *
+     * 🔑 **Ό,τι έδινε ο κρίκος 24 μένει αυτούσιο** — χτίζεται πάνω του (`relistedProjectionOf`). **Ιδιοδύναμο (Κ3)**.
+     */
+    apply: (doc) => ({
+      ...doc,
+      energyCertificate: relistedProjectionOf(
+        { type: doc.type, offerKinds: Array.isArray(doc.offerKinds) ? doc.offerKinds : [] },
+        doc.energyCertificate,
+      ),
+    }),
   },
 ];
 

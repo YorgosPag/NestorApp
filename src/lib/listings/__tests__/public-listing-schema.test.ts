@@ -742,3 +742,36 @@ describe('Κ19 — κρίκος 28: η προέλευση της απόδοση�
     expect(link.apply({ adminArea: { nearBoundary: false } }).adminArea).toBeNull();
   });
 });
+
+describe('Κ21 — κρίκος 30: η εκτίμηση της ΜΕΑ για ακίνητο υπό κατασκευή (ADR-777 §8.102)', () => {
+  const link = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 30)!;
+  const stored = (over: StoredListingDocument): StoredListingDocument => ({ type: 'apartment', offerKinds: ['sell'], ...over });
+  const V24_BOX = { primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null };
+
+  it('🔴 κουτί έκδοσης 24 ⇒ `projection: null` («δεν δηλώθηκε»), ποτέ συμπερασμένη κλάση', () => {
+    expect(link.apply(stored({ energyCertificate: V24_BOX })).energyCertificate).toEqual({ ...V24_BOX, projection: null });
+  });
+
+  it('🔴 ο κρίκος 24 εξακολουθεί να δίνει ΑΚΡΙΒΩΣ το κουτί της έκδοσης 24 — είναι παγωμένος', () => {
+    const link24 = LISTING_MIGRATIONS_21_30.find((migration) => migration.to === 24)!;
+    expect(Object.keys(link24.apply(stored({})).energyCertificate as object)).not.toContain('projection');
+  });
+
+  it('ιδιοδύναμο: ό,τι έγραψε ήδη ο γραφέας μένει· η παραπομπή στο αρχείο ΔΕΝ περνά ποτέ', () => {
+    const written = { ...V24_BOX, absence: 'under-construction', projection: { class: 'A', scope: 'building' } };
+    const once = link.apply(stored({ energyCertificate: written }));
+    expect(once.energyCertificate).toEqual(written);
+    expect(link.apply(once)).toEqual(once);
+    const leaked = { ...written, projection: { class: 'A', scope: null, sourceFileId: 'file_mea' } };
+    expect((link.apply(stored({ energyCertificate: leaked })).energyCertificate as { projection: unknown }).projection)
+      .toEqual({ class: 'A', scope: null });
+  });
+
+  it('ορφανή εκτίμηση (χωρίς «υπό κατασκευή») ή άκυρη κλάση ⇒ `null` · γη ⇒ κουτί `null`', () => {
+    const orphan = { ...V24_BOX, absence: 'pending', projection: { class: 'A', scope: null } };
+    expect((link.apply(stored({ energyCertificate: orphan })).energyCertificate as { projection: unknown }).projection).toBeNull();
+    const junk = { ...V24_BOX, absence: 'under-construction', projection: { class: 'Z' } };
+    expect((link.apply(stored({ energyCertificate: junk })).energyCertificate as { projection: unknown }).projection).toBeNull();
+    expect(link.apply(stored({ type: 'land', energyCertificate: V24_BOX })).energyCertificate).toBeNull();
+  });
+});

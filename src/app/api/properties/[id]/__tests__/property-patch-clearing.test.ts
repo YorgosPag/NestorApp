@@ -26,7 +26,7 @@ import {
 const AT = '2026-11-10T12:00:00.000Z';
 const UNDECLARED = {
   class: null, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null,
-  scope: null, sourceFileId: null, absence: null,
+  scope: null, sourceFileId: null, absence: null, projection: null,
 };
 const DECLARED_B = { ...UNDECLARED, class: 'B', issuedOn: '2024-03-12' };
 
@@ -40,7 +40,7 @@ describe('Κ1 — το κλειστό σύνολο: ΑΚΡΙΒΩΣ αυτά τα
   it('🔴 το σύνολο είναι αυτό — επέκταση ή συρρίκνωση είναι απόφαση ADR, όχι σιωπηλή αλλαγή', () => {
     expect([...PROPERTY_CLEARABLE_FIELDS].sort()).toEqual([
       'areas', 'commonCharges', 'condition', 'description', 'energy',
-      'finishes', 'interiorFeatures', 'securityFeatures', 'systemsOverride',
+      'finishes', 'interiorFeatures', 'orientationProposal', 'securityFeatures', 'systemsOverride',
     ]);
   });
 

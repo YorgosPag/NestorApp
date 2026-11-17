@@ -31,12 +31,14 @@ import {
 import { EnergyCertificateFields } from '@/components/shared/energy-certificate/EnergyCertificateFields';
 import { EnergyCertificateImport } from '@/components/shared/energy-certificate/EnergyCertificateImport';
 import { useCompanyPropertyImportPort } from '@/hooks/energy-certificate/useEnergyCertificateImportPorts';
+import { useEnergyConstructionContext } from '@/hooks/energy-certificate/useProjectEnergyStudies';
 import type { EnergyCertificatePatch } from '@/lib/energy-certificate/energy-certificate';
 import { energyOfForm, patchedEnergyFormSlice } from '@/lib/energy-certificate/energy-certificate-form';
 import { isFinalContractSigned } from '@/lib/conveyance/case-state';
 import { OrientationPlausibilityWarning } from '@/components/properties/shared/OrientationPlausibilityWarning';
 import { OrientationCompassGrid } from '@/components/properties/shared/OrientationCompassGrid';
 import { ConditionPlausibilityWarning } from '@/components/properties/shared/ConditionPlausibilityWarning';
+import { EnergyConstructionWarning } from '@/components/properties/shared/EnergyConstructionWarning';
 import { PropertyFieldsDetailCardsRow2 } from './PropertyFieldsDetailCardsRow2';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
 
@@ -61,7 +63,8 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
   // η κυριότητα πέρασε στους αγοραστές — ο ΙΔΙΟΣ κριτής με το μητρώο λήξεων (§25), όχι η εμπορική κατάσταση.
   const energyLocked = !isEditing || isFinalContractSigned(property.commercial?.legalPhase);
   const energyCertificate = energyOfForm(formData);
-  const applyEnergyPatch = (patch: EnergyCertificatePatch) =>
+  // ADR-777 §8.102 — μονάδα που χτίζεται: «υπό κατασκευή» + εκτίμηση της ΜΕΑ από τα έγγραφα του έργου.
+  const energyConstruction = useEnergyConstructionContext(property.project, formData.operationalStatus, energyCertificate);  const applyEnergyPatch = (patch: EnergyCertificatePatch) =>
     setFormData(prev => ({ ...prev, ...patchedEnergyFormSlice(prev, patch) }));
   // Η φόρμα κρατά `string[]`· η πυξίδα και η πρόταση μιλούν το λεξιλόγιο — φιλτράρισμα μέσα από τη ρίζα, όχι cast.
   const orientationSource: readonly string[] = isMultiLevel && activeLevelId
@@ -251,11 +254,13 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
               </fieldset>
               {/* ADR-777 §8.94 — το ΠΕΑ: τα ΙΔΙΑ πεδία με το «Βελτίωσε την αγγελία σου» του ιδιώτη. Η κλάση μένει στο
                   `formData.energyClass` (τη διαβάζουν πληρότητα και έλεγχοι αληθοφάνειας)· το μπλοκ συντίθεται εδώ. */}
+              <EnergyConstructionWarning notice={energyConstruction.notice} />
               <EnergyCertificateFields
                 value={energyCertificate}
                 onChange={applyEnergyPatch}
                 disabled={energyLocked}
                 idPrefix="unit"
+                construction={energyConstruction.context}
                 importSlot={
                   <EnergyCertificateImport
                     port={peaImportPort}

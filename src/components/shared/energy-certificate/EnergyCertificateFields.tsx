@@ -20,10 +20,8 @@
 import React from 'react';
 
 import { CheckLine } from '@/components/shared/form/CheckLine';
-import { ClearableSelect } from '@/components/ui/clearable-select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SelectItem } from '@/components/ui/select';
 import { ENERGY_CLASSES, isEnergyClass } from '@/constants/energy-classes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { normalizeCalendarDay, todayLocalDate } from '@/lib/date-local';
@@ -36,6 +34,7 @@ import {
   isEnergyCertificateScope,
   isPrimaryEnergy,
   type EnergyCertificate,
+  type EnergyCertificateAbsence,
   type EnergyCertificatePatch,
 } from '@/lib/energy-certificate/energy-certificate';
 import {
@@ -44,7 +43,11 @@ import {
   ENERGY_CLASS_LABEL_KEY,
 } from '@/lib/energy-certificate/energy-certificate-keys';
 
+import { BlockSelect } from './BlockSelect';
 import { CertificateFigureField, figureReaderOf } from './CertificateFigureField';
+import type { EnergyConstructionContext } from '@/lib/energy-certificate/energy-construction-notice';
+
+import { EnergyProjectionFields } from './EnergyProjectionFields';
 import { FinalEnergyFields } from './FinalEnergyFields';
 
 /** Τα κείμενα της ερώτησης ζουν δίπλα στο λεξιλόγιό της (`properties-enums`) — δες `energy-certificate-keys.ts`. */
@@ -61,38 +64,15 @@ export interface EnergyCertificateFieldsProps {
    * ποιο έγγραφο είναι· γι' αυτό υποδοχή και όχι εσωτερικό κουμπί.
    */
   readonly importSlot?: React.ReactNode;
+  /**
+   * Ακίνητο που **χτίζεται** (ADR-777 §8.102) — το δίνει μόνο η φόρμα του γραφείου. Χωρίς αυτό το «υπό κατασκευή» και
+   * η εκτίμηση της ΜΕΑ **δεν** προσφέρονται: ο ιδιώτης δεν πουλά επί σχεδίω, ούτε έχει έργο με μελέτες.
+   */
+  readonly construction?: EnergyConstructionContext;
 }
 
 const readPrimaryEnergy = figureReaderOf(isPrimaryEnergy);
 const readCo2Emissions = figureReaderOf(isCo2Emissions);
-
-/** Μία επιλογή από κλειστό σύνολο, με «καμία» — το κοινό σώμα της κλάσης και της εμβέλειας. */
-interface BlockSelectProps<T extends string> {
-  readonly selectId: string;
-  readonly label: string;
-  readonly placeholder: string;
-  readonly hint?: string;
-  readonly value: T | null;
-  readonly options: readonly T[];
-  readonly optionLabel: (option: T) => string;
-  readonly onPick: (next: string) => void;
-  readonly disabled: boolean;
-}
-
-function BlockSelect<T extends string>(props: BlockSelectProps<T>) {
-  const { selectId, label, placeholder, hint, value, options, optionLabel, onPick, disabled } = props;
-  return (
-    <div className="flex flex-col gap-1">
-      <Label htmlFor={selectId} className="text-xs text-muted-foreground">{label}</Label>
-      <ClearableSelect id={selectId} value={value ?? ''} disabled={disabled} onValueChange={onPick} placeholder={placeholder} clearLabel={placeholder}>
-        {options.map((option) => (
-          <SelectItem key={option} value={option} className="text-xs">{optionLabel(option)}</SelectItem>
-        ))}
-      </ClearableSelect>
-      {hint !== undefined && <p className="m-0 text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
 
 function ClassField({ value, onChange, disabled, idPrefix }: EnergyCertificateFieldsProps) {
   const { t } = useTranslation([NS]);
@@ -184,14 +164,24 @@ function ProvenanceNote({ value }: Pick<EnergyCertificateFieldsProps, 'value'>) 
   return <p className="m-0 text-xs text-muted-foreground">{t('properties-enums:energyCertificate.form.provenance')}</p>;
 }
 
+/**
+ * Οι απαντήσεις που προσφέρονται: το «υπό κατασκευή» μόνο στη φόρμα που ξέρει από κατασκευή (§8.102) — ή όταν είναι
+ * ήδη η αποθηκευμένη απάντηση, ώστε να μη φαίνεται ποτέ «καμία επιλογή» για κάτι που δηλώθηκε.
+ */
+function offeredAbsences({ value, construction }: EnergyCertificateFieldsProps): readonly EnergyCertificateAbsence[] {
+  if (construction !== undefined || value.absence === 'under-construction') return ENERGY_CERTIFICATE_ABSENCES;
+  return ENERGY_CERTIFICATE_ABSENCES.filter((absence) => absence !== 'under-construction');
+}
+
 /** «Γιατί δεν έχω κλάση να δηλώσω» — μία απάντηση ή καμία· ζητείται μόνο όταν δεν υπάρχει κλάση. */
-function AbsenceField({ value, onChange, disabled }: EnergyCertificateFieldsProps) {
+function AbsenceField(props: EnergyCertificateFieldsProps) {
+  const { value, onChange, disabled } = props;
   const { t } = useTranslation([NS]);
 
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
       <legend className="p-0 text-xs text-muted-foreground">{t('properties-enums:energyCertificate.form.absenceLegend')}</legend>
-      {ENERGY_CERTIFICATE_ABSENCES.map((absence) => (
+      {offeredAbsences(props).map((absence) => (
         <CheckLine
           key={absence}
           label={t(ENERGY_CERTIFICATE_ABSENCE_KEY[absence])}
@@ -210,7 +200,18 @@ export function EnergyCertificateFields(props: EnergyCertificateFieldsProps) {
       {props.importSlot}
       <ClassField {...props} />
       {props.value.class === null ? (
-        <AbsenceField {...props} />
+        <>
+          <AbsenceField {...props} />
+          {props.value.absence === 'under-construction' && (
+            <EnergyProjectionFields
+              value={props.value}
+              onChange={props.onChange}
+              disabled={props.disabled}
+              idPrefix={props.idPrefix}
+              studies={props.construction?.studies ?? null}
+            />
+          )}
+        </>
       ) : (
         <>
           <ProvenanceNote value={props.value} />

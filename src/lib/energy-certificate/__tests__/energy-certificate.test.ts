@@ -50,6 +50,7 @@ const FULL: EnergyCertificate = {
   scope: null,
   sourceFileId: null,
   absence: null,
+  projection: null,
 };
 
 describe('Α1 — ανάγνωση: άκυρη τιμή ⇒ `null`, ποτέ ρίψη, ποτέ «διόρθωση»', () => {
@@ -219,8 +220,8 @@ describe('Α6 — το κουτί της δημόσιας αγγελίας', () 
   const sale = { type: 'apartment', offerKinds: ['sell'] };
 
   it('από την πηγή: αριθμοί και λόγος απουσίας· ΟΧΙ κλάση, ΟΧΙ ημερομηνία', () => {
-    expect(listedEnergyCertificateOf(sale, FULL)).toEqual({ primaryEnergy: 132.4, co2Emissions: 38.1, usefulArea: null, finalEnergy: null, scope: null, absence: null });
-    expect(listedEnergyCertificateOf(sale, undefined)).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null });
+    expect(listedEnergyCertificateOf(sale, FULL)).toEqual({ primaryEnergy: 132.4, co2Emissions: 38.1, usefulArea: null, finalEnergy: null, scope: null, absence: null, projection: null });
+    expect(listedEnergyCertificateOf(sale, undefined)).toEqual({ primaryEnergy: null, co2Emissions: null, usefulArea: null, finalEnergy: null, scope: null, absence: null, projection: null });
   });
 
   it('🔒 η εμβέλεια ταξιδεύει δημόσια· η προέλευση (`sourceFileId`) ΠΟΤΕ', () => {
