@@ -197,7 +197,7 @@ export interface CasesViewer extends ActingViewer {
  * Όσες φαίνονται στον χώρο της σελίδας — καθεμία στο **σπίτι** της (`placement`, §15.15: το γραφείο όπου ανήκει
  * ακόμη, αλλιώς ο προσωπικός του). `unknown` ⇒ τουλάχιστον μία δεν μπόρεσε να κριθεί.
  */
-export async function shownIn<E extends Engagement>(engagements: readonly E[], viewed: WorkspaceRef, acting: ActingViews): Promise<readonly E[] | 'unknown'> {
+async function shownIn<E extends Engagement>(engagements: readonly E[], viewed: WorkspaceRef, acting: ActingViews): Promise<readonly E[] | 'unknown'> {
   const placed = await Promise.all(engagements.map(async (engagement) => ({ engagement, placement: await acting.placement(engagement) })));
   const shown: E[] = [];
   for (const { engagement, placement } of placed) {
@@ -210,8 +210,9 @@ export async function shownIn<E extends Engagement>(engagements: readonly E[], v
 
 /**
  * **Μία κάρτα ανά υπόθεση**: από το ιστορικό ενός είδους, η τρέχουσα συμμετοχή κάθε υπόθεσης (`selectCurrentEngagement`),
- * όσες φαίνονται στον χώρο της σελίδας (`shownIn`), ως κάρτες του είδους. Κοινό για κάθε οικοδεσπότη εκτός της
- * μεταβίβασης, που κρατά τη δική της ροή (ADR-916 Φ-Ε1: ο τρίτος οικοδεσπότης δεν αντιγράφει τον δεύτερο).
+ * όσες φαίνονται στον χώρο της σελίδας (`shownIn`), ως κάρτες του είδους. Η **μία** ροή για **κάθε** οικοδεσπότη
+ * (μεταβίβαση · ανάθεση έκδοσης · φάκελος ιδιώτη — ADR-916 Φ-Ε1)· η ταξινόμηση μένει στον καλούντα.
+ * Το φίλτρο χώρου τρέχει **πριν** από την κάρτα: υπόθεση άλλου χώρου δεν διαβάζεται καν.
  * `unknown` ⇒ τουλάχιστον μία δεν κρίθηκε (ποτέ μισή λίστα).
  */
 export async function shownCardsPerSubject<E extends Engagement, C>(
@@ -265,16 +266,10 @@ export async function listCaseCards(
   nowMs: number,
 ): Promise<readonly MyCaseCard[] | 'unknown'> {
   const { uid } = viewer;
-  const acting = actingViews(viewer);
-  const byCase = new Map<string, ConveyanceEngagement[]>();
-  for (const e of conveyanceHistory) byCase.set(e.subject.caseId, [...(byCase.get(e.subject.caseId) ?? []), e]);
-  const candidates = [...byCase.values()]
-    .map((history) => selectCurrentEngagement(history).engagement)
-    .filter((e): e is ConveyanceEngagement => e !== null);
-  const current = await shownIn(candidates, viewer.viewed, acting);
+  const cards = await shownCardsPerSubject(viewer, conveyanceHistory, (e, acting) =>
+    cardOf(db, e, judge(e, uid, nowMs).verdict, conveyanceHistory, acting));
   // §15.15 — «δεν μπόρεσα να ρωτήσω αν ανήκει ακόμη» ⇒ «δεν φορτώθηκε», ποτέ λίστα που κρύβει σιωπηλά υπόθεση.
-  if (current === 'unknown') return 'unknown';
-  const cards = await Promise.all(current.map((e) => cardOf(db, e, judge(e, uid, nowMs).verdict, conveyanceHistory, acting)));
+  if (cards === 'unknown') return 'unknown';
   return [...cards].sort((a, b) => b.offeredAt.localeCompare(a.offeredAt));
 }
 
