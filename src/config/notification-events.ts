@@ -912,6 +912,8 @@ export const NOTIFICATION_ENTITY_TYPES = {
   NETWORK_ACT_TEAM: 'network_act_team',
   /** ADR-862 Φ1 · ADR-901 Φ2 — η συμμετοχή σε υπόθεση (`companies/{host}/projects/{p}/engagements/{id}`). */
   ENGAGEMENT: 'engagement',
+  /** ADR-916 Φ-Ε1 — ο φάκελος ακινήτου ιδιώτη (`property_dossiers/{id}`): ο κάτοχος μαθαίνει ποιος μπήκε. */
+  PROPERTY_DOSSIER: 'property_dossier',
   /** ADR-923 §5.12 — η σχέση προμήθειας (`supply_relationships/{id}`). */
   SUPPLY_RELATIONSHIP: 'supply_relationship',
   /** ADR-923 §16 — η κατοχή μάρκας (`supplier_brand_claims/{id}`). */

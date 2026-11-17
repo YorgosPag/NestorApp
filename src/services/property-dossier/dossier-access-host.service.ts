@@ -14,8 +14,8 @@ import 'server-only';
  * 🔴 **Ίχνος στο ΠΡΟΣΩΠΙΚΟ βιβλίο του κατόχου** (ADR-195): η πρόσκληση στον φάκελο (Ιστορικό), οι πράξεις στη συμμετοχή.
  *
  * ⚠️ **Δηλωμένα όρια (όχι παραλείψεις)**:
- * - Ειδοποίηση του επαγγελματία για ανάκληση/ανανέωση/εύρος = Σ4 (ειδοποιήσεις). Η αλλαγή ισχύει **ήδη** στο επόμενο
- *   άνοιγμα, γιατί ο κριτής κρίνει σε κάθε ανάγνωση.
+ * - Η αλλαγή ισχύει στο **επόμενο** άνοιγμα (ο κριτής κρίνει σε κάθε ανάγνωση)· ο επαγγελματίας τη μαθαίνει με
+ *   ειδοποίηση (`dossier-engagement-notifier.ts`, Σ4) — ό,τι κατέβηκε ήδη **δεν** ανακαλείται.
  * - Η κρίση κατοχής πριν από τη μετάβαση **δεν** επαναλαμβάνεται μέσα στη συναλλαγή του γραφέα: η συμμετοχή ζει **κάτω**
  *   από τον φάκελο (η διαδρομή τη δένει), και η αλλαγή κατόχου κόβει ήδη κάθε πρόσβαση (ADR-866 Φ4).
  */
@@ -39,7 +39,7 @@ import { notifyEngagementInvitation } from '@/server/engagement-invitations/enga
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
 import { recordEngagementAudit } from '@/services/conveyance/conveyance-engagement-support';
 import { EntityAuditService } from '@/services/entity-audit.service';
-import type { DossierAccessSlot, DossierEngagementSummary } from '@/types/dossier-access';
+import type { DossierAccessResponse, DossierAccessSlot, DossierEngagementSummary } from '@/types/dossier-access';
 import {
   DOSSIER_ENGAGEMENT_ROLES,
   LIVE_ENGAGEMENT_STATES,
@@ -49,7 +49,9 @@ import {
   type Engagement,
 } from '@/types/engagement';
 import type { PropertyDossier } from '@/types/property-dossier';
-import { NO_LIVE_VIEW, judgeDossierEngagement } from './dossier-engagement-host-adapter';
+import { NO_LIVE_VIEW, dossierFilesWithin, judgeDossierEngagement } from './dossier-engagement-host-adapter';
+import { announceDossierAccessChanged, type DossierOwnerChange } from './dossier-engagement-notifier';
+import { FULL_DOSSIER_REACH } from './dossier-share-reach';
 
 /** Όσες συμμετοχές ενός φακέλου διαβάζει η όψη του κατόχου — φραγμένο ρητά (2 ρόλοι × ιστορικό). */
 const DOSSIER_ENGAGEMENT_SCAN_LIMIT = 100;
@@ -120,6 +122,19 @@ export async function listDossierAccessSlots(db: Firestore, dossier: PropertyDos
       invitation: invitations.get(role) ?? null,
     };
   });
+}
+
+/**
+ * **Η όψη του κατόχου στο άνοιγμα της κάρτας**: οι θέσεις **και** τα αρχεία του φακέλου, ταξινομημένα ανά καρτέλα από
+ * τον ΕΝΑ κριτή της πόρτας — ώστε ο διάλογος να προβλέπει «θα δει N αρχεία» και να διαλέγει εξαιρέσεις **χωρίς**
+ * δεύτερο κανόνα στον client (Datasite/Intralinks «view as»). Μόνο στην ανάγνωση: οι πράξεις δεν αλλάζουν αρχεία.
+ */
+export async function readDossierAccessView(db: Firestore, dossier: PropertyDossier, nowMs: number): Promise<DossierAccessResponse> {
+  const [slots, files] = await Promise.all([
+    listDossierAccessSlots(db, dossier, nowMs),
+    dossierFilesWithin(db, dossier, FULL_DOSSIER_REACH),
+  ]);
+  return { slots, files };
 }
 
 // =============================================================================
@@ -225,6 +240,13 @@ function transitionOf(change: DossierEngagementChangeRequest, byUid: string): En
   }
 }
 
+/** Η πράξη του αιτήματος → η αλλαγή που λέει η ειδοποίηση του επαγγελματία. */
+const OWNER_CHANGE_OF: Readonly<Record<DossierEngagementChangeRequest['action'], DossierOwnerChange>> = {
+  revoke: 'ended',
+  renew: 'renewed',
+  reach: 'reach',
+};
+
 /** Οι αλλαγές μιας πράξης κατόχου ως πεδία ίχνους — μόνο ό,τι άλλαξε πραγματικά. */
 function changedFields(before: DossierEngagement, after: DossierEngagement) {
   const fields = [
@@ -257,6 +279,7 @@ export async function changeDossierEngagement(
       changes: changedFields(outcome.before, outcome.after),
       performedBy: actor.uid, performedByName: actor.email, entityName: dossier.label,
     });
+    await announceDossierAccessChanged(outcome.after, OWNER_CHANGE_OF[input.change.action], dossier.label);
   }
   return { ok: true, slots: await listDossierAccessSlots(db, dossier, input.nowMs) };
 }

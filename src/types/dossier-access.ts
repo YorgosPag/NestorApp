@@ -19,6 +19,7 @@ import type {
   EngagementVerdict,
 } from '@/types/engagement';
 import type { CaseInvitationSummary } from '@/types/engagement-invitation';
+import type { EngagedDossierFile } from '@/types/my-engagements';
 
 /** Μία συμμετοχή στον φάκελο, όπως τη βλέπει ο **κάτοχος**. ⛔ Κανένα `uid` — ο κάτοχος βλέπει email, όχι ταυτότητα. */
 export interface DossierEngagementSummary {
@@ -48,6 +49,11 @@ export interface DossierAccessSlot {
 /** Η απάντηση κάθε πόρτας πρόσβασης — πάντα **όλες** οι θέσεις, ώστε η όψη να ξαναζωγραφίζει από μία αλήθεια. */
 export interface DossierAccessResponse {
   readonly slots: readonly DossierAccessSlot[];
+  /**
+   * Μόνο στην **ανάγνωση** (`GET`): τα αρχεία του φακέλου με την καρτέλα τους, από τον ΕΝΑ κριτή της πόρτας — για την
+   * προεπισκόπηση «θα δει N αρχεία» και τις εξαιρέσεις. Το σχήμα της όψης του επαγγελματία (`EngagedDossierFile`).
+   */
+  readonly files?: readonly EngagedDossierFile[];
   /** Μόνο στην έκδοση πρόσκλησης: η έκβαση της **αποστολής** του email, ονομασμένη (ποτέ σιωπή). */
   readonly invited?: InvitationNoticeOutcome;
 }

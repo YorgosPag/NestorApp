@@ -13,8 +13,8 @@ import 'server-only';
  * 🔒 Καμία πληροφορία επικοινωνίας του κατόχου (Ε-9′). Το όνομα του κατόχου **δεν** δίνεται: η όψη λέει τον φάκελο.
  *
  * ⚠️ **Δηλωμένα όρια (όχι παραλείψεις)**:
- * - Ο κάτοχος δεν έχει ακόμη ζωντανή όψη πρόσβασης (Σ4) ⇒ το σήμα του γραφέα είναι **ρητά** άδειο, όπως στην ανάθεση.
- * - Ειδοποίηση του κατόχου (απάντηση · αναπάντητη) = με την όψη πρόσβασης (Σ4). Το ίχνος γράφεται **από τώρα**.
+ * - Η κάρτα «Πρόσβαση» του κατόχου (Σ4) διαβάζει στο άνοιγμα και μετά από κάθε πράξη του — **όχι** ζωντανά: το σήμα του
+ *   γραφέα μένει **ρητά** άδειο, όπως στην ανάθεση. Το έγκαιρο «μπήκε» το φέρνει η **ειδοποίηση** της απάντησης.
  * - Εκκρεμότητα (`openItem`): ο φάκελος δεν έχει προθεσμία εργασίας — η λήξη φαίνεται στην κάρτα.
  * - Γραμμή επαφής γραφείου (`hostLine`): ο ιδιώτης δεν έχει βιβλίο επαφών· ο φάκελος δεν εμφανίζεται ποτέ εκεί.
  */
@@ -43,6 +43,7 @@ import {
   SCOPE_OF_SUBJECT,
   isDossierEngagement,
   type DossierEngagement,
+  type DossierShareReach,
 } from '@/types/engagement';
 import type {
   DossierEngagementInvitation,
@@ -52,10 +53,11 @@ import type {
 import type { EngagedDossierFile, MyDossierCard } from '@/types/my-engagements';
 import type { PropertyDossier } from '@/types/property-dossier';
 import { readDossierReadyFiles, readPropertyDossier } from './dossier-media.reader';
+import { announceDossierInvitationAnswered, announceDossierInvitationUnanswered } from './dossier-engagement-notifier';
 import { dossierFileReach } from './dossier-share-reach';
 
 /**
- * Ο κάτοχος δεν έχει ακόμη ζωντανή όψη πρόσβασης (Σ4) ⇒ ρητά κανένα έγγραφο-σήμα. Το ΕΝΑ σήμα του φακέλου: το
+ * Η όψη του κατόχου δεν είναι ζωντανή (βλ. δηλωμένα όρια) ⇒ ρητά κανένα έγγραφο-σήμα. Το ΕΝΑ σήμα του φακέλου: το
  * μοιράζονται η αποδοχή (εδώ) και οι πράξεις του κατόχου (`dossier-access-host.service.ts`).
  */
 export const NO_LIVE_VIEW: EngagementRosterSignal = () => undefined;
@@ -113,16 +115,27 @@ export async function describeDossierInvitation(db: Firestore, invitation: Dossi
   };
 }
 
-/** Ίχνος της αποδοχής στο **προσωπικό** βιβλίο του κατόχου (ποτέ σε βιβλίο γραφείου). */
+/**
+ * Μετά την απάντηση: ίχνος της αποδοχής στο **προσωπικό** βιβλίο του κατόχου (await — ποτέ σε βιβλίο γραφείου), και
+ * ειδοποίηση του κατόχου για αποδοχή **ή** άρνηση (ποτέ δεν πετά).
+ */
 async function afterAnswer(db: Firestore, invitation: DossierEngagementInvitation, answer: InvitationAnswer, answerer: InvitationAnswerer): Promise<void> {
-  if (answer.kind !== 'accepted') return;
-  const engagement = answer.engagement;
-  if (!isDossierEngagement(engagement)) throw new Error(`Engagement ${engagement.id} is not a property-dossier engagement`);
   const dossier = await readPropertyDossier(db, invitation.subject.dossierId).catch(() => null);
-  await recordEngagementAudit({
-    engagement, ownerUid: invitation.invitedByUid, action: 'created', changes: answerChanges(null, engagement),
-    performedBy: answerer.uid, performedByName: answerer.email, entityName: dossier?.label ?? null,
-  });
+  if (answer.kind === 'accepted') {
+    const engagement = answer.engagement;
+    if (!isDossierEngagement(engagement)) throw new Error(`Engagement ${engagement.id} is not a property-dossier engagement`);
+    await recordEngagementAudit({
+      engagement, ownerUid: invitation.invitedByUid, action: 'created', changes: answerChanges(null, engagement),
+      performedBy: answerer.uid, performedByName: answerer.email, entityName: dossier?.label ?? null,
+    });
+  }
+  await announceDossierInvitationAnswered(invitation, answer.kind, dossier?.label ?? null);
+}
+
+/** Ε-5 — η πρόσκληση έμεινε αναπάντητη 3 ημέρες: ο κάτοχος το μαθαίνει (μία φορά, από την υπενθύμιση της μηχανής). */
+async function announceUnanswered(db: Firestore, invitation: DossierEngagementInvitation): Promise<void> {
+  const dossier = await readPropertyDossier(db, invitation.subject.dossierId).catch(() => null);
+  await announceDossierInvitationUnanswered(invitation, dossier?.label ?? null);
 }
 
 // =============================================================================
@@ -153,11 +166,14 @@ function listCards(db: Firestore, viewer: CasesViewer, history: readonly Dossier
   return shownCardsPerSubject(viewer, history, (e, acting) => cardOf(db, e, viewer.uid, nowMs, acting));
 }
 
-/** Τα αρχεία του φακέλου που **φτάνουν** σε αυτή τη συμμετοχή — η ίδια κρίση με την πόρτα ανοίγματος. */
-async function reachedFilesOf(db: Firestore, dossier: PropertyDossier, engagement: DossierEngagement): Promise<EngagedDossierFile[]> {
+/**
+ * Τα αρχεία του φακέλου που **φτάνουν** σε ένα εύρος — η ίδια κρίση με την πόρτα ανοίγματος. Τη ρωτούν η όψη του
+ * επαγγελματία (το εύρος της συμμετοχής του) **και** η κάρτα του κατόχου (`FULL_DOSSIER_REACH`: όλα, ταξινομημένα).
+ */
+export async function dossierFilesWithin(db: Firestore, dossier: PropertyDossier, reach: DossierShareReach): Promise<EngagedDossierFile[]> {
   const files = await readDossierReadyFiles(db, dossier);
   return files.flatMap((file) => {
-    const tab = dossierFileReach(dossier, file, engagement.reach);
+    const tab = dossierFileReach(dossier, file, reach);
     if (tab === null) return [];
     return [{
       fileId: file.id,
@@ -186,7 +202,7 @@ async function view(db: Firestore, viewer: CasesViewer, engagement: DossierEngag
       expiresAt: engagement.expiresAt,
       tabs: engagement.reach.tabs,
       floorplanKind: floorplanTabKind(dossier.type),
-      files: await reachedFilesOf(db, dossier, engagement),
+      files: await dossierFilesWithin(db, dossier, engagement.reach),
       credential: engagement.declaredCredential ?? null,
       freshness: { revision: NO_SIGNAL_REVISION, freshUntil: nextConveyanceDayStart(new Date(nowMs)).toISOString() },
     },
@@ -200,7 +216,7 @@ export const DOSSIER_ENGAGEMENT_HOST: EngagementHostAdapter<DossierEngagementInv
   credentialAuthority: (invitation) => DOSSIER_ROLE_REGISTRY_AUTHORITY[invitation.role],
   describe: describeDossierInvitation,
   afterAnswer,
-  announceUnanswered: async () => undefined,
+  announceUnanswered,
   listCards,
   view,
   openItem: async () => null,

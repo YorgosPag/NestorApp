@@ -855,7 +855,13 @@
     "offeredBody": "Open the case and press “I take it on” to get access to the documents. The offer expires in 14 days.",
     "revokedTitle": "Your access to the case “{title}” was revoked",
     "withdrawnTitle": "The offer for the case “{title}” was withdrawn",
-    "completedTitle": "The case “{title}” is complete — your access has closed"
+    "completedTitle": "The case “{title}” is complete — your access has closed",
+    "dossier": {
+      "revokedTitle": "The owner revoked your access to the property file “{title}”",
+      "withdrawnTitle": "The owner withdrew the invitation to the property file “{title}”",
+      "renewedTitle": "The owner renewed your access to the property file “{title}” for {days} days",
+      "reachTitle": "The owner changed what you can see in the property file “{title}”"
+    }
   },
   "caseEngagementAnswered": {
     "acceptedTitle": {
@@ -865,7 +871,16 @@
     },
     "declinedTitle": "{who} declined the case “{title}”",
     "invitationPendingTitle": "{who} has not yet answered the invitation for the case “{title}”",
-    "invitationPendingBody": "Three days have passed without an answer. You can resend the invitation with one click or appoint another professional."
+    "invitationPendingBody": "Three days have passed without an answer. You can resend the invitation with one click or appoint another professional.",
+    "dossier": {
+      "acceptedTitle": {
+        "owner_lawyer": "{who} accepted access to the property file “{title}” as your lawyer",
+        "notary": "{who} accepted access to the property file “{title}” as the notary"
+      },
+      "declinedTitle": "{who} declined the invitation to the property file “{title}”",
+      "invitationPendingTitle": "{who} has not yet answered the invitation to the property file “{title}”",
+      "invitationPendingBody": "Three days have passed without an answer. From the property file page you can resend the invitation or cancel it."
+    }
   },
   "workspaceMembershipEnded": {
     "removedTitle": "The workspace “{office}” removed you from its members",

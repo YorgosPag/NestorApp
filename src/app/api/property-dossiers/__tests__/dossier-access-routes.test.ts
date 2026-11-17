@@ -13,6 +13,8 @@
  *   αρχειοθετημένος ⇒ 409 · ζωντανή θέση (και ληγμένη-ενεργή) ⇒ 409 `SLOT_OCCUPIED`.
  * - **Α** ακύρωση πρόσκλησης: ιδεμποτής · πρόσκληση άλλου φακέλου ⇒ 404.
  * - **Σ** πράξη σε συμμετοχή: revoke · renew · reach μέσω του ΕΝΟΣ γραφέα · ανανέωση ανακλημένης ⇒ 409 · ξένος ⇒ 404.
+ * - **Σ4 (όψη)** Θ3: η ανάγνωση φέρνει τα αρχεία με την καρτέλα του ΕΝΟΣ κριτή · Ε1: κάθε πράξη ειδοποιεί τον
+ *   επαγγελματία (και το «noop» δεν ειδοποιεί).
  *
  * | Μετάλλαξη | Κοκκινίζει |
  * |---|---|
@@ -20,6 +22,8 @@
  * | χωρίς προέλεγχο ζωντανής θέσης | Π5 |
  * | `.strict()` / `grantingReachSchema` αφαιρείται | Π3 |
  * | `revokeDossierInvitation` χωρίς έλεγχο φακέλου | Α2 |
+| `readDossierAccessView` χωρίς `files` | Θ3 |
+| `changeDossierEngagement` χωρίς `announceDossierAccessChanged` | Ε1 |
  */
 
 jest.mock('server-only', () => ({}));
@@ -63,6 +67,11 @@ jest.mock('@/lib/auth/personal-scope-middleware', () => ({
 }));
 
 jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') } }));
+
+const mockDispatch = jest.fn(async (_request: { recipientId: string; titleKey: string }) => ({ ok: true }));
+jest.mock('@/server/notifications/notification-orchestrator', () => ({
+  dispatchNotification: (request: { recipientId: string; titleKey: string }) => mockDispatch(request),
+}));
 
 const sentTokens: string[] = [];
 jest.mock('@/server/engagement-invitations/engagement-invitation-notice', () => ({
@@ -144,6 +153,19 @@ describe('ADR-916 Φ-Ε1 Σ2 — οι θέσεις του φακέλου', () =>
     expect(notary?.state).toBe('active');
     expect(notary?.verdict).not.toBe('engaged');
     expect(notary).not.toHaveProperty('uid');
+  });
+
+  it('Θ3 — η ανάγνωση φέρνει τα αρχεία του φακέλου με την καρτέλα τους (ο κριτής της πόρτας)· ξένο αρχείο λείπει', async () => {
+    const dossierId = seedDossier(OWNER);
+    const deed = {
+      userId: OWNER, entityType: 'property_dossier', entityId: dossierId, status: 'ready', isDeleted: false,
+      domain: 'admin', category: 'documents', purpose: 'study-title-deed', contentType: 'application/pdf', displayName: 'Τίτλος.pdf',
+      createdAt: '2026-10-01T00:00:00.000Z',
+    };
+    fake.seed(COLLECTIONS.FILES_PERSONAL, 'file_deed', deed);
+    fake.seed(COLLECTIONS.FILES_PERSONAL, 'file_foreign', { ...deed, userId: STRANGER });
+    const files = (await (await call(slotsRoute, { dossierId })).json()).files as readonly { fileId: string; tab: string }[];
+    expect(files.map((file) => [file.fileId, file.tab])).toEqual([['file_deed', 'documents']]);
   });
 });
 
@@ -251,6 +273,21 @@ describe('ADR-916 Φ-Ε1 Σ2 — πράξεις σε συμμετοχή (ο ΕΝ
     const engagement = await seedEngagement(other, 'notary');
     expect((await call(changeRoute, { dossierId: mine, engagementId: engagement.id }, { action: 'revoke' })).status).toBe(404);
     expect((await storedEngagement(other, engagement.id)).state).toBe('active');
+  });
+
+  it('Ε1 — revoke · renew · reach ⇒ ο επαγγελματίας ειδοποιείται με το κλειδί της πράξης· noop ⇒ καμία ειδοποίηση', async () => {
+    const dossierId = seedDossier(OWNER);
+    const engagement = await seedEngagement(dossierId, 'notary');
+    mockDispatch.mockClear();
+    await call(changeRoute, { dossierId, engagementId: engagement.id }, { action: 'renew', shareDays: 90 });
+    await call(changeRoute, { dossierId, engagementId: engagement.id }, { action: 'reach', reach: { tabs: ['documents'], excludedFileIds: [] } });
+    await call(changeRoute, { dossierId, engagementId: engagement.id }, { action: 'reach', reach: { tabs: ['documents'], excludedFileIds: [] } });
+    await call(changeRoute, { dossierId, engagementId: engagement.id }, { action: 'revoke' });
+    expect(mockDispatch.mock.calls.map(([request]) => [request.recipientId, request.titleKey])).toEqual([
+      ['u_pro', 'caseEngagementChanged.dossier.renewedTitle'],
+      ['u_pro', 'caseEngagementChanged.dossier.reachTitle'],
+      ['u_pro', 'caseEngagementChanged.dossier.revokedTitle'],
+    ]);
   });
 
   it('Σ5 — ξένος φάκελος ⇒ 404 · άγνωστη πράξη ή ξένο πεδίο ⇒ 400', async () => {
