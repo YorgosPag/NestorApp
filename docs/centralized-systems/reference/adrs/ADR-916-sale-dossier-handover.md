@@ -1524,7 +1524,8 @@ us-central1 · `onStorageFinalizeFilesEu`: 2nd gen europe-west3) · ενημέρ
 | Ε1-Α | πόρτα ανοίγματος: χωρίς ίχνος ⇒ χωρίς σύνδεσμο · ανακλημένη/ληγμένη ⇒ άρνηση | `services/property-dossier/__tests__/dossier-file-access.test.ts` |
 | Ε1-@ | email πρόσκλησης (κάτοψη **και** τοπογραφικό) | `services/email-templates/__tests__/dossier-invitation-email.test.ts` |
 | Ε1-Λ | μία λέξη ανά καρτέλα (κάτοχος · επαγγελματίας · email) | `components/conveyance/my-cases/__tests__/dossier-tab-vocabulary-parity.test.ts` |
-| Ε1-Π | πόρτες κατόχου: Θ1–Θ3 (θέσεις · αρχεία ανάγνωσης) · Π1–Π5 · Α1–Α2 · Σ1–Σ5 · **Ε1** (κάθε πράξη ειδοποιεί, το noop όχι) — Θ3 και Ε1 γράφτηκαν στη Σ4 και **δεν έχουν τρέξει** (tests μόνο με έγκριση) | `app/api/property-dossiers/__tests__/dossier-access-routes.test.ts` |
+| Ε1-Π | πόρτες κατόχου: Θ1–Θ3 (θέσεις · αρχεία ανάγνωσης) · Π1–Π5 · Α1–Α2 · Σ1–Σ5 · **Ε1** (κάθε πράξη ειδοποιεί, το noop όχι) — Θ3 και Ε1 γράφτηκαν στη Σ4· **πέρασαν 2026-11-17** (μαζί με Ε1-Μ/Ε/Α/@/Λ: 6 σουίτες, 52/52) | `app/api/property-dossiers/__tests__/dossier-access-routes.test.ts` |
+| Ε1-Θ | η ΜΙΑ μηχανή θέσεων `useSlotActions` (κοινή με `useCaseProfessionals`): Θ1–Θ3 ανάγνωση · Θ4–Θ5 πράξη · Θ6–Θ7 ανά κλειδί «σε εξέλιξη» · Θ8 καμία μπαγιάτικη ανάγνωση πάνω σε πράξη | `hooks/__tests__/useSlotActions.test.tsx` |
 | Ζ9 | **η γκαλερί**: κάθε πάνελ τον λόγο του με τίτλο **και** οδηγία · κάρτα Πρωτοκόλλου + σύνδεσμος Σ6 **μόνο** στο σφραγισμένο · καμία λέξη «verified» · «κίνηση γραφείου» πρώτα · κάθε λέξη του λεξιλογίου σε el **και** en · κανένα αίτημα | `components/property-handover-office/__tests__/property-handover-office-gallery.test.tsx` |
 
 **Μεταλλάξεις (2026-10-19)**: χωρίς τομέα γραφείου · WIP επιλέξιμο · `ready` μη κολλώδες · ακύρωση κάθε κατάστασης ·
