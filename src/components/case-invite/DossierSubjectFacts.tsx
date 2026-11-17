@@ -10,6 +10,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { DOSSIER_INVITE_KEYS, DOSSIER_ROLE_KEY, DOSSIER_TAB_KEY } from '@/components/conveyance/my-cases/dossier-space-labels';
+import { dossierTabWord } from '@/lib/property-dossier/property-dossier-view';
 import type { EngagementInvitationSubjectView } from '@/types/engagement-invitation';
 import { CASE_INVITE_KEYS, CASE_INVITE_NS } from './case-invite-labels';
 
@@ -22,7 +23,7 @@ export function DossierSubjectFacts({ subject }: { readonly subject: DossierSubj
       <dt className="text-muted-foreground">{t(CASE_INVITE_KEYS.roleLabel)}</dt>
       <dd>{t(DOSSIER_ROLE_KEY[subject.role])}</dd>
       <dt className="text-muted-foreground">{t(DOSSIER_INVITE_KEYS.tabsLabel)}</dt>
-      <dd>{subject.tabs.map((tab) => t(DOSSIER_TAB_KEY[tab])).join(' · ')}</dd>
+      <dd>{subject.tabs.map((tab) => t(DOSSIER_TAB_KEY[dossierTabWord(tab, subject.floorplanKind)])).join(' · ')}</dd>
       <dt className="text-muted-foreground">{t(DOSSIER_INVITE_KEYS.durationLabel)}</dt>
       <dd>{t(DOSSIER_INVITE_KEYS.duration, { days: subject.shareDays })}</dd>
     </>

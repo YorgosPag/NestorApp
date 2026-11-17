@@ -20,6 +20,7 @@ import type { InspectionContactRole } from '@/lib/document-validity/issuance-ins
 import type { QuoteTotals } from '@/lib/document-validity/issuance-quote';
 import type { ActingForView, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
+import type { FloorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
 import type {
   DeclaredCredential,
   DossierEngagementRole,
@@ -220,7 +221,7 @@ export interface EngagedDossierView {
   readonly expiresAt: string;
   readonly tabs: readonly PropertyDossierFileTab[];
   /** Πώς λέγεται η καρτέλα κάτοψης — οικόπεδο ⇒ «Τοπογραφικό» (ο ΙΔΙΟΣ κριτής με τη σελίδα του κατόχου, `floorplanTabKind`). */
-  readonly floorplanKind: 'floorplan' | 'topographic';
+  readonly floorplanKind: FloorplanTabKind;
   readonly files: readonly EngagedDossierFile[];
   readonly credential: DeclaredCredential | null;
   /** Χωρίς γραφέα σήματος (όπως η ανάθεση έκδοσης, §39): ξαναδιαβάζεται στο άνοιγμα ή στην αλλαγή ημέρας — ρητά. */

@@ -9,7 +9,7 @@
  *    (κανένα δεύτερο, βαρύ namespace στη σελίδα για τέσσερις ετικέτες καρτέλας).
  */
 
-import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
+import type { DossierTabWord } from '@/lib/property-dossier/property-dossier-view';
 import type { DossierEngagementRole } from '@/types/engagement';
 
 export const DOSSIER_SPACE_KEYS = {
@@ -37,8 +37,11 @@ export const DOSSIER_ROLE_KEY: Readonly<Record<DossierEngagementRole, string>> =
   notary: 'conveyance:engagement.dossier.roles.notary',
 };
 
-/** Η καρτέλα — η κάτοψη λέγεται «Τοπογραφικό» σε οικόπεδο (ο κριτής `floorplanTabKind`, όπως στη σελίδα του κατόχου). */
-export const DOSSIER_TAB_KEY: Readonly<Record<PropertyDossierFileTab | 'topographic', string>> = {
+/**
+ * Η **λέξη** της καρτέλας — η κάτοψη λέγεται «Τοπογραφικό» σε οικόπεδο. Δείκτης = `dossierTabWord(tab, floorplanKind)`,
+ * ποτέ η ωμή καρτέλα (ο ΕΝΑΣ μεταφραστής για όψη επαγγελματία, `/case-invite` και email).
+ */
+export const DOSSIER_TAB_KEY: Readonly<Record<DossierTabWord, string>> = {
   floorplan: 'conveyance:engagement.dossier.tabs.floorplan',
   topographic: 'conveyance:engagement.dossier.tabs.topographic',
   documents: 'conveyance:engagement.dossier.tabs.documents',

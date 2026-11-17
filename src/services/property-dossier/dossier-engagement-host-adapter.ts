@@ -44,7 +44,11 @@ import {
   isDossierEngagement,
   type DossierEngagement,
 } from '@/types/engagement';
-import type { DossierEngagementInvitation, EngagementInvitationDescription } from '@/types/engagement-invitation';
+import type {
+  DossierEngagementInvitation,
+  EngagementInvitationDescription,
+  EngagementInvitationSubjectView,
+} from '@/types/engagement-invitation';
 import type { EngagedDossierFile, MyDossierCard } from '@/types/my-engagements';
 import type { PropertyDossier } from '@/types/property-dossier';
 import { readDossierReadyFiles, readPropertyDossier } from './dossier-media.reader';
@@ -84,13 +88,25 @@ async function stageOpen(db: Firestore, tx: Transaction, invitation: DossierEnga
   return openDossier(dossier, invitation.invitedByUid) === null ? null : NO_LIVE_VIEW;
 }
 
+/** Η περιγραφή **στενεμένη** στο είδος — το email διαβάζει `subject.floorplanKind` χωρίς διακλάδωση ή εφεδρεία. */
+type DossierInvitationDescription = EngagementInvitationDescription & {
+  readonly subject: Extract<EngagementInvitationSubjectView, { readonly kind: 'property_dossier' }>;
+};
+
 /** Η **μία** περιγραφή της πρόσκλησης φακέλου — για την όψη (`describe`) **και** το email της. */
-export async function describeDossierInvitation(db: Firestore, invitation: DossierEngagementInvitation): Promise<EngagementInvitationDescription> {
+export async function describeDossierInvitation(db: Firestore, invitation: DossierEngagementInvitation): Promise<DossierInvitationDescription> {
   const dossier = openDossier(await readPropertyDossier(db, invitation.subject.dossierId).catch(() => null), invitation.invitedByUid);
   return {
     propertyLabel: dossier?.label ?? null,
     hostName: null,
-    subject: { kind: 'property_dossier', role: invitation.role, tabs: invitation.reach.tabs, shareDays: invitation.shareDays },
+    subject: {
+      kind: 'property_dossier',
+      role: invitation.role,
+      tabs: invitation.reach.tabs,
+      // Ο ΙΔΙΟΣ κριτής με τη σελίδα του κατόχου· φάκελος που δεν διαβάστηκε ⇒ «κάτοψη» (η προεπιλογή του κριτή).
+      floorplanKind: floorplanTabKind(dossier?.type ?? null),
+      shareDays: invitation.shareDays,
+    },
   };
 }
 

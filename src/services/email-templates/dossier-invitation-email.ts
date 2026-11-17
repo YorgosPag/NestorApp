@@ -22,6 +22,7 @@ import { HUMAN_LANGUAGES, resolveHumanLanguage, type HumanLanguage } from '@/i18
 import { caseInvitationHref } from '@/lib/conveyance/conveyance-routes';
 import { publicUrl } from '@/lib/http/public-origin';
 import { formatOperatorDate } from '@/lib/operator-time-format';
+import { dossierTabWord, type DossierTabWord, type FloorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
 import type { DossierEngagementRole } from '@/types/engagement';
 
 import { escapeHtml } from './base-email-template';
@@ -40,7 +41,8 @@ interface DossierInvitationWording extends InvitationEmailCoreWording {
   /** Τα ορίσματα είναι είτε ωμό κείμενο είτε **ήδη ασφαλές HTML** — ο renderer αποφασίζει. */
   readonly intro: (role: string, dossier: string) => string;
   readonly roles: Readonly<Record<DossierEngagementRole, string>>;
-  readonly tabs: Readonly<Record<PropertyDossierFileTab, string>>;
+  /** Ανά **λέξη** καρτέλας (`dossierTabWord`): η κάτοψη σε οικόπεδο λέγεται «Τοπογραφικό», όπως στη σελίδα του κατόχου. */
+  readonly tabs: Readonly<Record<DossierTabWord, string>>;
   readonly tabsLabel: string;
   readonly durationLabel: string;
   readonly duration: (days: DossierShareDays) => string;
@@ -58,7 +60,7 @@ const TEXTS: Readonly<Record<HumanLanguage, DossierInvitationWording>> = {
     heading: 'Σας δίνουν πρόσβαση στον φάκελο ενός ακινήτου',
     intro: (role, dossier) => `Ο κάτοχος του φακέλου ${dossier} σας καλεί ως ${role}.`,
     roles: { owner_lawyer: 'δικηγόρο του ιδιοκτήτη', notary: 'συμβολαιογράφο' },
-    tabs: { floorplan: 'Κάτοψη', documents: 'Έγγραφα', photos: 'Φωτογραφίες', videos: 'Βίντεο' },
+    tabs: { floorplan: 'Κάτοψη', topographic: 'Τοπογραφικό', documents: 'Έγγραφα', photos: 'Φωτογραφίες', videos: 'Βίντεο' },
     tabsLabel: 'Τι θα δείτε',
     durationLabel: 'Διάρκεια πρόσβασης',
     duration: (days) => `${days} ημέρες από την αποδοχή — ο κάτοχος μπορεί να την ανακαλέσει οποτεδήποτε.`,
@@ -81,7 +83,7 @@ const TEXTS: Readonly<Record<HumanLanguage, DossierInvitationWording>> = {
     heading: 'You are being given access to a property file',
     intro: (role, dossier) => `The owner of the property file ${dossier} invites you as ${role}.`,
     roles: { owner_lawyer: "the owner's lawyer", notary: 'the notary' },
-    tabs: { floorplan: 'Floor plan', documents: 'Documents', photos: 'Photos', videos: 'Videos' },
+    tabs: { floorplan: 'Floor plan', topographic: 'Site survey', documents: 'Documents', photos: 'Photos', videos: 'Videos' },
     tabsLabel: 'What you will see',
     durationLabel: 'Access period',
     duration: (days) => `${days} days from acceptance — the owner can revoke it at any time.`,
@@ -108,6 +110,8 @@ export interface DossierInvitationEmailInput {
   /** `null` ⇒ ο φάκελος δεν διαβάστηκε — λέξη αντί για όνομα, ποτέ κενό. */
   readonly dossierLabel: string | null;
   readonly tabs: readonly PropertyDossierFileTab[];
+  /** Η απάντηση του κριτή `floorplanTabKind` για **αυτόν** τον φάκελο — η πρόσκληση δεν μαντεύει το είδος. */
+  readonly floorplanKind: FloorplanTabKind;
   readonly shareDays: DossierShareDays;
   /** Η λήξη του **συνδέσμου**. */
   readonly expiresAt: string;
@@ -117,7 +121,7 @@ export interface DossierInvitationEmailInput {
 
 function detailsOf(input: DossierInvitationEmailInput, w: DossierInvitationWording, language: HumanLanguage): InvitationEmailLine[] {
   return [
-    invitationDetailLine(w.tabsLabel, input.tabs.map((tab) => w.tabs[tab]).join(' · ')),
+    invitationDetailLine(w.tabsLabel, input.tabs.map((tab) => w.tabs[dossierTabWord(tab, input.floorplanKind)]).join(' · ')),
     invitationDetailLine(w.durationLabel, w.duration(input.shareDays)),
     invitationDetailLine(w.purposeLabel, w.purpose),
     invitationDetailLine(w.expiresLabel, formatOperatorDate(input.expiresAt, language)),

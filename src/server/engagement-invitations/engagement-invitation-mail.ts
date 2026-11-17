@@ -90,6 +90,7 @@ async function composeDossier(db: Firestore, invitation: DossierEngagementInvita
     role: invitation.role,
     dossierLabel: description.propertyLabel,
     tabs: invitation.reach.tabs,
+    floorplanKind: description.subject.floorplanKind,
     shareDays: invitation.shareDays,
     expiresAt: invitation.expiresAt,
     token,

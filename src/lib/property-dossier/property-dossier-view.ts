@@ -10,6 +10,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, καμία εξάρτηση από React ή Firestore.
  */
 
+import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import { PROPERTY_TYPE_CLASS } from '@/constants/property-types';
 import type { PropertyDossier, PropertyDossierLifecycle } from '@/types/property-dossier';
 
@@ -45,6 +46,20 @@ export function partitionDossiers(dossiers: readonly PropertyDossier[]): Partiti
  * κατόψεις **και** τοπογραφικό και **προσφέρει** ανά κλάση (`property-dossier-media.ts`) — ο ίδιος κριτής ορίζει και
  * την κλάση της όψης (`propertyDossierViewClass`).
  */
-export function floorplanTabKind(type: PropertyDossier['type']): 'floorplan' | 'topographic' {
+export function floorplanTabKind(type: PropertyDossier['type']): FloorplanTabKind {
   return type !== null && PROPERTY_TYPE_CLASS[type] === 'land' ? 'topographic' : 'floorplan';
+}
+
+/** Η απάντηση του κριτή — ταξιδεύει ως **δεδομένο** σε όποιον δεν έχει τον φάκελο (όψη επαγγελματία · πρόσκληση · email). */
+export type FloorplanTabKind = 'floorplan' | 'topographic';
+
+/** Η **λέξη** μιας καρτέλας: οι καρτέλες του καταλόγου, με την κάτοψη να γίνεται «τοπογραφικό» σε γη. */
+export type DossierTabWord = Exclude<PropertyDossierFileTab, 'floorplan'> | FloorplanTabKind;
+
+/**
+ * **Ποια λέξη λέει αυτή η καρτέλα** — ο ΕΝΑΣ μεταφραστής καρτέλα → λέξη για όψη επαγγελματία, `/case-invite` και email
+ * (ADR-916 Φ-Ε1). Η καρτέλα μένει `floorplan` στα δεδομένα (εύρος · αρχεία)· αλλάζει **μόνο** η λέξη.
+ */
+export function dossierTabWord(tab: PropertyDossierFileTab, floorplanKind: FloorplanTabKind): DossierTabWord {
+  return tab === 'floorplan' ? floorplanKind : tab;
 }

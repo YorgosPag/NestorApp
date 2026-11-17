@@ -18,6 +18,7 @@ import type { IssuerQualification } from '@/config/document-validity/document-is
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { RegistryAuthorityId } from '@/constants/professional-registries';
 import type { DossierShareDays } from '@/config/engagement-policy';
+import type { FloorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
 import type {
   ConveyanceEngagementSubject,
   DossierEngagementRole,
@@ -173,6 +174,8 @@ export type EngagementInvitationSubjectView =
       readonly kind: 'property_dossier';
       readonly role: DossierEngagementRole;
       readonly tabs: DossierShareReach['tabs'];
+      /** Πώς λέγεται η καρτέλα κάτοψης — οικόπεδο ⇒ «Τοπογραφικό» (ο ΙΔΙΟΣ κριτής `floorplanTabKind`, από τον φάκελο). */
+      readonly floorplanKind: FloorplanTabKind;
       readonly shareDays: DossierShareDays;
     };
 

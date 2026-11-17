@@ -18,6 +18,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { CaseFileMode } from '@/lib/conveyance/case-activity';
 import { formatDate } from '@/lib/intl-formatting';
+import { dossierTabWord } from '@/lib/property-dossier/property-dossier-view';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
@@ -60,7 +61,7 @@ function TabSection({ tab, view, openFile }: TabSectionProps) {
   const { t } = useTranslation(['conveyance']);
   const colors = useSemanticColors();
   const files = view.files.filter((file) => file.tab === tab);
-  const labelKey = tab === 'floorplan' ? DOSSIER_TAB_KEY[view.floorplanKind] : DOSSIER_TAB_KEY[tab];
+  const labelKey = DOSSIER_TAB_KEY[dossierTabWord(tab, view.floorplanKind)];
   const headingId = `dossier-tab-${tab}`;
   return (
     <Card asChild className="space-y-2 p-4">
