@@ -34,8 +34,10 @@ import { dossierDetailHref } from '@/lib/property-dossier/property-dossier-route
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import { caseEngagementChangedDestination } from '@/services/conveyance/conveyance-engagement-notifier';
+import { resolveUserDisplayName } from '@/services/entity-audit.service';
 import type { DossierEngagement } from '@/types/engagement';
 import type { DossierEngagementInvitation } from '@/types/engagement-invitation';
+import type { PropertyDossier } from '@/types/property-dossier';
 import { personalWorkspace } from '@/types/workspace-membership';
 
 const logger = createModuleLogger('dossier-engagement-notifier');
@@ -88,24 +90,38 @@ async function dispatchDossierNotice(notice: DossierNotice): Promise<void> {
 /** Η πράξη του κατόχου που άλλαξε την πρόσβαση — από τη **μετάβαση** του γραφέα, όχι από το αίτημα. */
 export type DossierOwnerChange = 'ended' | 'renewed' | 'reach';
 
-/** Ποιο κλειδί λέει την αλλαγή. Τέλος σε `offered` = απόσυρση πρότασης· σε `active` = ανάκληση. */
-function changedTitleKey(change: DossierOwnerChange, after: DossierEngagement): string {
-  if (change === 'renewed') return `${CHANGED}.renewedTitle`;
-  if (change === 'reach') return `${CHANGED}.reachTitle`;
-  return after.state === 'withdrawn' ? `${CHANGED}.withdrawnTitle` : `${CHANGED}.revokedTitle`;
+/**
+ * Ποιο κλειδί λέει την αλλαγή. Τέλος σε `offered` = απόσυρση πρότασης· σε `active` = ανάκληση.
+ * Με όνομα κατόχου ⇒ `…dossier.named.*` («{host} ανανέωσε…»)· χωρίς ⇒ η ανώνυμη φράση («Ο κάτοχος…»).
+ */
+function changedTitleKey(change: DossierOwnerChange, after: DossierEngagement, named: boolean): string {
+  const base = named ? `${CHANGED}.named` : CHANGED;
+  if (change === 'renewed') return `${base}.renewedTitle`;
+  if (change === 'reach') return `${base}.reachTitle`;
+  return after.state === 'withdrawn' ? `${base}.withdrawnTitle` : `${base}.revokedTitle`;
 }
 
-/** Ο επαγγελματίας μαθαίνει **κάθε** αλλαγή της πρόσβασής του από τον κάτοχο. */
+/**
+ * Ο επαγγελματίας μαθαίνει **κάθε** αλλαγή της πρόσβασής του από τον κάτοχο — **και ποιος** την έκανε.
+ * 🔑 Όπως το Google Drive / Dropbox («Ο Χ άλλαξε την πρόσβασή σας»): ανώνυμο «ο κάτοχος» σε έναν δικηγόρο με πολλούς
+ *    πελάτες δεν λέει **ποιος**. Πηγή ονόματος = η ΙΔΙΑ με την πρόσκληση (`resolveUserDisplayName`, εφεδρεία `null` ⇒
+ *    **ποτέ** email στη θέση του ονόματος — Ε-9′: καμία πληροφορία επικοινωνίας του κατόχου).
+ */
 export async function announceDossierAccessChanged(
   after: DossierEngagement,
   change: DossierOwnerChange,
-  dossierLabel: string | null,
+  dossier: Pick<PropertyDossier, 'label' | 'userId'>,
 ): Promise<void> {
+  const host = await resolveUserDisplayName(dossier.userId, null);
   await dispatchDossierNotice({
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_ENGAGEMENT_CHANGED,
     recipientUid: after.uid,
-    titleKey: changedTitleKey(change, after),
-    titleParams: { title: dossierLabel ?? after.subject.dossierId, days: String(after.shareDays) },
+    titleKey: changedTitleKey(change, after, host !== null),
+    titleParams: {
+      title: dossier.label,
+      days: String(after.shareDays),
+      ...(host !== null ? { host } : {}),
+    },
     eventId: `dossier-engagement:${after.id}:${change}:${after.updatedAt}`,
     entity: { type: NOTIFICATION_ENTITY_TYPES.ENGAGEMENT, id: after.id },
     destination: await caseEngagementChangedDestination(after),

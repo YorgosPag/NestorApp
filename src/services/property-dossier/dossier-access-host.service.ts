@@ -279,7 +279,7 @@ export async function changeDossierEngagement(
       changes: changedFields(outcome.before, outcome.after),
       performedBy: actor.uid, performedByName: actor.email, entityName: dossier.label,
     });
-    await announceDossierAccessChanged(outcome.after, OWNER_CHANGE_OF[input.change.action], dossier.label);
+    await announceDossierAccessChanged(outcome.after, OWNER_CHANGE_OF[input.change.action], dossier);
   }
   return { ok: true, slots: await listDossierAccessSlots(db, dossier, input.nowMs) };
 }

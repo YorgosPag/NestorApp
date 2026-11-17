@@ -39,7 +39,7 @@ import { COLLECTIONS, FIRESTORE_LIMITS, type CollectionKey } from '@/config/fire
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { requireAuthContext, requireUserContext, waitForAuthReady, resolveEffectiveCompanyId } from './auth-context';
 import { onSuperAdminActiveCompanyChange } from './super-admin-active-company';
-import { getTenantConfig, resolveTenantValue } from './tenant-config';
+import { getTenantConfig, isPersonOwnedParent, resolveTenantValue } from './tenant-config';
 import { buildReadPaths, hasReadPaths } from './read-scope-config';
 import { listenToPaths, resultOfSnapshots } from './firestore-read-paths';
 import { chunkArray } from '@/lib/array-utils';
@@ -429,10 +429,10 @@ class FirestoreQueryService implements IFirestoreQueryService {
     options: SubscribeOptions<T> = {}
   ): Unsubscribe {
     // Υποσυλλογή: τον μισθωτή τον φέρει ήδη ο γονέας (η διαδρομή του εγγράφου) ⇒ κανένα
-    // φίλτρο πρώτο, και καμία ανοικοδόμηση όταν αλλάζει ο χώρος — ίδια συμπεριφορά με πριν.
+    // φίλτρο πρώτο, και καμία ανοικοδόμηση όταν αλλάζει ο χώρος. Γονέας ανθρώπου ⇒ αρκεί η ταυτότητα (ADR-894 §10 Β1).
     return subscribeToCollection(
       collection(db, resolveCollectionName(parentKey), parentId, subcollectionName),
-      requireAuthContext,
+      isPersonOwnedParent(parentKey) ? requireUserContext : requireAuthContext,
       () => [[]],
       false,
       onData,

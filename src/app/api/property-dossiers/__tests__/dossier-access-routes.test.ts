@@ -66,11 +66,17 @@ jest.mock('@/lib/auth/personal-scope-middleware', () => ({
       callback(request, { scope: 'personal', ctx: { uid: OWNER, email: 'owner@example.gr' } }, context),
 }));
 
-jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') } }));
+/** Το `displayName` του προφίλ του κατόχου — `null` = προφίλ χωρίς όνομα (η ανώνυμη φράση). */
+const mockOwnerName = jest.fn(async (_uid: string): Promise<string | null> => null);
+jest.mock('@/services/entity-audit.service', () => ({
+  EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') },
+  resolveUserDisplayName: (uid: string) => mockOwnerName(uid),
+}));
 
-const mockDispatch = jest.fn(async (_request: { recipientId: string; titleKey: string }) => ({ ok: true }));
+interface DispatchedNotice { recipientId: string; titleKey: string; titleParams?: Record<string, string> }
+const mockDispatch = jest.fn(async (_request: DispatchedNotice) => ({ ok: true }));
 jest.mock('@/server/notifications/notification-orchestrator', () => ({
-  dispatchNotification: (request: { recipientId: string; titleKey: string }) => mockDispatch(request),
+  dispatchNotification: (request: DispatchedNotice) => mockDispatch(request),
 }));
 
 const sentTokens: string[] = [];
@@ -288,6 +294,24 @@ describe('ADR-916 Φ-Ε1 Σ2 — πράξεις σε συμμετοχή (ο ΕΝ
       ['u_pro', 'caseEngagementChanged.dossier.reachTitle'],
       ['u_pro', 'caseEngagementChanged.dossier.revokedTitle'],
     ]);
+  });
+
+  it('Ε2 — κάτοχος με όνομα ⇒ `…dossier.named.*` με `{host}` = το όνομα του ΚΑΤΟΧΟΥ (ποτέ email)', async () => {
+    const dossierId = seedDossier(OWNER);
+    const engagement = await seedEngagement(dossierId, 'owner_lawyer');
+    mockOwnerName.mockImplementation(async (uid) => (uid === OWNER ? 'Γιώργος Παγώνης' : null));
+    mockDispatch.mockClear();
+    try {
+      await call(changeRoute, { dossierId, engagementId: engagement.id }, { action: 'renew', shareDays: 90 });
+      await call(changeRoute, { dossierId, engagementId: engagement.id }, { action: 'revoke' });
+    } finally {
+      mockOwnerName.mockImplementation(async () => null);
+    }
+    expect(mockDispatch.mock.calls.map(([request]) => [request.titleKey, request.titleParams?.host])).toEqual([
+      ['caseEngagementChanged.dossier.named.renewedTitle', 'Γιώργος Παγώνης'],
+      ['caseEngagementChanged.dossier.named.revokedTitle', 'Γιώργος Παγώνης'],
+    ]);
+    expect(mockDispatch.mock.calls.every(([request]) => !String(request.titleParams?.host).includes('@'))).toBe(true);
   });
 
   it('Σ5 — ξένος φάκελος ⇒ 404 · άγνωστη πράξη ή ξένο πεδίο ⇒ 400', async () => {

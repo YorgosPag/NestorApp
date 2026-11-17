@@ -860,7 +860,13 @@
       "revokedTitle": "The owner revoked your access to the property file “{title}”",
       "withdrawnTitle": "The owner withdrew the invitation to the property file “{title}”",
       "renewedTitle": "The owner renewed your access to the property file “{title}” for {days} days",
-      "reachTitle": "The owner changed what you can see in the property file “{title}”"
+      "reachTitle": "The owner changed what you can see in the property file “{title}”",
+      "named": {
+        "revokedTitle": "{host} revoked your access to the property file “{title}”",
+        "withdrawnTitle": "{host} withdrew the invitation to the property file “{title}”",
+        "renewedTitle": "{host} renewed your access to the property file “{title}” for {days} days",
+        "reachTitle": "{host} changed what you can see in the property file “{title}”"
+      }
     }
   },
   "caseEngagementAnswered": {

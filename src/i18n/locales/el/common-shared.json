@@ -860,7 +860,13 @@
       "revokedTitle": "Ο κάτοχος ανακάλεσε την πρόσβασή σας στον φάκελο «{title}»",
       "withdrawnTitle": "Ο κάτοχος απέσυρε την πρόσκληση για τον φάκελο «{title}»",
       "renewedTitle": "Ο κάτοχος ανανέωσε την πρόσβασή σας στον φάκελο «{title}» για {days} ημέρες",
-      "reachTitle": "Ο κάτοχος άλλαξε τι βλέπετε στον φάκελο «{title}»"
+      "reachTitle": "Ο κάτοχος άλλαξε τι βλέπετε στον φάκελο «{title}»",
+      "named": {
+        "revokedTitle": "{host} ανακάλεσε την πρόσβασή σας στον φάκελο «{title}»",
+        "withdrawnTitle": "{host} απέσυρε την πρόσκληση για τον φάκελο «{title}»",
+        "renewedTitle": "{host} ανανέωσε την πρόσβασή σας στον φάκελο «{title}» για {days} ημέρες",
+        "reachTitle": "{host} άλλαξε τι βλέπετε στον φάκελο «{title}»"
+      }
     }
   },
   "caseEngagementAnswered": {

@@ -276,6 +276,25 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   WORKSPACE_ALIASES: { mode: 'none', fieldName: '', unscopedCategory: 'global-index', unscopedReason: 'ADR-787 §5.3 δ / Ε-5 §8 — το κλειδί εγγράφου ΕΙΝΑΙ ο σκελετός UTS #39, και η ερώτηση είναι «ποιος χώρος έχει αυτό το ψευδώνυμο;»: ένα where(companyId) θα απαιτούσε να ξέρεις ήδη την απάντηση. Σημειακή ανάγνωση κατά κλειδί, ΠΟΤΕ σάρωση — ένας κατάλογος ψευδωνύμων είναι απαρίθμηση γραφείων, που απαγορεύει το Ε-5 §4 #1. Γράφει μόνο ο διακομιστής.' },
 } as const;
 
+/**
+ * **Γονείς υποσυλλογών που ανήκουν σε ΑΝΘΡΩΠΟ, όχι σε οργανισμό** (ADR-894 §10 Β1 · ADR-809).
+ *
+ * Σε υποσυλλογή ο μισθωτής είναι **η διαδρομή του γονέα** — φίλτρο δεν μπαίνει κανένα. Το ερώτημα «χρειάζεται
+ * εταιρεία;» το απαντά επομένως **ο γονέας**: `users/{uid}/…` ανήκει στον άνθρωπο ⇒ αρκεί η ταυτότητα, και η
+ * απομόνωση τη φυλά ο κανόνας `isOwner(userId)` της διαδρομής.
+ *
+ * 🔴 **Γιατί υπάρχει (2026-11-18)**: ο ακροατής ανάκλησης συσκευής (`users/{uid}/sessions`) ζητούσε εταιρεία ⇒
+ *    για αυτόνομο επαγγελματία / ιδιώτη πετούσε `MissingTenantError` και **δεν στηνόταν ποτέ** — η «Αποσύνδεση
+ *    από άλλη συσκευή» δεν έφτανε σε εκείνη τη συσκευή. Μετρημένο ζωντανά στον λογαριασμό δικηγόρου (ADR-916 Φ-Ε1).
+ * ⚠️ Γονέας **οργανισμού** (π.χ. `companies/{W}/…`) **ΔΕΝ** μπαίνει εδώ: εκεί η εταιρεία είναι ο σωστός πρώτος φρουρός.
+ */
+const PERSON_OWNED_PARENTS: ReadonlySet<CollectionKey> = new Set<CollectionKey>(['USERS']);
+
+/** «Ανήκει ο γονέας αυτής της υποσυλλογής σε άνθρωπο;» — η ΜΙΑ απάντηση για τον client ακροατή υποσυλλογής. */
+export function isPersonOwnedParent(key: CollectionKey): boolean {
+  return PERSON_OWNED_PARENTS.has(key);
+}
+
 /** Default tenant configuration for collections not in the override map */
 const DEFAULT_TENANT_CONFIG: TenantFieldConfig = {
   mode: 'companyId',
