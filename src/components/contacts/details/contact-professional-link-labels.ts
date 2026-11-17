@@ -20,6 +20,14 @@ export const PROFESSIONAL_LINK_KEYS = {
   actingForOffice: 'contacts-core:header.professionalLink.actingForOffice',
 } as const;
 
+/** ADR-915 §40.8 — με ποιο όνομα αποδέχτηκε ο λογαριασμός, και αν συμφωνεί με την επαφή. */
+export const LINKED_ACCOUNT_KEYS = {
+  label: 'contacts-core:header.professionalLink.accountLabel',
+  unknown: 'contacts-core:header.professionalLink.accountUnknown',
+  nameDiffers: 'contacts-core:header.professionalLink.accountNameDiffers',
+  nameDiffersHint: 'contacts-core:header.professionalLink.accountNameDiffersHint',
+} as const;
+
 /** ADR-915 §40.6 — η υιοθέτηση της δήλωσης στην επαφή. */
 export const ADOPTION_KEYS = {
   currentLabel: 'contacts-core:header.professionalLink.currentLabel',

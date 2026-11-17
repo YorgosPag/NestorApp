@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 890 ADRs | Last Updated: 2026-11-16
+**📊 Stats**: 892 ADRs | Last Updated: 2026-11-17
 
 ---
 
@@ -924,7 +924,9 @@
 | **ADR-939** | «Γράψτε μας» στη σελίδα παραστατικού: κανάλι `portal` στα ενιαία εισερχόμενα CRM | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-939-customer-page-write-to-us.md) |
 | **ADR-940** | Ο modifier που ο Tailwind πετά σιωπηλά, και η πύλη που ρωτά τον ίδιο τον compiler | ✅ ✅ IMPLEMENTED — πύλη CHECK 3.116 (Στρώμα 1 hook + Στρώμα 2 CI) · ένα σημείο φόρτωσης του Tailwind · §9 `content` = όλο το `src/` + κριτήριο ξεχασμένου αρχείου (κλαδί `agent/pea-sold-truth`, 2026-11-12) | 2026-11-12 | UI / Quality Gates | [📄](./adrs/ADR-940-tailwind-modifier-generation-gate.md) |
 | **ADR-941** | Εισαγωγή διανυσματικού PDF: γραμμές και κείμενα όπως είναι στο αρχείο, όχι αναγνώριση από εικόνα | ✅ 🚧 IN PROGRESS — Φ1 · Φ2α ζωντανά· Φ2β υλοποιημένη στο κλαδί `agent/sketch-recognition` (2026-11-14), ζωντανή δοκιμή εκκρεμεί | 2026-11-13 | DXF Viewer / Import | [📄](./adrs/ADR-941-vector-pdf-import.md) |
-| **ADR-943** | Προκαταβολή ανάθεσης με κράτηση: ο ιδιοκτήτης πληρώνει, ο πάροχος κρατά, ο μηχανικός πληρώνεται στην έναρξη | ✅ 🚧 IN PROGRESS — Φ0 (απόφαση + σχέδιο), 2026-11-16 | 2026-11-16 | Document Registry / Payments | [📄](./adrs/ADR-943-issuance-advance-escrow.md) |
+| **ADR-942** | Αίτημα εγγράφων προς τον κάτοχο: **μία** μηχανή για κάθε υπόθεση, με τον φάκελο του ακινήτου ως αποθήκη | ✅ ✅ ACCEPTED — αποφάσεις Ε1–Ε6 στο §9 (2026-11-16)· **Φ0 ✅ ΟΛΟΚΛΗΡΗ** (expand `46a75628` → μετάπτωση 5/5 → contract, §7.1)· **Φ1 ✅ χτίστηκε** (§7.2)· **Φ2 ✅ χτίστηκε για εταιρική θεματοφυλακή** (§7.3 — απόφαση Giorgio «β», 2026-11-17)· η Φ2 για ιδιώτη κάτοχο περιμένει την ADR-916 Φ-Ε1 | 2026-11-16 | Συνεργασία επαγγελματιών / Έγγραφα ακινήτου | [📄](./adrs/ADR-942-document-requests-across-subjects.md) |
+| **ADR-943** | Προκαταβολή ανάθεσης με κράτηση: ο ιδιοκτήτης πληρώνει, ο πάροχος κρατά, ο μηχανικός πληρώνεται στην έναρξη | ✅ 🚧 IN PROGRESS — Φ0 ✅ · Φ1 τομέας ✅ · Φ2 γενίκευση checkout ✅ · Φ3 marketplace ✅ (2026-11-16) · Φ4α όροι + έγκριση ✅ (2026-11-17) · Φ4β πληρωμή → κράτηση ✅ (2026-11-17, jest εκκρεμεί έγκριση) · Φ5 – Φ6 εκκρεμούν | 2026-11-16 | Document Registry / Payments | [📄](./adrs/ADR-943-issuance-advance-escrow.md) |
+| **ADR-944** | Κλειδιά email επαφής και προειδοποίηση «το email υπάρχει ήδη σε άλλη επαφή» | ✅ ✅ IMPLEMENTED (κώδικας) — 2026-11-17 · ⏳ ανάπτυξη δείκτη στο Firebase · ⏳ συμπλήρωση υπαρχουσών επαφών · ⏳ jest / browser (εκκρεμεί έγκριση) | 2026-11-17 | Contacts / Data Model | [📄](./adrs/ADR-944-contact-email-keys-duplicate-warning.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

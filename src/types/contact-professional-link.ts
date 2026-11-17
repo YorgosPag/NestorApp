@@ -7,7 +7,9 @@
  *    γραφέας. Κανένα πεδίο `uid` στην επαφή, καμία δίδυμη καρτέλα (πρακτική Slack Connect / Procore: ο οικοδεσπότης
  *    **διαβάζει**, ο επαγγελματίας **κατέχει**).
  * 🔒 **GDPR 5(1)(γ)**: χωρίς `uid`, χωρίς email λογαριασμού — μόνο γεγονότα που το γραφείο ήδη γνωρίζει ή που του
- *    δήλωσε ο ίδιος ο επαγγελματίας για **αυτή** τη συνεργασία.
+ *    δήλωσε ο ίδιος ο επαγγελματίας για **αυτή** τη συνεργασία. Το **όνομα** του λογαριασμού εκτίθεται **μόνο** για
+ *    συνεργασία που ο ίδιος **αποδέχτηκε** (ADR-915 §40.8, πρότυπο Slack Connect «basic details» / Box): ο οικοδεσπότης
+ *    βλέπει με ποια ταυτότητα δουλεύει μαζί του, όχι μόνο ό,τι έγραψε ο ίδιος στο ευρετήριό του.
  */
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
@@ -52,9 +54,27 @@ export interface ContactDeclaredCredential {
 export const CONTACT_LINK_STATUSES = ['linked', 'offered', 'none'] as const;
 export type ContactLinkStatus = (typeof CONTACT_LINK_STATUSES)[number];
 
+/**
+ * ADR-915 §40.8 — συμφωνεί το όνομα της επαφής με το όνομα του λογαριασμού;
+ * - `match`   — ίδιες λέξεις, ανεξαρτήτως τόνων, κεφαλαίων, σειράς και γραφής (Γιώργος ≡ GIORGOS)
+ * - `differs` — και οι δύο πλευρές έχουν όνομα και **δεν** ταιριάζουν
+ * - `unknown` — λείπει η μία πλευρά: **ποτέ** ψευδές «διαφέρει»
+ */
+export const CONTACT_ACCOUNT_NAME_MATCHES = ['match', 'differs', 'unknown'] as const;
+export type ContactAccountNameMatch = (typeof CONTACT_ACCOUNT_NAME_MATCHES)[number];
+
+/** Ο λογαριασμός που **αποδέχτηκε** συνεργασία ως αυτή η επαφή — μόνο όνομα, ποτέ `uid` ή email. */
+export interface ContactLinkedAccount {
+  /** `null` ⇒ ο λογαριασμός δεν διαβάστηκε («άγνωστος λογαριασμός»), ποτέ κενό σαν να ήταν γνωστό. */
+  readonly displayName: string | null;
+  readonly nameMatch: ContactAccountNameMatch;
+}
+
 export interface ContactProfessionalLink {
   readonly status: ContactLinkStatus;
   readonly assignments: readonly ContactProfessionalAssignment[];
+  /** Διακριτοί λογαριασμοί με **αποδεκτή** συνεργασία· κενό σε `offered`/`none` (δεν έχει συναινέσει ακόμη). */
+  readonly accounts: readonly ContactLinkedAccount[];
   readonly declared: ContactDeclaredCredential | null;
   /** Ανέλαβε για λογαριασμό του **γραφείου** του (νομικό πρόσωπο) — μόνο ένδειξη, ποτέ αυτόματη επαφή εταιρείας. */
   readonly actingForOffice: boolean;

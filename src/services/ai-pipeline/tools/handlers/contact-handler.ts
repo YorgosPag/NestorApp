@@ -20,6 +20,7 @@ import {
   logger,
 } from '../executor-shared';
 import { nowISO } from '@/lib/date-local';
+import { CONTACT_EMAIL_KEYS_FIELD, contactEmailKeys } from '@/lib/contacts/contact-email-keys';
 import { aiAgentAuditActor, aiAgentPerformer, aiAgentStamp } from '../../shared/ai-performer';
 
 import {
@@ -297,6 +298,8 @@ export class ContactHandler implements ToolHandler {
         ...(label && !resolvedInMap(label, entity, 'email') ? { label } : {}),
       };
       updatePayload.emails = [...currentEmails, newEntry];
+      // ADR-944 — τα κλειδιά από το ΕΝΑ SSoT, πάνω στον πλήρη νέο πίνακα (+ παλαιό επίπεδο `email`).
+      updatePayload[CONTACT_EMAIL_KEYS_FIELD] = contactEmailKeys(updatePayload.emails, contactData.email);
     } else if (fieldType === 'website') {
       const { isValidUrl } = await import('@/lib/validation/email-validation');
       const normalizedUrl = value.startsWith('http') ? value : `https://${value}`;

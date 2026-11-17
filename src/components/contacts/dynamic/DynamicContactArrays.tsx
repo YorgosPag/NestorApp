@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import '@/lib/design-system';
 import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
+import { EmailDuplicateNotice } from '@/components/contacts/fields/EmailDuplicateNotice';
 import type { ContactEntityType } from '@/components/contacts/dynamic/communication';
 import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
@@ -35,6 +36,11 @@ export interface DynamicContactArraysProps {
   disabled?: boolean;
   /** Entity type — determines which communication type labels to show */
   contactType?: ContactEntityType;
+  /**
+   * ADR-944 — η επαφή που επεξεργάζεται: εξαιρείται από την προειδοποίηση «το email υπάρχει ήδη σε άλλη επαφή».
+   * Η προειδοποίηση εμφανίζεται μόνο σε επεξεργασία (`disabled === false`).
+   */
+  contactId?: string;
   onPhonesChange?: (phones: PhoneInfo[]) => void;
   onEmailsChange?: (emails: EmailInfo[]) => void;
   onWebsitesChange?: (websites: WebsiteInfo[]) => void;
@@ -52,6 +58,7 @@ export function DynamicContactArrays({
   socialMedia = [],
   disabled = false,
   contactType = 'individual',
+  contactId,
   onPhonesChange,
   onEmailsChange,
   onWebsitesChange,
@@ -100,6 +107,9 @@ export function DynamicContactArrays({
           onEmailsChange?.(emails);
         }}
       />
+      {!disabled && (
+        <EmailDuplicateNotice emails={normalizedEmails.map((entry) => entry.email)} excludeContactId={contactId} />
+      )}
 
       {/* 🌐 WEBSITES - UniversalCommunicationManager */}
       <UniversalCommunicationManager

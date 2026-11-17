@@ -40,6 +40,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 import { inferPhoneType } from '@/server/lib/phone-line-type';
 import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
+import { CONTACT_EMAIL_KEYS_FIELD, contactEmailKeys } from '@/lib/contacts/contact-email-keys';
 import { splitCountryCallingCode } from '@/lib/contact/channel-phone';
 
 import { performerStamp, type ResolvedPerformer } from '@/server/lib/performer-stamp';
@@ -110,6 +111,8 @@ export function buildContactDocument(
       emails: params.email
         ? [{ email: params.email, type: inferEmailType(params.email, params.type, 'work'), isPrimary: true }]
         : [],
+      // ADR-944 — από το ΕΝΑ SSoT, πάνω στην ίδια πηγή που μόλις γράφτηκε.
+      [CONTACT_EMAIL_KEYS_FIELD]: contactEmailKeys([], params.email),
       phones: parsedPhone
         ? [{
           number: parsedPhone.number,

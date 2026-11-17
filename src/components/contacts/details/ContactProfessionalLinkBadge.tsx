@@ -24,8 +24,14 @@ import { documentExpiryHref } from '@/lib/document-validity/document-registry-vi
 import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
 import { isLegalEngagementRole } from '@/types/engagement';
 import type { ComparableContact } from '@/lib/contacts/declared-credential-comparison';
-import type { ContactProfessionalAssignment, ContactProfessionalLink } from '@/types/contact-professional-link';
-import { ENGAGEMENT_STATE_KEYS, PROFESSIONAL_LINK_KEYS } from './contact-professional-link-labels';
+import { AlertTriangle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import type {
+  ContactLinkedAccount,
+  ContactProfessionalAssignment,
+  ContactProfessionalLink,
+} from '@/types/contact-professional-link';
+import { ENGAGEMENT_STATE_KEYS, LINKED_ACCOUNT_KEYS, PROFESSIONAL_LINK_KEYS } from './contact-professional-link-labels';
 import { DeclaredCredentialAdoption, credentialText } from './DeclaredCredentialAdoption';
 
 
@@ -87,10 +93,43 @@ interface LinkFactsProps {
   readonly contact: ComparableContact | null;
 }
 
+/**
+ * ADR-915 §40.8 — «Συνδέθηκε ως: …» + σήμα όταν το όνομα **διαφέρει** (κείμενο + εικονίδιο, ποτέ μόνο χρώμα — CHECK 3.41).
+ * Η εξήγηση είναι ορατό κείμενο, όχι tooltip: πρέπει να τη διαβάσει όποιος δεν αιωρείται (αφή, αναγνώστης οθόνης).
+ */
+function LinkedAccountLine({ account, t }: { readonly account: ContactLinkedAccount; readonly t: Translate }) {
+  const iconSizes = useIconSizes();
+  const differs = account.nameMatch === 'differs';
+  return (
+    <li className="flex flex-col gap-1">
+      <span className="flex flex-wrap items-center gap-2">
+        <span>{account.displayName ?? t(LINKED_ACCOUNT_KEYS.unknown)}</span>
+        {differs && (
+          <Badge variant="warning" className="gap-1">
+            <AlertTriangle className={iconSizes.xs} aria-hidden="true" />
+            {t(LINKED_ACCOUNT_KEYS.nameDiffers)}
+          </Badge>
+        )}
+      </span>
+      {differs && <span className="text-muted-foreground">{t(LINKED_ACCOUNT_KEYS.nameDiffersHint)}</span>}
+    </li>
+  );
+}
+
 function LinkFacts({ link, t, contactId, contact }: LinkFactsProps) {
   const declared = link.declared;
   return (
     <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+      {link.accounts.length > 0 && (
+        <>
+          <dt className="text-muted-foreground">{t(LINKED_ACCOUNT_KEYS.label)}</dt>
+          <dd className="m-0">
+            <ul className="m-0 flex list-none flex-col gap-1 p-0">
+              {link.accounts.map((account, index) => <LinkedAccountLine key={index} account={account} t={t} />)}
+            </ul>
+          </dd>
+        </>
+      )}
       <dt className="text-muted-foreground">{t(PROFESSIONAL_LINK_KEYS.assignmentsLabel)}</dt>
       <dd className="m-0">
         <ul className="m-0 list-none p-0">

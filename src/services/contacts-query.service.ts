@@ -23,6 +23,7 @@ import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DocumentData } from 'firebase/firestore';
 import { generateContactId } from '@/services/enterprise-id.service';
+import { applyDerivedFieldsOnCreate } from '@/services/contacts/contact-derived-fields';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { requireAuthContext, resolveEffectiveCompanyId } from '@/services/firestore/auth-context';
@@ -337,6 +338,8 @@ export async function importContacts(
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
+    // ADR-944 — η μαζική εισαγωγή είναι κι αυτή γραφέας: ίδια παράγωγα με τη μία-μία δημιουργία.
+    applyDerivedFieldsOnCreate(createData as unknown as Record<string, unknown>);
     batch.set(ref, createData);
     countInBatch++;
 

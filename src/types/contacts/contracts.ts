@@ -72,6 +72,12 @@ export interface BaseContact {
   // SSoT: lives on BaseContact so all contact variants expose it for queries.
   personaTypes?: string[];
 
+  /**
+   * ADR-944 — τα email της επαφής ως **κλειδιά ερωτήματος** (πεζά + trim, μοναδικά, ταξινομημένα).
+   * Παράγωγο, ΠΟΤΕ χειρόγραφο: το γράφει κάθε γραφέας μέσω `lib/contacts/contact-email-keys`.
+   */
+  emailKeys?: string[];
+
   // 🏢 ENTERPRISE: Extended display properties (2026-01-20)
   /** Trade name / Commercial name (for companies) */
   tradeName?: string;

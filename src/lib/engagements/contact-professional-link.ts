@@ -69,6 +69,14 @@ export function latestDeclarationOf(judged: readonly JudgedEngagement[]): Contac
   return { authority: declared.authority, number: declared.number, chapter: declared.chapter, declaredAt: declared.declaredAt, engagementId };
 }
 
+/**
+ * ADR-915 §40.8 — οι **διακριτοί** λογαριασμοί που **αποδέχτηκαν** (ποτέ σε σκέτη πρόταση: δεν έχει συναινέσει ακόμη),
+ * με τη σειρά της πιο πρόσφατης συμμετοχής τους.
+ */
+export function acceptedAccountUidsOf(judged: readonly JudgedEngagement[]): readonly string[] {
+  return [...new Set(judged.filter(isAccepted).map((j) => j.engagement.uid).filter((uid) => uid !== ''))];
+}
+
 /** Ανέλαβε έστω μία φορά για λογαριασμό **γραφείου** (νομικό πρόσωπο); — μόνο μέσω του `actingWorkspaceOf`. */
 export function actsForOfficeOf(judged: readonly JudgedEngagement[]): boolean {
   return judged.filter(isAccepted).some((j) => actingWorkspaceOf(j.engagement).kind === 'org');

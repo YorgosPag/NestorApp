@@ -53,6 +53,7 @@ import type {
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
 import type { SignatoryFieldSet } from '@/subapps/procurement/types/signatory-fields';
+import { contactEmailKeys } from '@/lib/contacts/contact-email-keys';
 
 const logger = createModuleLogger('COMMIT_SIGNATORY');
 
@@ -130,6 +131,8 @@ async function createIndividualContact(
       vatNumber: sig.vatNumber ?? undefined,
       phones,
       emails,
+      // ADR-944 — τα κλειδιά από το ΕΝΑ SSoT, πάνω στον ίδιο πίνακα.
+      emailKeys: contactEmailKeys(emails),
       companyId: ctx.companyId,
       createdAt: now,
       updatedAt: now,

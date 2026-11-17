@@ -15,7 +15,9 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { engagementsOfContactQuery } from '@/lib/auth/engagement-ref';
 import { parseEngagement } from '@/lib/auth/engagement-schema';
+import { compareContactToAccount, type ContactPersonName } from '@/lib/engagements/contact-account-name-match';
 import {
+  acceptedAccountUidsOf,
   actsForOfficeOf,
   judgeCurrentPerSubject,
   latestDeclarationOf,
@@ -24,7 +26,12 @@ import {
   type JudgedEngagement,
 } from '@/lib/engagements/contact-professional-link';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { ContactProfessionalAssignment, ContactProfessionalLink } from '@/types/contact-professional-link';
+import { readAccountIdentities } from '@/server/auth/account-identities';
+import type {
+  ContactLinkedAccount,
+  ContactProfessionalAssignment,
+  ContactProfessionalLink,
+} from '@/types/contact-professional-link';
 import type { Engagement } from '@/types/engagement';
 import { hostLineOf } from './engagement-hosts';
 
@@ -60,23 +67,59 @@ async function assignmentOf(db: Firestore, judged: JudgedEngagement): Promise<Co
   };
 }
 
+/**
+ * ADR-915 §40.8 — **με ποια ταυτότητα** δουλεύει μαζί του: μόνο όνομα, μόνο αποδεκτοί λογαριασμοί, διαβασμένο από την
+ * **πηγή** τη στιγμή της ανάγνωσης (`readAccountIdentities`) — καμία αντιγραφή στην επαφή. Ο `uid` **δεν** φεύγει.
+ */
+async function linkedAccountsOf(
+  db: Firestore,
+  judged: readonly JudgedEngagement[],
+  contactName: ContactPersonName | null,
+): Promise<readonly ContactLinkedAccount[]> {
+  const uids = acceptedAccountUidsOf(judged);
+  if (uids.length === 0) return [];
+  const identities = await readAccountIdentities(db, uids);
+  return uids.map((uid) => {
+    const identity = identities.get(uid) ?? null;
+    return {
+      displayName: identity?.displayName ?? null,
+      nameMatch: compareContactToAccount(contactName, identity),
+    };
+  });
+}
+
+/**
+ * Ζητά ο καλών τους λογαριασμούς (ADR-915 §40.8); **Ρητό** σε κάθε σημείο κλήσης: η ανάγνωση ταυτοτήτων κοστίζει
+ * κλήση στο Firebase Auth, και ο καλών που θέλει μόνο τη δήλωση (υιοθέτηση) δεν την πληρώνει.
+ * `contactName` = από την επαφή που ο route **ήδη** φόρτωσε (`loadOwnedContact`) — `null` όταν δεν είναι φυσικό πρόσωπο.
+ */
+export type LinkedAccountsRequest =
+  | { readonly read: true; readonly contactName: ContactPersonName | null }
+  | { readonly read: false };
+
 /** Τι ξέρει **αυτό** το γραφείο για τον λογαριασμό πίσω από **αυτή** την επαφή του. */
 export async function readContactProfessionalLink(
   db: Firestore,
   hostCompanyId: string,
   contactId: string,
   nowMs: number,
+  accountsRequest: LinkedAccountsRequest,
 ): Promise<ContactProfessionalLinkRead> {
   try {
     const snapshot = await engagementsOfContactQuery(db, hostCompanyId, contactId).get();
     const judged = judgeCurrentPerSubject(readableOf(snapshot.docs.map((doc) => doc.data()), contactId), nowMs);
     const status = linkStatusOf(judged);
     const shown = status === 'none' ? [] : judged;
+    const [assignments, accounts] = await Promise.all([
+      Promise.all(shown.map((j) => assignmentOf(db, j))),
+      accountsRequest.read ? linkedAccountsOf(db, judged, accountsRequest.contactName) : [],
+    ]);
     return {
       outcome: 'ok',
       link: {
         status,
-        assignments: await Promise.all(shown.map((j) => assignmentOf(db, j))),
+        assignments,
+        accounts,
         declared: latestDeclarationOf(judged),
         actingForOffice: actsForOfficeOf(judged),
       },

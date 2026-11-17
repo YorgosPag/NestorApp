@@ -26,6 +26,7 @@ import type { EntitySyncAction, SyncEntityType } from '@/services/realtime/types
 import { SYNC_SOURCE_AI_AGENT } from '@/services/realtime/types';
 
 import { buildContactDocument, parsePhoneForStorage } from './contact-document-builder';
+import { CONTACT_EMAIL_KEYS_FIELD, emailKeyOf } from '@/lib/contacts/contact-email-keys';
 import { inferPhoneType } from '@/server/lib/phone-line-type';
 import { phoneOwnerKindOf } from '@/lib/contact/phone-type-vocabulary';
 import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
@@ -154,6 +155,7 @@ function buildFieldAddition(field: string, value: string, existing: Readonly<Rec
   }
 
   if (field === 'email') {
+    const key = emailKeyOf(value);
     return {
       emails: FieldValue.arrayUnion({
         email: value.toLowerCase().trim(),
@@ -161,6 +163,8 @@ function buildFieldAddition(field: string, value: string, existing: Readonly<Rec
         type: inferEmailType(value, phoneOwnerKindOf(existing.type), 'work'),
         isPrimary: false,
       }),
+      // ADR-944 — το κλειδί μπαίνει **μαζί** με το email, στην ίδια εγγραφή (ποτέ μετά).
+      ...(key === null ? {} : { [CONTACT_EMAIL_KEYS_FIELD]: FieldValue.arrayUnion(key) }),
     };
   }
 
@@ -171,7 +175,7 @@ function buildFieldAddition(field: string, value: string, existing: Readonly<Rec
 function buildFieldClearing(field: string): Record<string, unknown> {
   if (!ARRAY_FIELDS.has(field)) return { [field]: null };
   if (field === 'phone') return { phones: [] };
-  if (field === 'email') return { emails: [] };
+  if (field === 'email') return { emails: [], [CONTACT_EMAIL_KEYS_FIELD]: [] };
   return {};
 }
 

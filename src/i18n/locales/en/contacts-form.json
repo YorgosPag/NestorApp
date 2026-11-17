@@ -233,6 +233,12 @@
     },
     "vatDuplicate": "VAT {vatNumber} is already used by: {contactName}",
     "vatChecking": "Checking VAT...",
+    "emailDuplicate": {
+      "region": "Emails already used by other contacts",
+      "heading": "{email} is already used by:",
+      "unnamedContact": "Unnamed contact",
+      "hint": "You can still save — check whether this is the same person, or a shared mailbox."
+    },
     "vatInvalid": "Invalid VAT number — please verify the 9 digits are correct",
     "arrayValidation": {
       "invalidEmail": "One or more email addresses are invalid.",

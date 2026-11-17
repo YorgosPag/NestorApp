@@ -127,6 +127,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
           socialMedia={formData.socialMediaArray || []}
           disabled={fieldDisabled ?? disabled}
           contactType={contactType}
+          contactId={formData.id}
           onPhonesChange={(phones) => setFormData ? setFormData({ ...formData, phones }) : handleChange({ target: { name: 'phones', value: JSON.stringify(phones) } } as React.ChangeEvent<HTMLInputElement>)}
           onEmailsChange={(emails) => setFormData ? setFormData({ ...formData, emails }) : handleChange({ target: { name: 'emails', value: JSON.stringify(emails) } } as React.ChangeEvent<HTMLInputElement>)}
           onWebsitesChange={(websites) => setFormData ? setFormData({ ...formData, websites }) : handleChange({ target: { name: 'websites', value: JSON.stringify(websites) } } as React.ChangeEvent<HTMLInputElement>)}

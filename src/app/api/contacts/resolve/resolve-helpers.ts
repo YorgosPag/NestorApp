@@ -16,6 +16,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { contactOwnerKindOf } from '@/lib/contact/contact-owner-kind';
 import { inferEmailType } from '@/lib/contact/email-type-vocabulary';
+import { CONTACT_EMAIL_KEYS_FIELD, emailKeyOf } from '@/lib/contacts/contact-email-keys';
 import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isAbsentText } from '@/lib/ai-structured-output';
@@ -168,6 +169,8 @@ export async function storeContactEmail(
   const emailType = inferEmailType(email, contactOwnerKindOf(data.type), 'work');
   await docRef.update({
     emails: FieldValue.arrayUnion({ email: normalized, type: emailType, isPrimary: currentEmails.length === 0 }),
+    // ADR-944 — το κλειδί στην ίδια εγγραφή με το email, από το ΕΝΑ SSoT.
+    [CONTACT_EMAIL_KEYS_FIELD]: FieldValue.arrayUnion(emailKeyOf(email) ?? normalized),
     updatedAt: FieldValue.serverTimestamp(),
     ...performerStamp(performer),
   });

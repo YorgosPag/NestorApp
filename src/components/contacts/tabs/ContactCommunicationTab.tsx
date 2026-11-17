@@ -69,6 +69,7 @@ export function ContactCommunicationTab({
         socialMedia={effectiveFormData.socialMediaArray || []}
         disabled={disabled}
         contactType={contactType}
+        contactId={effectiveFormData.id}
         onPhonesChange={handlePhonesChange}
         onEmailsChange={handleEmailsChange}
         onWebsitesChange={handleWebsitesChange}

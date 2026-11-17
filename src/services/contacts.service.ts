@@ -19,6 +19,7 @@ import {
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { DuplicatePreventionService } from './contacts/DuplicatePreventionService';
+import { applyDerivedFieldsOnCreate, applyDerivedFieldsOnUpdate } from './contacts/contact-derived-fields';
 import { sanitizeContactData, sanitizeContactForUpdate, validateContactData, type ContactDataRecord } from '@/utils/contactForm/utils/data-cleaning';
 import { flattenCustomFieldsForUpdate } from '@/utils/contacts/contact-update-paths';
 import { positionContactPayload, relocateContactAddressPayload } from './contact-address-positions.client';
@@ -220,12 +221,8 @@ export class ContactsService {
       _lastModifiedAt: serverTimestamp(),
     };
 
-    // ADR-268 Q88: Auto-sync personaTypes on create
-    const createRecord = createData as unknown as Record<string, unknown>;
-    if (Array.isArray(createRecord.personas)) {
-      const personasArr = createRecord.personas as Array<{ personaType: string; status: string }>;
-      createRecord.personaTypes = personasArr.filter(p => p.status === 'active').map(p => p.personaType);
-    }
+    // ADR-268 Q88 (personaTypes) + ADR-944 (emailKeys): παράγωγα πεδία, ένα σημείο.
+    applyDerivedFieldsOnCreate(createData as unknown as Record<string, unknown>);
 
     const docRef = doc(colRef, id);
     await setDoc(docRef, createData as unknown as Contact);
@@ -397,11 +394,8 @@ export class ContactsService {
     delete udRecord.activePersonas;
     delete udRecord.personaData;
 
-    // ADR-268 Q88: Auto-sync personaTypes from personas[]
-    if (Array.isArray(udRecord.personas)) {
-      const personasArr = udRecord.personas as Array<{ personaType: string; status: string }>;
-      udRecord.personaTypes = personasArr.filter(p => p.status === 'active').map(p => p.personaType);
-    }
+    // ADR-268 Q88 (personaTypes) + ADR-944 (emailKeys) — μόνο όσα αγγίζει το φορτίο.
+    applyDerivedFieldsOnUpdate(udRecord);
 
     // Remove UI-only fields
     for (const field of UI_ONLY_FIELDS) { delete udRecord[field]; }

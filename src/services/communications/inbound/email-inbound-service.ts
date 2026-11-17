@@ -40,6 +40,7 @@ import type {
   RoutingResolution,
 } from './types';
 import { processAttachments } from './email-inbound-attachments';
+import { CONTACT_EMAIL_KEYS_FIELD, contactEmailKeys } from '@/lib/contacts/contact-email-keys';
 
 const logger = createModuleLogger('EMAIL_INBOUND_SERVICE');
 
@@ -226,6 +227,8 @@ async function ensureContactForSender(companyId: string, sender: ParsedAddress):
       },
     ],
     email: sender.email,
+    // ADR-944 — τα κλειδιά από το ΕΝΑ SSoT, πάνω στην ίδια πηγή.
+    [CONTACT_EMAIL_KEYS_FIELD]: contactEmailKeys([], sender.email),
     createdAt: new Date(),
     updatedAt: new Date(),
   };

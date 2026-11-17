@@ -31,6 +31,7 @@ import { auditWrite } from './tools/executor-shared';
 import { aiAgentAuditActor, aiAgentStamp } from './shared/ai-performer';
 import type { ChatHistoryMessage } from './chat-history-service';
 import { nowISO } from '@/lib/date-local';
+import { CONTACT_EMAIL_KEYS_FIELD, contactEmailKeys } from '@/lib/contacts/contact-email-keys';
 
 const logger = createModuleLogger('INVOICE_ENRICH');
 
@@ -169,6 +170,8 @@ export async function autoEnrichFromInvoice(
         type: 'work',
         isPrimary: true,
       }];
+      // ADR-944 — ο πίνακας αντικαθίσταται ολόκληρος ⇒ και τα κλειδιά, από το ΕΝΑ SSoT.
+      updatePayload[CONTACT_EMAIL_KEYS_FIELD] = contactEmailKeys(updatePayload.emails);
     }
   }
 

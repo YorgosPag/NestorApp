@@ -55,7 +55,7 @@ const AdoptBodySchema = z.object({
 
 /** Η δήλωση **από τον server** — καμία ⇒ 409 (η εικόνα του γραφείου είναι μπαγιάτικη). */
 async function declarationOf(db: Firestore, ctx: AuthContext, contactId: string): Promise<ContactDeclaredCredential> {
-  const read = await readContactProfessionalLink(db, ctx.companyId, contactId, Date.now());
+  const read = await readContactProfessionalLink(db, ctx.companyId, contactId, Date.now(), { read: false });
   if (read.outcome === 'unknown') throw new ApiError(503, 'Professional link unavailable');
   if (read.link.declared === null) throw new ApiError(409, 'No active declaration to adopt', 'NOTHING_DECLARED');
   return read.link.declared;
