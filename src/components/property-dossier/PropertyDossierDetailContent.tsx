@@ -10,6 +10,8 @@
  * **δεν** φορτώνει πριν ανοίξει (`LazyTabContent`), άρα τα τέσσερα ερωτήματα αρχείων δεν τρέχουν όλα μαζί.
  *
  * ⚠️ **Σε γη η «Κάτοψη» λέγεται «Τοπογραφικό»** (§2.7.1) — ίδια κατηγορία αρχείων, άλλη λέξη (`floorplanTabKind`).
+ * 🔑 **Κάρτα «Πρόσβαση»** (ADR-916 Φ-Ε1 Σ4) ανάμεσα στην κεφαλίδα και τις καρτέλες: ποιος βλέπει τον φάκελο — τεμπέλικη
+ * επιφάνεια (`DossierSurfaces.PropertyDossierAccess`), όχι νέα καρτέλα αρχείων.
  * ⚠️ **Αρχειοθετημένος ⇒ πλαίσιο + «Επαναφορά»**, τα αρχεία μένουν προσβάσιμα: η αρχειοθέτηση αλλάζει **πού φαίνεται**
  * ο φάκελος, όχι τι επιτρέπεται (§2.9.6 — δηλωμένο όριο: δεν κλειδώνει ανεβάσματα).
  */
@@ -42,6 +44,7 @@ import { usePropertyDossierTypeLabel } from './PropertyDossierCard';
 import { PropertyDossierDialog } from './PropertyDossierDialog';
 import { PropertyDossierOriginNotice } from './PropertyDossierOrigin';
 import { PropertyDossierTitle } from './PropertyDossierTitle';
+import { DossierSurfaces } from './dossier-surfaces';
 import { usePropertyDossierLifecycle } from './usePropertyDossierLifecycle';
 
 registerRouteSlice(routeSlice);
@@ -107,6 +110,7 @@ function DossierView({ dossier }: { readonly dossier: PropertyDossier }) {
       <DossierHeader dossier={dossier} />
       <PropertyDossierOriginNotice origin={dossier.origin} />
       {dossier.lifecycle === 'archived' && <ArchivedNotice dossier={dossier} />}
+      <DossierSurfaces.PropertyDossierAccess dossier={dossier} />
       <UniversalTabsRenderer<PropertyDossier, PropertyDossierTabComponentProps>
         tabs={tabs}
         data={dossier}

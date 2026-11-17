@@ -2479,6 +2479,77 @@
         "legalText": "Text of version {version}",
         "fileName": "Handover protocol - rev. {revision}"
       }
+    },
+    "access": {
+      "title": "Access",
+      "lead": "Who can see this file. A professional sees only the tabs you choose, for as long as you set — and every view or download is written to History.",
+      "loading": "Loading who has access…",
+      "error": "The file's access could not be loaded. Try again shortly.",
+      "archivedHint": "The file is archived: restore it first to send a new invitation.",
+      "roles": {
+        "owner_lawyer": "Lawyer",
+        "notary": "Notary"
+      },
+      "nobody": "Nobody has access in this role.",
+      "expiresOn": "Expires {date}",
+      "expiredOn": "Expired {date}",
+      "reachLine": "Sees: {tabs}",
+      "excludedCount": "{count, plural, one {# file excluded} other {# files excluded}}",
+      "actions": {
+        "invite": "Invite",
+        "resend": "Resend",
+        "cancelInvitation": "Cancel invitation",
+        "renew": "Renew",
+        "reach": "Change scope",
+        "revoke": "Revoke"
+      },
+      "reach": {
+        "tabsLabel": "What they will see",
+        "filesLabel": "Files",
+        "filesHint": "Untick anything you don't want them to see.",
+        "noFiles": "There are no files in these tabs yet.",
+        "preview": "{count, plural, one {They will see # file} other {They will see # files}} — plus anything you add to these tabs later.",
+        "noTab": "Choose at least one tab."
+      },
+      "invite": {
+        "title": "Give a professional access",
+        "description": "They will get an email with a link that works only for that address. Access starts when they accept.",
+        "emailLabel": "Professional's email",
+        "emailInvalid": "Enter a valid email.",
+        "roleLabel": "As",
+        "daysLabel": "For how long",
+        "days": "{count, plural, one {# day} other {# days}} from acceptance",
+        "purposeTitle": "What you declare by sending",
+        "purpose": "You are giving access for a legal review of the property on your behalf. You can revoke it at any time; anything the professional has already downloaded stays with them.",
+        "send": "Send invitation",
+        "sending": "Sending…",
+        "cancel": "Cancel"
+      },
+      "reachDialog": {
+        "title": "Change scope",
+        "description": "Applies from the next time they open the file, and the professional is notified.",
+        "save": "Save",
+        "saving": "Saving…"
+      },
+      "renewDialog": {
+        "title": "Renew access",
+        "description": "The new expiry counts from today, and the professional is notified.",
+        "confirm": "Renew",
+        "confirming": "Renewing…"
+      },
+      "revokeConfirm": {
+        "title": "Revoke access?",
+        "description": "Takes effect immediately and the professional is notified. Anything already downloaded is not erased from their device.",
+        "confirm": "Revoke",
+        "cancel": "Cancel"
+      },
+      "rejections": {
+        "NOT_FOUND": "It no longer exists — refresh the page.",
+        "DOSSIER_ARCHIVED": "The file is archived — restore it to give access.",
+        "SLOT_OCCUPIED": "This role already has access — renew or revoke it first.",
+        "NOT_ALLOWED": "That access has already ended — send a new invitation.",
+        "generic": "That didn't work. Try again."
+      }
     }
   },
   "savedListings": {

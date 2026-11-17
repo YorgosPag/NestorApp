@@ -16,11 +16,8 @@ import type { ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { propertyDossierIdFrom } from '@/lib/property-dossier/property-dossier-request-schema';
 import { readOwnedDossier, type DossierOwnerActor } from '@/services/property-dossier/dossier-access-host.service';
-import type { DossierAccessResponse } from '@/types/dossier-access';
+import type { DossierAccessError, DossierAccessResponse } from '@/types/dossier-access';
 import type { PropertyDossier } from '@/types/property-dossier';
-
-/** Οι κωδικοί άρνησης των πορτών πρόσβασης — κλειστό σύνολο, ίδιο λεξιλόγιο με το `{ error }` των αδελφών. */
-export type DossierAccessError = 'NOT_FOUND' | 'DOSSIER_ARCHIVED' | 'SLOT_OCCUPIED' | 'NOT_ALLOWED';
 
 export type DossierAccessBody = DossierAccessResponse | { readonly error: DossierAccessError };
 

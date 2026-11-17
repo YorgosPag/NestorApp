@@ -20,4 +20,13 @@ export const DossierSurfaces = defineLazySurfaces({
     load: () => import('@/components/property-dossier/PropertyDossierTabs').then(mod => ({ default: mod.PropertyDossierTab })),
     fallback: DossierTabLoading,
   },
+  /**
+   * ADR-916 Φ-Ε1 Σ4 — η κάρτα «Πρόσβαση» του κατόχου. Τεμπέλικη, όπως ο διάλογος κοινοποίησης του Drive/Figma: μιλά και
+   * το λεξιλόγιο συμμετοχών (`conveyance` — καταστάσεις · πρόσκληση · δηλωμένη ιδιότητα, ένα λεξιλόγιο για κάθε θέση
+   * επαγγελματία), που **δεν** μπαίνει έτσι στη στατική κλειστότητα της σελίδας φακέλου (ADR-744 §27.4).
+   */
+  PropertyDossierAccess: {
+    load: () => import('@/components/property-dossier/access/DossierAccessCard').then(mod => ({ default: mod.DossierAccessCard })),
+    namespaces: ['property-market', 'conveyance'],
+  },
 });

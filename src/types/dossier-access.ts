@@ -21,6 +21,13 @@ import type {
 import type { CaseInvitationSummary } from '@/types/engagement-invitation';
 import type { EngagedDossierFile } from '@/types/my-engagements';
 
+/**
+ * Οι κωδικοί άρνησης των πορτών πρόσβασης — **κλειστό** σύνολο, το ΕΝΑ λεξιλόγιο για πόρτα (`{ error }`) και πελάτη
+ * (`dossierAccessRejectionOf`). 404 = «δεν υπάρχει εδώ» · 409 = «υπάρχει, αλλά η κατάστασή του δεν το επιτρέπει».
+ */
+export const DOSSIER_ACCESS_ERRORS = ['NOT_FOUND', 'DOSSIER_ARCHIVED', 'SLOT_OCCUPIED', 'NOT_ALLOWED'] as const;
+export type DossierAccessError = (typeof DOSSIER_ACCESS_ERRORS)[number];
+
 /** Μία συμμετοχή στον φάκελο, όπως τη βλέπει ο **κάτοχος**. ⛔ Κανένα `uid` — ο κάτοχος βλέπει email, όχι ταυτότητα. */
 export interface DossierEngagementSummary {
   readonly engagementId: string;

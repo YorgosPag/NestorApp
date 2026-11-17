@@ -14,6 +14,7 @@
  */
 
 import type { ChecklistProvider } from '@/config/conveyance-checklist/types';
+import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import type { ConveyanceCaseState } from '@/types/conveyance-case';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
 
@@ -118,6 +119,12 @@ export function activeExpiresAt(nowMs: number): string {
 export const DOSSIER_SHARE_DAYS = [7, 30, 90] as const;
 export type DossierShareDays = (typeof DOSSIER_SHARE_DAYS)[number];
 export const DOSSIER_SHARE_DEFAULT_DAYS: DossierShareDays = 30;
+
+/**
+ * ADR-916 Φ-Ε1 Σ4 — η **προεπιλογή εύρους** μιας νέας πρόσκλησης: ό,τι χρειάζεται ο νομικός έλεγχος (Έγγραφα · Κάτοψη ή
+ * Τοπογραφικό), **όχι** φωτογραφίες και βίντεο. Ελάχιστη πρόσβαση εξ ορισμού (least privilege)· ο κάτοχος προσθέτει.
+ */
+export const DOSSIER_SHARE_DEFAULT_TABS: readonly PropertyDossierFileTab[] = ['floorplan', 'documents'];
 
 /** Φρουρός για τιμή **από έξω** (σώμα αιτήματος · δίσκος). */
 export function isDossierShareDays(value: unknown): value is DossierShareDays {
