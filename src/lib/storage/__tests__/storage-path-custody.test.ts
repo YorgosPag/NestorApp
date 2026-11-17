@@ -170,6 +170,13 @@ describe('Ρ — κάθε είδος ρίζας διαβάζεται σωστά'
   it('Ρ5 — `asset-packs`: οι κανόνες λένε `allow read: if false` ⇒ μόνο ο διακομιστής', () => {
     expect(judgeStorageCustody('asset-packs/pack_1/v1/a.glb', caller)).toBe('server-mediated');
   });
+
+  it.each(['asset-packs/pack_1/v1/a.glb', 'mandate-evidence/c1/e.pdf', 'catalog-publications/p1/x.pdf', 'tour-tiles/t1/0.jpg'])(
+    '🔴 Ρ6 — %s: η ΓΕΝΙΚΗ λήψη ΔΕΝ σερβίρει server-only (μόνο η δική της πόρτα με κριτή — ADR-916 Φ-Ε1)',
+    (path) => {
+      expect(isStorageCustodyServable(judgeStorageCustody(path, caller))).toBe(false);
+    },
+  );
 });
 
 // =============================================================================

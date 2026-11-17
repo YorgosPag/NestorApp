@@ -267,12 +267,20 @@ export type StorageCustodyVerdict =
   | 'foreign-user'
   | 'undeclared-root';
 
-/** Οι ετυμηγορίες που **επιτρέπουν** στον διακομιστή να σερβίρει τα bytes. */
+/**
+ * Οι ετυμηγορίες που **επιτρέπουν** σε μια **γενική** πόρτα λήψης κατά μονοπάτι να σερβίρει τα bytes.
+ *
+ * 🔴 **ΟΧΙ `server-mediated`** (ADR-916 Φ-Ε1, 2026-11-17): «μόνο ο διακομιστής» σημαίνει «μόνο η **δική της** πόρτα, με
+ *    **δικό της** κριτή» — `asset-packs` → `/api/asset-packs` (πύλη δικαιώματος πακέτου) · `catalog-publications` →
+ *    `/api/catalog/publications/[id]/download` · `mandate-evidence` → η διαδρομή αποδεικτικού · `tour-*` → κουπόνι
+ *    θέασης. Μέχρι τότε το `/api/download?url=` τις σέρβιρε σε **κάθε** μέλος **κάθε** εταιρείας που ήξερε τη διαδρομή
+ *    (το Admin SDK δεν κοιτά το token του URL) ⇒ παρέκαμπτε **και** τους τέσσερις κριτές. Κανένας νόμιμος καλών του `?url=`
+ *    δεν ζητά τέτοια ρίζα (grep 2026-11-17).
+ */
 const SERVABLE_VERDICTS: readonly StorageCustodyVerdict[] = [
   'own-company',
   'own-user',
   'shared-catalog',
-  'server-mediated',
 ];
 
 /** Επιτρέπει αυτή η ετυμηγορία τη λήψη; */
