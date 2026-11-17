@@ -63,16 +63,20 @@ export type ContactLinkStatus = (typeof CONTACT_LINK_STATUSES)[number];
 export const CONTACT_ACCOUNT_NAME_MATCHES = ['match', 'differs', 'unknown'] as const;
 export type ContactAccountNameMatch = (typeof CONTACT_ACCOUNT_NAME_MATCHES)[number];
 
-/** Ο λογαριασμός που **αποδέχτηκε** συνεργασία ως αυτή η επαφή — μόνο όνομα, ποτέ `uid` ή email. */
+/**
+ * Ο λογαριασμός που **αποδέχτηκε** συνεργασία ως αυτή η επαφή — μόνο όνομα, ποτέ `uid` ή email.
+ *
+ * 🔑 **Δεδομένα πηγής, όχι ετυμηγορία** (ADR-915 §40.10): ο server στέλνει το όνομα του λογαριασμού και ο πελάτης
+ *    κρίνει «ίδιο / διαφορετικό» (`compareContactToAccount`) και προτείνει (`accountNameProposalOf`) πάνω στη **ζωντανή**
+ *    επαφή. Ετυμηγορία υπολογισμένη στον server πάλιωνε τη στιγμή που άλλαζε το όνομα της επαφής (υιοθέτηση **ή**
+ *    χειροκίνητη επεξεργασία) — το σήμα έμενε «διαφορετικό» μέχρι ανανέωση.
+ * 🔑 Όλα `null` ⇒ ο λογαριασμός δεν διαβάστηκε («άγνωστος λογαριασμός»), ποτέ κενό σαν να ήταν γνωστό.
+ */
 export interface ContactLinkedAccount {
-  /** `null` ⇒ ο λογαριασμός δεν διαβάστηκε («άγνωστος λογαριασμός»), ποτέ κενό σαν να ήταν γνωστό. */
   readonly displayName: string | null;
-  readonly nameMatch: ContactAccountNameMatch;
-  /**
-   * ADR-915 §40.9 — το **δομημένο** όνομα του λογαριασμού, για την «Υιοθέτηση ονόματος». Ίδιο προσωπικό δεδομένο με
-   * το `displayName`, σε μέρη. `null` ⇒ ο λογαριασμός δεν έχει χωριστό όνομα **και** επώνυμο (καμία μαντεψιά διάσπασης).
-   */
-  readonly proposedName: { readonly firstName: string; readonly lastName: string } | null;
+  /** Το **δομημένο** όνομα — ίδιο προσωπικό δεδομένο με το `displayName`, σε μέρη. */
+  readonly givenName: string | null;
+  readonly familyName: string | null;
 }
 
 export interface ContactProfessionalLink {

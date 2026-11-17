@@ -160,6 +160,7 @@ ADR-838). Ένας τρίτος, χειρόγραφος κατάλογος θα 
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-17 | **§40.10 — Δεδομένα στο σύρμα, κρίση στον πελάτη: το σήμα «Διαφορετικό όνομα» δεν παλιώνει.** Ζωντανή επαλήθευση στην παραγωγή: μετά από επιτυχή υιοθέτηση το όνομα άλλαξε παντού, αλλά σήμα και κουμπί **έμειναν** μέχρι ανανέωση — η ετυμηγορία (`nameMatch`/`proposedName`) ερχόταν έτοιμη από τον server και το `professional-link` δεν ξαναζητούνταν. Ρίζα: ετυμηγορία υπολογισμένη πάνω σε στιγμιότυπο της επαφής. Θεραπεία της **κλάσης**: το `ContactLinkedAccount` φέρει πλέον το όνομα του λογαριασμού (`displayName`/`givenName`/`familyName`) και η όψη κρίνει με τον **ίδιο** καθαρό πυρήνα πάνω στη ζωντανή επαφή — καλύπτει και τη χειροκίνητη μετονομασία από τη φόρμα, που είχε το ίδιο κενό. Ο route δεν χρειάζεται πια το όνομα της επαφής. Άγκυρα Π5 (πρόταση ⇒ πάντα `match`). |
 | 2026-11-17 | **§40.9 — «Υιοθέτηση ονόματος από τον λογαριασμό».** Ρητή πράξη κάτω από το «Διαφορετικό όνομα»: `POST …/adopt-account-name` ξαναδιαβάζει στον server τον **έναν** αποδεκτό λογαριασμό (`readSoleAcceptedAccount`), απαιτεί δομημένο όνομα **και** επώνυμο (καμία διάσπαση), γράφει με CAS σε συναλλαγή, αφήνει ιστορικό και τρέχει **με await** το cascade ADR-249 στον server (αποτυχία ⇒ `nameCascade:'failed'`, ποτέ σιωπηλά). Διάλογος με παλιό → νέο, προειδοποίηση ταυτότητας και επιπτώσεις από το `name-cascade-preview`. |
 | 2026-11-17 | **§45.20 Φ6γ — ο δρόμος της πράξης του μηχανικού έγινε κοινός** (ADR-943 §5.10 Φ5α): η σκαλωσιά του «Αίτημα νέας ημερομηνίας» (δική του ενεργή συμμετοχή · κρίση της μέσα στη συναλλαγή · ίδιος γραφέας/μειωτής · ίχνος) εξήχθη αυτούσια στο `issuance-engagement-action.server.ts`, και ο πίνακας αρνήσεων → HTTP στο `api/engagements/_shared/issuance-action-response.ts`. Δεύτερος καταναλωτής: «Έγινε η αυτοψία». Συμπεριφορά του αιτήματος αμετάβλητη. |
 | 2026-11-17 | **§40.8 — «Συνδέθηκε ως: <όνομα λογαριασμού>» + σήμα «Διαφορετικό όνομα».** Αφορμή: επαφή «Μαυρίδης» με ενεργό εκδότη ΠΕΑ τον λογαριασμό «ΠΕΑΣ», αόρατο στο γραφείο. Μόνο όνομα, μόνο για αποδεκτή συνεργασία, από την πηγή (`readAccountIdentities`)· `uid`/email ποτέ στο σύρμα. Σύγκριση με επίγνωση ελληνικών (`compareContactToAccount`). Αναθεωρεί τη φράση ΓΚΠΔ της §40.3. Μαζί: ADR-944 (προειδοποίηση διπλού email ανάμεσα σε επαφές). |
@@ -3952,9 +3953,9 @@ email **δεν** φεύγουν ποτέ στο σύρμα.
 |---|---|
 | Διακριτοί αποδεκτοί λογαριασμοί | `acceptedAccountUidsOf` (`lib/engagements/contact-professional-link.ts`) |
 | Ταυτότητα από την **πηγή** τη στιγμή της ανάγνωσης (καμία αντιγραφή στην επαφή — §40.2 ακέραιο) | `readAccountIdentities` (`server/auth/account-identities.ts`, υπάρχον SSoT ADR-884) |
-| Ρητό αίτημα ανά καλούντα: `{ read: true, contactName }` (σελίδα επαφής) · `{ read: false }` (υιοθέτηση — δεν πληρώνει κλήση Auth) | `LinkedAccountsRequest` στο `contact-engagement-link.server.ts` |
-| Όνομα επαφής από το **ίδιο** φόρτωμα του route (`loadOwnedContact`) | `contactPersonNameOf` |
-| `ContactProfessionalLink.accounts: { displayName: string \| null; nameMatch }[]` | `types/contact-professional-link.ts` |
+| Ρητό αίτημα ανά καλούντα: `{ read: true }` (σελίδα επαφής) · `{ read: false }` (υιοθέτηση — δεν πληρώνει κλήση Auth) *(ως την §40.10: `{ read: true, contactName }`)* | `LinkedAccountsRequest` στο `contact-engagement-link.server.ts` |
+| ~~Όνομα επαφής από το ίδιο φόρτωμα του route~~ — **αναθεωρήθηκε §40.10**: η σύγκριση γίνεται στον πελάτη, πάνω στη ζωντανή επαφή | `ContactProfessionalLinkBadge.tsx` |
+| `ContactProfessionalLink.accounts: { displayName; givenName; familyName }[]` *(ως την §40.10: `{ displayName; nameMatch; proposedName }`)* | `types/contact-professional-link.ts` |
 | Όψη: `LinkedAccountLine` στο `ContactProfessionalLinkBadge.tsx` · κλειδιά `LINKED_ACCOUNT_KEYS` (`contacts-core:header.professionalLink.account*`, el + en) | |
 
 **Απορρίφθηκαν:** email ή `uid` στην απόκριση (ελαχιστοποίηση· το email ήδη το ξέρει το γραφείο από την πρόσκληση) ·
@@ -4006,7 +4007,7 @@ email **δεν** φεύγουν ποτέ στο σύρμα.
 | Πρόταση + ακριβής ισότητα (καθαρές) | `accountNameProposalOf` · `sameContactPersonName` (`lib/engagements/contact-account-name-match.ts`) |
 | Ο ΕΝΑΣ αποδεκτός λογαριασμός (με `uid`, μόνο server) · κοινή ανάγνωση `judgedOf` και για τους δύο αναγνώστες | `readSoleAcceptedAccount` (`server/engagements/contact-engagement-link.server.ts`) |
 | Η πόρτα | `POST /api/contacts/[contactId]/adopt-account-name` · `API_ROUTES.CONTACTS.ADOPT_ACCOUNT_NAME` |
-| Στο σύρμα: `ContactLinkedAccount.proposedName` (ίδιο δεδομένο με το `displayName`, σε μέρη) · `AdoptAccountName{Request,Response}` | `types/contact-professional-link.ts` |
+| Στο σύρμα: `ContactLinkedAccount.givenName`/`familyName` (ίδιο δεδομένο με το `displayName`, σε μέρη· η πρόταση = `accountNameProposalOf` στον πελάτη, §40.10) · `AdoptAccountName{Request,Response}` | `types/contact-professional-link.ts` |
 | Όψη: `AccountNameAdoption.tsx` + `useAdoptAccountName.ts` · κλειδιά `ACCOUNT_NAME_ADOPTION_KEYS` (`contacts-core:header.professionalLink.adoptName.*`, el + en) | `components/contacts/details/` |
 
 **Γνωστό όριο:** αν το cascade αποτύχει, δεν ξανατρέχει μόνο του. Η επαφή έχει ήδη το νέο όνομα, οπότε ούτε νέα
@@ -4022,6 +4023,35 @@ email **δεν** φεύγουν ποτέ στο σύρμα.
 cascade · unchanged χωρίς παρενέργειες · αποτυχία/εξαίρεση cascade ⇒ `failed` · 409 CONTACT_CHANGED / AMBIGUOUS_ACCOUNT /
 NO_LINKED_ACCOUNT · 422 NOT_INDIVIDUAL / NO_STRUCTURED_NAME · 503 · ιδιοκτησία πρώτα) ·
 `contact-account-name-match.test.ts` (Π1–Π4, Ι1–Ι3) · `contact-engagement-link-accounts.test.ts` (`proposedName` στα Α1/Α4 · Μ1–Μ4).
+
+### 40.10 Δεδομένα στο σύρμα, κρίση στον πελάτη — το σήμα δεν παλιώνει (2026-11-17)
+
+**Εύρημα (ζωντανή επαλήθευση στην παραγωγή, nestorconstruct.gr):** η υιοθέτηση στην επαφή `cont_fb75c1f0…` πέτυχε
+(`POST adopt-account-name` 200, ιστορικό «Αλέξανδρος → ΓΕΩΡΓΙΟΣ» · «Μαυρίδης → ΠΕΑΣ», το όνομα άλλαξε αμέσως σε κεφαλίδα,
+λίστα και πεδία), αλλά το σήμα «Διαφορετικό όνομα» και το κουμπί **έμειναν** — έφυγαν μόνο με ανανέωση. Η §40.9 υπέθετε
+(«η λίστα επαφών είναι ζωντανή ⇒ το σήμα γίνεται μόνο του ίδιο») κάτι ψευδές: το σήμα **δεν** διαβαζόταν από τη λίστα.
+
+**Ρίζα:** η ετυμηγορία (`nameMatch`) και η πρόταση (`proposedName`) υπολογίζονταν στον server πάνω σε **στιγμιότυπο** της
+επαφής, και το `professional-link` ζητείται μία φορά ανά επαφή. Κάθε αλλαγή ονόματος — υιοθέτηση **ή χειροκίνητη
+μετονομασία στη φόρμα** — άφηνε την ετυμηγορία μπαγιάτικη. Δηλαδή το λάθος ήταν **κλάση**, όχι η περίπτωση.
+
+**Απόφαση — παράγωγη κατάσταση, όχι αποθηκευμένη ετυμηγορία:** οι μεγάλοι παίκτες (Figma, Linear, Google Docs) δεν
+στέλνουν «υπολογισμένη ετυμηγορία» που εξαρτάται από δεδομένα του πελάτη· στέλνουν **δεδομένα** και παράγουν την όψη από
+την τρέχουσα κατάσταση. Η «ανανέωση μετά την πράξη» (invalidate/refetch, ο δρόμος React Query) απορρίφθηκε: θα διόρθωνε
+**μόνο** την υιοθέτηση, όχι τη χειροκίνητη μετονομασία, και θα κόστιζε δεύτερο αίτημα με κλήση Firebase Auth.
+- Το σύρμα φέρει το όνομα του λογαριασμού: `ContactLinkedAccount = { displayName, givenName, familyName }` — τα **ίδια**
+  προσωπικά δεδομένα που ήδη ταξίδευαν (ως `displayName` + `proposedName`), καμία διεύρυνση έκθεσης (ΓΚΠΔ 5(1)(γ)).
+- Η όψη κρίνει `compareContactToAccount(ζωντανό όνομα επαφής, λογαριασμός)` και προτείνει `accountNameProposalOf(λογαριασμός)`
+  — ο **ίδιος** καθαρός πυρήνας που τρέχει και ο server στην υιοθέτηση· ένας κανόνας, δύο εκτελέσεις, καμία απόκλιση.
+- Ο route του `professional-link` δεν χρειάζεται πια το όνομα της επαφής (`LinkedAccountsRequest = { read: boolean }`).
+- Άγκυρα **Π5**: για κάθε λογαριασμό με πρόταση, `compareContactToAccount(πρόταση, λογαριασμός) === 'match'` — το
+  συμβόλαιο που εγγυάται ότι το κουμπί φεύγει μετά την υιοθέτηση.
+
+**Απορρίφθηκαν:** refetch μετά την υιοθέτηση (μισή θεραπεία) · αισιόδοξη κρυφή κατάσταση «υιοθετήθηκε» (δεύτερη αλήθεια) ·
+διατήρηση **και** του `nameMatch` του server (δύο κρίσεις που μπορούν να διαφωνήσουν).
+
+**Tests (ενημερώθηκαν, εκκρεμεί έγκριση εκτέλεσης):** `contact-engagement-link-accounts.test.ts` (Α1/Α4: όνομα σε μέρη,
+**καμία** ετυμηγορία στο σύρμα) · `contact-account-name-match.test.ts` (Π5).
 
 ## 41. Η διάταξη του μητρώου λήξεων: «τι θέλει ενέργεια» πρώτα, πυκνό μητρώο από κάτω, λεπτομέρεια στο πλάι (2026-11-15)
 

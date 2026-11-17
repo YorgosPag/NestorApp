@@ -16,11 +16,6 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { engagementsOfContactQuery } from '@/lib/auth/engagement-ref';
 import { parseEngagement } from '@/lib/auth/engagement-schema';
 import {
-  accountNameProposalOf,
-  compareContactToAccount,
-  type ContactPersonName,
-} from '@/lib/engagements/contact-account-name-match';
-import {
   acceptedAccountUidsOf,
   actsForOfficeOf,
   judgeCurrentPerSubject,
@@ -74,21 +69,18 @@ async function assignmentOf(db: Firestore, judged: JudgedEngagement): Promise<Co
 /**
  * ADR-915 §40.8 — **με ποια ταυτότητα** δουλεύει μαζί του: μόνο όνομα, μόνο αποδεκτοί λογαριασμοί, διαβασμένο από την
  * **πηγή** τη στιγμή της ανάγνωσης (`readAccountIdentities`) — καμία αντιγραφή στην επαφή. Ο `uid` **δεν** φεύγει.
+ * ADR-915 §40.10 — **μόνο τα δεδομένα**: η κρίση «ίδιο / διαφορετικό» γίνεται στον πελάτη, πάνω στη ζωντανή επαφή.
  */
-async function linkedAccountsOf(
-  db: Firestore,
-  judged: readonly JudgedEngagement[],
-  contactName: ContactPersonName | null,
-): Promise<readonly ContactLinkedAccount[]> {
+async function linkedAccountsOf(db: Firestore, judged: readonly JudgedEngagement[]): Promise<readonly ContactLinkedAccount[]> {
   const uids = acceptedAccountUidsOf(judged);
   if (uids.length === 0) return [];
   const identities = await readAccountIdentities(db, uids);
   return uids.map((uid) => {
-    const identity = identities.get(uid) ?? null;
+    const identity = identities.get(uid);
     return {
       displayName: identity?.displayName ?? null,
-      nameMatch: compareContactToAccount(contactName, identity),
-      proposedName: accountNameProposalOf(identity),
+      givenName: identity?.givenName ?? null,
+      familyName: identity?.familyName ?? null,
     };
   });
 }
@@ -96,11 +88,10 @@ async function linkedAccountsOf(
 /**
  * Ζητά ο καλών τους λογαριασμούς (ADR-915 §40.8); **Ρητό** σε κάθε σημείο κλήσης: η ανάγνωση ταυτοτήτων κοστίζει
  * κλήση στο Firebase Auth, και ο καλών που θέλει μόνο τη δήλωση (υιοθέτηση) δεν την πληρώνει.
- * `contactName` = από την επαφή που ο route **ήδη** φόρτωσε (`loadOwnedContact`) — `null` όταν δεν είναι φυσικό πρόσωπο.
  */
-export type LinkedAccountsRequest =
-  | { readonly read: true; readonly contactName: ContactPersonName | null }
-  | { readonly read: false };
+export interface LinkedAccountsRequest {
+  readonly read: boolean;
+}
 
 /** Οι τρέχουσες συμμετοχές της επαφής **σε αυτό** το γραφείο, κριμένες τώρα — η ΜΙΑ ανάγνωση και των δύο αναγνωστών. */
 async function judgedOf(db: Firestore, hostCompanyId: string, contactId: string, nowMs: number): Promise<readonly JudgedEngagement[]> {
@@ -122,7 +113,7 @@ export async function readContactProfessionalLink(
     const shown = status === 'none' ? [] : judged;
     const [assignments, accounts] = await Promise.all([
       Promise.all(shown.map((j) => assignmentOf(db, j))),
-      accountsRequest.read ? linkedAccountsOf(db, judged, accountsRequest.contactName) : [],
+      accountsRequest.read ? linkedAccountsOf(db, judged) : [],
     ]);
     return {
       outcome: 'ok',

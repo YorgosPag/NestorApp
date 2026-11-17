@@ -80,6 +80,7 @@
       "servicesProvided": "Παρεχόμενες Υπηρεσίες",
       "personas": "Ρόλοι (Personas)",
       "personaTypes": "Τύποι Ρόλων",
+      "emailKeys": "Κλειδιά αναζήτησης email",
       "area": "Εμβαδόν",
       "price": "Τιμή",
       "buildingId": "Κτίριο",
@@ -352,6 +353,7 @@
         "servicesProvided": "Παρεχόμενες Υπηρεσίες",
         "personas": "Ρόλοι (Personas)",
         "personaTypes": "Τύποι Ρόλων",
+        "emailKeys": "Κλειδιά αναζήτησης email",
         "displayName": "Εμφανιζόμενο όνομα"
       },
       "property": {

@@ -430,6 +430,9 @@ const CONTACT_TRACKED_FIELDS_RAW: Record<string, string> = {
   // ── Personas (ADR-121) ──
   personas: 'personas',
   personaTypes: 'personaTypes',
+
+  // ── Παράγωγα ευρετήρια (ADR-944) ──
+  emailKeys: 'emailKeys',
 };
 
 // Fields exclusive to a specific contact type — excluded from audit diffs
@@ -548,6 +551,13 @@ const CONTACT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     label: 'emails',
     trackSubFields: ['email', 'type', 'isPrimary', 'label'],
     itemCatalogs: { type: AUDIT_EMAIL_TYPE_CATALOG },
+  },
+  // ADR-944 — παράγωγο των `emails`: σωπαίνει όταν άλλαξαν και τα emails (`CONTACT_DERIVED_MIRRORS`), φαίνεται με
+  // ετικέτα όταν άλλαξε μόνο του (συμπλήρωση / απόκλιση) — ποτέ ωμό «emailKeys».
+  emailKeys: {
+    kind: 'collection',
+    ...CONTACT_COLLECTION_IDENTITY.emailKeys,
+    label: 'emailKeys',
   },
   phones: {
     kind: 'collection',

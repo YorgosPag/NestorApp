@@ -34,7 +34,7 @@ import type {
 import { ENGAGEMENT_STATE_KEYS, LINKED_ACCOUNT_KEYS, PROFESSIONAL_LINK_KEYS } from './contact-professional-link-labels';
 import { DeclaredCredentialAdoption, credentialText } from './DeclaredCredentialAdoption';
 import { AccountNameAdoption } from './AccountNameAdoption';
-import type { ContactPersonName } from '@/lib/engagements/contact-account-name-match';
+import { compareContactToAccount, type ContactPersonName } from '@/lib/engagements/contact-account-name-match';
 
 
 /** Τι ανέλαβε: το **έγγραφο** σε ανάθεση έκδοσης, ο **ρόλος** σε μεταβίβαση. */
@@ -100,18 +100,22 @@ interface LinkFactsProps {
 /**
  * ADR-915 §40.8 — «Συνδέθηκε ως: …» + σήμα όταν το όνομα **διαφέρει** (κείμενο + εικονίδιο, ποτέ μόνο χρώμα — CHECK 3.41).
  * Η εξήγηση είναι ορατό κείμενο, όχι tooltip: πρέπει να τη διαβάσει όποιος δεν αιωρείται (αφή, αναγνώστης οθόνης).
+ * ADR-915 §40.10 — η κρίση γίνεται **εδώ**, πάνω στο ζωντανό όνομα της επαφής: υιοθέτηση ή χειροκίνητη διόρθωση ⇒ το
+ * σήμα και το κουμπί φεύγουν στην ίδια απόδοση που αλλάζει το όνομα, χωρίς δεύτερο αίτημα και χωρίς ανανέωση.
  */
 interface LinkedAccountLineProps {
   readonly account: ContactLinkedAccount;
   readonly t: Translate;
   readonly contactId: string;
-  /** ADR-915 §40.9 — μόνο όταν η υιοθέτηση επιτρέπεται: φυσικό πρόσωπο **και** ένας μοναδικός λογαριασμός. */
-  readonly adoptableName: ContactPersonName | null;
+  /** Το ζωντανό όνομα της επαφής — `null` σε νομικό πρόσωπο (καμία σύγκριση, κανένα σήμα). */
+  readonly contactName: ContactPersonName | null;
+  /** ADR-915 §40.9 — ένας μοναδικός λογαριασμός: με δύο, «ποιανού το όνομα;» δεν απαντιέται με ένα κουμπί. */
+  readonly adoptable: boolean;
 }
 
-function LinkedAccountLine({ account, t, contactId, adoptableName }: LinkedAccountLineProps) {
+function LinkedAccountLine({ account, t, contactId, contactName, adoptable }: LinkedAccountLineProps) {
   const iconSizes = useIconSizes();
-  const differs = account.nameMatch === 'differs';
+  const differs = compareContactToAccount(contactName, account) === 'differs';
   return (
     <li className="flex flex-col gap-1">
       <span className="flex flex-wrap items-center gap-2">
@@ -124,8 +128,8 @@ function LinkedAccountLine({ account, t, contactId, adoptableName }: LinkedAccou
         )}
       </span>
       {differs && <span className="text-muted-foreground">{t(LINKED_ACCOUNT_KEYS.nameDiffersHint)}</span>}
-      {differs && adoptableName !== null && (
-        <AccountNameAdoption contactId={contactId} account={account} contactName={adoptableName} t={t} />
+      {differs && adoptable && contactName !== null && (
+        <AccountNameAdoption contactId={contactId} account={account} contactName={contactName} t={t} />
       )}
     </li>
   );
@@ -134,7 +138,7 @@ function LinkedAccountLine({ account, t, contactId, adoptableName }: LinkedAccou
 function LinkFacts({ link, t, contactId, contact, contactName }: LinkFactsProps) {
   const declared = link.declared;
   // Με δύο λογαριασμούς, «ποιανού το όνομα;» δεν απαντιέται με ένα κουμπί — ο server απαντά 409 ούτως ή άλλως.
-  const adoptableName = link.accounts.length === 1 ? contactName : null;
+  const adoptable = link.accounts.length === 1;
   return (
     <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
       {link.accounts.length > 0 && (
@@ -143,7 +147,7 @@ function LinkFacts({ link, t, contactId, contact, contactName }: LinkFactsProps)
           <dd className="m-0">
             <ul className="m-0 flex list-none flex-col gap-1 p-0">
               {link.accounts.map((account, index) => (
-                <LinkedAccountLine key={index} account={account} t={t} contactId={contactId} adoptableName={adoptableName} />
+                <LinkedAccountLine key={index} account={account} t={t} contactId={contactId} contactName={contactName} adoptable={adoptable} />
               ))}
             </ul>
           </dd>

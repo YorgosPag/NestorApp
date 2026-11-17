@@ -80,6 +80,7 @@
       "servicesProvided": "Services Provided",
       "personas": "Roles (Personas)",
       "personaTypes": "Role Types",
+      "emailKeys": "Email lookup keys",
       "area": "Area",
       "price": "Price",
       "buildingId": "Building",
@@ -352,6 +353,7 @@
         "servicesProvided": "Services provided",
         "personas": "Personas",
         "personaTypes": "Persona types",
+        "emailKeys": "Email lookup keys",
         "displayName": "Display name"
       },
       "property": {

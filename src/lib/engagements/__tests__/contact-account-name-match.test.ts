@@ -85,6 +85,25 @@ describe('accountNameProposalOf — ADR-915 §40.9', () => {
   it('Π4 — άγνωστος λογαριασμός ⇒ null', () => {
     expect(accountNameProposalOf(null)).toBeNull();
   });
+
+  /**
+   * ADR-915 §40.10 — το συμβόλαιο που κάνει το σήμα να φεύγει **μόνο του** μετά την υιοθέτηση: η επαφή παίρνει την
+   * πρόταση, ο πελάτης ξανακρίνει πάνω στη ζωντανή επαφή, και η κρίση **ΠΡΕΠΕΙ** να είναι `match`. Αν ποτέ η πρόταση
+   * και η σύγκριση αποκλίνουν (π.χ. η σύγκριση αρχίσει να διαβάζει άλλο πεδίο), το κουμπί θα έμενε για πάντα.
+   */
+  it('Π5 — υιοθετημένη πρόταση ⇒ ΠΑΝΤΑ match με τον ίδιο λογαριασμό', () => {
+    const accounts = [
+      account('ΓΕΩΡΓΙΟΣ', 'ΠΕΑΣ', 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ'),
+      account('  Γεώργιος  Ιωάννης ', 'Πέας', 'Γιώργος Πέας'),
+      account('Μαρία', 'Παπα-Γεωργίου', null),
+      account('Georgios', 'Pagonis', 'Γεώργιος Παγώνης'),
+    ];
+    for (const acc of accounts) {
+      const adopted = accountNameProposalOf(acc);
+      expect(adopted).not.toBeNull();
+      expect(compareContactToAccount(adopted, acc)).toBe('match');
+    }
+  });
 });
 
 describe('sameContactPersonName — ADR-915 §40.9', () => {

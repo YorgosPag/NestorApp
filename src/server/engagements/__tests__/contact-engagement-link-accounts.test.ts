@@ -2,10 +2,11 @@
  * ADR-915 §40.8 — «Συνδέθηκε ως»: **μόνο όνομα**, **μόνο** για αποδεκτή συνεργασία, ανάγνωση ταυτοτήτων **μόνο** όταν
  * τη ζητά ο καλών. Η κρίση συμμετοχών (`judgeCurrentPerSubject`) τρέχει **αληθινή**· μόνο τα σύνορα I/O είναι ψεύτικα.
  *
- * Α1 — αποδεκτή ⇒ όνομα + `differs` (το αληθινό εύρημα Μαυρίδης/ΠΕΑΣ) · ΚΑΝΕΝΑ uid/email στην απόκριση.
+ * Α1 — αποδεκτή ⇒ το όνομα του λογαριασμού (ενιαίο + δομημένο) · ΚΑΝΕΝΑ uid/email · ΚΑΜΙΑ ετυμηγορία στην απόκριση
+ *      (ADR-915 §40.10: η κρίση «ίδιο / διαφορετικό» γίνεται στον πελάτη, πάνω στη ζωντανή επαφή).
  * Α2 — σκέτη πρόταση ⇒ καμία ταυτότητα, καμία κλήση στο Auth (δεν έχει συναινέσει).
  * Α3 — `{ read: false }` (υιοθέτηση) ⇒ καμία κλήση στο Auth.
- * Α4 — λογαριασμός που δεν διαβάστηκε ⇒ `displayName: null`, `unknown` — ποτέ κενό σαν γνωστό.
+ * Α4 — λογαριασμός που δεν διαβάστηκε ⇒ όλα `null` — ποτέ κενό σαν γνωστό.
  * Μ1–Μ4 — ADR-915 §40.9: ο ΕΝΑΣ αποδεκτός λογαριασμός (ok · none · ambiguous · unknown) για την υιοθέτηση ονόματος.
  */
 
@@ -32,7 +33,6 @@ jest.mock('@/server/auth/account-identities', () => ({
 const NOW = Date.parse('2026-11-17T09:00:00.000Z');
 const DAY = 86_400_000;
 const db = {} as Firestore;
-const MAVRIDIS = { firstName: 'Αλέξανδρος', lastName: 'Μαυρίδης' };
 
 function issuance(state: 'active' | 'offered'): IssuanceEngagement {
   return {
@@ -51,23 +51,24 @@ beforeEach(() => {
 });
 
 describe('readContactProfessionalLink — λογαριασμοί (ADR-915 §40.8)', () => {
-  it('Α1 — αποδεκτή ⇒ όνομα + differs, χωρίς uid/email', async () => {
+  it('Α1 — αποδεκτή ⇒ όνομα λογαριασμού, χωρίς uid/email, χωρίς ετυμηγορία', async () => {
     mockDocs.mockReturnValue([issuance('active')]);
     mockReadAccountIdentities.mockResolvedValue(new Map([['u_pro', {
       uid: 'u_pro', displayName: 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ', email: 'pro@example.gr', emailVerified: true, givenName: 'ΓΕΩΡΓΙΟΣ', familyName: 'ΠΕΑΣ',
     }]]));
-    const read = await readContactProfessionalLink(db, 'comp_host', 'cont_1', NOW, { read: true, contactName: MAVRIDIS });
+    const read = await readContactProfessionalLink(db, 'comp_host', 'cont_1', NOW, { read: true });
     expect(read).toMatchObject({ outcome: 'ok', link: { status: 'linked', accounts: [{
-      displayName: 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ', nameMatch: 'differs', proposedName: { firstName: 'ΓΕΩΡΓΙΟΣ', lastName: 'ΠΕΑΣ' },
+      displayName: 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ', givenName: 'ΓΕΩΡΓΙΟΣ', familyName: 'ΠΕΑΣ',
     }] } });
     const wire = JSON.stringify(read);
     expect(wire).not.toContain('u_pro');
     expect(wire).not.toContain('pro@example.gr');
+    expect(wire).not.toContain('nameMatch');
   });
 
   it('Α2 — σκέτη πρόταση ⇒ καμία ταυτότητα, καμία κλήση στο Auth', async () => {
     mockDocs.mockReturnValue([issuance('offered')]);
-    const read = await readContactProfessionalLink(db, 'comp_host', 'cont_1', NOW, { read: true, contactName: MAVRIDIS });
+    const read = await readContactProfessionalLink(db, 'comp_host', 'cont_1', NOW, { read: true });
     expect(read).toMatchObject({ outcome: 'ok', link: { status: 'offered', accounts: [] } });
     expect(mockReadAccountIdentities).not.toHaveBeenCalled();
   });
@@ -79,11 +80,11 @@ describe('readContactProfessionalLink — λογαριασμοί (ADR-915 §40.8
     expect(mockReadAccountIdentities).not.toHaveBeenCalled();
   });
 
-  it('Α4 — λογαριασμός που δεν διαβάστηκε ⇒ null + unknown', async () => {
+  it('Α4 — λογαριασμός που δεν διαβάστηκε ⇒ όλα null', async () => {
     mockDocs.mockReturnValue([issuance('active')]);
     mockReadAccountIdentities.mockResolvedValue(new Map());
-    const read = await readContactProfessionalLink(db, 'comp_host', 'cont_1', NOW, { read: true, contactName: MAVRIDIS });
-    expect(read).toMatchObject({ outcome: 'ok', link: { accounts: [{ displayName: null, nameMatch: 'unknown', proposedName: null }] } });
+    const read = await readContactProfessionalLink(db, 'comp_host', 'cont_1', NOW, { read: true });
+    expect(read).toMatchObject({ outcome: 'ok', link: { accounts: [{ displayName: null, givenName: null, familyName: null }] } });
   });
 });
 

@@ -24,6 +24,8 @@ import type { CollectionIdentity } from '../lib/audit/collection-item-identity';
 /** Οι συλλογές της επαφής: ταυτότητα (`keyBy`) + ετικέτα (`labelFields`) — χωρίς ωμό τύπο στην ετικέτα. */
 export const CONTACT_COLLECTION_IDENTITY = {
   emails: { keyBy: 'email', labelFields: ['email'] },
+  // ADR-944 — παράγωγο ευρετήριο ερωτημάτων των `emails` (κανονικοποιημένα κλειδιά· δες `CONTACT_DERIVED_MIRRORS`).
+  emailKeys: { keyBy: 'value' },
   phones: { keyBy: 'number', labelFields: ['number'] },
   websites: { keyBy: 'url', labelFields: ['url'] },
   socialMedia: { keyBy: ['platform', 'username'], labelFields: ['platform', 'username'] },
@@ -71,4 +73,7 @@ export const CONTACT_DERIVED_MIRRORS: Readonly<Partial<Record<ContactCollectionF
   addresses: 'customFields.companyAddresses',
   // ADR-268 Q88 — `personaTypes` = τα ενεργά `personas[].personaType` (`contacts.service.ts`), ευρετήριο ερωτημάτων.
   personaTypes: 'personas',
+  // ADR-944 §3 — `emailKeys` = τα κανονικοποιημένα `emails[].email` (`contact-derived-fields.ts`), ευρετήριο ερωτημάτων.
+  // Μετρημένο στην παραγωγή 2026-11-17: χωρίς αυτή τη γραμμή κάθε αλλαγή email θα έγραφε ΚΑΙ «emailKeys» στο Ιστορικό.
+  emailKeys: 'emails',
 };

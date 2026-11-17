@@ -14,7 +14,11 @@ import React, { useState } from 'react';
 import type { Translate } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { contactPersonFullName, type ContactPersonName } from '@/lib/engagements/contact-account-name-match';
+import {
+  accountNameProposalOf,
+  contactPersonFullName,
+  type ContactPersonName,
+} from '@/lib/engagements/contact-account-name-match';
 import type { ContactLinkedAccount } from '@/types/contact-professional-link';
 import { ACCOUNT_NAME_ADOPTION_KEYS } from './contact-professional-link-labels';
 import { useAdoptAccountName, type NameAdoptionImpact } from './useAdoptAccountName';
@@ -38,7 +42,9 @@ export interface AccountNameAdoptionProps {
 export function AccountNameAdoption({ contactId, account, contactName, t }: AccountNameAdoptionProps) {
   const [confirming, setConfirming] = useState(false);
   const { adopt, pending, impact, loadImpact } = useAdoptAccountName(contactId, t);
-  const proposed = account.proposedName;
+  // Ο ΙΔΙΟΣ καθαρός πυρήνας με τον server (`adopt-account-name` → `accountNameProposalOf`): ό,τι δείχνει ο διάλογος
+  // είναι ό,τι θα γράψει ο server — ποτέ δύο κανόνες για το «ποιο όνομα προτείνει ο λογαριασμός».
+  const proposed = accountNameProposalOf(account);
 
   if (proposed === null) {
     return <span className="text-muted-foreground">{t(ACCOUNT_NAME_ADOPTION_KEYS.unstructured)}</span>;
