@@ -137,7 +137,7 @@ async function afterAnswer(db: Firestore, invitation: DossierEngagementInvitatio
       performedBy: answerer.uid, performedByName: answerer.email, entityName: dossier?.label ?? null,
     });
   }
-  await announceDossierInvitationAnswered(invitation, answer.kind, dossier?.label ?? null);
+  await announceDossierInvitationAnswered(invitation, answer.kind, dossier?.label ?? null, answerer.uid);
 }
 
 /** Ε-5 — η πρόσκληση έμεινε αναπάντητη 3 ημέρες: ο κάτοχος το μαθαίνει (μία φορά, από την υπενθύμιση της μηχανής). */

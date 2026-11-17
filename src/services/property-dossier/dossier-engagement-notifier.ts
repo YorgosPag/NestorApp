@@ -147,16 +147,22 @@ function ownerNotice(
   };
 }
 
-/** Ο κάτοχος μαθαίνει ότι ο επαγγελματίας **ανέλαβε** — ή ότι **δεν** ανέλαβε. */
+/**
+ * Ο κάτοχος μαθαίνει ότι ο επαγγελματίας **ανέλαβε** — ή ότι **δεν** ανέλαβε — **με το όνομά του** (Dropbox/Drive:
+ * «X accepted your invitation»). `who` = το `displayName` του λογαριασμού που απάντησε (ίδια πηγή με το όνομα του
+ * κατόχου)· χωρίς όνομα ⇒ το email της πρόσκλησης — ο κάτοχος το **έγραψε ο ίδιος**, άρα δεν διαρρέει τίποτα.
+ */
 export async function announceDossierInvitationAnswered(
   invitation: DossierEngagementInvitation,
   answer: 'accepted' | 'declined',
   dossierLabel: string | null,
+  answererUid: string,
 ): Promise<void> {
   const titleKey = answer === 'accepted' ? `${ANSWERED}.acceptedTitle.${invitation.role}` : `${ANSWERED}.declinedTitle`;
+  const who = await resolveUserDisplayName(answererUid, invitation.inviteeEmail);
   await dispatchDossierNotice(ownerNotice(invitation, {
     titleKey,
-    titleParams: { title: dossierLabel ?? invitation.subject.dossierId, who: invitation.inviteeEmail },
+    titleParams: { title: dossierLabel ?? invitation.subject.dossierId, who: who ?? invitation.inviteeEmail },
     eventId: `dossier-invitation:${invitation.id}:${answer}`,
   }));
 }
