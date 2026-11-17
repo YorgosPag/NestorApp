@@ -399,6 +399,13 @@ transfers / payouts / reversals** στην τεκμηρίωση ⇒ η κατά�
 | `document-registry.client.ts` | `sendIssuanceAdvanceLink` |
 | `RegistryIssuanceAdvanceLine.tsx` (**νέο**) · `RegistryIssuanceStep.tsx` · `issuance-labels.ts` | γραμμή «Προκαταβολή: <κατάσταση>» στην κάρτα (`advanceGlanceOf`) + κουμπί → διάλογος με `AccessCodeToggle` → `IssuedAccessCode` (επαναχρήση §29) |
 
+**Σουίτα διακομιστή** `issuance-advance-owner-page.test.ts` (fake Firestore, μόνο email/orchestrator mocks — 14 tests): σύνδεσμος
+`advance` δεμένος στην απόφαση και ποτέ φόρμα απάντησης · υπογραφή 120 ημ. · έγκριση `recorded-instruction` πληρώνει · νέα
+απόφαση ⇒ `superseded` · όριο 3 ζωντανών · ζωή σελίδας +30 ημ. · κωδικός φακέλου (λάθη στον κάτοχο, νέος κωδικός γραφείου
+κληρονομείται) · αντίρρηση (`owner-link`, αιτιολογία μόνο στο γραφείο, `not-objectable` δεύτερη/εκτός παραθύρου, κωδικός
+απαιτείται) · αίτημα γραφείου (`nothing-to-do` · `no-email` · ώρα αποδέσμευσης στο email). **Μετάλλαξη 2/2 πιάστηκε**
+(δέσιμο `decidedAt` · κάτοχος κωδικού).
+
 ## 6. Πού ξεπερνάμε τους μεγάλους
 1. Πολιτική ακύρωσης **μέσα στην ίδια έγκριση** με την τιμή (ο Airbnb τη δείχνει, δεν την «υπογράφει» μαζί με όρους που αναθεωρούνται).
 2. Υπαναχώρηση καταναλωτή **ρητή και καταγεγραμμένη** τη στιγμή της πληρωμής.
