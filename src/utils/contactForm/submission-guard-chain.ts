@@ -22,6 +22,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { extractHeadquartersAddress, hasHQAddressChanged } from './address-impact-helpers';
 import { detectCompanyIdentityChanges } from './company-identity-guard';
 import { detectCommunicationChanges } from './communication-impact-guard';
+import type { CommunicationImpactPreview, CommunicationImpactPreviewRequest } from '@/types/communication-impact-preview';
 
 import type { NameCascadeDialogState, AddressImpactDialogState, CompanyIdentityDialogState, CommunicationImpactDialogState } from '@/types/contact-submission-dialog.types';
 
@@ -96,6 +97,42 @@ function blockPreviewFailure(
 ): GuardResult {
   logger.warn(`${scope} preview failed, blocking save`, { error });
   return { blocked: true, errorKey };
+}
+
+/**
+ * Guard 4 — επιπτώσεις επικοινωνίας. SSoT: τρέχει για ΟΛΟΥΣ τους τύπους· το μητρώο φιλτράρει εξαρτήσεις ανά τύπο.
+ *
+ * ADR-944 §3.7 — **φραγμός ανά διεύθυνση, όχι ανά πλήθος**: ο πελάτης στέλνει ποια κλειδιά email αφαιρεί και ο
+ * server απαντά ποια είναι άγκυρες αποδεκτού λογαριασμού. Άγκυρα ⇒ φραγμός. Αλλιώς αναφορές > 0 ⇒ διάλογος.
+ * Αλλιώς περνά (`null`). Αποτυχία ερώτησης ⇒ φραγμός (fail-closed): «δεν ρώτησα» ≠ «δεν υπάρχει άγκυρα».
+ */
+async function runCommunicationGuard(deps: GuardChainDeps): Promise<GuardResult | null> {
+  const detection = detectCommunicationChanges(deps.editContact, deps.formData);
+  if (!detection.requiresImpactPreview) return null;
+  try {
+    const body: CommunicationImpactPreviewRequest = { removedEmailKeys: detection.removedEmailKeys };
+    const cp = await apiClient.post<CommunicationImpactPreview>(
+      `/api/contacts/${deps.editContactId}/communication-impact-preview`,
+      body,
+    );
+    if (cp.anchoredEmailKeys.length > 0) {
+      return { blocked: true, errorKey: 'common-shared.contacts.communicationImpact.accountAnchorRemoval' };
+    }
+    if (cp.totalAffected === 0) return null;
+    deps.deferredCommunicationSubmitRef.current = wrapConfirmed(deps.action, deps.communicationImpactConfirmedRef);
+    deps.setCommunicationImpactDialog({
+      changes: detection.changes,
+      properties: cp.properties,
+      paymentPlans: cp.paymentPlans,
+      communications: cp.communications,
+      projects: cp.projects,
+      invoices: cp.invoices,
+      apyCertificates: cp.apyCertificates,
+    });
+    return { blocked: false, deferred: true, guardType: 'communicationImpact' };
+  } catch (error) {
+    return blockPreviewFailure('communicationImpact', error, 'contacts-lifecycle.identityImpact.messages.unavailable');
+  }
 }
 
 // ============================================================================
@@ -188,31 +225,10 @@ export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> 
   }
   deps.companyIdentityConfirmedRef.current = false;
 
-  // --- Guard 4: Communication Impact (ADR-280) ---
-  // SSoT: Runs for ALL contact types. Registry filters applicable dependencies per type.
+  // --- Guard 4: Communication Impact (ADR-280 · ADR-944 §3.7) ---
   if (!deps.communicationImpactConfirmedRef.current) {
-    const commDetection = detectCommunicationChanges(editContact, formData);
-    if (commDetection.hasUnsafeRemoval) {
-      return { blocked: true, errorKey: 'common-shared.contacts.communicationImpact.unsafeRemoval' };
-    }
-    if (commDetection.requiresImpactPreview) {
-      try {
-        const cp = await apiClient.get<{ totalAffected: number; properties: number; paymentPlans: number; communications: number; projects: number; invoices: number; apyCertificates: number }>(
-          `/api/contacts/${editContactId}/communication-impact-preview`
-        );
-        if (cp.totalAffected > 0) {
-          deps.deferredCommunicationSubmitRef.current = wrapConfirmed(deps.action, deps.communicationImpactConfirmedRef);
-          deps.setCommunicationImpactDialog({ changes: commDetection.changes, properties: cp.properties, paymentPlans: cp.paymentPlans, communications: cp.communications, projects: cp.projects, invoices: cp.invoices, apyCertificates: cp.apyCertificates });
-          return { blocked: false, deferred: true, guardType: 'communicationImpact' };
-        }
-      } catch (error) {
-        return blockPreviewFailure(
-          'communicationImpact',
-          error,
-          'contacts-lifecycle.identityImpact.messages.unavailable',
-        );
-      }
-    }
+    const communicationResult = await runCommunicationGuard(deps);
+    if (communicationResult !== null) return communicationResult;
   }
   deps.communicationImpactConfirmedRef.current = false;
 

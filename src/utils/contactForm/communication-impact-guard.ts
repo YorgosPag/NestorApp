@@ -8,16 +8,21 @@
  * - primaryEmailChanged: Primary email value changed
  * - primaryPhoneChanged: Primary phone value changed
  * - corporateWebsiteChanged: First corporate website changed
- * - lastEmailRemoved: All emails removed (unsafe)
- * - lastPhoneRemoved: All phones removed (unsafe)
+ * - lastEmailRemoved: All emails removed (needs impact preview — NOT a block)
+ * - lastPhoneRemoved: All phones removed (needs impact preview — NOT a block)
+ *
+ * 🔑 ADR-944 §3.7 — **φραγμός ανά διεύθυνση, όχι ανά πλήθος**: η αφαίρεση email μπλοκάρεται **μόνο** όταν η
+ * διεύθυνση είναι άγκυρα ταυτότητας αποδεκτού λογαριασμού, και αυτό το αποφασίζει ο **server**
+ * (`communication-impact-preview`). Εδώ υπολογίζονται μόνο τα κλειδιά που αφαιρούνται (`removedEmailKeys`).
  *
  * @module utils/contactForm/communication-impact-guard
- * @enterprise ADR-280 — Communication Field Impact Detection
+ * @enterprise ADR-280 — Communication Field Impact Detection · ADR-944 §3.7
  */
 
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { getPrimaryEmail, getPrimaryPhone } from '@/types/contacts/helpers';
+import { contactEmailKeys } from '@/lib/contacts/contact-email-keys';
 
 // ============================================================================
 // TYPES
@@ -43,9 +48,12 @@ export interface CommunicationFieldChange {
 export interface CommunicationChangeDetection {
   readonly changes: ReadonlyArray<CommunicationFieldChange>;
   readonly hasChanges: boolean;
-  /** True when all emails or all phones were removed (blocks submit) */
-  readonly hasUnsafeRemoval: boolean;
-  /** True when primary email/phone changed or corporate website changed */
+  /**
+   * Κλειδιά email (SSoT `contactEmailKeys`) που είχε η επαφή και **δεν** έχει η φόρμα — κάθε αφαιρούμενη
+   * διεύθυνση, όχι μόνο η τελευταία. Ο server απαντά ποια από αυτά είναι άγκυρες λογαριασμού (ADR-944 §3.7).
+   */
+  readonly removedEmailKeys: ReadonlyArray<string>;
+  /** True when any change (incl. removals) or any removed email needs the server-side impact preview */
   readonly requiresImpactPreview: boolean;
 }
 
@@ -87,6 +95,17 @@ function contactHasEmails(contact: Contact): boolean {
 /** Check if contact has phones in existing data */
 function contactHasPhones(contact: Contact): boolean {
   return (contact.phones?.length ?? 0) > 0;
+}
+
+/**
+ * Κλειδιά email της επαφής που **λείπουν** από τη φόρμα. Τα παλιά κλειδιά = πίνακας `emails` ∪ το αποθηκευμένο
+ * παράγωγο `emailKeys` (ADR-944 — περιέχει και το επίπεδο `email` του παλαιού σχήματος, που ο τύπος `Contact`
+ * δεν δηλώνει). Ένωση, όχι επιλογή: ένα μπαγιάτικο παράγωγο δεν πρέπει να κρύψει αφαίρεση.
+ */
+export function removedEmailKeysOf(editContact: Contact, formData: ContactFormData): string[] {
+  const kept = new Set(contactEmailKeys(formData.emails ?? []));
+  const previous = new Set([...contactEmailKeys(editContact.emails ?? []), ...(editContact.emailKeys ?? [])]);
+  return [...previous].filter((key) => !kept.has(key)).sort();
 }
 
 // ============================================================================
@@ -166,18 +185,14 @@ export function detectCommunicationChanges(
     });
   }
 
-  // Unsafe removal = all emails or all phones removed
-  const hasUnsafeRemoval = changes.some(
-    (c) => c.changeType === 'lastEmailRemoved' || c.changeType === 'lastPhoneRemoved'
-  );
-
-  // Impact preview for non-removal changes (primary email/phone/website changed)
-  const requiresImpactPreview = changes.some((c) => !c.isRemoval);
+  // ADR-944 §3.7: καμία αφαίρεση δεν μπλοκάρεται εδώ — όλες περνούν από το preview του server, που ξέρει
+  // (α) ποια κλειδιά είναι άγκυρες λογαριασμού (φραγμός) και (β) πόσες εγγραφές αναφέρονται στην επαφή (διάλογος).
+  const removedEmailKeys = removedEmailKeysOf(editContact, formData);
 
   return {
     changes,
     hasChanges: changes.length > 0,
-    hasUnsafeRemoval,
-    requiresImpactPreview,
+    removedEmailKeys,
+    requiresImpactPreview: changes.length > 0 || removedEmailKeys.length > 0,
   };
 }

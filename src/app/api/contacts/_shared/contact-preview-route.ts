@@ -51,10 +51,12 @@
  * ΓΙΑΤΙ ΔΥΟ EXPORTS ΚΑΙ ΟΧΙ ΕΝΑ ΜΕ ΣΗΜΑΙΑ
  * ─────────────────────────────────────────────────────────────────────────────
  * Τέσσερις διαδρομές είναι `GET` χωρίς σώμα, δύο είναι `POST` με σχήμα `zod`.
+ * (2026-11-17, ADR-944 §3.7: το `communication-impact-preview` έγινε `POST` — φέρει τα αφαιρούμενα κλειδιά email,
+ * προσωπικά δεδομένα που δεν μπαίνουν σε query string. Πλέον τρεις `GET` + τρεις `POST` από τις έξι.)
  * Ένας εκτελεστής με `schema?` θα έκρυβε τη διαφορά πίσω από προαιρετικό πεδίο·
  * δύο ρητές συναρτήσεις πάνω σε **έναν** πυρήνα την αφήνουν ορατή. Ο πυρήνας
- * ({@link runContactPreview}) κρατά ό,τι είναι όντως κοινό: ταυτότητα,
- * δικαίωμα, ρυθμιστής, φόρτωση, φύλακας, `apiSuccess`.
+ * ({@link previewHandler}) κρατά ό,τι είναι όντως κοινό: φόρτωση, φύλακας,
+ * `apiSuccess`· το σύνορο (`withAuth` + δικαίωμα) καλείται ρητά σε κάθε export.
  *
  * 💡 **Δώρο της ενοποίησης**: ο φορτωτής επιστρέφει ήδη το φορτίο, άρα ο τύπος
  * επαφής (`contact.type`) διαβάζεται **από αυτό**. Οι `communication-` και
@@ -132,58 +134,66 @@ interface PreviewCore<TPayload, TInput> {
 type SegmentData = { params: Promise<{ contactId: string }> };
 
 /**
- * Ο πυρήνας: ταυτότητα → δικαίωμα → `[contactId]` → **φόρτωση+φύλακας σε μία
+ * Οι επιλογές του συνόρου — **μία** σταθερά, κοινή και στα δύο exports, ώστε το
+ * δικαίωμα να μη γράφεται (ούτε να ξεχνιέται) ανά factory.
+ */
+const PREVIEW_AUTH_OPTIONS = { permissions: PREVIEW_PERMISSION } as const;
+
+/**
+ * Ο πυρήνας **μέσα** στο σύνορο: `[contactId]` → **φόρτωση+φύλακας σε μία
  * πράξη** → (τύπος) → προεπισκόπηση.
+ *
+ * ⚠️ Επιστρέφει τον αυθεντικοποιημένο handler — **δεν** καλεί ο ίδιος το
+ * `withAuth`. Το σύνορο καλείται **ρητά σε κάθε εξαγόμενη factory**
+ * (2026-11-17, ADR-944 §3.7 · ADR-872): εκεί το βλέπει ο αναθεωρητής, και εκεί
+ * το αναγνωρίζει το CHECK 3.92 (σύνορο = εξαγόμενη συνάρτηση που καλεί σύνορο).
+ * Ίδιο σχήμα με το `projectPreviewRoute` (§7.8). Όσο το `withAuth` ζούσε σε
+ * αυτή τη μη εξαγόμενη συνάρτηση, οι τρεις `POST` καταγράφονταν ψευδώς «εκτός
+ * συνόρου» στη baseline της πύλης.
  *
  * ⚠️ Το «υπάρχει;» και το «δικό μου;» απαντούν με **το ίδιο** σφάλμα, από το
  * ίδιο εργοστάσιο: το `contactNotFound()` του γνήσιου κλάδου είναι η **ίδια
  * κλήση** που κάνει και ο `requireContactAccess` στη μεταμφίεση.
  */
-async function runContactPreview<TPayload, TInput>(
-  request: NextRequest,
+function previewHandler<TPayload, TInput>(
   contactId: string,
   core: PreviewCore<TPayload, TInput>,
   readInput: (req: NextRequest) => Promise<TInput>,
-): Promise<NextResponse> {
-  const handler = withAuth<ApiSuccessResponse<TPayload>>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const input = await readInput(req);
+) {
+  return async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    const input = await readInput(req);
 
-      const { id, data } = await loadOwnedContact({
+    const { id, data } = await loadOwnedContact({
+      contactId,
+      caller: ctx,
+      action: core.action,
+    });
+
+    // Η στένωση γίνεται **εδώ, ρητά**: ο φορτωτής επιστρέφει το ωμό φορτίο
+    // επίτηδες, γιατί ο τύπος υπόσχεται πεδία που η βάση δεν εγγυάται (§7.5).
+    const contact = { id, ...(data ?? {}) } as Contact;
+    const contactType =
+      (data?.['type'] as ContactType | undefined) ?? core.fallbackType ?? 'company';
+
+    if (core.requireType !== undefined && contactType !== core.requireType) {
+      throw new ApiError(400, core.wrongTypeMessage ?? 'Unsupported contact type');
+    }
+
+    return apiSuccess(
+      await core.preview({
+        contact,
+        contactType,
+        companyId: ctx.companyId,
+        input,
+        ctx,
         contactId,
-        caller: ctx,
-        action: core.action,
-      });
-
-      // Η στένωση γίνεται **εδώ, ρητά**: ο φορτωτής επιστρέφει το ωμό φορτίο
-      // επίτηδες, γιατί ο τύπος υπόσχεται πεδία που η βάση δεν εγγυάται (§7.5).
-      const contact = { id, ...(data ?? {}) } as Contact;
-      const contactType =
-        (data?.['type'] as ContactType | undefined) ?? core.fallbackType ?? 'company';
-
-      if (core.requireType !== undefined && contactType !== core.requireType) {
-        throw new ApiError(400, core.wrongTypeMessage ?? 'Unsupported contact type');
-      }
-
-      return apiSuccess(
-        await core.preview({
-          contact,
-          contactType,
-          companyId: ctx.companyId,
-          input,
-          ctx,
-          contactId,
-        }),
-      );
-    },
-    { permissions: PREVIEW_PERMISSION },
-  );
-
-  return handler(request);
+      }),
+    );
+  };
 }
 
 /**
- * Οι **τέσσερις `GET`** — καμία είσοδος πέρα από το `[contactId]`.
+ * Οι **`GET`** (αρχικά τέσσερις· βλ. την κεφαλίδα για το `communication-impact-preview`) — καμία είσοδος πέρα από το `[contactId]`.
  *
  * Αυτές είναι που έτρεχαν χωρίς δικαίωμα και χωρίς φύλακα· εδώ και τα δύο
  * μπαίνουν **δομικά**, όχι με προσοχή του επόμενου συντάκτη.
@@ -194,12 +204,10 @@ export function contactPreviewRoute<TPayload>(core: PreviewCore<TPayload, void>)
     segmentData?: SegmentData,
   ): Promise<NextResponse> {
     const { contactId } = await segmentData!.params;
-    return runContactPreview<TPayload, void>(
-      request,
-      contactId,
-      core,
-      async () => undefined,
-    );
+    return withAuth<ApiSuccessResponse<TPayload>>(
+      previewHandler<TPayload, void>(contactId, core, async () => undefined),
+      PREVIEW_AUTH_OPTIONS,
+    )(request);
   });
 }
 
@@ -209,7 +217,7 @@ export interface ContactPreviewBodyRouteSpec<S extends z.ZodTypeAny, TPayload>
   readonly schema: S;
 }
 
-/** Οι **δύο `POST`** — με επικυρωμένο σώμα. */
+/** Οι **`POST`** — με επικυρωμένο σώμα. */
 export function contactPreviewRouteWithBody<S extends z.ZodTypeAny, TPayload>(
   spec: ContactPreviewBodyRouteSpec<S, TPayload>,
 ) {
@@ -218,12 +226,15 @@ export function contactPreviewRouteWithBody<S extends z.ZodTypeAny, TPayload>(
     segmentData?: SegmentData,
   ): Promise<NextResponse> {
     const { contactId } = await segmentData!.params;
-    return runContactPreview<TPayload, z.infer<S>>(request, contactId, spec, async (req) => {
-      const parsed = spec.schema.safeParse(await req.json());
-      if (!parsed.success) {
-        throw new ApiError(400, 'Validation failed');
-      }
-      return parsed.data;
-    });
+    return withAuth<ApiSuccessResponse<TPayload>>(
+      previewHandler<TPayload, z.infer<S>>(contactId, spec, async (req) => {
+        const parsed = spec.schema.safeParse(await req.json());
+        if (!parsed.success) {
+          throw new ApiError(400, 'Validation failed');
+        }
+        return parsed.data;
+      }),
+      PREVIEW_AUTH_OPTIONS,
+    )(request);
   });
 }

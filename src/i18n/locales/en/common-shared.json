@@ -360,9 +360,12 @@
       "changeTypes": {
         "primaryEmailChanged": "Primary Email",
         "primaryPhoneChanged": "Primary Phone",
-        "corporateWebsiteChanged": "Corporate Website"
+        "corporateWebsiteChanged": "Corporate Website",
+        "lastEmailRemoved": "All Emails Removed",
+        "lastPhoneRemoved": "All Phones Removed"
       },
       "fieldChanged": "\"{oldValue}\" → \"{newValue}\"",
+      "fieldRemoved": "\"{oldValue}\" → removed",
       "sectionLive": "Live references (will read the updated data)",
       "depProperties": "Properties (ownerships)",
       "depPaymentPlans": "Payment plans",
@@ -373,9 +376,10 @@
       "depApyCertificates": "APY certificates",
       "count": "{count, plural, one {# record} other {# records}}",
       "warningLive": "{count} records reference this contact and will use the new communication details.",
+      "warningRemoval": "{count, plural, one {# record references this contact and will no longer have this communication detail.} other {# records reference this contact and will no longer have this communication detail.}}",
       "confirm": "Save & Continue",
       "cancel": "Cancel",
-      "unsafeRemoval": "Cannot remove all emails or phones from a company contact. At least one is required for communication workflows."
+      "accountAnchorRemoval": "This email is the account this contact's person uses to work with your office. If you remove it, their next acceptance will create a second contact. Keep it; you can add another email or make another one primary."
     }
   },
   "customerActions": {

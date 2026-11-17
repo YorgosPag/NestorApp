@@ -25,6 +25,7 @@ import {
   type JudgedEngagement,
 } from '@/lib/engagements/contact-professional-link';
 import { createModuleLogger } from '@/lib/telemetry';
+import { emailKeyOf } from '@/lib/contacts/contact-email-keys';
 import { readAccountIdentities, type AccountIdentity } from '@/server/auth/account-identities';
 import type {
   ContactLinkedAccount,
@@ -159,6 +160,39 @@ export async function readSoleAcceptedAccount(
     return identity === undefined ? { outcome: 'unknown' } : { outcome: 'ok', identity };
   } catch (error) {
     logger.error('[CONTACT-LINK] Ο αποδεκτός λογαριασμός δεν διαβάστηκε — άγνωστος, όχι «κανένας»', {
+      contactId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { outcome: 'unknown' };
+  }
+}
+
+/**
+ * ADR-944 §3.7 — **τα κλειδιά email** (SSoT `emailKeyOf`) των αποδεκτών λογαριασμών της επαφής: οι **άγκυρες**
+ * ταυτότητας, γιατί το `account-contact-resolver` βρίσκει την επαφή ενός λογαριασμού με `findContactByEmail`.
+ * Μόνο server — τα κλειδιά **δεν** φεύγουν· ο καλών απαντά μόνο με την τομή τους με ό,τι έστειλε ο πελάτης.
+ * - `unknown` — η ανάγνωση απέτυχε **ή** λογαριασμός λείπει από τον χάρτη ταυτοτήτων (ο `readAccountIdentities`
+ *   καταπίνει την αποτυχία σε κενό χάρτη) **ή** δεν έχει email. Ποτέ «καμία άγκυρα» από άγνοια.
+ */
+export type AcceptedAccountEmailKeysRead =
+  | { readonly outcome: 'ok'; readonly keys: ReadonlySet<string> }
+  | { readonly outcome: 'unknown' };
+
+export async function readAcceptedAccountEmailKeys(
+  db: Firestore,
+  hostCompanyId: string,
+  contactId: string,
+  nowMs: number,
+): Promise<AcceptedAccountEmailKeysRead> {
+  try {
+    const uids = acceptedAccountUidsOf(await judgedOf(db, hostCompanyId, contactId, nowMs));
+    if (uids.length === 0) return { outcome: 'ok', keys: new Set() };
+    const identities = await readAccountIdentities(db, uids);
+    const keys = uids.map((uid) => emailKeyOf(identities.get(uid)?.email));
+    if (keys.some((key) => key === null)) return { outcome: 'unknown' };
+    return { outcome: 'ok', keys: new Set(keys.filter((key): key is string => key !== null)) };
+  } catch (error) {
+    logger.error('[CONTACT-LINK] Τα email των λογαριασμών δεν διαβάστηκαν — άγνωστα, όχι «καμία άγκυρα»', {
       contactId,
       error: error instanceof Error ? error.message : String(error),
     });

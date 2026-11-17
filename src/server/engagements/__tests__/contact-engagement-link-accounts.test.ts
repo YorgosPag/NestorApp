@@ -8,13 +8,18 @@
  * Α3 — `{ read: false }` (υιοθέτηση) ⇒ καμία κλήση στο Auth.
  * Α4 — λογαριασμός που δεν διαβάστηκε ⇒ όλα `null` — ποτέ κενό σαν γνωστό.
  * Μ1–Μ4 — ADR-915 §40.9: ο ΕΝΑΣ αποδεκτός λογαριασμός (ok · none · ambiguous · unknown) για την υιοθέτηση ονόματος.
+ * Κ1–Κ5 — ADR-944 §3.7: τα κλειδιά email των αποδεκτών λογαριασμών (άγκυρες) · άγνωστο ⇒ `unknown`, ποτέ «καμία άγκυρα».
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
 
 import type { IssuanceEngagement } from '@/types/engagement';
 
-import { readContactProfessionalLink, readSoleAcceptedAccount } from '../contact-engagement-link.server';
+import {
+  readAcceptedAccountEmailKeys,
+  readContactProfessionalLink,
+  readSoleAcceptedAccount,
+} from '../contact-engagement-link.server';
 
 const mockDocs = jest.fn<readonly unknown[], []>();
 const mockReadAccountIdentities = jest.fn();
@@ -113,5 +118,43 @@ describe('readSoleAcceptedAccount — ADR-915 §40.9', () => {
     mockDocs.mockReturnValue([issuance('active')]);
     mockReadAccountIdentities.mockResolvedValue(new Map());
     await expect(readSoleAcceptedAccount(db, 'comp_host', 'cont_1', NOW)).resolves.toEqual({ outcome: 'unknown' });
+  });
+});
+
+describe('readAcceptedAccountEmailKeys — άγκυρες ταυτότητας (ADR-944 §3.7)', () => {
+  const identity = (email: string | null) => new Map([['u_pro', {
+    uid: 'u_pro', displayName: 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ', email, emailVerified: true, givenName: null, familyName: null,
+  }]]);
+
+  it('Κ1 — αποδεκτή ⇒ το κλειδί (πεζά + trim) του email του λογαριασμού', async () => {
+    mockDocs.mockReturnValue([issuance('active')]);
+    mockReadAccountIdentities.mockResolvedValue(identity('  Pro@Example.GR '));
+    const read = await readAcceptedAccountEmailKeys(db, 'comp_host', 'cont_1', NOW);
+    expect(read.outcome).toBe('ok');
+    expect(read.outcome === 'ok' ? [...read.keys] : null).toEqual(['pro@example.gr']);
+  });
+
+  it('Κ2 — καμία αποδεκτή (σκέτη πρόταση) ⇒ κανένα κλειδί, καμία κλήση στο Auth', async () => {
+    mockDocs.mockReturnValue([issuance('offered')]);
+    const read = await readAcceptedAccountEmailKeys(db, 'comp_host', 'cont_1', NOW);
+    expect(read.outcome === 'ok' ? read.keys.size : -1).toBe(0);
+    expect(mockReadAccountIdentities).not.toHaveBeenCalled();
+  });
+
+  it('Κ3 — λογαριασμός που λείπει από τον χάρτη ⇒ unknown (ποτέ «καμία άγκυρα»)', async () => {
+    mockDocs.mockReturnValue([issuance('active')]);
+    mockReadAccountIdentities.mockResolvedValue(new Map());
+    await expect(readAcceptedAccountEmailKeys(db, 'comp_host', 'cont_1', NOW)).resolves.toEqual({ outcome: 'unknown' });
+  });
+
+  it('Κ4 — λογαριασμός χωρίς email ⇒ unknown', async () => {
+    mockDocs.mockReturnValue([issuance('active')]);
+    mockReadAccountIdentities.mockResolvedValue(identity(null));
+    await expect(readAcceptedAccountEmailKeys(db, 'comp_host', 'cont_1', NOW)).resolves.toEqual({ outcome: 'unknown' });
+  });
+
+  it('Κ5 — αποτυχία ανάγνωσης συμμετοχών ⇒ unknown', async () => {
+    mockDocs.mockImplementation(() => { throw new Error('firestore down'); });
+    await expect(readAcceptedAccountEmailKeys(db, 'comp_host', 'cont_1', NOW)).resolves.toEqual({ outcome: 'unknown' });
   });
 });

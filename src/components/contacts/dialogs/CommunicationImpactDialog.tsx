@@ -62,6 +62,8 @@ function getChangeTypeVisuals(changeType: CommunicationChangeType) {
       return { Icon: Phone, className: getStatusColor('active', 'text') };
     case 'corporateWebsiteChanged':
       return { Icon: Globe, className: 'text-primary' };
+    case 'lastPhoneRemoved':
+      return { Icon: Phone, className: 'text-[hsl(var(--text-warning))]' };
     default:
       return { Icon: Mail, className: 'text-[hsl(var(--text-warning))]' };
   }
@@ -95,6 +97,12 @@ export function CommunicationImpactDialog({
 
   const totalLive = properties + paymentPlans + projects + communications;
   const hasSnapshots = invoices > 0 || apyCertificates > 0;
+  // ADR-944 §3.7: σε καθαρή αφαίρεση «θα χρησιμοποιούν τα νέα στοιχεία» είναι ψέμα — δεν υπάρχουν νέα στοιχεία.
+  const onlyRemovals = changes.length > 0 && changes.every((change) => change.isRemoval);
+  const changeValue = (change: CommunicationFieldChange) =>
+    change.isRemoval
+      ? ci('fieldRemoved', { oldValue: change.oldValue })
+      : ci('fieldChanged', { oldValue: change.oldValue, newValue: change.newValue });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -123,7 +131,7 @@ export function CommunicationImpactDialog({
                           {changeLabel(change.changeType)}
                         </span>
                         <span className={cn('ml-auto text-xs', colors.text.muted)}>
-                          {ci('fieldChanged', { oldValue: change.oldValue, newValue: change.newValue })}
+                          {changeValue(change)}
                         </span>
                       </li>
                     );
@@ -190,7 +198,7 @@ export function CommunicationImpactDialog({
               )}
 
               <p className="text-sm text-[hsl(var(--text-warning))]">
-                {ci('warningLive', { count: totalLive })}
+                {ci(onlyRemovals ? 'warningRemoval' : 'warningLive', { count: totalLive })}
               </p>
             </section>
           </AlertDialogDescription>
