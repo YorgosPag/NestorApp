@@ -256,18 +256,26 @@ async function readCaseInvitations(db: Firestore, hostCompanyId: string, caseId:
 }
 
 /**
- * **Η πιο πρόσφατη πρόσκληση ανά θέση**, ως περίληψη του οικοδεσπότη (η ληγμένη `pending` ⇒ `expired`). ΕΝΑΣ κανόνας
- * «πιο πρόσφατη = μεγαλύτερο `createdAt`» για υπόθεση και φάκελο.
+ * **Η πιο πρόσφατη πρόσκληση ανά κλειδί** — ο ΕΝΑΣ κανόνας «πιο πρόσφατη = μεγαλύτερο `createdAt`» για υπόθεση
+ * (ανά ρόλο), φάκελο (ανά ρόλο) και χώρο αναθέσεων (ανά ανάθεση). Επιστρέφει την ίδια την πρόσκληση· η περίληψη
+ * γίνεται από τον καλούντα.
  */
+function latestBy<I extends EngagementInvitation, K>(invitations: Iterable<I>, keyOf: (invitation: I) => K): ReadonlyMap<K, I> {
+  const latest = new Map<K, I>();
+  for (const invitation of invitations) {
+    const key = keyOf(invitation);
+    const current = latest.get(key);
+    if (!current || invitation.createdAt > current.createdAt) latest.set(key, invitation);
+  }
+  return latest;
+}
+
+/** Η πιο πρόσφατη πρόσκληση ανά θέση, ως περίληψη του οικοδεσπότη (η ληγμένη `pending` ⇒ `expired`). */
 function latestSummariesByRole<R extends string>(
   invitations: Iterable<EngagementInvitation & { readonly role: R }>,
   nowValue: string,
 ): ReadonlyMap<R, CaseInvitationSummary> {
-  const latest = new Map<R, EngagementInvitation>();
-  for (const invitation of invitations) {
-    const current = latest.get(invitation.role);
-    if (!current || invitation.createdAt > current.createdAt) latest.set(invitation.role, invitation);
-  }
+  const latest = latestBy(invitations, (invitation) => invitation.role);
   return new Map([...latest].map(([role, invitation]) => [role, summaryOf(invitation, nowValue)]));
 }
 
@@ -323,13 +331,11 @@ export async function latestIssuanceSpaceInvitations(
     .where('subject.kind', '==', 'document_issuance')
     .limit(ISSUANCE_SPACE_SCAN_LIMIT)
     .get();
-  const latest = new Map<string, IssuanceEngagementInvitation>();
-  for (const doc of snapshot.docs) {
-    const invitation = engagementInvitationFromDocument(doc.data(), doc.id);
-    if (invitation === null || !isIssuanceInvitation(invitation) || invitation.hostCompanyId !== hostCompanyId) continue;
-    const current = latest.get(invitation.subject.assignmentId);
-    if (!current || invitation.createdAt > current.createdAt) latest.set(invitation.subject.assignmentId, invitation);
-  }
+  const owned = snapshot.docs
+    .map((doc) => engagementInvitationFromDocument(doc.data(), doc.id))
+    .filter((invitation): invitation is IssuanceEngagementInvitation =>
+      invitation !== null && isIssuanceInvitation(invitation) && invitation.hostCompanyId === hostCompanyId);
+  const latest = latestBy(owned, (invitation) => invitation.subject.assignmentId);
   const byAssignment = new Map([...latest].map(([assignmentId, invitation]) => [assignmentId, {
     ...summaryOf(invitation, nowValue),
     assignmentId,
