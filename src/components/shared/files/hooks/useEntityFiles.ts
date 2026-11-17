@@ -18,7 +18,7 @@ import { isPermissionDeniedError } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileSupersededPayload, FileLinkCreatedPayload } from '@/services/realtime';
-import { buildFileReadFilter, internFileScopes, readQueryNarrowing, type FileScope } from '../utils/upload-scope';
+import { buildFileReadFilter, internFileScopes, readQueryNarrowing, type FileScope } from '@/lib/files/upload-scope';
 import { useEntityFilesRealtime } from './useEntityFilesRealtime';
 import { useStableFileCustody } from './useStableFileCustody';
 
@@ -195,7 +195,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       ]);
 
       // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
-      // Helper extracted to useEntityFiles-purpose-filter — see module docs
+      // Helper extracted to lib/files/file-purpose-filter — see module docs
       // for META_TAB_PURPOSES and '*-floorplan' semantics (ADR-293 Phase 7).
       const filterByPurpose = buildFileReadFilter(purpose, scopes, unclaimedBy);
 

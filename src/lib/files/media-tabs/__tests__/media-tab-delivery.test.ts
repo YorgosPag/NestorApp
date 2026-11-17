@@ -17,8 +17,8 @@
  * | `fileListIsLive` ⇒ πάντα `true` | «καρτέλες χωρίς εμβέλειες: όπως πριν» ⇒ 🔴 3 |
  */
 
-import { fileListIsLive, readQueryNarrowing } from '@/components/shared/files/utils/upload-scope';
-import { propertyDossierMediaTab } from '@/components/property-dossier/property-dossier-media';
+import { fileListIsLive, readQueryNarrowing } from '@/lib/files/upload-scope';
+import { propertyDossierMediaTab } from '@/lib/property-dossier/property-dossier-media';
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import type { PropertyDossier } from '@/types/property-dossier';
 import { propertyDossierMediaBinding } from '../entity-media-binding';

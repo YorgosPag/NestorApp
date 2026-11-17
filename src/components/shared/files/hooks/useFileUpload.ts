@@ -39,7 +39,7 @@ import type { EntityType, FileDomain, FileCategory } from '@/config/domain-const
 import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
 import { entryPointUploadTitle } from '@/config/upload-entry-points/entry-point-title';
 import { isAIClassifiable } from './useFileClassification';
-import { resolveUploadScope, type PurposeAuthority } from '../utils/upload-scope';
+import { resolveUploadScope, type PurposeAuthority } from '@/lib/files/upload-scope';
 import { RealtimeService } from '@/services/realtime';
 import { useAuth } from '@/auth/hooks/useAuth';
 

@@ -11,7 +11,7 @@
  *  - `@/services/firestore` — realtime listener disabled (realtime=false)
  *  - `@/services/filesystem/file-mutation-gateway` — mutation ops stubbed
  *  - `firebase/firestore` — `where` stubbed for import-time safety
- *  - `./useEntityFiles-purpose-filter` — pass-through (no purpose filter)
+ *  - `@/lib/files/file-purpose-filter` — pass-through (no purpose filter)
  */
 
 jest.mock('firebase/firestore', () => ({
@@ -44,7 +44,7 @@ jest.mock('@/services/file-record.service', () => ({
   },
 }));
 
-jest.mock('../useEntityFiles-purpose-filter', () => ({
+jest.mock('@/lib/files/file-purpose-filter', () => ({
   buildPurposeFilter: () => () => true,
 }));
 

@@ -17,7 +17,7 @@
 
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { DOCUMENTS_TAB_PURPOSE } from '@/components/shared/files/hooks/useEntityFiles-purpose-filter';
+import { DOCUMENTS_TAB_PURPOSE } from '@/lib/files/file-purpose-filter';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   ProjectFilesTabPlaceholder,

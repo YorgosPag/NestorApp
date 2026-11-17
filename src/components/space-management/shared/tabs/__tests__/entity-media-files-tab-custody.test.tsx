@@ -48,9 +48,9 @@ jest.mock('@/ui-adapters/react/useSemanticColors', () => ({
 }));
 
 const { EntityMediaFilesTab } = require('../EntityMediaFilesTab') as typeof import('../EntityMediaFilesTab');
-const { parkingMediaBinding, propertyDossierMediaBinding } = require('../entity-media-binding') as
-  typeof import('../entity-media-binding');
-const { PHOTOS_MEDIA_CONFIG } = require('../media-tab-configs') as typeof import('../media-tab-configs');
+const { parkingMediaBinding, propertyDossierMediaBinding } = require('@/lib/files/media-tabs/entity-media-binding') as
+  typeof import('@/lib/files/media-tabs/entity-media-binding');
+const { PHOTOS_MEDIA_CONFIG } = require('@/lib/files/media-tabs/media-tab-configs') as typeof import('@/lib/files/media-tabs/media-tab-configs');
 
 const DOSSIER = { id: 'pdos_test', label: 'Το σπίτι μου', userId: 'owner-1' };
 

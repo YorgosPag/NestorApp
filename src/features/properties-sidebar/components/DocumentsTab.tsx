@@ -20,7 +20,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { DOCUMENTS_TAB_PURPOSE } from '@/components/shared/files/hooks/useEntityFiles-purpose-filter';
+import { DOCUMENTS_TAB_PURPOSE } from '@/lib/files/file-purpose-filter';
 import type { Property } from '@/types/property-viewer';
 import { usePropertyFilesTab } from './property-files-tab';
 

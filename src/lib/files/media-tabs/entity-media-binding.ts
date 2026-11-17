@@ -11,13 +11,13 @@
  * εταιρική — και ο προσωπικός φάκελος ακινήτου θα χρειαζόταν **δεύτερο** κέλυφος. Τώρα κάθε σύνδεση **δηλώνει**
  * την πηγή της θεματοφυλακής ({@link MediaCustodySource}), και το κέλυφος μένει **ένα**.
  *
- * @module components/space-management/shared/tabs/entity-media-binding
+ * @module lib/files/media-tabs/entity-media-binding
  * @see ADR-588 — Space Media Tab Shell
  * @see ADR-866 §5.2 — FileCustody
  */
 
 import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
-import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
+import type { ParkingSpot } from '@/types/parking';
 import type { FileCustody } from '@/lib/files/file-custody';
 import type { Storage } from '@/types/storage/contracts';
 import type { PropertyDossier } from '@/types/property-dossier';

@@ -47,7 +47,7 @@ import {
   type PublicShelfSource,
 } from '@/services/upload/utils/storage-path-public-shelf';
 import { currentTerrainSource } from '@/services/listings/terrain-source-selection';
-import { propertyDossierFileTabOf } from '@/components/property-dossier/property-dossier-media';
+import { propertyDossierFileTabOf } from '@/lib/property-dossier/property-dossier-media';
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import type { FileRecord } from '@/types/file-record';
 import type { PropertyDossier } from '@/types/property-dossier';

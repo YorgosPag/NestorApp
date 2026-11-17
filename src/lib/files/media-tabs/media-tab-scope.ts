@@ -1,7 +1,7 @@
 /**
  * @fileoverview **Τι προσφέρει, πού γράφει και τι διαβάζει μια καρτέλα του κελύφους** — καθαρές συναρτήσεις, ένα σημείο.
- * @related ADR-588 (κέλυφος) · ADR-866 §2.10 (Β1) · `components/shared/files/utils/upload-scope.ts`
- * @module components/space-management/shared/tabs/media-tab-scope
+ * @related ADR-588 (κέλυφος) · ADR-866 §2.10 (Β1) · `lib/files/upload-scope.ts`
+ * @module lib/files/media-tabs/media-tab-scope
  *
  * 🔑 Το `EntityMediaFilesTab` **και** η άγκυρα Α38.1 ρωτούν **τις ίδιες** συναρτήσεις: ό,τι ελέγχει η άγκυρα είναι ό,τι
  * αποδίδεται, όχι ένα αντίγραφό του. Μετάλλαξη εδώ ⇒ κόκκινο εκεί.
@@ -13,7 +13,7 @@ import {
   type FileScope,
   type FilesTabScopePolicy,
   type UploadTabDefaults,
-} from '@/components/shared/files/utils/upload-scope';
+} from '@/lib/files/upload-scope';
 import type { EntityMediaBinding } from './entity-media-binding';
 import type { MediaTabConfig } from './media-tab-configs';
 

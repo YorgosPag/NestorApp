@@ -1,6 +1,6 @@
 /**
  * @fileoverview Άγκυρα του κατασκευαστή της πηγής εδάφους — δύο σπίτια, ένα έγγραφο (ADR-920 Β4.3).
- * @related lib/listings/terrain-file-record · components/property-dossier/property-dossier-media
+ * @related lib/listings/terrain-file-record · lib/property-dossier/property-dossier-media
  *
  * | Μετάλλαξη | Κοκκινίζει |
  * |---|---|
@@ -15,7 +15,7 @@
  */
 
 import { ENTITY_TYPES, FILE_CATEGORIES, FILE_CLASSIFICATIONS } from '@/config/domain-constants';
-import { propertyDossierFileTabOf } from '@/components/property-dossier/property-dossier-media';
+import { propertyDossierFileTabOf } from '@/lib/property-dossier/property-dossier-media';
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import type { PropertyDossier } from '@/types/property-dossier';
 import {

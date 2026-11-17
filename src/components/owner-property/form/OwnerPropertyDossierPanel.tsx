@@ -24,7 +24,7 @@ import React from 'react';
 import { useFormContext } from 'react-hook-form';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { propertyDossierMediaTab, propertyDossierFileTabOf } from '@/components/property-dossier/property-dossier-media';
+import { propertyDossierMediaTab, propertyDossierFileTabOf } from '@/lib/property-dossier/property-dossier-media';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { withDeclaredFirst } from '@/lib/ordering/declared-order';
 import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-property-form-values';

@@ -44,7 +44,7 @@ import { RealtimeService } from '@/services/realtime';
 import type { FileRecord } from '@/types/file-record';
 import { useEntityFiles } from '../useEntityFiles';
 import { useFileUpload } from '../useFileUpload';
-import type { FileScope, PurposeAuthority } from '../../utils/upload-scope';
+import type { FileScope, PurposeAuthority } from '@/lib/files/upload-scope';
 
 const TITLE_DEED: UploadEntryPoint = {
   id: 'study-admin-title-deed', purpose: 'study-title-deed', domain: 'admin', category: 'documents',

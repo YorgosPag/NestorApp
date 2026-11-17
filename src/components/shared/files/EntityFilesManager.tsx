@@ -65,7 +65,7 @@ import { useFileUpload } from './hooks/useFileUpload';
 import { useFileDownload } from './hooks/useFileDownload';
 import { useEntityFilesSearch } from './hooks/useEntityFilesSearch';
 import { useStableFileCustody } from './hooks/useStableFileCustody';
-import { fileListIsLive, tabReadParams, type FilesTabScopePolicy } from './utils/upload-scope';
+import { fileListIsLive, tabReadParams, type FilesTabScopePolicy } from '@/lib/files/upload-scope';
 
 // Components
 import { EntityFilesToolbar } from './EntityFilesToolbar';

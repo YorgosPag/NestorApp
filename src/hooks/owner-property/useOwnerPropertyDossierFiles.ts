@@ -26,13 +26,13 @@ import React from 'react';
 
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
-import { propertyDossierMediaBinding } from '@/components/space-management/shared/tabs/entity-media-binding';
+import { propertyDossierMediaBinding } from '@/lib/files/media-tabs/entity-media-binding';
 import {
   mediaTabScopePolicy,
   mediaTabUploadDefaults,
-} from '@/components/space-management/shared/tabs/media-tab-scope';
-import { propertyDossierMediaTab } from '@/components/property-dossier/property-dossier-media';
-import { resolveUploadScope, type FileScope } from '@/components/shared/files/utils/upload-scope';
+} from '@/lib/files/media-tabs/media-tab-scope';
+import { propertyDossierMediaTab } from '@/lib/property-dossier/property-dossier-media';
+import { resolveUploadScope, type FileScope } from '@/lib/files/upload-scope';
 import { createModuleLogger } from '@/lib/telemetry';
 import { validateCustodyUploadAuth } from '@/services/filesystem/file-mutation-gateway';
 import { uploadEntityFile } from '@/services/filesystem/upload-entity-file';

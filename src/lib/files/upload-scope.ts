@@ -1,7 +1,7 @@
 /**
  * @fileoverview **Πού γράφει ένα ανέβασμα — και τι διαβάζει η καρτέλα** · η ΜΙΑ αλήθεια για το εύρος ενός αρχείου.
  * @related ADR-866 §2.10 (Β1) · ADR-588 (κέλυφος καρτελών) · ADR-031 · ADR-293
- * @module components/shared/files/utils/upload-scope
+ * @module lib/files/upload-scope
  *
  * 🔴 **Η βλάβη που γέννησε αυτό το module (ζωντανή επαλήθευση 2026-09-19)**: η καρτέλα **διάβαζε** με το δικό της
  * `domain`/`category` (`useEntityFiles`), ενώ το ανέβασμα **έγραφε** το `domain`/`category` του τύπου εγγράφου
@@ -22,7 +22,7 @@
 import type { FileCategory, FileDomain } from '@/config/domain-constants';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import type { FileRecord } from '@/types/file-record';
-import { META_TAB_PURPOSES, buildPurposeFilter } from '../hooks/useEntityFiles-purpose-filter';
+import { META_TAB_PURPOSES, buildPurposeFilter } from './file-purpose-filter';
 
 /** Το εύρος ενός αρχείου — τα τρία πεδία με τα οποία μια καρτέλα το **βρίσκει**. */
 export interface FileScope {

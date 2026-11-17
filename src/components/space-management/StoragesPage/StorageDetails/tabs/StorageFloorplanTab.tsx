@@ -15,8 +15,8 @@
 'use client';
 
 import { EntityMediaFilesTab } from '@/components/space-management/shared/tabs/EntityMediaFilesTab';
-import { storageMediaBinding } from '@/components/space-management/shared/tabs/entity-media-binding';
-import { FLOORPLAN_MEDIA_CONFIG } from '@/components/space-management/shared/tabs/media-tab-configs';
+import { storageMediaBinding } from '@/lib/files/media-tabs/entity-media-binding';
+import { FLOORPLAN_MEDIA_CONFIG } from '@/lib/files/media-tabs/media-tab-configs';
 import type { Storage } from '@/types/storage/contracts';
 
 interface StorageFloorplanTabProps {

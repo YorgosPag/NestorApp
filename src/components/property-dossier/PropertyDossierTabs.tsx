@@ -19,11 +19,11 @@ import '@/lib/design-system';
 
 import { ActivityTab } from '@/components/shared/audit/ActivityTab';
 import { EntityMediaFilesTab } from '@/components/space-management/shared/tabs/EntityMediaFilesTab';
-import { propertyDossierMediaBinding } from '@/components/space-management/shared/tabs/entity-media-binding';
+import { propertyDossierMediaBinding } from '@/lib/files/media-tabs/entity-media-binding';
 import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PropertyDossier } from '@/types/property-dossier';
-import { propertyDossierMediaTab } from './property-dossier-media';
+import { propertyDossierMediaTab } from '@/lib/property-dossier/property-dossier-media';
 import type { PropertyDossierTabName } from './property-dossier-tab-names';
 
 const NS = 'property-market';

@@ -1,7 +1,7 @@
 /**
  * @fileoverview **Οι καρτέλες αρχείων του φακέλου ακινήτου** — το ίδιο κέλυφος, με εύρος από τον **έναν** κατάλογο.
  * @related ADR-866 §2.10 (Β1 · Π2) · §5.3 · ADR-588 (κέλυφος) · `config/upload-entry-points/entries-property-dossier.ts`
- * @module components/property-dossier/property-dossier-media
+ * @module lib/property-dossier/property-dossier-media
  *
  * 🔴 **Η βλάβη (ζωντανή επαλήθευση 2026-09-19)**: η Φ1.2 έδωσε στον φάκελο τις ρυθμίσεις της **θέσης στάθμευσης**
  * (`construction/*`, φίλτρο κατηγορίας) χωρίς καμία γραμμή στον κατάλογο ⇒ μηδέν τύποι εγγράφου, καμία καρτέλα δεν
@@ -22,7 +22,7 @@ import {
   PHOTOS_MEDIA_CONFIG,
   VIDEOS_MEDIA_CONFIG,
   type MediaTabConfig,
-} from '@/components/space-management/shared/tabs/media-tab-configs';
+} from '@/lib/files/media-tabs/media-tab-configs';
 import { FILE_DOMAINS } from '@/config/domain-constants';
 import {
   propertyDossierViewIds,
@@ -30,9 +30,9 @@ import {
   type PropertyDossierViewClass,
 } from '@/config/upload-entry-points/entries-property-dossier';
 import { floorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
-import { propertyDossierMediaBinding } from '@/components/space-management/shared/tabs/entity-media-binding';
-import { mediaTabScopePolicy } from '@/components/space-management/shared/tabs/media-tab-scope';
-import { matchesTabRead } from '@/components/shared/files/utils/upload-scope';
+import { propertyDossierMediaBinding } from '@/lib/files/media-tabs/entity-media-binding';
+import { mediaTabScopePolicy } from '@/lib/files/media-tabs/media-tab-scope';
+import { matchesTabRead } from '@/lib/files/upload-scope';
 import type { FileRecord } from '@/types/file-record';
 import type { PropertyDossier } from '@/types/property-dossier';
 

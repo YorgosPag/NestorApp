@@ -8,14 +8,14 @@
  *
  * Config/data file — no logic (exempt from the 40-line / 500-line limits).
  *
- * @module components/space-management/shared/tabs/media-tab-configs
+ * @module lib/files/media-tabs/media-tab-configs
  * @see ADR-588 — Space Media Tab Shell
  * @see ADR-031 — Canonical File Storage System
  */
 
 import type { FileCategory, FileDomain } from '@/config/domain-constants';
 import { DEFAULT_PHOTO_ACCEPT, DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
-import type { PurposeAuthority } from '@/components/shared/files/utils/upload-scope';
+import type { PurposeAuthority } from '@/lib/files/upload-scope';
 
 /**
  * ADR-866 §2.10 Β1 — **το εύρος της καρτέλας δηλωμένο με τύπους εγγράφου**, όχι με σκέτο `domain`/`category`.

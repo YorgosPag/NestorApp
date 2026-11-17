@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
-import { resolveUploadScope } from '@/components/shared/files/utils/upload-scope';
+import { resolveUploadScope } from '@/lib/files/upload-scope';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { findCatalogEntryForFile } from '@/config/upload-entry-points/queries';
 import { useCompanyId } from '@/hooks/useCompanyId';

@@ -21,8 +21,8 @@ import {
   readQueryNarrowing,
   resolveUploadScope,
   type FileScope,
-} from '@/components/shared/files/utils/upload-scope';
-import { propertyDossierFileTabOf, propertyDossierMediaTab } from '@/components/property-dossier/property-dossier-media';
+} from '@/lib/files/upload-scope';
+import { propertyDossierFileTabOf, propertyDossierMediaTab } from '@/lib/property-dossier/property-dossier-media';
 import { STUDY_ENTRIES } from '@/config/upload-entry-points/entries-studies';
 import { getEntryPointsForEntity } from '@/config/upload-entry-points/queries';
 import type { PropertyDossier } from '@/types/property-dossier';

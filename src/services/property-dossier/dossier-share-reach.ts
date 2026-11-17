@@ -14,7 +14,7 @@
  * Καθαρό: καμία βάση, ασκείται από άγκυρες χωρίς mock.
  */
 
-import { propertyDossierFileTabOf } from '@/components/property-dossier/property-dossier-media';
+import { propertyDossierFileTabOf } from '@/lib/property-dossier/property-dossier-media';
 import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
 import {
   PROPERTY_DOSSIER_FILE_TABS,

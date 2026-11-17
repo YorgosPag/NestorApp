@@ -17,7 +17,7 @@ import { CONVEYANCE_CHECKLIST } from '@/config/conveyance-checklist/catalog';
 import type { EvidenceLevel } from '@/config/conveyance-checklist/types';
 import { ENTITY_TYPES, type FileCategory } from '@/config/domain-constants';
 import { selectOfferedEntryPoints, type UploadEntryPoint } from '@/config/upload-entry-points';
-import { DOCUMENTS_TAB_PURPOSE, buildPurposeFilter } from '../../hooks/useEntityFiles-purpose-filter';
+import { DOCUMENTS_TAB_PURPOSE, buildPurposeFilter } from '../file-purpose-filter';
 import { resolveUploadScope, type UploadTabDefaults } from '../upload-scope';
 
 /** Οι τρεις καρτέλες «Έγγραφα», όπως δηλώνονται στα components τους (τύπος οντότητας · τι αποκλείουν). */

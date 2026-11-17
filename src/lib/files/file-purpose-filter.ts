@@ -1,5 +1,5 @@
 /**
- * useEntityFiles-purpose-filter — client-side purpose filter helpers.
+ * file-purpose-filter — client-side purpose filter helpers (moved from components/shared/files/hooks, ADR-916 Φ-Ε1).
  *
  * Extracted from useEntityFiles.ts to honour the Google file-size limit
  * (Hook ≤500 lines). Behavior preserved verbatim.
@@ -20,7 +20,7 @@
  *   `document` αντί `certificate`, και κανένα αρχείο αυτών των καρτελών δεν ικανοποιούσε γραμμή του καταλόγου
  *   μεταβίβασης (ADR-901), που αντιστοιχίζει με τον σκοπό του τύπου.
  *
- * @module components/shared/files/hooks/useEntityFiles-purpose-filter
+ * @module lib/files/file-purpose-filter
  */
 
 import type { FileRecord } from '@/types/file-record';

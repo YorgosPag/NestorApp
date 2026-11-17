@@ -11,8 +11,8 @@
 'use client';
 
 import { EntityMediaFilesTab } from '@/components/space-management/shared/tabs/EntityMediaFilesTab';
-import { parkingMediaBinding } from '@/components/space-management/shared/tabs/entity-media-binding';
-import { VIDEOS_MEDIA_CONFIG } from '@/components/space-management/shared/tabs/media-tab-configs';
+import { parkingMediaBinding } from '@/lib/files/media-tabs/entity-media-binding';
+import { VIDEOS_MEDIA_CONFIG } from '@/lib/files/media-tabs/media-tab-configs';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 
 interface ParkingVideosTabProps {

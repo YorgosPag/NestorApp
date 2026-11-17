@@ -25,7 +25,7 @@ import { fileOwnerConstraints, fileReadKindOf } from '@/services/file-record-que
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
-import { buildFileReadFilter, type FileScope } from '../utils/upload-scope';
+import { buildFileReadFilter, type FileScope } from '@/lib/files/upload-scope';
 
 const logger = createModuleLogger('USE_ENTITY_FILES');
 

@@ -25,9 +25,9 @@ import { useEntityFilesTabSession } from '@/components/shared/files/useEntityFil
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
-import type { EntityMediaBinding } from './entity-media-binding';
-import type { MediaTabConfig } from './media-tab-configs';
-import { mediaTabAllowedEntryPointIds, mediaTabPurpose, mediaTabScopePolicy } from './media-tab-scope';
+import type { EntityMediaBinding } from '@/lib/files/media-tabs/entity-media-binding';
+import type { MediaTabConfig } from '@/lib/files/media-tabs/media-tab-configs';
+import { mediaTabAllowedEntryPointIds, mediaTabPurpose, mediaTabScopePolicy } from '@/lib/files/media-tabs/media-tab-scope';
 import '@/lib/design-system';
 
 // ============================================================================
