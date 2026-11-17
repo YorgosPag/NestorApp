@@ -15,7 +15,11 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { engagementsOfContactQuery } from '@/lib/auth/engagement-ref';
 import { parseEngagement } from '@/lib/auth/engagement-schema';
-import { compareContactToAccount, type ContactPersonName } from '@/lib/engagements/contact-account-name-match';
+import {
+  accountNameProposalOf,
+  compareContactToAccount,
+  type ContactPersonName,
+} from '@/lib/engagements/contact-account-name-match';
 import {
   acceptedAccountUidsOf,
   actsForOfficeOf,
@@ -26,7 +30,7 @@ import {
   type JudgedEngagement,
 } from '@/lib/engagements/contact-professional-link';
 import { createModuleLogger } from '@/lib/telemetry';
-import { readAccountIdentities } from '@/server/auth/account-identities';
+import { readAccountIdentities, type AccountIdentity } from '@/server/auth/account-identities';
 import type {
   ContactLinkedAccount,
   ContactProfessionalAssignment,
@@ -84,6 +88,7 @@ async function linkedAccountsOf(
     return {
       displayName: identity?.displayName ?? null,
       nameMatch: compareContactToAccount(contactName, identity),
+      proposedName: accountNameProposalOf(identity),
     };
   });
 }
@@ -97,6 +102,12 @@ export type LinkedAccountsRequest =
   | { readonly read: true; readonly contactName: ContactPersonName | null }
   | { readonly read: false };
 
+/** Οι τρέχουσες συμμετοχές της επαφής **σε αυτό** το γραφείο, κριμένες τώρα — η ΜΙΑ ανάγνωση και των δύο αναγνωστών. */
+async function judgedOf(db: Firestore, hostCompanyId: string, contactId: string, nowMs: number): Promise<readonly JudgedEngagement[]> {
+  const snapshot = await engagementsOfContactQuery(db, hostCompanyId, contactId).get();
+  return judgeCurrentPerSubject(readableOf(snapshot.docs.map((doc) => doc.data()), contactId), nowMs);
+}
+
 /** Τι ξέρει **αυτό** το γραφείο για τον λογαριασμό πίσω από **αυτή** την επαφή του. */
 export async function readContactProfessionalLink(
   db: Firestore,
@@ -106,8 +117,7 @@ export async function readContactProfessionalLink(
   accountsRequest: LinkedAccountsRequest,
 ): Promise<ContactProfessionalLinkRead> {
   try {
-    const snapshot = await engagementsOfContactQuery(db, hostCompanyId, contactId).get();
-    const judged = judgeCurrentPerSubject(readableOf(snapshot.docs.map((doc) => doc.data()), contactId), nowMs);
+    const judged = await judgedOf(db, hostCompanyId, contactId, nowMs);
     const status = linkStatusOf(judged);
     const shown = status === 'none' ? [] : judged;
     const [assignments, accounts] = await Promise.all([
@@ -126,6 +136,38 @@ export async function readContactProfessionalLink(
     };
   } catch (error) {
     logger.error('[CONTACT-LINK] Η ανάγνωση απέτυχε — άγνωστο, όχι «μη συνδεδεμένος»', {
+      contactId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { outcome: 'unknown' };
+  }
+}
+
+/**
+ * ADR-915 §40.9 — **ο ΕΝΑΣ** λογαριασμός που αποδέχτηκε ως αυτή η επαφή, για την «Υιοθέτηση ονόματος». Μόνο server:
+ * κρατά τον `uid`, που **δεν** φεύγει ποτέ στον πελάτη.
+ * - `none`      — κανένας αποδεκτός λογαριασμός (η εικόνα του γραφείου είναι μπαγιάτικη)
+ * - `ambiguous` — δύο ή περισσότεροι: **ποιανού** το όνομα; δεν διαλέγουμε
+ * - `unknown`   — η ανάγνωση (συμμετοχών ή λογαριασμού) απέτυχε· ποτέ «κανένας»
+ */
+export type SoleAcceptedAccountRead =
+  | { readonly outcome: 'ok'; readonly identity: AccountIdentity }
+  | { readonly outcome: 'none' | 'ambiguous' | 'unknown' };
+
+export async function readSoleAcceptedAccount(
+  db: Firestore,
+  hostCompanyId: string,
+  contactId: string,
+  nowMs: number,
+): Promise<SoleAcceptedAccountRead> {
+  try {
+    const uids = acceptedAccountUidsOf(await judgedOf(db, hostCompanyId, contactId, nowMs));
+    if (uids.length === 0) return { outcome: 'none' };
+    if (uids.length > 1) return { outcome: 'ambiguous' };
+    const identity = (await readAccountIdentities(db, uids)).get(uids[0]);
+    return identity === undefined ? { outcome: 'unknown' } : { outcome: 'ok', identity };
+  } catch (error) {
+    logger.error('[CONTACT-LINK] Ο αποδεκτός λογαριασμός δεν διαβάστηκε — άγνωστος, όχι «κανένας»', {
       contactId,
       error: error instanceof Error ? error.message : String(error),
     });

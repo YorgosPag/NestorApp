@@ -65,7 +65,23 @@
       "adopted": "The declaration was adopted on the contact",
       "unchanged": "The contact already holds this value",
       "conflict": "The contact changed in the meantime — review it again before adopting",
-      "failed": "Adoption failed"
+      "failed": "Adoption failed",
+      "adoptName": {
+        "button": "Adopt name from account",
+        "unstructured": "The account has no separate first and last name — correct the contact name manually.",
+        "title": "Adopt name from account",
+        "description": "The contact will be named “{next}” instead of “{previous}”.",
+        "identityWarning": "First make sure the account belongs to the same person as the contact.",
+        "impactLoading": "Calculating impact…",
+        "impactNone": "No other records need updating.",
+        "impact": "{count, plural, one {# other record} other {# other records}} will also be updated (properties, payment plans).",
+        "impactUnavailable": "The number of records to update is unavailable — they will all be updated automatically.",
+        "adopted": "The account name was adopted on the contact",
+        "unchanged": "The contact already has this name",
+        "conflict": "The contact or the account changed in the meantime — check again before adopting",
+        "cascadeFailed": "The name changed on the contact, but updating it on properties and payment plans failed",
+        "failed": "Name adoption failed"
+      }
     }
   },
   "list": {

@@ -33,6 +33,8 @@ import type {
 } from '@/types/contact-professional-link';
 import { ENGAGEMENT_STATE_KEYS, LINKED_ACCOUNT_KEYS, PROFESSIONAL_LINK_KEYS } from './contact-professional-link-labels';
 import { DeclaredCredentialAdoption, credentialText } from './DeclaredCredentialAdoption';
+import { AccountNameAdoption } from './AccountNameAdoption';
+import type { ContactPersonName } from '@/lib/engagements/contact-account-name-match';
 
 
 /** Τι ανέλαβε: το **έγγραφο** σε ανάθεση έκδοσης, ο **ρόλος** σε μεταβίβαση. */
@@ -91,13 +93,23 @@ interface LinkFactsProps {
   readonly contactId: string;
   /** Τα πεδία της επαφής για τη σύγκριση — `null` σε νομικό πρόσωπο (καμία υιοθέτηση). */
   readonly contact: ComparableContact | null;
+  /** Το όνομα της επαφής (ADR-915 §40.9) — `null` σε νομικό πρόσωπο. */
+  readonly contactName: ContactPersonName | null;
 }
 
 /**
  * ADR-915 §40.8 — «Συνδέθηκε ως: …» + σήμα όταν το όνομα **διαφέρει** (κείμενο + εικονίδιο, ποτέ μόνο χρώμα — CHECK 3.41).
  * Η εξήγηση είναι ορατό κείμενο, όχι tooltip: πρέπει να τη διαβάσει όποιος δεν αιωρείται (αφή, αναγνώστης οθόνης).
  */
-function LinkedAccountLine({ account, t }: { readonly account: ContactLinkedAccount; readonly t: Translate }) {
+interface LinkedAccountLineProps {
+  readonly account: ContactLinkedAccount;
+  readonly t: Translate;
+  readonly contactId: string;
+  /** ADR-915 §40.9 — μόνο όταν η υιοθέτηση επιτρέπεται: φυσικό πρόσωπο **και** ένας μοναδικός λογαριασμός. */
+  readonly adoptableName: ContactPersonName | null;
+}
+
+function LinkedAccountLine({ account, t, contactId, adoptableName }: LinkedAccountLineProps) {
   const iconSizes = useIconSizes();
   const differs = account.nameMatch === 'differs';
   return (
@@ -112,12 +124,17 @@ function LinkedAccountLine({ account, t }: { readonly account: ContactLinkedAcco
         )}
       </span>
       {differs && <span className="text-muted-foreground">{t(LINKED_ACCOUNT_KEYS.nameDiffersHint)}</span>}
+      {differs && adoptableName !== null && (
+        <AccountNameAdoption contactId={contactId} account={account} contactName={adoptableName} t={t} />
+      )}
     </li>
   );
 }
 
-function LinkFacts({ link, t, contactId, contact }: LinkFactsProps) {
+function LinkFacts({ link, t, contactId, contact, contactName }: LinkFactsProps) {
   const declared = link.declared;
+  // Με δύο λογαριασμούς, «ποιανού το όνομα;» δεν απαντιέται με ένα κουμπί — ο server απαντά 409 ούτως ή άλλως.
+  const adoptableName = link.accounts.length === 1 ? contactName : null;
   return (
     <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
       {link.accounts.length > 0 && (
@@ -125,7 +142,9 @@ function LinkFacts({ link, t, contactId, contact }: LinkFactsProps) {
           <dt className="text-muted-foreground">{t(LINKED_ACCOUNT_KEYS.label)}</dt>
           <dd className="m-0">
             <ul className="m-0 flex list-none flex-col gap-1 p-0">
-              {link.accounts.map((account, index) => <LinkedAccountLine key={index} account={account} t={t} />)}
+              {link.accounts.map((account, index) => (
+                <LinkedAccountLine key={index} account={account} t={t} contactId={contactId} adoptableName={adoptableName} />
+              ))}
             </ul>
           </dd>
         </>
@@ -154,9 +173,10 @@ export interface ContactProfessionalLinkBadgeProps {
   readonly link: ContactProfessionalLink;
   readonly contactId: string;
   readonly contact: ComparableContact | null;
+  readonly contactName: ContactPersonName | null;
 }
 
-export function ContactProfessionalLinkBadge({ link, contactId, contact }: ContactProfessionalLinkBadgeProps) {
+export function ContactProfessionalLinkBadge({ link, contactId, contact, contactName }: ContactProfessionalLinkBadgeProps) {
   const { t } = useTranslation(['contacts-core', 'conveyance', 'document-registry', 'legality', 'property-market']);
   if (link.status === 'none') return null;
   const linked = link.status === 'linked';
@@ -168,7 +188,7 @@ export function ContactProfessionalLinkBadge({ link, contactId, contact }: Conta
         </Badge>
         {link.actingForOffice && <span className="text-muted-foreground">{t(PROFESSIONAL_LINK_KEYS.actingForOffice)}</span>}
       </header>
-      <LinkFacts link={link} t={t} contactId={contactId} contact={contact} />
+      <LinkFacts link={link} t={t} contactId={contactId} contact={contact} contactName={contactName} />
     </section>
   );
 }

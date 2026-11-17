@@ -23,6 +23,7 @@ import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector'
 import { useContactEditFocus } from './contact-details/ContactEditFocusContext';
 import { ContactLinkSurfaces } from '@/components/contacts/contact-link-surfaces';
 import { useContactProfessionalLink } from './useContactProfessionalLink';
+import { contactPersonNameOf } from '@/lib/engagements/contact-account-name-match';
 
 const logger = createModuleLogger('ContactDetailsHeader');
 
@@ -197,6 +198,7 @@ export function ContactDetailsHeader({
             link={professionalLink}
             contactId={contact.id ?? ''}
             contact={isIndividualContact(contact) ? { licences: contact.licences, personas: contact.personas } : null}
+            contactName={contactPersonNameOf({ type: contact.type, firstName: contact.firstName, lastName: contact.lastName })}
           />
         )}
       </div>

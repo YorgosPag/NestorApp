@@ -6,13 +6,14 @@
  * Α2 — σκέτη πρόταση ⇒ καμία ταυτότητα, καμία κλήση στο Auth (δεν έχει συναινέσει).
  * Α3 — `{ read: false }` (υιοθέτηση) ⇒ καμία κλήση στο Auth.
  * Α4 — λογαριασμός που δεν διαβάστηκε ⇒ `displayName: null`, `unknown` — ποτέ κενό σαν γνωστό.
+ * Μ1–Μ4 — ADR-915 §40.9: ο ΕΝΑΣ αποδεκτός λογαριασμός (ok · none · ambiguous · unknown) για την υιοθέτηση ονόματος.
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
 
 import type { IssuanceEngagement } from '@/types/engagement';
 
-import { readContactProfessionalLink } from '../contact-engagement-link.server';
+import { readContactProfessionalLink, readSoleAcceptedAccount } from '../contact-engagement-link.server';
 
 const mockDocs = jest.fn<readonly unknown[], []>();
 const mockReadAccountIdentities = jest.fn();
@@ -56,7 +57,9 @@ describe('readContactProfessionalLink — λογαριασμοί (ADR-915 §40.8
       uid: 'u_pro', displayName: 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ', email: 'pro@example.gr', emailVerified: true, givenName: 'ΓΕΩΡΓΙΟΣ', familyName: 'ΠΕΑΣ',
     }]]));
     const read = await readContactProfessionalLink(db, 'comp_host', 'cont_1', NOW, { read: true, contactName: MAVRIDIS });
-    expect(read).toMatchObject({ outcome: 'ok', link: { status: 'linked', accounts: [{ displayName: 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ', nameMatch: 'differs' }] } });
+    expect(read).toMatchObject({ outcome: 'ok', link: { status: 'linked', accounts: [{
+      displayName: 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ', nameMatch: 'differs', proposedName: { firstName: 'ΓΕΩΡΓΙΟΣ', lastName: 'ΠΕΑΣ' },
+    }] } });
     const wire = JSON.stringify(read);
     expect(wire).not.toContain('u_pro');
     expect(wire).not.toContain('pro@example.gr');
@@ -80,6 +83,34 @@ describe('readContactProfessionalLink — λογαριασμοί (ADR-915 §40.8
     mockDocs.mockReturnValue([issuance('active')]);
     mockReadAccountIdentities.mockResolvedValue(new Map());
     const read = await readContactProfessionalLink(db, 'comp_host', 'cont_1', NOW, { read: true, contactName: MAVRIDIS });
-    expect(read).toMatchObject({ outcome: 'ok', link: { accounts: [{ displayName: null, nameMatch: 'unknown' }] } });
+    expect(read).toMatchObject({ outcome: 'ok', link: { accounts: [{ displayName: null, nameMatch: 'unknown', proposedName: null }] } });
+  });
+});
+
+describe('readSoleAcceptedAccount — ADR-915 §40.9', () => {
+  const IDENTITY = { uid: 'u_pro', displayName: 'ΓΕΩΡΓΙΟΣ ΠΕΑΣ', email: 'pro@example.gr', emailVerified: true, givenName: 'Γεώργιος', familyName: 'Πέας' };
+
+  it('Μ1 — ένας αποδεκτός ⇒ ok με την ταυτότητά του', async () => {
+    mockDocs.mockReturnValue([issuance('active')]);
+    mockReadAccountIdentities.mockResolvedValue(new Map([['u_pro', IDENTITY]]));
+    await expect(readSoleAcceptedAccount(db, 'comp_host', 'cont_1', NOW)).resolves.toEqual({ outcome: 'ok', identity: IDENTITY });
+  });
+
+  it('Μ2 — μόνο πρόταση ⇒ none, καμία κλήση στο Auth', async () => {
+    mockDocs.mockReturnValue([issuance('offered')]);
+    await expect(readSoleAcceptedAccount(db, 'comp_host', 'cont_1', NOW)).resolves.toEqual({ outcome: 'none' });
+    expect(mockReadAccountIdentities).not.toHaveBeenCalled();
+  });
+
+  it('Μ3 — δύο διαφορετικοί αποδεκτοί λογαριασμοί ⇒ ambiguous', async () => {
+    const other = { ...issuance('active'), id: 'eng_other', uid: 'u_other', subject: { kind: 'document_issuance' as const, assignmentId: 'dias_other' } };
+    mockDocs.mockReturnValue([issuance('active'), other]);
+    await expect(readSoleAcceptedAccount(db, 'comp_host', 'cont_1', NOW)).resolves.toEqual({ outcome: 'ambiguous' });
+  });
+
+  it('Μ4 — ο λογαριασμός δεν διαβάστηκε ⇒ unknown, ποτέ none', async () => {
+    mockDocs.mockReturnValue([issuance('active')]);
+    mockReadAccountIdentities.mockResolvedValue(new Map());
+    await expect(readSoleAcceptedAccount(db, 'comp_host', 'cont_1', NOW)).resolves.toEqual({ outcome: 'unknown' });
   });
 });

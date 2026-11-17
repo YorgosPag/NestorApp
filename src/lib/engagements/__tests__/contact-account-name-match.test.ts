@@ -5,7 +5,12 @@
  * Τα υπόλοιπα φρουρούν το αντίθετο λάθος — ψεύτικο «διαφέρει» που μαθαίνει τον άνθρωπο να αγνοεί το σήμα.
  */
 
-import { compareContactToAccount, contactPersonNameOf } from '../contact-account-name-match';
+import {
+  accountNameProposalOf,
+  compareContactToAccount,
+  contactPersonNameOf,
+  sameContactPersonName,
+} from '../contact-account-name-match';
 
 const contact = (firstName: string | null, lastName: string | null) => ({ firstName, lastName });
 const account = (givenName: string | null, familyName: string | null, displayName: string | null = null) =>
@@ -59,5 +64,40 @@ describe('contactPersonNameOf', () => {
     expect(contactPersonNameOf({ type: 'company', companyName: 'Α.Ε.' })).toBeNull();
     expect(contactPersonNameOf({ type: 'service', serviceName: 'ΔΟΥ' })).toBeNull();
     expect(contactPersonNameOf(undefined)).toBeNull();
+  });
+});
+
+describe('accountNameProposalOf — ADR-915 §40.9', () => {
+  it('Π1 — και τα δύο δομημένα πεδία ⇒ πρόταση, με τακτοποιημένα κενά', () => {
+    expect(accountNameProposalOf(account('  Γεώργιος  Ιωάννης ', 'Πέας'))).toEqual({ firstName: 'Γεώργιος Ιωάννης', lastName: 'Πέας' });
+  });
+
+  it('Π2 — λείπει όνομα ή επώνυμο ⇒ null (καμία μισή υιοθέτηση)', () => {
+    expect(accountNameProposalOf(account('Γεώργιος', null))).toBeNull();
+    expect(accountNameProposalOf(account(null, 'Πέας'))).toBeNull();
+    expect(accountNameProposalOf(account('Γεώργιος', '   '))).toBeNull();
+  });
+
+  it('Π3 — μόνο ενιαίο displayName ⇒ null, ΠΟΤΕ μαντεψιά διάσπασης', () => {
+    expect(accountNameProposalOf(account(null, null, 'Γεώργιος Ιωάννης Πέας'))).toBeNull();
+  });
+
+  it('Π4 — άγνωστος λογαριασμός ⇒ null', () => {
+    expect(accountNameProposalOf(null)).toBeNull();
+  });
+});
+
+describe('sameContactPersonName — ADR-915 §40.9', () => {
+  it('Ι1 — κενά στην άκρη ή διπλά στη μέση δεν κάνουν άλλο όνομα', () => {
+    expect(sameContactPersonName(contact(' Γεώργιος ', 'Πέας'), contact('Γεώργιος', 'Πέας '))).toBe(true);
+    expect(sameContactPersonName(contact('Γεώργιος  Ιωάννης', 'Πέας'), contact('Γεώργιος Ιωάννης', 'Πέας'))).toBe(true);
+  });
+
+  it('Ι2 — κεφαλαία/τόνοι ΕΙΝΑΙ αλλαγή εγγραφής (αντίθετα με το σήμα, που τα θεωρεί ίδια)', () => {
+    expect(sameContactPersonName(contact('ΓΕΩΡΓΙΟΣ', 'ΠΕΑΣ'), contact('Γεώργιος', 'Πέας'))).toBe(false);
+  });
+
+  it('Ι3 — κενό ≡ απόν', () => {
+    expect(sameContactPersonName(contact('', null), contact(null, '  '))).toBe(true);
   });
 });

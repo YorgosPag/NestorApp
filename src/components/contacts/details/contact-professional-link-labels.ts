@@ -43,6 +43,24 @@ export const ADOPTION_KEYS = {
   failed: 'contacts-core:header.professionalLink.failed',
 } as const;
 
+/** ADR-915 §40.9 — η υιοθέτηση του ονόματος του λογαριασμού στην επαφή. */
+export const ACCOUNT_NAME_ADOPTION_KEYS = {
+  button: 'contacts-core:header.professionalLink.adoptName.button',
+  unstructured: 'contacts-core:header.professionalLink.adoptName.unstructured',
+  title: 'contacts-core:header.professionalLink.adoptName.title',
+  description: 'contacts-core:header.professionalLink.adoptName.description',
+  identityWarning: 'contacts-core:header.professionalLink.adoptName.identityWarning',
+  impactLoading: 'contacts-core:header.professionalLink.adoptName.impactLoading',
+  impactNone: 'contacts-core:header.professionalLink.adoptName.impactNone',
+  impact: 'contacts-core:header.professionalLink.adoptName.impact',
+  impactUnavailable: 'contacts-core:header.professionalLink.adoptName.impactUnavailable',
+  adopted: 'contacts-core:header.professionalLink.adoptName.adopted',
+  unchanged: 'contacts-core:header.professionalLink.adoptName.unchanged',
+  conflict: 'contacts-core:header.professionalLink.adoptName.conflict',
+  cascadeFailed: 'contacts-core:header.professionalLink.adoptName.cascadeFailed',
+  failed: 'contacts-core:header.professionalLink.adoptName.failed',
+} as const;
+
 /** Η κατάσταση της συμμετοχής, όπως τη διαβάζει το γραφείο — ολικός πάνω στο λεξιλόγιο του πυρήνα. */
 export const ENGAGEMENT_STATE_KEYS: Readonly<Record<EngagementState, string>> = {
   offered: 'conveyance:engagement.states.offered',

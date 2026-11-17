@@ -57,6 +57,44 @@ function accountWordsOf(account: AccountPersonName): ReadonlySet<string> {
   return structured.size > 0 ? structured : wordsOf(account.displayName);
 }
 
+/** Το όνομα που **προτείνει** ο λογαριασμός για την επαφή — πάντα και τα δύο μέρη (ADR-915 §40.9). */
+export interface ContactPersonNameProposal {
+  readonly firstName: string;
+  readonly lastName: string;
+}
+
+/** Κενά στην άκρη και διπλά κενά στη μέση δεν κάνουν άλλο όνομα. */
+function tidy(value: string | null): string | null {
+  if (value === null) return null;
+  const tidied = value.trim().replace(/\s+/gu, ' ');
+  return tidied === '' ? null : tidied;
+}
+
+/**
+ * ADR-915 §40.9 — η πρόταση υιοθέτησης: **μόνο** όταν ο λογαριασμός έχει **και τα δύο** δομημένα πεδία. Μόνο ενιαίο
+ * `displayName` ⇒ `null`: η διάσπαση «Γεώργιος Ιωάννης Πέας» σε όνομα/επώνυμο είναι μαντεψιά (ADR-884 §9.1 Α1).
+ */
+export function accountNameProposalOf(account: AccountPersonName | null): ContactPersonNameProposal | null {
+  if (account === null) return null;
+  const firstName = tidy(account.givenName);
+  const lastName = tidy(account.familyName);
+  return firstName === null || lastName === null ? null : { firstName, lastName };
+}
+
+/**
+ * **Ακριβής** ισότητα ονόματος (μετά από τακτοποίηση κενών) — ό,τι κρίνει αν μια εγγραφή **αλλάζει** κάτι. Διαφέρει
+ * σκόπιμα από το `compareContactToAccount`: «ΓΙΩΡΓΟΣ» ≡ «Γιώργος» για το σήμα, αλλά η εγγραφή του ενός πάνω στο άλλο
+ * **αλλάζει** την επαφή.
+ */
+export function sameContactPersonName(a: ContactPersonName, b: ContactPersonName): boolean {
+  return tidy(a.firstName) === tidy(b.firstName) && tidy(a.lastName) === tidy(b.lastName);
+}
+
+/** «Όνομα Επώνυμο» — η ΜΙΑ ενιαία μορφή για διάλογο, ιστορικό και cascade· όποιο μέρος λείπει παραλείπεται. */
+export function contactPersonFullName(name: ContactPersonName): string {
+  return [tidy(name.firstName), tidy(name.lastName)].filter((part): part is string => part !== null).join(' ');
+}
+
 /** `match` · `differs` · `unknown` — βλ. {@link ContactAccountNameMatch}. */
 export function compareContactToAccount(
   contact: ContactPersonName | null,

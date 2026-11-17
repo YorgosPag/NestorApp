@@ -68,6 +68,11 @@ export interface ContactLinkedAccount {
   /** `null` ⇒ ο λογαριασμός δεν διαβάστηκε («άγνωστος λογαριασμός»), ποτέ κενό σαν να ήταν γνωστό. */
   readonly displayName: string | null;
   readonly nameMatch: ContactAccountNameMatch;
+  /**
+   * ADR-915 §40.9 — το **δομημένο** όνομα του λογαριασμού, για την «Υιοθέτηση ονόματος». Ίδιο προσωπικό δεδομένο με
+   * το `displayName`, σε μέρη. `null` ⇒ ο λογαριασμός δεν έχει χωριστό όνομα **και** επώνυμο (καμία μαντεψιά διάσπασης).
+   */
+  readonly proposedName: { readonly firstName: string; readonly lastName: string } | null;
 }
 
 export interface ContactProfessionalLink {
@@ -91,4 +96,25 @@ export interface AdoptDeclaredCredentialRequest {
 /** `adopted` = γράφτηκε · `unchanged` = η επαφή είχε ήδη την ίδια τιμή (ιδεμπότητα, καμία εγγραφή). */
 export interface AdoptDeclaredCredentialResponse {
   readonly outcome: 'adopted' | 'unchanged';
+}
+
+/**
+ * ADR-915 §40.9 — το σώμα της «Υιοθέτησης ονόματος»: **μόνο** το όνομα που είδε το γραφείο στην επαφή (CAS). Το νέο
+ * όνομα **δεν** ταξιδεύει από τον πελάτη — ο server το ξαναδιαβάζει από τον λογαριασμό.
+ */
+export interface AdoptAccountNameRequest {
+  readonly expectedCurrent: { readonly firstName: string | null; readonly lastName: string | null };
+}
+
+/**
+ * - `complete`   — τα αποκανονικοποιημένα αντίγραφα του ονόματος (ADR-249) ενημερώθηκαν
+ * - `failed`     — η επαφή γράφτηκε, τα αντίγραφα **όχι** (ο άνθρωπος ειδοποιείται· ποτέ σιωπηλά)
+ * - `not-needed` — καμία εγγραφή (`unchanged`)
+ */
+export const NAME_CASCADE_OUTCOMES = ['complete', 'failed', 'not-needed'] as const;
+export type NameCascadeOutcome = (typeof NAME_CASCADE_OUTCOMES)[number];
+
+export interface AdoptAccountNameResponse {
+  readonly outcome: 'adopted' | 'unchanged';
+  readonly nameCascade: NameCascadeOutcome;
 }
