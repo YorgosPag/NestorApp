@@ -13,6 +13,17 @@
         "unknown": "Δεν ήταν δυνατό να ελεγχθούν τα γραφεία σας. Δοκιμάστε ξανά σε λίγο.",
         "unnamedOffice": "Γραφείο χωρίς όνομα"
       },
+      "dossier": {
+        "expiresLine": "Πρόσβαση ως {date}",
+        "kindLabel": "Φάκελος ακινήτου",
+        "open": "Άνοιγμα φακέλου",
+        "roleLine": "Ως {role}",
+        "roles": {
+          "notary": "συμβολαιογράφος",
+          "owner_lawyer": "δικηγόρος του ιδιοκτήτη"
+        },
+        "untitled": "Φάκελος ακινήτου"
+      },
       "invite": {
         "chapterLabel": {
           "bar-association": "Δικηγορικός Σύλλογος",

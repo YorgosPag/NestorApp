@@ -54,6 +54,9 @@ function requestParsers(): { readonly [K in EngagementSubjectKind]: RequestParse
   return {
     conveyance_case: parserFor('conveyance_case', [...ROLES_OF_SUBJECT.conveyance_case, HOST_REQUEST_ROLE]),
     document_issuance: parserFor('document_issuance', [...ROLES_OF_SUBJECT.document_issuance, HOST_REQUEST_ROLE]),
+    // ADR-916 Φ-Ε1 — ο φάκελος δεν γράφει ακόμη αιτήματα (δηλωμένο όριο στο `request-adapters.ts`)· ο αναλυτής
+    // υπάρχει για την ολικότητα και μένει **αυστηρός**: ό,τι δεν είναι αίτημα φακέλου με ρόλο του φακέλου ⇒ `null`.
+    property_dossier: parserFor('property_dossier', [...ROLES_OF_SUBJECT.property_dossier, HOST_REQUEST_ROLE]),
   };
 }
 

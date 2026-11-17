@@ -22,12 +22,16 @@ import { describeConveyanceInvitation } from '@/services/conveyance/conveyance-e
 import { contactNameOf, describeIssuanceInvitation } from '@/services/document-registry/issuance-engagement-host-adapter';
 import type { ConfirmationEmailResult } from '@/services/email-templates/confirmation-email-shared';
 import { buildEngagementInvitationEmail } from '@/services/email-templates/engagement-invitation-email';
+import { buildDossierInvitationEmail } from '@/services/email-templates/dossier-invitation-email';
 import { buildIssuanceEmail } from '@/services/email-templates/issuance-invitation-email';
+import { describeDossierInvitation } from '@/services/property-dossier/dossier-engagement-host-adapter';
 import type { EngagementSubjectKind } from '@/types/engagement';
 import {
   isConveyanceInvitation,
+  isDossierInvitation,
   isIssuanceInvitation,
   type ConveyanceEngagementInvitation,
+  type DossierEngagementInvitation,
   type EngagementInvitation,
   type IssuanceEngagementInvitation,
 } from '@/types/engagement-invitation';
@@ -78,9 +82,23 @@ async function composeIssuance(db: Firestore, invitation: IssuanceEngagementInvi
   return buildIssuanceEmail({ kind: 'space', language, facts, space: { link, expiresAt: invitation.expiresAt } });
 }
 
+/** ADR-916 Φ-Ε1 — η πρόσκληση στον φάκελο ιδιώτη: ρόλος + καρτέλες του εύρους + διάρκεια + σκοπός. */
+async function composeDossier(db: Firestore, invitation: DossierEngagementInvitation, token: string, language: unknown) {
+  const description = await describeDossierInvitation(db, invitation);
+  return buildDossierInvitationEmail({
+    language,
+    role: invitation.role,
+    dossierLabel: description.propertyLabel,
+    tabs: invitation.reach.tabs,
+    shareDays: invitation.shareDays,
+    expiresAt: invitation.expiresAt,
+    token,
+  });
+}
+
 /** Ολικός — **συνάρτηση, όχι σταθερά module** (CHECK 3.80, ίδια αρχή με το `engagementHosts()`). */
 function invitationComposers(): { readonly [K in EngagementSubjectKind]: ComposerFor<K> } {
-  return { conveyance_case: composeConveyance, document_issuance: composeIssuance };
+  return { conveyance_case: composeConveyance, document_issuance: composeIssuance, property_dossier: composeDossier };
 }
 
 /** **Το email αυτής της πρόσκλησης**, στη γλώσσα του παραλήπτη — από το είδος της υπόθεσής της, ποτέ από το αίτημα. */
@@ -91,6 +109,7 @@ export function composeEngagementInvitationEmail(
   language: unknown,
 ): Promise<ConfirmationEmailResult | null> {
   if (isIssuanceInvitation(invitation)) return invitationComposers().document_issuance(db, invitation, token, language);
+  if (isDossierInvitation(invitation)) return invitationComposers().property_dossier(db, invitation, token, language);
   if (isConveyanceInvitation(invitation)) return invitationComposers().conveyance_case(db, invitation, token, language);
   throw new Error(`Engagement invitation ${invitation.id} has no composer for its subject kind`);
 }

@@ -20,7 +20,7 @@ import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
 import type { ActingWorkspaceRequest } from '@/lib/auth/acting-workspace';
 import { engagementInvitationFromDocument } from '@/lib/auth/engagement-invitation-schema';
-import { stageEngagementByInvitation } from '@/lib/auth/engagement-write';
+import { stageEngagementByInvitation, type EngagementInvitationAcceptance } from '@/lib/auth/engagement-write';
 import type { ActiveWorkspace } from '@/lib/auth/workspace-membership';
 import { declaredCredentialOf, type CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import { nowISO } from '@/lib/date-local';
@@ -36,8 +36,9 @@ import {
   type InvitationResolution,
 } from '@/server/invitations/invitation-redeem';
 import { resolveActingFor } from '@/services/conveyance/conveyance-acting-workspace.server';
-import type { Engagement } from '@/types/engagement';
+import type { DeclaredCredential, Engagement } from '@/types/engagement';
 import {
+  isDossierInvitation,
   isIssuanceInvitation,
   type EngagementInvitation,
   type EngagementInvitationKindRefusal,
@@ -90,11 +91,34 @@ function recordOf(stored: InvitationDocumentCore, resolution: InvitationResoluti
   return record;
 }
 
-/** Το ζεύγος υπόθεσης/ρόλου της πρόσκλησης — η διακριτή ένωση του γραφέα, χωρίς `as`. */
-function subjectAndRoleOf(record: EngagementInvitation) {
+/** Ό,τι κοινό φέρει κάθε αποδοχή — ο άνθρωπος, η δήλωσή του και η στιγμή της σφράγισης. */
+interface AcceptanceFacts {
+  readonly identity: InvitationRedeemer;
+  readonly declaredCredential: DeclaredCredential;
+  readonly actingFor: WorkspaceRef;
+  readonly nowMs: number;
+}
+
+/**
+ * Η αποδοχή **στο σχήμα του γραφέα**, ανά είδος — η διακριτή ένωση του `stageEngagementByInvitation`, χωρίς `as`.
+ * Ο φάκελος ιδιώτη (ADR-916 Φ-Ε1) φέρει εύρος + διάρκεια **από την πρόσκληση** (τα διάλεξε ο κάτοχος)· τα είδη
+ * γραφείου φέρουν οικοδεσπότη, επαφή διορισμού και συναινέσεις.
+ */
+function acceptanceOf(record: EngagementInvitation, facts: AcceptanceFacts): EngagementInvitationAcceptance {
+  const common = {
+    uid: facts.identity.uid, email: facts.identity.email, offeredBy: record.invitedByUid, nowMs: facts.nowMs,
+    invitationId: record.id, declaredCredential: facts.declaredCredential, actingFor: facts.actingFor,
+  };
+  if (isDossierInvitation(record)) {
+    return { ...common, subject: record.subject, role: record.role, reach: record.reach, shareDays: record.shareDays };
+  }
+  const project = {
+    ...common, hostCompanyId: record.hostCompanyId, projectId: record.projectId, consents: record.consents,
+    origin: { kind: 'professional_appointment', contactId: record.contactId } as const,
+  };
   return isIssuanceInvitation(record)
-    ? { subject: record.subject, role: record.role }
-    : { subject: record.subject, role: record.role };
+    ? { ...project, subject: record.subject, role: record.role }
+    : { ...project, subject: record.subject, role: record.role };
 }
 
 async function stageAcceptance(
@@ -112,14 +136,10 @@ async function stageAcceptance(
   if (signal === null) return { kind: 'refused', reason: 'case-closed' };
   // Η **ίδια** στιγμή με τη σφράγιση της πρόσκλησης (`resolvedAt` της επίλυσης) — ένα ρολόι ανά αποδοχή.
   const nowMs = Date.parse(record.resolvedAt ?? nowISO());
-  const stage = await stageEngagementByInvitation(db, tx, {
-    hostCompanyId: record.hostCompanyId, projectId: record.projectId, uid: identity.uid, email: identity.email,
-    ...subjectAndRoleOf(record),
-    origin: { kind: 'professional_appointment', contactId: record.contactId },
-    consents: record.consents, offeredBy: record.invitedByUid, nowMs,
-    invitationId: record.id, declaredCredential: declaredCredentialOf(authority, declaration.credential, new Date(nowMs).toISOString()),
-    actingFor: declaration.actingFor,
-  }, signal);
+  const declaredCredential = declaredCredentialOf(authority, declaration.credential, new Date(nowMs).toISOString());
+  const stage = await stageEngagementByInvitation(db, tx, acceptanceOf(record, {
+    identity, declaredCredential, actingFor: declaration.actingFor, nowMs,
+  }), signal);
   if (stage.outcome === 'commit') return { kind: 'commit', write: () => stage.write() };
   return stage.reason === 'unreadable'
     ? { kind: 'unavailable', reason: 'engagements-unreadable' }

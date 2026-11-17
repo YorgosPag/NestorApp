@@ -19,6 +19,7 @@ import { resolveEngagedCase, type EngagedCaseResolution } from '@/services/conve
 import { requestIssuanceDocuments, type IssuanceRequestResult } from '@/services/document-registry/issuance-document-request.service';
 import {
   isConveyanceEngagement,
+  isDossierEngagement,
   isIssuanceEngagement,
   type Engagement,
   type EngagementSubjectKind,
@@ -52,9 +53,18 @@ function requestAsIssuer(db: Firestore, engagement: EngagementOf<'document_issua
   return requestIssuanceDocuments(db, { engagement, uid: input.uid, itemIds: input.itemIds, nowMs: input.nowMs });
 }
 
+/**
+ * ADR-916 Φ-Ε1 — **δηλωμένο όριο, όχι stub**: στον φάκελο ιδιώτη ο επαγγελματίας **βλέπει** ό,τι του δόθηκε· δεν ζητά
+ * έγγραφα από τον κάτοχο (δεν υπάρχει ακόμη κατάλογος ζητούμενων για φάκελο). Η πόρτα απαντά «δεν υπάρχει» (404),
+ * όπως για συμμετοχή που δεν έχει αυτή τη δυνατότητα — ποτέ σιωπηλή «επιτυχία».
+ */
+async function requestAsDossierProfessional(): Promise<EngagedDocumentRequestOutcome> {
+  return { ok: false, rejection: 'not-found' };
+}
+
 /** Ολικός: κάθε είδος υπόθεσης δηλώνει πώς ζητά έγγραφα ο επαγγελματίας του. */
 function requestAdapters(): { readonly [K in EngagementSubjectKind]: EngagedRequester<K> } {
-  return { conveyance_case: requestAsConveyance, document_issuance: requestAsIssuer };
+  return { conveyance_case: requestAsConveyance, document_issuance: requestAsIssuer, property_dossier: requestAsDossierProfessional };
 }
 
 /** Ο επαγγελματίας ζητά έγγραφα **μέσω της δικής του** συμμετοχής — δρομολόγηση από το είδος της, ποτέ από το αίτημα. */
@@ -65,6 +75,7 @@ export async function requestDocumentsAsEngaged(db: Firestore, input: EngagedReq
   if (engagement === undefined) return { ok: false, rejection: 'not-found' };
   const adapters = requestAdapters();
   if (isIssuanceEngagement(engagement)) return adapters.document_issuance(db, engagement, input);
+  if (isDossierEngagement(engagement)) return adapters.property_dossier(db, engagement, input);
   if (isConveyanceEngagement(engagement)) return adapters.conveyance_case(db, engagement, input);
   return { ok: false, rejection: 'not-found' };
 }

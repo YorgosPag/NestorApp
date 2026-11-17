@@ -25,6 +25,8 @@ function subjectIdOf(subject: EngagementSubject): string {
       return subject.caseId;
     case 'document_issuance':
       return subject.assignmentId;
+    case 'property_dossier':
+      return subject.dossierId;
   }
 }
 

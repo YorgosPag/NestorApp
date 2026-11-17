@@ -23,6 +23,8 @@
  * @see lib/auth/engagement-write.ts — ο ΕΝΑΣ γραφέας
  */
 
+import type { DossierShareDays } from '@/config/engagement-policy';
+import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
 import type { ChapteredRegistryId, RegistryAuthorityId } from '@/constants/professional-registries';
 import type { ScopedGrant } from '@/lib/auth/scoped-grant';
 import type { CdeAudience } from '@/types/container-access';
@@ -77,14 +79,27 @@ export function isLegalEngagementRole(value: unknown): value is LegalProfessiona
 export const ISSUANCE_ENGAGEMENT_ROLES = ['document_issuer'] as const;
 export type IssuanceEngagementRole = (typeof ISSUANCE_ENGAGEMENT_ROLES)[number];
 
+/**
+ * ADR-916 Φ-Ε1 — ο ρόλος του νομικού επαγγελματία στον **φάκελο ιδιώτη**. Ένας ζωντανός ανά ρόλο.
+ * 🔑 Χωριστό λεξιλόγιο από τη μεταβίβαση: «δικηγόρος πωλητή/αγοραστή» δεν έχει νόημα χωρίς πράξη· εδώ ο
+ *    δικηγόρος είναι **του κατόχου**. Η μεταβίβαση ιδιώτη (ADR-901 Φ5) φέρνει τους δικούς της ρόλους.
+ */
+export const DOSSIER_ENGAGEMENT_ROLES = ['owner_lawyer', 'notary'] as const;
+export type DossierEngagementRole = (typeof DOSSIER_ENGAGEMENT_ROLES)[number];
+
+/** Φρουρός για τιμή **από έξω** (σώμα αιτήματος) — δίπλα στο λεξιλόγιο. */
+export function isDossierEngagementRole(value: unknown): value is DossierEngagementRole {
+  return typeof value === 'string' && (DOSSIER_ENGAGEMENT_ROLES as readonly string[]).includes(value);
+}
+
 /** Κάθε ρόλος συμμετοχής, όποιου είδους υπόθεσης. */
-export type EngagementRole = LegalProfessionalRole | IssuanceEngagementRole;
+export type EngagementRole = LegalProfessionalRole | IssuanceEngagementRole | DossierEngagementRole;
 
 /**
  * Τα εύρη μιας συμμετοχής — κρίνονται **μόνο** από το `evaluateScopedGrant` (ADR-884 Φ0.5).
  * ⚠️ Λίστα **περιοχών**, ποτέ λίστα αρχείων (ADR-787 Α5).
  */
-export const ENGAGEMENT_SCOPES = ['conveyance:case:view', 'issuance:assignment:collaborate'] as const;
+export const ENGAGEMENT_SCOPES = ['conveyance:case:view', 'issuance:assignment:collaborate', 'dossier:files:view'] as const;
 export type EngagementScope = (typeof ENGAGEMENT_SCOPES)[number];
 
 /** Η πλευρά της συναλλαγής — ποιανού τα έγγραφα ανοίγει η συναίνεση (ADR-901 §5.2). */
@@ -113,11 +128,13 @@ export type ConsentBasis = (typeof CONSENT_BASES)[number];
  * **Σε τι** δίνει πρόσβαση η συμμετοχή — κλειστή ένωση (ADR-862 §5.3.10).
  * - `conveyance_case`   — υπόθεση μεταβίβασης (ADR-901 Φ2)
  * - `document_issuance` — ανάθεση έκδοσης εγγράφου, π.χ. ΠΕΑ (ADR-915 §27)
+ * - `property_dossier`  — ο φάκελος ακινήτου **ιδιώτη** (ADR-916 Φ-Ε1 · ADR-866 Φ3): οικοδεσπότης = ο κάτοχος του
+ *                         φακέλου, η συμμετοχή ζει **κάτω** από τον φάκελο (`property_dossiers/{pdos}/engagements`)
  *
  * ⚠️ Το πεδίο-κλειδί **διαφέρει** ανά είδος και το λύνει **μόνο** το `lib/auth/engagement-subject.ts`.
  *    Τα αποθηκευμένα έγγραφα μεταβίβασης κρατούν το `caseId` τους — καμία μετανάστευση.
  */
-export const ENGAGEMENT_SUBJECT_KINDS = ['conveyance_case', 'document_issuance'] as const;
+export const ENGAGEMENT_SUBJECT_KINDS = ['conveyance_case', 'document_issuance', 'property_dossier'] as const;
 export type EngagementSubjectKind = (typeof ENGAGEMENT_SUBJECT_KINDS)[number];
 
 export interface ConveyanceEngagementSubject {
@@ -129,7 +146,12 @@ export interface IssuanceEngagementSubject {
   /** Το ντετερμινιστικό id της ανάθεσης (`issuanceAssignmentIdOf`, `document_issuance_assignments`). */
   readonly assignmentId: string;
 }
-export type EngagementSubject = ConveyanceEngagementSubject | IssuanceEngagementSubject;
+export interface DossierEngagementSubject {
+  readonly kind: 'property_dossier';
+  /** Ο φάκελος (`pdos_*`) — **και** η διαδρομή του εγγράφου (`property_dossiers/{dossierId}/engagements`). */
+  readonly dossierId: string;
+}
+export type EngagementSubject = ConveyanceEngagementSubject | IssuanceEngagementSubject | DossierEngagementSubject;
 
 /**
  * 🔑 **Οι τρεις συσχετίσεις ανά είδος — ΟΛΙΚΟΙ πίνακες.** Τρίτο είδος υπόθεσης **δεν χτίζει** μέχρι να
@@ -139,19 +161,42 @@ export type EngagementSubject = ConveyanceEngagementSubject | IssuanceEngagement
 export const SCOPE_OF_SUBJECT = {
   conveyance_case: 'conveyance:case:view',
   document_issuance: 'issuance:assignment:collaborate',
+  property_dossier: 'dossier:files:view',
 } as const satisfies Readonly<Record<EngagementSubjectKind, EngagementScope>>;
 
 export const ROLES_OF_SUBJECT = {
   conveyance_case: LEGAL_ENGAGEMENT_ROLES,
   document_issuance: ISSUANCE_ENGAGEMENT_ROLES,
+  property_dossier: DOSSIER_ENGAGEMENT_ROLES,
 } as const satisfies Readonly<Record<EngagementSubjectKind, readonly EngagementRole[]>>;
 
 export const TEMPLATE_OF_SUBJECT = {
   conveyance_case: 'legal',
   document_issuance: 'issuer',
+  property_dossier: 'legal',
 } as const satisfies Readonly<Record<EngagementSubjectKind, CdeAudience>>;
 
-/** Η πράξη που **γέννησε** τη συμμετοχή (ADR-862 §5.3.1 `originActRef`). */
+/**
+ * ADR-916 Φ-Ε1 — η πράξη που γέννησε συμμετοχή στον **φάκελο ιδιώτη**: η πρόσκληση του κατόχου. **Χωρίς** `contactId`:
+ * ο ιδιώτης δεν έχει βιβλίο επαφών· η ταυτότητα του επαγγελματία είναι ο λογαριασμός του (`uid`) + η δήλωσή του.
+ */
+export interface DossierEngagementOrigin {
+  readonly kind: 'owner_invitation';
+  readonly invitationId: string;
+}
+
+/**
+ * ADR-916 Φ-Ε1 — **ποια αρχεία του φακέλου φτάνουν** στον επαγγελματία: καρτέλες (κληρονομικότητα φακέλου, όπως
+ * Drive/Box) **μείον** ρητές εξαιρέσεις ανά αρχείο (που εκείνοι δεν έχουν). ⚠️ Λίστα **περιοχών** + εξαιρέσεις —
+ * ποτέ λίστα επιτρεπόμενων αρχείων (ADR-787 Α5): ό,τι νέο μπαίνει σε επιτρεπόμενη καρτέλα φτάνει, αμέσως.
+ * Η κρίση **παράγεται** σε κάθε ανάγνωση (`lib/property-dossier/dossier-share-reach.ts`).
+ */
+export interface DossierShareReach {
+  readonly tabs: readonly PropertyDossierFileTab[];
+  readonly excludedFileIds: readonly string[];
+}
+
+/** Η πράξη που **γέννησε** τη συμμετοχή σε υπόθεση **γραφείου** (ADR-862 §5.3.1 `originActRef`). */
 export interface EngagementOrigin {
   readonly kind: 'professional_appointment';
   /** Η επαφή του επαγγελματία στο `ProfessionalsCard` — η ταυτότητα **στο βιβλίο** του οικοδεσπότη. */
@@ -169,6 +214,12 @@ export const ROLE_REGISTRY_AUTHORITY = {
   buyer_lawyer: 'bar-association',
   notary: 'notary-association',
 } as const satisfies Readonly<Record<LegalProfessionalRole, ChapteredRegistryId>>;
+
+/** ADR-916 Φ-Ε1 — το ίδιο ερώτημα για τους ρόλους του φακέλου ιδιώτη. */
+export const DOSSIER_ROLE_REGISTRY_AUTHORITY = {
+  owner_lawyer: 'bar-association',
+  notary: 'notary-association',
+} as const satisfies Readonly<Record<DossierEngagementRole, ChapteredRegistryId>>;
 
 /**
  * **Δηλωμένη** επαγγελματική ιδιότητα (ADR-901 Ε-4) — στιγμιότυπο **ανά υπόθεση**, όπως τη δήλωσε ο ίδιος
@@ -208,11 +259,8 @@ export interface EngagementConsent {
  * ⚠️ **`revokedAt` ΑΠΟΝ, όχι `null`**, όσο δεν ανακλήθηκε: για το `evaluateScopedGrant` κάθε
  *    παρούσα τιμή σημαίνει «ανακλήθηκε».
  */
-interface EngagementBase extends ScopedGrant<EngagementScope> {
+interface EngagementCore extends ScopedGrant<EngagementScope> {
   readonly id: string;
-  /** Ο χώρος **του έργου** — ποτέ του καλεσμένου (ADR-862 §2.3, Κ-3). Και πεδίο για collection-group. */
-  readonly hostCompanyId: string;
-  readonly projectId: string;
   /** Ο καλεσμένος — πεδίο για το «Κοινόχρηστα μαζί μου» (collection-group). */
   readonly uid: string;
   /** Το email με το οποίο βρέθηκε ο λογαριασμός — ίχνος, **όχι** κλειδί. */
@@ -223,7 +271,6 @@ interface EngagementBase extends ScopedGrant<EngagementScope> {
   readonly state: EngagementState;
   /** ΠΑΡΑΓΕΤΑΙ (`config/engagement-policy.ts`) — ποτέ πληκτρολογημένο (ADR-862 §5.3.3). */
   readonly expiresAt: string;
-  readonly origin: EngagementOrigin;
   readonly consents: readonly EngagementConsent[];
   /** ADR-901 Ε-4 — απόν ⇒ καμία δήλωση (π.χ. πρόταση σε υπάρχοντα λογαριασμό, πριν από τη Φ3). */
   readonly declaredCredential?: DeclaredCredential;
@@ -246,23 +293,50 @@ interface EngagementBase extends ScopedGrant<EngagementScope> {
   readonly updatedAt: string;
 }
 
+/**
+ * Συμμετοχή σε υπόθεση **γραφείου** — ζει στο `companies/{hostCompanyId}/projects/{projectId}/engagements`.
+ * ADR-916 Φ-Ε1: τα πεδία του οικοδεσπότη-γραφείου **δεν** είναι πια στον κοινό πυρήνα — ο φάκελος ιδιώτη δεν τα έχει.
+ */
+interface ProjectHostedEngagement extends EngagementCore {
+  /** Ο χώρος **του έργου** — ποτέ του καλεσμένου (ADR-862 §2.3, Κ-3). Και πεδίο για collection-group. */
+  readonly hostCompanyId: string;
+  readonly projectId: string;
+  readonly origin: EngagementOrigin;
+}
+
 /** Συμμετοχή σε υπόθεση μεταβίβασης (ADR-901) — δικηγόρος πωλητή/αγοραστή ή συμβολαιογράφος. */
-export interface ConveyanceEngagement extends EngagementBase {
+export interface ConveyanceEngagement extends ProjectHostedEngagement {
   readonly role: LegalProfessionalRole;
   readonly subject: ConveyanceEngagementSubject;
 }
 
 /** Συμμετοχή σε ανάθεση έκδοσης εγγράφου (ADR-915 §27 · ADR-862 §5.3.10). */
-export interface IssuanceEngagement extends EngagementBase {
+export interface IssuanceEngagement extends ProjectHostedEngagement {
   readonly role: IssuanceEngagementRole;
   readonly subject: IssuanceEngagementSubject;
 }
 
 /**
+ * ADR-916 Φ-Ε1 — συμμετοχή στον **φάκελο ιδιώτη**. Ο οικοδεσπότης **δεν αποθηκεύεται**: είναι ο **σημερινός**
+ * κάτοχος του φακέλου (`property_dossiers/{dossierId}.userId`), ώστε η πρόσβαση να ακολουθεί την αλλαγή χεριών.
+ */
+export interface DossierEngagement extends EngagementCore {
+  readonly role: DossierEngagementRole;
+  readonly subject: DossierEngagementSubject;
+  readonly origin: DossierEngagementOrigin;
+  readonly reach: DossierShareReach;
+  /** Η διάρκεια που **διάλεξε** ο κάτοχος από το κλειστό μενού πολιτικής — η λήξη **παράγεται** από αυτήν. */
+  readonly shareDays: DossierShareDays;
+}
+
+/** Οι συμμετοχές που ζουν σε έργο γραφείου. */
+export type ProjectEngagement = ConveyanceEngagement | IssuanceEngagement;
+
+/**
  * Το έγγραφο συμμετοχής — **διακριτή ένωση** στο `subject.kind`: ρόλος και υπόθεση πάνε **μαζί**, ώστε ένας
  * «συμβολαιογράφος σε ανάθεση ΠΕΑ» να μην μπορεί καν να γραφτεί.
  */
-export type Engagement = ConveyanceEngagement | IssuanceEngagement;
+export type Engagement = ProjectEngagement | DossierEngagement;
 
 /** Η συμμετοχή ενός **συγκεκριμένου** είδους υπόθεσης — για τα ολικά μητρώα ανά είδος (`{[K in EngagementSubjectKind]}`). */
 export type EngagementOfKind<K extends EngagementSubjectKind> = Extract<Engagement, { readonly subject: { readonly kind: K } }>;
@@ -277,10 +351,26 @@ export function isIssuanceEngagement(engagement: Engagement): engagement is Issu
   return engagement.subject.kind === 'document_issuance';
 }
 
-/** Η διεύθυνση ενός εγγράφου συμμετοχής — **τρεις** άξονες, κανένας από τον πελάτη. */
+/** ADR-916 Φ-Ε1 — στενεύει στον φάκελο ιδιώτη. */
+export function isDossierEngagement(engagement: Engagement): engagement is DossierEngagement {
+  return engagement.subject.kind === 'property_dossier';
+}
+
+/** Στενεύει στις συμμετοχές που ζουν σε έργο γραφείου (έχουν `hostCompanyId` · `projectId`). */
+export function isProjectEngagement(engagement: Engagement): engagement is ProjectEngagement {
+  return engagement.subject.kind !== 'property_dossier';
+}
+
+/** Η διεύθυνση ενός εγγράφου συμμετοχής **έργου** — **τρεις** άξονες, κανένας από τον πελάτη. */
 export interface EngagementKey {
   readonly hostCompanyId: string;
   readonly projectId: string;
+  readonly engagementId: string;
+}
+
+/** ADR-916 Φ-Ε1 — η διεύθυνση συμμετοχής στον φάκελο ιδιώτη: ο φάκελος **είναι** η διαδρομή. */
+export interface DossierEngagementKey {
+  readonly dossierId: string;
   readonly engagementId: string;
 }
 

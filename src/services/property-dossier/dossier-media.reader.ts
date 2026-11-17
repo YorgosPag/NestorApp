@@ -22,7 +22,36 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_STATUS } from '@/config/domain-constants';
 import { propertyDossierFromDocument } from '@/lib/property-dossier/property-dossier-from-document';
+import type { FileRecord } from '@/types/file-record';
+import type { PropertyDossier } from '@/types/property-dossier';
 import type { DossierMediaCandidate, DossierMediaRead } from './dossier-media-publication';
+
+/** Ο φάκελος — ή `null` αν δεν υπάρχει / δεν διαβάζεται. **Χωρίς** κρίση κατόχου: την κάνει ο καλών. */
+export async function readPropertyDossier(adminDb: AdminFirestore, dossierId: string): Promise<PropertyDossier | null> {
+  const snapshot = await adminDb.collection(COLLECTIONS.PROPERTY_DOSSIERS).doc(dossierId).get();
+  return propertyDossierFromDocument(snapshot.data(), dossierId);
+}
+
+/** Ένα έτοιμο αρχείο του φακέλου — + τα πεδία ονόματος, για όποιον το δείχνει σε άνθρωπο (ADR-916 Φ-Ε1). */
+export type DossierReadyFile = DossierMediaCandidate & Pick<FileRecord, 'displayName' | 'originalFilename'>;
+
+/**
+ * Τα **έτοιμα** αρχεία του φακέλου, στο βιβλίο **του κατόχου του** — ο ίδιος δείκτης με τη σελίδα του φακέλου.
+ * Τον μοιράζονται η βιτρίνα (ADR-866 Φ1.3) και ο επαγγελματίας του φακέλου (ADR-916 Φ-Ε1): μία ανάγνωση, όχι δύο.
+ */
+export async function readDossierReadyFiles(
+  adminDb: AdminFirestore,
+  dossier: Pick<PropertyDossier, 'id' | 'userId'>,
+): Promise<readonly DossierReadyFile[]> {
+  const files = await adminDb
+    .collection(COLLECTIONS.FILES_PERSONAL)
+    .where('userId', '==', dossier.userId)
+    .where('entityType', '==', ENTITY_TYPES.PROPERTY_DOSSIER)
+    .where('entityId', '==', dossier.id)
+    .where('status', '==', FILE_STATUS.READY)
+    .get();
+  return files.docs.map((doc) => ({ ...(doc.data() as DossierReadyFile), id: doc.id }));
+}
 
 /**
  * Διαβάζει τον φάκελο **και** τα έτοιμα αρχεία του — ή `null` αν ο φάκελος δεν υπάρχει / δεν ανήκει στον `ownerUserId`.
@@ -34,20 +63,7 @@ export async function readDossierMedia(
   dossierId: string,
   ownerUserId: string,
 ): Promise<DossierMediaRead | null> {
-  const snapshot = await adminDb.collection(COLLECTIONS.PROPERTY_DOSSIERS).doc(dossierId).get();
-  const dossier = propertyDossierFromDocument(snapshot.data(), dossierId);
+  const dossier = await readPropertyDossier(adminDb, dossierId);
   if (dossier === null || dossier.userId !== ownerUserId) return null;
-
-  const files = await adminDb
-    .collection(COLLECTIONS.FILES_PERSONAL)
-    .where('userId', '==', dossier.userId)
-    .where('entityType', '==', ENTITY_TYPES.PROPERTY_DOSSIER)
-    .where('entityId', '==', dossier.id)
-    .where('status', '==', FILE_STATUS.READY)
-    .get();
-
-  return {
-    dossier,
-    files: files.docs.map((doc) => ({ ...(doc.data() as DossierMediaCandidate), id: doc.id })),
-  };
+  return { dossier, files: await readDossierReadyFiles(adminDb, dossier) };
 }

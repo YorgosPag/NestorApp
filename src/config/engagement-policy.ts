@@ -109,6 +109,27 @@ export function activeExpiresAt(nowMs: number): string {
 }
 
 /**
+ * ADR-916 Φ-Ε1 — η διάρκεια διαμοιρασμού του **φακέλου ιδιώτη**: **κλειστό μενού**, όχι πληκτρολόγηση (ADR-862 §5.3.3).
+ *
+ * 🔑 Ο φάκελος από μόνος του δεν έχει «πράξη» που ολοκληρώνεται (όπως η υπόθεση μεταβίβασης) ⇒ η λήξη παράγεται από
+ *    τη **ρητή επιλογή του κατόχου** — το expiry του Google Drive — αλλά μόνο ανάμεσα σε τιμές πολιτικής. Ανανέωση =
+ *    νέα επιλογή από το ίδιο μενού, από **σήμερα**· ανάκληση = άμεση (ADR-787 Ε-2 §5). Κανένα «για πάντα».
+ */
+export const DOSSIER_SHARE_DAYS = [7, 30, 90] as const;
+export type DossierShareDays = (typeof DOSSIER_SHARE_DAYS)[number];
+export const DOSSIER_SHARE_DEFAULT_DAYS: DossierShareDays = 30;
+
+/** Φρουρός για τιμή **από έξω** (σώμα αιτήματος · δίσκος). */
+export function isDossierShareDays(value: unknown): value is DossierShareDays {
+  return typeof value === 'number' && (DOSSIER_SHARE_DAYS as readonly number[]).includes(value);
+}
+
+/** Η λήξη μιας **ενεργής** συμμετοχής φακέλου που άρχισε (ή ανανεώθηκε) τη στιγμή `nowMs`. */
+export function dossierShareExpiresAt(days: DossierShareDays, nowMs: number): string {
+  return new Date(nowMs + days * DAY_MS).toISOString();
+}
+
+/**
  * ADR-901 Ε-5 — αν ο επαγγελματίας δεν απαντήσει σε **3** ημέρες, υπενθυμίζεται **ο προσκαλών** (όχι ο
  * επαγγελματίας: ο οικοδεσπότης ξέρει αν πρέπει να τηλεφωνήσει, να ξαναστείλει ή να ορίσει άλλον).
  */

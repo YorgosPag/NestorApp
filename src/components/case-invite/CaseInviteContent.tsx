@@ -46,6 +46,7 @@ import {
   CASE_INVITE_SUBJECT_KEYS,
 } from './case-invite-labels';
 import { CredentialDeclarationForm, credentialDraftOf, credentialFromDraft, type CredentialDraft } from './CredentialDeclarationForm';
+import { DossierSubjectFacts } from './DossierSubjectFacts';
 
 // 🔴 ADR-744 §18 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE (ποτέ `import()`, ποτέ σε Server Component).
 import routeSlice from '@/i18n/generated/routes/case-invite__token.el.json';
@@ -82,6 +83,7 @@ function SubjectFacts({ subject }: { readonly subject: EngagementInvitationSubje
   // `document-registry` / `legality` να μην μπαίνουν στο slice της σελίδας (που υπηρετεί και τη μεταβίβαση).
   const { t } = useTranslation(CASE_INVITE_NS);
   if (subject.kind === 'document_issuance') return <IssuanceSurfaces.IssuanceSubjectFacts subject={subject} />;
+  if (subject.kind === 'property_dossier') return <DossierSubjectFacts subject={subject} />;
   return (
     <>
       <dt className="text-muted-foreground">{t(CASE_INVITE_KEYS.roleLabel)}</dt>

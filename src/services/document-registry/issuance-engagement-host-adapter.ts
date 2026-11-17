@@ -20,7 +20,7 @@ import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { qualificationRegistryAuthority } from '@/config/document-validity/document-issuers';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
-import { listEngagementsOfUser, selectCurrentEngagement } from '@/lib/auth/engagement-read';
+import { listEngagementsOfUser } from '@/lib/auth/engagement-read';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import { advanceGlanceOf, advanceTimelineOf } from '@/lib/document-validity/issuance-advance';
 import { ballInCourtOf, issuanceStageOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
@@ -40,8 +40,8 @@ import { announceIssuanceAnswer, type IssuanceSpaceEvent } from '@/server/issuan
 import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { readPropertySiteAddress } from '@/server/lib/property-site-address.server';
-import { actingViews, type ActingViews } from '@/services/conveyance/conveyance-acting-workspace.server';
-import { placementRejectionOf, shownIn, type CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
+import type { ActingViews } from '@/services/conveyance/conveyance-acting-workspace.server';
+import { placementRejectionOf, shownCardsPerSubject, type CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
 import { answerChanges, recordEngagementAudit } from '@/services/conveyance/conveyance-engagement-support';
 import { loadConveyanceSubject } from '@/services/conveyance/conveyance-subject.server';
 import { readPublicListingById } from '@/services/listings/public-listing-by-id.reader';
@@ -148,8 +148,11 @@ async function announceSpace(db: Firestore, invitation: IssuanceEngagementInvita
 
 async function afterAnswer(db: Firestore, invitation: IssuanceEngagementInvitation, answer: InvitationAnswer, answerer: InvitationAnswerer): Promise<void> {
   if (answer.kind === 'accepted') {
+    // Η πρόσκληση ανάθεσης γεννά **μόνο** συμμετοχή ανάθεσης· άλλο είδος εδώ = σφάλμα κώδικα, ρίχνεται δυνατά (όχι `as`).
+    const engagement = answer.engagement;
+    if (!isIssuanceEngagement(engagement)) throw new Error(`Engagement ${engagement.id} is not a document-issuance engagement`);
     await recordEngagementAudit({
-      engagement: answer.engagement, action: 'created', changes: answerChanges(null, answer.engagement),
+      engagement, action: 'created', changes: answerChanges(null, engagement),
       performedBy: answerer.uid, performedByName: answerer.email,
       entityName: await issuancePropertyNameOf(db, invitation.hostCompanyId, invitation.propertyId),
     });
@@ -209,16 +212,8 @@ function deliveryGlanceOf(stage: IssuanceStage, assignment: DocumentIssuanceAssi
   return status?.due ? { dueOn: status.due.dueOn, lateness: status.lateness } : null;
 }
 
-async function listCards(db: Firestore, viewer: CasesViewer, history: readonly IssuanceEngagement[], nowMs: number) {
-  const acting = actingViews(viewer);
-  const byAssignment = new Map<string, IssuanceEngagement[]>();
-  for (const e of history) byAssignment.set(e.subject.assignmentId, [...(byAssignment.get(e.subject.assignmentId) ?? []), e]);
-  const candidates = [...byAssignment.values()]
-    .map((engagements) => selectCurrentEngagement(engagements).engagement)
-    .filter((e): e is IssuanceEngagement => e !== null);
-  const current = await shownIn(candidates, viewer.viewed, acting);
-  if (current === 'unknown') return 'unknown' as const;
-  return Promise.all(current.map((e) => cardOf(db, e, viewer.uid, nowMs, acting)));
+function listCards(db: Firestore, viewer: CasesViewer, history: readonly IssuanceEngagement[], nowMs: number) {
+  return shownCardsPerSubject(viewer, history, (e, acting) => cardOf(db, e, viewer.uid, nowMs, acting));
 }
 
 /**

@@ -31,6 +31,7 @@ import type { CaseHome } from '@/lib/conveyance/conveyance-routes';
 import type { CaseEngagementAnswer, CredentialDeclarationInput } from '@/lib/conveyance/declared-credential';
 import { AcceptEngagementDialog } from './AcceptEngagementDialog';
 import { MyCaseCardView } from './MyCaseCardView';
+import { MyDossierCardView } from './MyDossierCardView';
 import { MyOpenItemsSection } from './MyOpenItemsSection';
 import { IssuanceSurfaces } from '@/components/conveyance/issuance-surfaces';
 
@@ -49,9 +50,11 @@ function CaseList({ home, cards, pending, onRespond }: CaseListProps) {
     <ul className="grid gap-3">
       {cards.map((card) => (
         <li key={card.engagementId}>
-          {card.kind === 'document_issuance'
-            ? <IssuanceSurfaces.MyIssuanceCardView card={card} home={home} />
-            : <MyCaseCardView card={card} home={home} busy={pending.has(card.engagementId)} onRespond={onRespond} />}
+          {card.kind === 'document_issuance' && <IssuanceSurfaces.MyIssuanceCardView card={card} home={home} />}
+          {card.kind === 'property_dossier' && <MyDossierCardView card={card} home={home} />}
+          {card.kind === 'conveyance_case' && (
+            <MyCaseCardView card={card} home={home} busy={pending.has(card.engagementId)} onRespond={onRespond} />
+          )}
         </li>
       ))}
     </ul>

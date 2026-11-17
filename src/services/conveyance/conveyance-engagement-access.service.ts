@@ -25,6 +25,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { isShownInWorkspace } from '@/lib/auth/acting-workspace';
 import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
+import { subjectKeyOf } from '@/lib/auth/engagement-subject';
 import { listEngagementsOfUser, selectCurrentEngagement } from '@/lib/auth/engagement-read';
 import { transitionEngagement, type EngagementTransition } from '@/lib/auth/engagement-write';
 import { deriveCaseChecklist } from '@/lib/conveyance/case-checklist';
@@ -205,6 +206,31 @@ export async function shownIn<E extends Engagement>(engagements: readonly E[], v
     if (isShownInWorkspace(engagement, placement.home, viewed)) shown.push(engagement);
   }
   return shown;
+}
+
+/**
+ * **Μία κάρτα ανά υπόθεση**: από το ιστορικό ενός είδους, η τρέχουσα συμμετοχή κάθε υπόθεσης (`selectCurrentEngagement`),
+ * όσες φαίνονται στον χώρο της σελίδας (`shownIn`), ως κάρτες του είδους. Κοινό για κάθε οικοδεσπότη εκτός της
+ * μεταβίβασης, που κρατά τη δική της ροή (ADR-916 Φ-Ε1: ο τρίτος οικοδεσπότης δεν αντιγράφει τον δεύτερο).
+ * `unknown` ⇒ τουλάχιστον μία δεν κρίθηκε (ποτέ μισή λίστα).
+ */
+export async function shownCardsPerSubject<E extends Engagement, C>(
+  viewer: CasesViewer,
+  history: readonly E[],
+  cardOf: (engagement: E, acting: ActingViews) => Promise<C>,
+): Promise<readonly C[] | 'unknown'> {
+  const bySubject = new Map<string, E[]>();
+  for (const e of history) {
+    const key = subjectKeyOf(e.subject);
+    bySubject.set(key, [...(bySubject.get(key) ?? []), e]);
+  }
+  const candidates = [...bySubject.values()]
+    .map((engagements) => selectCurrentEngagement(engagements).engagement)
+    .filter((e): e is E => e !== null);
+  const acting = actingViews(viewer);
+  const current = await shownIn(candidates, viewer.viewed, acting);
+  if (current === 'unknown') return 'unknown';
+  return Promise.all(current.map((e) => cardOf(e, acting)));
 }
 
 /** Γιατί η όψη μιας συμμετοχής **δεν** ανοίγει σε αυτόν τον χώρο — ίδια απάντηση για κάθε είδος υπόθεσης. */

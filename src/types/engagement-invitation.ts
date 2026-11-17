@@ -17,8 +17,12 @@
 import type { IssuerQualification } from '@/config/document-validity/document-issuers';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { RegistryAuthorityId } from '@/constants/professional-registries';
+import type { DossierShareDays } from '@/config/engagement-policy';
 import type {
   ConveyanceEngagementSubject,
+  DossierEngagementRole,
+  DossierEngagementSubject,
+  DossierShareReach,
   EngagementConsent,
   IssuanceEngagementRole,
   IssuanceEngagementSubject,
@@ -57,10 +61,21 @@ export interface CredentialHint {
 /**
  * Ό,τι κοινό έχει **κάθε** πρόσκληση συμμετοχής, όποιου είδους υπόθεσης (ADR-862 §5.3.11).
  *
- * 🔑 **Μία μηχανή, δύο είδη υπόθεσης** — ίδια συλλογή, ίδιο μυστικό, ίδια σελίδα `/case-invite/[token]`, ίδια
+ * 🔑 **Μία μηχανή, τρία είδη υπόθεσης** — ίδια συλλογή, ίδιο μυστικό, ίδια σελίδα `/case-invite/[token]`, ίδια
  * εξαργύρωση. Ό,τι διαφέρει ανά είδος το απαντά **μόνο** ο οικοδεσπότης του είδους (`server/engagements/engagement-hosts.ts`).
  */
-interface EngagementInvitationBase extends InvitationRecordCore {
+interface EngagementInvitationCore extends InvitationRecordCore {
+  readonly credentialHint: CredentialHint;
+  /** Ε-5 — πότε ο προσκαλών υπενθυμίζεται αν δεν υπάρξει απάντηση. Γράφεται **στην έκδοση** (προληπτικά). */
+  readonly reminderDueAt: string;
+  readonly reminderSentAt: string | null;
+}
+
+/**
+ * Πρόσκληση σε υπόθεση **γραφείου** — ADR-916 Φ-Ε1: τα πεδία του οικοδεσπότη-γραφείου **δεν** είναι πια στον κοινό
+ * πυρήνα· ο φάκελος ιδιώτη δεν έχει μισθωτή, έργο ή βιβλίο επαφών.
+ */
+interface ProjectHostedInvitation extends EngagementInvitationCore {
   /** Ο χώρος **της υπόθεσης** — ο μισθωτής της συμμετοχής που θα γεννηθεί (ADR-862 §2.3 Κ-3). */
   readonly hostCompanyId: string;
   readonly projectId: string;
@@ -69,17 +84,13 @@ interface EngagementInvitationBase extends InvitationRecordCore {
   readonly contactId: string;
   /** Οι συναινέσεις που **ήδη** ικανοποιήθηκαν στην έκδοση (Ε-3: καμία πρόσκληση πριν από αυτές). */
   readonly consents: readonly EngagementConsent[];
-  readonly credentialHint: CredentialHint;
-  /** Ε-5 — πότε ο προσκαλών υπενθυμίζεται αν δεν υπάρξει απάντηση. Γράφεται **στην έκδοση** (προληπτικά). */
-  readonly reminderDueAt: string;
-  readonly reminderSentAt: string | null;
 }
 
 /**
  * Πρόσκληση σε **υπόθεση μεταβίβασης** (ADR-901 Φ3). Στον δίσκο ζει όπως πάντα, με επίπεδο `caseId`
  * (καμία μετανάστευση). Το `subject` το **παράγει** το σχήμα στην ανάγνωση.
  */
-export interface ConveyanceEngagementInvitation extends EngagementInvitationBase {
+export interface ConveyanceEngagementInvitation extends ProjectHostedInvitation {
   readonly subject: ConveyanceEngagementSubject;
   readonly caseId: string;
   readonly role: LegalProfessionalRole;
@@ -89,7 +100,7 @@ export interface ConveyanceEngagementInvitation extends EngagementInvitationBase
  * Πρόσκληση στον **χώρο μιας ανάθεσης έκδοσης** (ADR-915 §39 · ADR-862 §5.3.11). Γεννιέται από το «Αναλαμβάνω»
  * του επαγγελματία, δεμένη στο email όπου πήγε η ανάθεση. Στον δίσκο ζει με `subject` (το ίδιο σχήμα με τη συμμετοχή).
  */
-export interface IssuanceEngagementInvitation extends EngagementInvitationBase {
+export interface IssuanceEngagementInvitation extends ProjectHostedInvitation {
   readonly subject: IssuanceEngagementSubject;
   readonly role: IssuanceEngagementRole;
   /** Το είδος εγγράφου της ανάθεσης — από εδώ παράγεται η αρχή του μητρώου (προσόν → άδεια → αρχή). */
@@ -98,8 +109,20 @@ export interface IssuanceEngagementInvitation extends EngagementInvitationBase {
   readonly qualification: IssuerQualification;
 }
 
+/**
+ * ADR-916 Φ-Ε1 — ο **ιδιώτης κάτοχος** καλεί νομικό επαγγελματία στον φάκελο του ακινήτου του. Εύρος και διάρκεια
+ * τα διαλέγει ο κάτοχος **στην έκδοση** και περνούν αυτούσια στη συμμετοχή· ο οικοδεσπότης **δεν** αποθηκεύεται (είναι
+ * ο σημερινός κάτοχος του φακέλου — αλλαγή χεριών ⇒ η πρόσκληση δεν εξαργυρώνεται, `invitedByUid` ≠ κάτοχος).
+ */
+export interface DossierEngagementInvitation extends EngagementInvitationCore {
+  readonly subject: DossierEngagementSubject;
+  readonly role: DossierEngagementRole;
+  readonly reach: DossierShareReach;
+  readonly shareDays: DossierShareDays;
+}
+
 /** Το έγγραφο της πρόσκλησης — διακριτή ένωση στο `subject.kind`. */
-export type EngagementInvitation = ConveyanceEngagementInvitation | IssuanceEngagementInvitation;
+export type EngagementInvitation = ConveyanceEngagementInvitation | IssuanceEngagementInvitation | DossierEngagementInvitation;
 
 /** Φρουροί — ο ΕΝΑΣ τρόπος να στενέψει μια πρόσκληση. */
 export function isConveyanceInvitation(invitation: EngagementInvitation): invitation is ConveyanceEngagementInvitation {
@@ -107,6 +130,9 @@ export function isConveyanceInvitation(invitation: EngagementInvitation): invita
 }
 export function isIssuanceInvitation(invitation: EngagementInvitation): invitation is IssuanceEngagementInvitation {
   return invitation.subject.kind === 'document_issuance';
+}
+export function isDossierInvitation(invitation: EngagementInvitation): invitation is DossierEngagementInvitation {
+  return invitation.subject.kind === 'property_dossier';
 }
 
 /** Η πρόσκληση της θέσης όπως τη βλέπει ο **οικοδεσπότης** — χωρίς nonce, χωρίς id στο HTML του επαγγελματία. */
@@ -133,6 +159,7 @@ export interface EngagementInvitationChecklist {
  * **Σε τι** καλείται ο άνθρωπος — ό,τι διαφέρει ανά είδος υπόθεσης στην όψη και στο email (ADR-862 §5.3.11).
  * - μεταβίβαση: ο νομικός ρόλος + ο κατάλογος **του ρόλου** (μετρήσεις· `null` ⇒ δεν διαβάστηκε)
  * - ανάθεση έκδοσης: **ποιο** έγγραφο ζητείται (π.χ. ΠΕΑ)
+ * - φάκελος ιδιώτη: ο ρόλος, οι καρτέλες του εύρους και η διάρκεια
  */
 export type EngagementInvitationSubjectView =
   | {
@@ -140,7 +167,14 @@ export type EngagementInvitationSubjectView =
       readonly role: LegalProfessionalRole;
       readonly checklist: EngagementInvitationChecklist | null;
     }
-  | { readonly kind: 'document_issuance'; readonly documentKind: DocumentKind };
+  | { readonly kind: 'document_issuance'; readonly documentKind: DocumentKind }
+  /** ADR-916 Φ-Ε1 — ο ρόλος + **ποιες καρτέλες** του φακέλου θα δει (το εύρος, όχι αρχεία) + για πόσες ημέρες. */
+  | {
+      readonly kind: 'property_dossier';
+      readonly role: DossierEngagementRole;
+      readonly tabs: DossierShareReach['tabs'];
+      readonly shareDays: DossierShareDays;
+    };
 
 /** Η όψη πριν από την ταυτότητα (`/case-invite/[token]`) — **μετρήσεις, όχι έγγραφα** (ADR-901 §5.3 βήμα 5). */
 export interface EngagementInvitationPreview {

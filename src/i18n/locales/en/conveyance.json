@@ -367,6 +367,17 @@
         "notary-association": "Notaries' association",
         "regional-authority": "Regional Unit that issued the licence"
       },
+      "dossier": {
+        "title": "Access to a property file",
+        "intro": "The owner of the property file {property} is giving you access to its files.",
+        "scope": "Accepting gives access only to the tabs listed here, for as long as the owner decides — not to the rest of the file. Every view and download is logged and visible to the owner.",
+        "tabsLabel": "What you will see",
+        "durationLabel": "Duration",
+        "duration": "{days, plural, one {# day} other {# days}} from acceptance",
+        "accepted": "You have access to the property file",
+        "acceptedBody": "The file is now in “My cases”.",
+        "open": "Open the file"
+      },
       "issuance": {
         "title": "The assignment space",
         "intro": "{host} opened a collaboration space for the property {property}.",
@@ -551,6 +562,29 @@
         }
       },
       "scope": "The space gives access to this assignment only. Your contact details are not shown to anyone without your own choice."
+    },
+    "dossier": {
+      "kindLabel": "Property file",
+      "untitled": "Property file",
+      "roleLine": "As {role}",
+      "roles": {
+        "owner_lawyer": "the owner's lawyer",
+        "notary": "notary"
+      },
+      "expiresLine": "Access until {date}",
+      "open": "Open the file",
+      "tabs": {
+        "floorplan": "Floor plan",
+        "topographic": "Topographic plan",
+        "documents": "Documents",
+        "photos": "Photos",
+        "videos": "Videos"
+      },
+      "empty": "There are no files in this tab yet.",
+      "addedOn": "Added {date}",
+      "openFile": "Open",
+      "download": "Download",
+      "auditNotice": "Every view and download is logged in the owner's history."
     },
     "myCases": {
       "title": "My cases",

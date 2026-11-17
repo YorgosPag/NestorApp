@@ -16,7 +16,7 @@ import 'server-only';
 import type { CollectionReference, DocumentReference, Firestore, Query } from 'firebase-admin/firestore';
 
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import type { EngagementKey, EngagementSubject } from '@/types/engagement';
+import { isDossierEngagement, type Engagement, type EngagementKey, type EngagementSubject } from '@/types/engagement';
 
 /**
  * ADR-862 §5.3.10 — το φίλτρο «αυτή η υπόθεση», **ανά είδος**, με **ρητό** όνομα πεδίου: οι πύλες δεικτών
@@ -30,6 +30,9 @@ function subjectFilter(query: Query, subject: EngagementSubject): Query {
       return query.where('subject.caseId', '==', subject.caseId);
     case 'document_issuance':
       return query.where('subject.assignmentId', '==', subject.assignmentId);
+    case 'property_dossier':
+      // Η συλλογή ΕΙΝΑΙ ήδη ο φάκελος· το φίλτρο κρατά το ίδιο σχήμα με τα άλλα είδη (ζώνη, όχι ανάγκη).
+      return query.where('subject.dossierId', '==', subject.dossierId);
   }
 }
 
@@ -49,9 +52,43 @@ export function engagementsCollection(db: Firestore, hostCompanyId: string, proj
     .collection(SUBCOLLECTIONS.PROJECT_ENGAGEMENTS);
 }
 
-/** Ένα έγγραφο συμμετοχής. */
+/** Ένα έγγραφο συμμετοχής **έργου**. */
 export function engagementRef(db: Firestore, key: EngagementKey): DocumentReference {
   return engagementsCollection(db, key.hostCompanyId, key.projectId).doc(key.engagementId);
+}
+
+/**
+ * ADR-916 Φ-Ε1 — `property_dossiers/{dossierId}/engagements`: η άδεια ζει **κάτω** από τον πόρο που ανοίγει (Α1,
+ * πρότυπο Drive `files/{id}/permissions`). Ο οικοδεσπότης (ο κάτοχος) **δεν** είναι πεδίο: είναι ο γονέας.
+ */
+export function dossierEngagementsCollection(db: Firestore, dossierId: string): CollectionReference {
+  // tenant-scope-exempt: φάκελος ΙΔΙΩΤΗ — δεν υπάρχει μισθωτής· η απομόνωση είναι η διαδρομή του φακέλου.
+  return db.collection(COLLECTIONS.PROPERTY_DOSSIERS).doc(dossierId).collection(SUBCOLLECTIONS.DOSSIER_ENGAGEMENTS);
+}
+
+/**
+ * **Πού ζει** μια συμμετοχή — η ΜΙΑ απάντηση για γραφέα και αναγνώστες, ανά είδος υπόθεσης. Ο φάκελος παράγει τη
+ * διαδρομή από την **ίδια** την υπόθεση (`subject.dossierId`)· τα είδη έργου από τον οικοδεσπότη τους.
+ */
+export type EngagementHome =
+  | { readonly kind: 'project'; readonly hostCompanyId: string; readonly projectId: string }
+  | { readonly kind: 'dossier'; readonly dossierId: string };
+
+export function homeOfEngagement(engagement: Engagement): EngagementHome {
+  return isDossierEngagement(engagement)
+    ? { kind: 'dossier', dossierId: engagement.subject.dossierId }
+    : { kind: 'project', hostCompanyId: engagement.hostCompanyId, projectId: engagement.projectId };
+}
+
+export function engagementsCollectionOf(db: Firestore, home: EngagementHome): CollectionReference {
+  return home.kind === 'dossier'
+    ? dossierEngagementsCollection(db, home.dossierId)
+    : engagementsCollection(db, home.hostCompanyId, home.projectId);
+}
+
+/** Το έγγραφο μιας **ήδη γνωστής** συμμετοχής — όποιου είδους. */
+export function engagementDocOf(db: Firestore, engagement: Engagement): DocumentReference {
+  return engagementsCollectionOf(db, homeOfEngagement(engagement)).doc(engagement.id);
 }
 
 /**

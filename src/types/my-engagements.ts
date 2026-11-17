@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Ο επαγγελματίας έχει **ένα** σπίτι για κάθε συνεργασία του (μοτίβο Procore «My Projects» / ACC «Projects»):
- * υποθέσεις μεταβίβασης **και** αναθέσεις έκδοσης εγγράφου, στην ίδια λίστα, στο ίδιο URL
+ * υποθέσεις μεταβίβασης, αναθέσεις έκδοσης εγγράφου **και** φάκελοι ιδιωτών (ADR-916 Φ-Ε1), στην ίδια λίστα, στο ίδιο URL
  * (`/o/[ws]/cases/[engagementId]` · `/engagements/[engagementId]`). Κάθε κάρτα/όψη φέρει το `kind` της — η
  * επιφάνεια διαλέγει περιεχόμενο **μόνο** από αυτό.
  *
@@ -19,7 +19,14 @@ import type { IssuanceLateness } from '@/lib/document-validity/issuance-delivery
 import type { InspectionContactRole } from '@/lib/document-validity/issuance-inspection-contact';
 import type { QuoteTotals } from '@/lib/document-validity/issuance-quote';
 import type { ActingForView, EngagedCaseView, MyCaseCard } from '@/types/conveyance-case';
-import type { DeclaredCredential, EngagementState, EngagementSubjectKind, EngagementVerdict } from '@/types/engagement';
+import type { PropertyDossierFileTab } from '@/config/upload-entry-points/entries-property-dossier';
+import type {
+  DeclaredCredential,
+  DossierEngagementRole,
+  EngagementState,
+  EngagementSubjectKind,
+  EngagementVerdict,
+} from '@/types/engagement';
 import type { ViewFreshness } from '@/types/server-view';
 import type { IssuanceDocumentRequests } from '@/types/issuance-document-request';
 
@@ -51,7 +58,24 @@ export interface IssuanceDeliveryGlance {
   readonly lateness: IssuanceLateness;
 }
 
-export type MyEngagementCard = MyCaseCard | MyIssuanceCard;
+/**
+ * ADR-916 Φ-Ε1 — η κάρτα ενός **φακέλου ιδιώτη** που του δόθηκε. Μόνο ό,τι χρειάζεται για το «ανοίγω;»: το όνομα του
+ * φακέλου (όπως το λέει ο κάτοχος), ο ρόλος και ως πότε ισχύει. 🔒 Κανένα στοιχείο επικοινωνίας του κατόχου.
+ */
+export interface MyDossierCard {
+  readonly kind: 'property_dossier';
+  readonly engagementId: string;
+  readonly engagementState: EngagementState;
+  readonly verdict: EngagementVerdict;
+  readonly offeredAt: string;
+  readonly expiresAt: string;
+  readonly role: DossierEngagementRole;
+  /** `null` ⇒ ο φάκελος δεν διαβάστηκε ή δεν είναι πια του κατόχου που κάλεσε (η κάρτα μένει, με την ετυμηγορία της). */
+  readonly dossierLabel: string | null;
+  readonly actingFor: ActingForView | null;
+}
+
+export type MyEngagementCard = MyCaseCard | MyIssuanceCard | MyDossierCard;
 
 /** Τι ημερομηνία είναι η εκκρεμότητα — η παράδοση του εγγράφου ή η υπογραφή της μεταβίβασης. */
 export type EngagementOpenItemDue = 'delivery' | 'signing';
@@ -173,4 +197,34 @@ export interface EngagedIssuanceView {
   readonly freshness: ViewFreshness;
 }
 
-export type EngagedView = EngagedCaseView | EngagedIssuanceView;
+/** ADR-916 Φ-Ε1 — ένα αρχείο του φακέλου που **φτάνει** στη συμμετοχή (η ίδια κρίση εύρους με την πόρτα ανοίγματος). */
+export interface EngagedDossierFile {
+  readonly fileId: string;
+  readonly fileName: string;
+  readonly tab: PropertyDossierFileTab;
+  readonly contentType: string;
+  /** ISO — πότε μπήκε στον φάκελο· `null` ⇒ δεν διαβάστηκε. */
+  readonly addedAt: string | null;
+}
+
+/**
+ * ADR-916 Φ-Ε1 — ο **φάκελος ιδιώτη** όπως τον βλέπει ο επαγγελματίας: **μόνο** τα αρχεία του εύρους του (καρτέλες
+ * μείον εξαιρέσεις), παραγόμενα σε **κάθε** ανάγνωση — εξαίρεση ή μετακίνηση αρχείου ισχύει αμέσως. 🔒 Κανένα στοιχείο
+ * επικοινωνίας του κατόχου· άνοιγμα/λήψη **μόνο** από την πόρτα του server, με ίχνος στο βιβλίο του κατόχου.
+ */
+export interface EngagedDossierView {
+  readonly kind: 'property_dossier';
+  readonly engagementId: string;
+  readonly dossierLabel: string;
+  readonly role: DossierEngagementRole;
+  readonly expiresAt: string;
+  readonly tabs: readonly PropertyDossierFileTab[];
+  /** Πώς λέγεται η καρτέλα κάτοψης — οικόπεδο ⇒ «Τοπογραφικό» (ο ΙΔΙΟΣ κριτής με τη σελίδα του κατόχου, `floorplanTabKind`). */
+  readonly floorplanKind: 'floorplan' | 'topographic';
+  readonly files: readonly EngagedDossierFile[];
+  readonly credential: DeclaredCredential | null;
+  /** Χωρίς γραφέα σήματος (όπως η ανάθεση έκδοσης, §39): ξαναδιαβάζεται στο άνοιγμα ή στην αλλαγή ημέρας — ρητά. */
+  readonly freshness: ViewFreshness;
+}
+
+export type EngagedView = EngagedCaseView | EngagedIssuanceView | EngagedDossierView;

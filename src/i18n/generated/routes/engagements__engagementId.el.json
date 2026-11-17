@@ -43,6 +43,27 @@
         "declared": "ΑΜ {number} · {chapter} (δηλωμένο)",
         "declaredNoChapter": "ΑΜ {number} (δηλωμένο)"
       },
+      "dossier": {
+        "addedOn": "Προστέθηκε {date}",
+        "auditNotice": "Κάθε άνοιγμα και λήψη καταγράφεται στο ιστορικό του κατόχου.",
+        "download": "Λήψη",
+        "empty": "Δεν υπάρχουν ακόμη αρχεία σε αυτή την καρτέλα.",
+        "expiresLine": "Πρόσβαση ως {date}",
+        "kindLabel": "Φάκελος ακινήτου",
+        "openFile": "Άνοιγμα",
+        "roleLine": "Ως {role}",
+        "roles": {
+          "notary": "συμβολαιογράφος",
+          "owner_lawyer": "δικηγόρος του ιδιοκτήτη"
+        },
+        "tabs": {
+          "documents": "Έγγραφα",
+          "floorplan": "Κάτοψη",
+          "photos": "Φωτογραφίες",
+          "topographic": "Τοπογραφικό",
+          "videos": "Βίντεο"
+        }
+      },
       "myCases": {
         "signing": "Υπογραφή: {date}",
         "untitled": "Ακίνητο"

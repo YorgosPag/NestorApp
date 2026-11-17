@@ -23,8 +23,12 @@ import { PROPERTY_ENTRY_POINTS } from './entries-property';
 import { STUDY_ENTRIES } from './entries-studies';
 import type { UploadEntryPoint } from './types';
 
-/** Οι τέσσερις καρτέλες αρχείων του φακέλου. */
-export type PropertyDossierFileTab = 'floorplan' | 'documents' | 'photos' | 'videos';
+/**
+ * Οι τέσσερις καρτέλες αρχείων του φακέλου — ως **δεδομένα** (ADR-916 Φ-Ε1: το εύρος διαμοιρασμού επικυρώνεται
+ * σε χρόνο εκτέλεσης απέναντι σε αυτή τη λίστα, όχι σε δεύτερη αντιγραφή της).
+ */
+export const PROPERTY_DOSSIER_FILE_TABS = ['floorplan', 'documents', 'photos', 'videos'] as const;
+export type PropertyDossierFileTab = (typeof PROPERTY_DOSSIER_FILE_TABS)[number];
 
 /** Η κλάση του ακινήτου για την όψη — `land` για οικόπεδο/αγροτεμάχιο (`PROPERTY_TYPE_CLASS`), αλλιώς `building`. */
 export type PropertyDossierViewClass = 'building' | 'land';

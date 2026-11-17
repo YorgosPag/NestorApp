@@ -13,10 +13,13 @@
 import { z } from 'zod';
 
 import { isNationalRegistry, isRegistryAuthority, type RegistryAuthorityId } from '@/constants/professional-registries';
+import { isDossierShareDays, type DossierShareDays } from '@/config/engagement-policy';
+import { PROPERTY_DOSSIER_FILE_TABS } from '@/config/upload-entry-points/entries-property-dossier';
 import { isCdeAudience, type CdeAudience } from '@/types/container-access';
 import {
   CONSENT_BASES,
   CONSENT_SOURCES,
+  DOSSIER_ENGAGEMENT_ROLES,
   ENGAGEMENT_SCOPES,
   ENGAGEMENT_SIDES,
   ENGAGEMENT_STATES,
@@ -60,26 +63,59 @@ const declaredCredentialSchema = z.object({
 }).refine((c) => !isNationalRegistry(c.authority) || c.chapter === null);
 
 /**
- * Το ζεύγος **υπόθεση ↔ ρόλος** — διακριτή ένωση, ώστε το σχήμα να μην μπορεί να διαβάσει «συμβολαιογράφο σε
- * ανάθεση ΠΕΑ». Ό,τι αναμιγνύει είδη ⇒ αποτυχία ⇒ `null` (fail-closed).
+ * Τα πεδία του οικοδεσπότη-**γραφείου** — υποχρεωτικά **μόνο** στα είδη που ζουν σε έργο. ADR-916 Φ-Ε1: ο φάκελος
+ * ιδιώτη **δεν** τα έχει (ο οικοδεσπότης είναι ο γονέας της διαδρομής)· αν εμφανιστούν εκεί, αγνοούνται — κανείς
+ * καταναλωτής δεν τα διαβάζει σε συμμετοχή φακέλου (ο τύπος δεν τα έχει).
+ */
+const projectHostShape = {
+  hostCompanyId: nonEmpty,
+  projectId: nonEmpty,
+  origin: z.object({
+    kind: z.literal('professional_appointment'),
+    contactId: nonEmpty,
+    invitationId: nonEmpty.optional(),
+  }),
+};
+
+/** ADR-916 Φ-Ε1 — εύρος: καρτέλες **του καταλόγου** (καμία άγνωστη) + εξαιρέσεις, χωρίς διπλότυπα. */
+export const dossierReachSchema = z.object({
+  tabs: z.array(z.enum(PROPERTY_DOSSIER_FILE_TABS)).refine((tabs) => new Set(tabs).size === tabs.length),
+  excludedFileIds: z.array(nonEmpty).refine((ids) => new Set(ids).size === ids.length),
+});
+
+/**
+ * Το ζεύγος **υπόθεση ↔ ρόλος** (+ ό,τι ανήκει **μόνο** στο είδος) — διακριτή ένωση, ώστε το σχήμα να μην μπορεί να
+ * διαβάσει «συμβολαιογράφο σε ανάθεση ΠΕΑ» ή «φάκελο ιδιώτη με οικοδεσπότη γραφείο». Ό,τι αναμιγνύει είδη ⇒ `null`.
  */
 const subjectAndRole = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('conveyance_case'),
     subject: z.object({ kind: z.literal('conveyance_case'), caseId: nonEmpty }),
     role: z.enum(LEGAL_ENGAGEMENT_ROLES),
+    ...projectHostShape,
   }),
   z.object({
     kind: z.literal('document_issuance'),
     subject: z.object({ kind: z.literal('document_issuance'), assignmentId: nonEmpty }),
     role: z.enum(ISSUANCE_ENGAGEMENT_ROLES),
+    ...projectHostShape,
+  }),
+  z.object({
+    kind: z.literal('property_dossier'),
+    subject: z.object({ kind: z.literal('property_dossier'), dossierId: nonEmpty }),
+    role: z.enum(DOSSIER_ENGAGEMENT_ROLES),
+    origin: z.object({ kind: z.literal('owner_invitation'), invitationId: nonEmpty }),
+    reach: dossierReachSchema,
+    shareDays: z.custom<DossierShareDays>(isDossierShareDays),
   }),
 ]);
 
+/** Τα πεδία που διαβάζει **μόνο** η διακριτή ένωση — μεταφέρονται αυτούσια από το ωμό έγγραφο. */
+const KIND_FIELDS = ['subject', 'role', 'hostCompanyId', 'projectId', 'origin', 'reach', 'shareDays'] as const;
+const rawRecord = z.record(z.string(), z.unknown());
+
 const engagementSchema = z.object({
   id: nonEmpty,
-  hostCompanyId: nonEmpty,
-  projectId: nonEmpty,
   uid: nonEmpty,
   email: z.string(),
   template: z.custom<CdeAudience>(isCdeAudience),
@@ -88,11 +124,6 @@ const engagementSchema = z.object({
   scopes: z.array(z.enum(ENGAGEMENT_SCOPES)),
   state: z.enum(ENGAGEMENT_STATES),
   expiresAt: nonEmpty,
-  origin: z.object({
-    kind: z.literal('professional_appointment'),
-    contactId: nonEmpty,
-    invitationId: nonEmpty.optional(),
-  }),
   consents: z.array(engagementConsentSchema),
   declaredCredential: declaredCredentialSchema.optional(),
   actingFor: actingForSchema.optional(),
@@ -109,22 +140,28 @@ const engagementSchema = z.object({
 /**
  * Ωμό έγγραφο → `Engagement`, ή `null` αν δεν είναι συμμετοχή που καταλαβαίνουμε.
  *
- * Δύο περάσματα: (1) τα κοινά πεδία· (2) το ζεύγος υπόθεσης ↔ ρόλου ως διακριτή ένωση. Μετά, το πρότυπο και το
- * εύρος πρέπει να είναι **ακριβώς** αυτά που παράγει το είδος (`TEMPLATE_OF_SUBJECT` · `SCOPE_OF_SUBJECT`) —
- * ADR-862 §5.3.10. Το αποτέλεσμα χτίζεται **ανά κλάδο**, ώστε ο τύπος να στενεύει χωρίς κανένα `as`.
+ * Δύο περάσματα: (1) τα κοινά πεδία· (2) το ζεύγος υπόθεσης ↔ ρόλου **μαζί με τα πεδία του είδους** (οικοδεσπότης
+ * γραφείου · ή εύρος/διάρκεια φακέλου) ως διακριτή ένωση. Μετά, το πρότυπο και το εύρος πρέπει να είναι **ακριβώς**
+ * αυτά που παράγει το είδος (`TEMPLATE_OF_SUBJECT` · `SCOPE_OF_SUBJECT`) — ADR-862 §5.3.10. Το αποτέλεσμα χτίζεται
+ * **ανά κλάδο**, ώστε ο τύπος να στενεύει χωρίς κανένα `as`.
  */
 export function parseEngagement(raw: unknown): Engagement | null {
   const base = engagementSchema.safeParse(raw);
-  if (!base.success) return null;
-  const pair = subjectAndRole.safeParse({ kind: base.data.subject.kind, subject: base.data.subject, role: base.data.role });
+  const record = rawRecord.safeParse(raw);
+  if (!base.success || !record.success) return null;
+  const kindFields = Object.fromEntries(KIND_FIELDS.map((field) => [field, record.data[field]]));
+  const pair = subjectAndRole.safeParse({ ...kindFields, kind: base.data.subject.kind });
   if (!pair.success) return null;
   const kind = pair.data.kind;
   if (base.data.template !== TEMPLATE_OF_SUBJECT[kind]) return null;
   if (!base.data.scopes.every((scope) => scope === SCOPE_OF_SUBJECT[kind])) return null;
-  switch (pair.data.kind) {
+  const data = pair.data;
+  switch (data.kind) {
     case 'conveyance_case':
-      return { ...base.data, subject: pair.data.subject, role: pair.data.role };
+      return { ...base.data, subject: data.subject, role: data.role, hostCompanyId: data.hostCompanyId, projectId: data.projectId, origin: data.origin };
     case 'document_issuance':
-      return { ...base.data, subject: pair.data.subject, role: pair.data.role };
+      return { ...base.data, subject: data.subject, role: data.role, hostCompanyId: data.hostCompanyId, projectId: data.projectId, origin: data.origin };
+    case 'property_dossier':
+      return { ...base.data, subject: data.subject, role: data.role, origin: data.origin, reach: data.reach, shareDays: data.shareDays };
   }
 }

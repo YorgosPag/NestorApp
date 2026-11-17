@@ -22,25 +22,39 @@ import 'server-only';
 
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 
-import { activeExpiresAt, offerExpiresAt } from '@/config/engagement-policy';
+import { activeExpiresAt, dossierShareExpiresAt, offerExpiresAt, type DossierShareDays } from '@/config/engagement-policy';
+import { activeDossierByInvitation, planDossierChange, type DossierInvitationAcceptance } from './engagement-dossier-plan';
 import { normalizeToMillisOrNull } from '@/lib/date-local';
 import { generateEngagementId } from '@/services/enterprise-id.service';
 import type { WorkspaceRef } from '@/types/workspace-membership';
 import { isOwnActingWorkspace } from './acting-workspace';
 import { parseEngagement } from './engagement-schema';
-import { engagementRef, engagementsCollection, engagementsForSubjectQuery } from './engagement-ref';
+import {
+  dossierEngagementsCollection,
+  engagementDocOf,
+  engagementRef,
+  engagementsCollectionOf,
+  engagementsForSubjectQuery,
+  homeOfEngagement,
+  type EngagementHome,
+} from './engagement-ref';
 import {
   LIVE_ENGAGEMENT_STATES,
   SCOPE_OF_SUBJECT,
   TEMPLATE_OF_SUBJECT,
+  isDossierEngagement,
   type ConveyanceEngagement,
   type DeclaredCredential,
+  type DossierEngagementKey,
+  type DossierShareReach,
   type Engagement,
   type EngagementConsent,
   type EngagementKey,
   type EngagementOrigin,
+  type EngagementRole,
   type EngagementSubject,
   type IssuanceEngagement,
+  type ProjectEngagement,
 } from '@/types/engagement';
 
 // =============================================================================
@@ -115,7 +129,7 @@ export type EngagementOfferOutcome =
   | { readonly outcome: 'role-conflict'; readonly engagement: Engagement }
   | { readonly outcome: 'unreadable' };
 
-function newEngagement(request: EngagementOfferRequest): Engagement {
+function newEngagement(request: EngagementOfferRequest): ProjectEngagement {
   const now = new Date(request.nowMs).toISOString();
   const kind = request.subject.kind;
   return {
@@ -144,10 +158,10 @@ function newEngagement(request: EngagementOfferRequest): Engagement {
 async function readLiveForSubject(
   db: Firestore,
   tx: Transaction,
-  key: Pick<EngagementKey, 'hostCompanyId' | 'projectId'>,
+  home: EngagementHome,
   subject: EngagementSubject,
 ): Promise<{ readonly live: readonly Engagement[]; readonly unreadable: boolean }> {
-  const query = engagementsForSubjectQuery(engagementsCollection(db, key.hostCompanyId, key.projectId), subject);
+  const query = engagementsForSubjectQuery(engagementsCollectionOf(db, home), subject);
   const parsed = (await tx.get(query)).docs.map((doc) => parseEngagement(doc.data()));
   const readable = parsed.filter((e): e is Engagement => e !== null);
   return {
@@ -159,7 +173,7 @@ async function readLiveForSubject(
 /** Η κρίση της πρότασης πάνω στις ζωντανές συμμετοχές — **καθαρή**, ώστε να ασκείται χωρίς βάση. */
 export function judgeOffer(
   live: readonly Engagement[],
-  request: Pick<EngagementOfferRequest, 'uid' | 'role'>,
+  request: { readonly uid: string; readonly role: EngagementRole },
 ): Exclude<EngagementOfferOutcome, { outcome: 'offered' } | { outcome: 'unreadable' }> | null {
   const mine = live.find((e) => e.uid === request.uid);
   if (mine) return mine.role === request.role ? { outcome: 'already-live', engagement: mine } : { outcome: 'role-conflict', engagement: mine };
@@ -171,12 +185,12 @@ export function judgeOffer(
 export function offerEngagement(db: Firestore, request: EngagementOfferRequest, signal: EngagementRosterSignal): Promise<EngagementOfferOutcome> {
   return db.runTransaction(async (tx): Promise<EngagementOfferOutcome> => {
     // Πρόταση πάνω σε ιστορία που δεν καταλαβαίνουμε ⇒ άρνηση: η μοναδικότητα δεν κρίνεται «περίπου».
-    const { live, unreadable } = await readLiveForSubject(db, tx, request, request.subject);
+    const { live, unreadable } = await readLiveForSubject(db, tx, projectHomeOf(request), request.subject);
     if (unreadable) return { outcome: 'unreadable' };
     const existing = judgeOffer(live, request);
     if (existing) return existing;
     const engagement = newEngagement(request);
-    tx.create(engagementRef(db, { ...request, engagementId: engagement.id }), engagement);
+    tx.create(engagementDocOf(db, engagement), engagement);
     signal(tx, { live: withWritten(live, engagement), changed: [engagement] });
     return { outcome: 'offered', engagement };
   });
@@ -186,13 +200,38 @@ export function offerEngagement(db: Firestore, request: EngagementOfferRequest, 
 // ΕΞΑΡΓΥΡΩΣΗ ΠΡΟΣΚΛΗΣΗΣ (ADR-901 Φ3) — μέσα στη συναλλαγή της μηχανής ADR-853
 // =============================================================================
 
-/** Ό,τι γράφει η αποδοχή πρόσκλησης με email — η πρόταση **και** η απάντηση, σε ένα βήμα. */
-export type EngagementInvitationAcceptance = EngagementOfferRequest & {
+/** Ό,τι κοινό φέρει **κάθε** αποδοχή πρόσκλησης. */
+interface InvitationAcceptanceCore {
   readonly invitationId: string;
   readonly declaredCredential: DeclaredCredential;
   /** ADR-901 §15 — για λογαριασμό ποιου χώρου· κρίθηκε **πριν** από τη συναλλαγή (`decideActingWorkspace`). */
   readonly actingFor: WorkspaceRef;
-};
+}
+
+/** Αποδοχή πρόσκλησης σε υπόθεση **γραφείου** — η πρόταση **και** η απάντηση, σε ένα βήμα. */
+export type ProjectInvitationAcceptance = EngagementOfferRequest & InvitationAcceptanceCore;
+
+/** ADR-916 Φ-Ε1 — αποδοχή στον **φάκελο ιδιώτη** (`engagement-dossier-plan.ts`). */
+export type { DossierInvitationAcceptance };
+
+export type EngagementInvitationAcceptance = ProjectInvitationAcceptance | DossierInvitationAcceptance;
+
+function isDossierAcceptance(request: EngagementInvitationAcceptance): request is DossierInvitationAcceptance {
+  return request.subject.kind === 'property_dossier';
+}
+
+function projectHomeOf(key: Pick<EngagementKey, 'hostCompanyId' | 'projectId'>): EngagementHome {
+  return { kind: 'project', hostCompanyId: key.hostCompanyId, projectId: key.projectId };
+}
+
+function acceptanceHomeOf(request: EngagementInvitationAcceptance): EngagementHome {
+  return isDossierAcceptance(request) ? { kind: 'dossier', dossierId: request.subject.dossierId } : projectHomeOf(request);
+}
+
+/** Η λήξη μιας συμμετοχής που **γίνεται ενεργή** τη στιγμή `nowMs` — ο φάκελος από τη διάρκεια του κατόχου. */
+function activeExpiryOf(engagement: Engagement, nowMs: number): string {
+  return isDossierEngagement(engagement) ? dossierShareExpiresAt(engagement.shareDays, nowMs) : activeExpiresAt(nowMs);
+}
 
 export type EngagementInvitationStage =
   | { readonly outcome: 'refused'; readonly reason: 'slot-occupied' | 'role-conflict' | 'unreadable' }
@@ -214,7 +253,7 @@ export async function stageEngagementByInvitation(
   request: EngagementInvitationAcceptance,
   signal: EngagementRosterSignal,
 ): Promise<EngagementInvitationStage> {
-  const { live, unreadable } = await readLiveForSubject(db, tx, request, request.subject);
+  const { live, unreadable } = await readLiveForSubject(db, tx, acceptanceHomeOf(request), request.subject);
   if (unreadable) return { outcome: 'refused', reason: 'unreadable' };
   const existing = judgeOffer(live, request);
   if (existing && existing.outcome !== 'already-live') return { outcome: 'refused', reason: existing.outcome };
@@ -237,13 +276,14 @@ export async function stageEngagementByInvitation(
     outcome: 'commit',
     write: () => {
       if (accepted?.outcome === 'offer-expired') setEngagement(db, tx, accepted.engagement);
-      tx.create(engagementRef(db, { ...request, engagementId: fresh.id }), fresh);
+      tx.create(engagementDocOf(db, fresh), fresh);
       return signalled(fresh, accepted?.outcome === 'offer-expired' ? [accepted.engagement] : []);
     },
   };
 }
 
 function activeByInvitation(request: EngagementInvitationAcceptance): Engagement {
+  if (isDossierAcceptance(request)) return activeDossierByInvitation(request);
   const offered = newEngagement(request);
   return {
     ...offered,
@@ -257,7 +297,7 @@ function activeByInvitation(request: EngagementInvitationAcceptance): Engagement
 }
 
 function setEngagement(db: Firestore, tx: Transaction, engagement: Engagement): Engagement {
-  tx.set(engagementRef(db, { ...engagement, engagementId: engagement.id }), engagement);
+  tx.set(engagementDocOf(db, engagement), engagement);
   return engagement;
 }
 
@@ -277,7 +317,17 @@ export type EngagementTransition =
   | { readonly kind: 'accept'; readonly byUid: string; readonly declaredCredential: DeclaredCredential; readonly actingFor: WorkspaceRef }
   | { readonly kind: 'decline'; readonly byUid: string }
   /** Οικοδεσπότης: `offered` ⇒ withdrawn · `active` ⇒ revoked (άμεσα, ADR-787 Ε-2 §5). */
-  | { readonly kind: 'end'; readonly byUid: string };
+  | { readonly kind: 'end'; readonly byUid: string }
+  /**
+   * ADR-916 Φ-Ε1 — **μόνο** φάκελος ιδιώτη, **μόνο** ενεργή: νέα λήξη από το κλειστό μενού, **από σήμερα** (Drive
+   * «extend expiry»). Ποτέ «ανάσταση» ληγμένης ή ανακλημένης: εκεί θέλει νέα πρόσκληση (νέα συναίνεση).
+   */
+  | { readonly kind: 'renew'; readonly byUid: string; readonly shareDays: DossierShareDays }
+  /** ADR-916 Φ-Ε1 — **μόνο** φάκελος ιδιώτη, ζωντανή: αλλαγή εύρους (καρτέλες · εξαιρέσεις) — ισχύει στο επόμενο άνοιγμα. */
+  | { readonly kind: 'reach'; readonly byUid: string; readonly reach: DossierShareReach };
+
+/** Η απάντηση του **καλεσμένου** — οι υπόλοιπες είναι πράξεις οικοδεσπότη (τις ελέγχει ο καλών: route κατόχου). */
+type GuestAnswer = Extract<EngagementTransition, { kind: 'accept' | 'decline' }>;
 
 export type EngagementTransitionOutcome =
   | { readonly outcome: 'changed'; readonly before: Engagement; readonly after: Engagement }
@@ -296,7 +346,7 @@ function stamp(before: Engagement, nowMs: number, changes: Partial<Engagement>):
 }
 
 /** Η απάντηση του καλεσμένου — **μόνο** σε `offered`, **μόνο** ο ίδιος. */
-function planResponse(e: Engagement, answer: Exclude<EngagementTransition, { kind: 'end' }>, nowMs: number): Planned {
+function planResponse(e: Engagement, answer: GuestAnswer, nowMs: number): Planned {
   const accept = answer.kind === 'accept';
   const target = accept ? 'active' : 'declined';
   if (e.state === target) return { outcome: 'noop', engagement: e };
@@ -312,7 +362,7 @@ function planResponse(e: Engagement, answer: Exclude<EngagementTransition, { kin
   // Ζώνη του γραφέα: «για λογαριασμό» ξένου προσωπικού χώρου δεν γράφεται, όποιος κι αν το ζήτησε.
   if (!isOwnActingWorkspace(e.uid, answer.actingFor)) return { outcome: 'not-allowed', engagement: e };
   return stamp(e, nowMs, {
-    state: 'active', respondedAt: at, expiresAt: activeExpiresAt(nowMs),
+    state: 'active', respondedAt: at, expiresAt: activeExpiryOf(e, nowMs),
     declaredCredential: answer.declaredCredential, actingFor: answer.actingFor,
   });
 }
@@ -328,6 +378,7 @@ function planEnd(e: Engagement, byUid: string, nowMs: number): Planned {
 /** **Καθαρός** σχεδιασμός μιας μετάβασης — ασκείται από τις άγκυρες χωρίς βάση. */
 export function planTransition(e: Engagement, transition: EngagementTransition, nowMs: number): Planned {
   if (transition.kind === 'end') return planEnd(e, transition.byUid, nowMs);
+  if (transition.kind === 'renew' || transition.kind === 'reach') return planDossierChange(e, transition, nowMs);
   // Μόνο ο ίδιος ο καλεσμένος απαντά — ο οικοδεσπότης δεν «αποδέχεται για λογαριασμό του».
   if (e.uid !== transition.byUid) return { outcome: 'not-allowed', engagement: e };
   return planResponse(e, transition, nowMs);
@@ -336,12 +387,14 @@ export function planTransition(e: Engagement, transition: EngagementTransition, 
 /** Εφαρμογή μετάβασης σε **ένα** έγγραφο, μέσα σε συναλλαγή. */
 export function transitionEngagement(
   db: Firestore,
-  key: EngagementKey,
+  key: EngagementKey | DossierEngagementKey,
   transition: EngagementTransition,
   nowMs: number,
   signal: EngagementRosterSignal,
 ): Promise<EngagementTransitionOutcome> {
-  const ref = engagementRef(db, key);
+  const ref = 'dossierId' in key
+    ? dossierEngagementsCollection(db, key.dossierId).doc(key.engagementId)
+    : engagementRef(db, key);
   return db.runTransaction(async (tx): Promise<EngagementTransitionOutcome> => {
     const current = parseEngagement((await tx.get(ref)).data());
     if (!current) return { outcome: 'not-found' };
@@ -349,7 +402,7 @@ export function transitionEngagement(
     const written = planned.outcome === 'changed' ? planned.after : planned.outcome === 'offer-expired' ? planned.engagement : null;
     if (!written) return planned;
     // Αναγνώσεις πριν από εγγραφές (κανόνας συναλλαγής): οι ζωντανές του αντικειμένου για το σήμα των όψεων.
-    const { live } = await readLiveForSubject(db, tx, key, current.subject);
+    const { live } = await readLiveForSubject(db, tx, homeOfEngagement(current), current.subject);
     tx.set(ref, written);
     signal(tx, { live: withWritten(live, written), changed: [written] });
     return planned;
@@ -376,7 +429,7 @@ export function closeEngagementsForSubject(
   return db.runTransaction(async (tx) => {
     // ⚠️ Το κλείσιμο ΔΕΝ σταματά σε χαλασμένο έγγραφο: όποια ζωντανή διαβάζεται, κλείνει (ο κριτής
     //    αρνείται ήδη ό,τι δεν διαβάζεται — η ανάκληση δεν επιτρέπεται να «κολλήσει» σε άλλο έγγραφο).
-    const { live } = await readLiveForSubject(db, tx, key, subject);
+    const { live } = await readLiveForSubject(db, tx, projectHomeOf(key), subject);
     const at = new Date(nowMs).toISOString();
     const closed = live.map((e) => {
       const after: Engagement = e.state === 'active'

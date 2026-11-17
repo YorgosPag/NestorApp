@@ -8,6 +8,7 @@ import 'server-only';
  * 🔑 Τρίτο είδος υπόθεσης **δεν μεταγλωττίζεται** μέχρι να δηλώσει εδώ τι ανοίγει ο επαγγελματίας του. Η πόρτα
  *    `api/engagements/[id]/files/[fileId]` ρωτά **μόνο** αυτό το αρχείο.
  * 🔑 Η μεταβίβαση περνά **αυτούσια** (`openCaseFile`): ο κατάλογος του θεατή της δεν αλλάζει.
+ * 🔑 Ο φάκελος ιδιώτη (ADR-916 Φ-Ε1): ό,τι φτάνει στο εύρος, με ίχνος στο **προσωπικό** βιβλίο του κατόχου.
  * 🔑 Η δρομολόγηση γίνεται από το είδος της **δικής του** συμμετοχής, ποτέ από το αίτημα· ξένη ≡ ανύπαρκτη (404).
  * ⚠️ **Συνάρτηση, όχι σταθερά module** (CHECK 3.80).
  */
@@ -17,8 +18,10 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { listEngagementsOfUser } from '@/lib/auth/engagement-read';
 import { openCaseFile } from '@/services/conveyance/conveyance-case-file-access.service';
 import { openIssuanceFile } from '@/services/document-registry/issuance-file-access.service';
+import { openDossierFile } from '@/services/property-dossier/dossier-file-access.service';
 import {
   isConveyanceEngagement,
+  isDossierEngagement,
   isIssuanceEngagement,
   type EngagementOfKind,
   type EngagementSubjectKind,
@@ -34,7 +37,7 @@ function openAsConveyance(db: Firestore, _engagement: EngagementOfKind<'conveyan
 
 /** Ολικός: κάθε είδος υπόθεσης δηλώνει τι ανοίγει ο επαγγελματίας του. */
 function fileOpeners(): { readonly [K in EngagementSubjectKind]: EngagedFileOpener<K> } {
-  return { conveyance_case: openAsConveyance, document_issuance: openIssuanceFile };
+  return { conveyance_case: openAsConveyance, document_issuance: openIssuanceFile, property_dossier: openDossierFile };
 }
 
 /** Ο επαγγελματίας ανοίγει/κατεβάζει ένα αρχείο **μέσω της δικής του** συμμετοχής. */
@@ -45,6 +48,7 @@ export async function openFileAsEngaged(db: Firestore, request: EngagedFileReque
   if (engagement === undefined) return { ok: false, rejection: 'not-found' };
   const openers = fileOpeners();
   if (isIssuanceEngagement(engagement)) return openers.document_issuance(db, engagement, request);
+  if (isDossierEngagement(engagement)) return openers.property_dossier(db, engagement, request);
   if (isConveyanceEngagement(engagement)) return openers.conveyance_case(db, engagement, request);
   return { ok: false, rejection: 'not-found' };
 }

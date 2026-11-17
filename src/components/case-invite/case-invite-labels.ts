@@ -88,7 +88,7 @@ interface CaseInviteSubjectKeys {
 }
 
 /**
- * Η εισαγωγή της πρόσκλησης — ανά είδος υπόθεσης (υπόθεση μεταβίβασης · χώρος ανάθεσης έκδοσης).
+ * Η εισαγωγή της πρόσκλησης — ανά είδος υπόθεσης (υπόθεση μεταβίβασης · χώρος ανάθεσης έκδοσης · φάκελος ιδιώτη).
  * ⚠️ Δηλωμένος τύπος, ΟΧΙ `as const satisfies`: ο γεννήτορας του slice (ADR-744, `key-tables.js`) ξεδιπλώνει μόνο `as` —
  * με `satisfies` ο πίνακας δεν διαβάζεται και το `t(T[kind].scope)` λύνεται με το ΟΝΟΜΑ της ιδιότητας (ψευδή κλειδιά).
  */
@@ -108,6 +108,14 @@ export const CASE_INVITE_SUBJECT_KEYS: Readonly<Record<EngagementSubjectKind, Ca
     accepted: 'conveyance:engagement.invite.issuance.accepted',
     acceptedBody: 'conveyance:engagement.invite.issuance.acceptedBody',
     open: 'conveyance:engagement.invite.issuance.open',
+  },
+  property_dossier: {
+    title: 'conveyance:engagement.invite.dossier.title',
+    intro: 'conveyance:engagement.invite.dossier.intro',
+    scope: 'conveyance:engagement.invite.dossier.scope',
+    accepted: 'conveyance:engagement.invite.dossier.accepted',
+    acceptedBody: 'conveyance:engagement.invite.dossier.acceptedBody',
+    open: 'conveyance:engagement.invite.dossier.open',
   },
 };
 

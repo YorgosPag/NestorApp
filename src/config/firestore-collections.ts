@@ -1451,6 +1451,10 @@ export const SUBCOLLECTIONS = {
   //    ⚠️ Ξεχωριστό όνομα από το `members` (Ε-6): ένα collection-group σαρώνει ΚΑΤΑ ΟΝΟΜΑ, και ο εξωτερικός
   //    ΔΕΝ είναι μέλος γραφείου. Ο ένας γραφέας: `lib/auth/engagement-write.ts`.
   PROJECT_ENGAGEMENTS: process.env.NEXT_PUBLIC_PROJECT_ENGAGEMENTS_SUBCOL || 'engagements',
+  // 🤝 ADR-916 Φ-Ε1 — /property_dossiers/{pdos}/engagements/{eng_…}: ο φάκελος ΙΔΙΩΤΗ ως οικοδεσπότης (Α1).
+  //    ⚠️ ΤΟ ΙΔΙΟ ΟΝΟΜΑ με το `PROJECT_ENGAGEMENTS`, ΕΠΙΤΗΔΕΣ: το «Κοινόχρηστα μαζί μου» (`engagementsOfUserQuery`)
+  //    είναι collection-group ΚΑΤΑ ΟΝΟΜΑ ⇒ βρίσκει και τις δύο διαδρομές με ΕΝΑ ερώτημα — καμία δεύτερη πόρτα.
+  DOSSIER_ENGAGEMENTS: process.env.NEXT_PUBLIC_PROJECT_ENGAGEMENTS_SUBCOL || 'engagements',
 
   // 🔴 ΜΕΛΟΣ ΧΩΡΟΥ — /companies/{id}/workspace_members/{uid}
   //    (ADR-244 Role Management · ADR-787 Κ-2 §5.1 γ)
