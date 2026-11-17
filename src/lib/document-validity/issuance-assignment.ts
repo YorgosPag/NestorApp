@@ -35,6 +35,7 @@ import {
 } from './issuance-actor';
 import { advanceCollectedMinor, advanceStateOf, isAdvanceTermsValid, type AdvanceEvent } from './issuance-advance';
 import { isIssuanceAdvanceAction, reduceIssuanceAdvance, type IssuanceAdvanceAction } from './issuance-advance-reducer';
+import { hasLiveAdvanceMoney } from './issuance-advance-settlement';
 import type { IssuanceDelivery } from './issuance-delivery';
 import {
   declinedDeliveryChange, requestedDeliveryChange, withDeliveryChangeAccepted,
@@ -196,9 +197,14 @@ export function visibleIssuanceStage(state: IssuanceState): IssuanceStage | null
   return state.kind === 'open' ? state.stage : null;
 }
 
-/** Η ανάθεση είναι ακόμη **ελεύθερη** για νέα πρόταση: τίποτα δεν δεσμεύτηκε προς τον επαγγελματία. */
+/**
+ * Η ανάθεση είναι ακόμη **ελεύθερη** για νέα πρόταση: τίποτα δεν δεσμεύτηκε προς τον επαγγελματία. ADR-943 Φ5γ — και
+ * **κανένα χρήμα δεν ζει** στην προηγούμενη (ακυρωμένη) ανάθεση: η πρόταση γράφει πάνω στο ίδιο έγγραφο και θα έσβηνε το
+ * ίχνος τους (`hasLiveAdvanceMoney`).
+ */
 export function canProposeIssuance(state: IssuanceState): boolean {
-  return state.kind === 'none' || state.stage === 'proposed' || state.stage === 'declined';
+  if (state.kind === 'none') return state.last === null || !hasLiveAdvanceMoney(state.last);
+  return state.stage === 'proposed' || state.stage === 'declined';
 }
 
 // ---------------------------------------------------------------------------

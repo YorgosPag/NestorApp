@@ -20,12 +20,14 @@ import { useIssuanceAssignmentActions } from '@/components/document-registry/iss
 import { REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
 import { ISSUANCE_ADVANCE_LINK_KEYS, ISSUANCE_ADVANCE_LINK_REFUSAL_KEYS } from '@/components/document-registry/issuance-labels';
 import type { RegistryIssuanceView } from '@/components/document-registry/registry-issuance';
+import { RegistryIssuanceAdvanceDispute } from '@/components/document-registry/RegistryIssuanceAdvanceDispute';
 import { AccessCodeToggle, IssuedAccessCode } from '@/components/document-registry/RegistryIssuanceAccessCode';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { advanceGlanceOf, type AdvanceStateKind } from '@/lib/document-validity/issuance-advance';
+import type { IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { sendIssuanceAdvanceLink } from '@/services/document-registry/document-registry.client';
 
@@ -61,18 +63,24 @@ function useAdvanceLinkSend(view: RegistryIssuanceView) {
 
 interface AdvanceLineProps {
   readonly view: RegistryIssuanceView;
+  /**
+   * Η εγγραφή της ανάθεσης — η ανοιχτή, ή (Φ5γ) η ακυρωμένη όσο ζουν ακόμη χρήματα σε αυτήν (διαφορά που περιμένει απόφαση ·
+   * επιστροφή σε εξέλιξη).
+   */
+  readonly record: IssuanceAssignmentRecord;
   /** Ο ιδιοκτήτης της απόφασης — ο αποδέκτης του email (όνομα για τον διάλογο και τον κωδικό). */
   readonly ownerName: string;
 }
 
-export function RegistryIssuanceAdvanceLine({ view, ownerName }: AdvanceLineProps): React.ReactElement | null {
+export function RegistryIssuanceAdvanceLine({ view, record, ownerName }: AdvanceLineProps): React.ReactElement | null {
   const { t } = useTranslation([REGISTRY_NS]);
   const { send, sending, code, clearCode, canAct } = useAdvanceLinkSend(view);
   const [open, setOpen] = useState(false);
   const [withCode, setWithCode] = useState(false);
-  const glance = view.state.kind === 'open' ? advanceGlanceOf(view.state.record) : null;
+  const glance = advanceGlanceOf(record);
   if (glance === null) return null;
-  const actionKey = actionKeyOf(glance.state);
+  // Ακυρωμένη ανάθεση: κανένας νέος σύνδεσμος (η πόρτα θέλει ανοιχτή ανάθεση) — μόνο η απόφαση της διαφοράς.
+  const actionKey = record.cancellation === null ? actionKeyOf(glance.state) : null;
   const close = () => { setOpen(false); clearCode(); };
   const confirm = () => { if (!sending) void send(withCode).then((done) => { if (done) setOpen(false); }); };
   return (
@@ -82,6 +90,7 @@ export function RegistryIssuanceAdvanceLine({ view, ownerName }: AdvanceLineProp
       {canAct && actionKey !== null ? (
         <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>{t(actionKey)}</Button>
       ) : null}
+      <RegistryIssuanceAdvanceDispute view={view} record={record} />
       <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}>
         <DialogContent>
           {code === null ? (

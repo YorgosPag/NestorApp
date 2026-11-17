@@ -43,6 +43,8 @@ import { DELIVERY_CHANGE_KEYS, DELIVERY_KEYS } from '@/components/document-regis
 import { INSPECTION_KEYS } from '@/components/document-registry/issuance-inspection-labels';
 import type { IssuanceInspectionContactEntry } from '@/lib/document-validity/issuance-inspection-contact';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
+import { nowISO } from '@/lib/date-local';
+import { cancellationPreviewOf } from '@/lib/document-validity/issuance-advance-settlement';
 import { formatMinor } from '@/lib/money/money';
 
 const DecisionForm = dynamic(() => import('./RegistryIssuanceDecisionForms').then((mod) => mod.DecisionForm), { ssr: false });
@@ -65,7 +67,7 @@ export interface IssuanceDialogShellProps {
   readonly children: (close: () => void) => React.ReactNode;
 }
 
-function IssuanceDialogShell({ trigger, triggerVariant = 'outline', title, description, children }: IssuanceDialogShellProps): React.ReactElement {
+export function IssuanceDialogShell({ trigger, triggerVariant = 'outline', title, description, children }: IssuanceDialogShellProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -228,17 +230,38 @@ export function IssuanceNoticeDialog({ view, professionalName }: { readonly view
   );
 }
 
+/**
+ * ADR-943 Φ5γ (Ζ-4) — τι γίνεται με την κρατημένη προκαταβολή **αν ακυρωθεί τώρα**: ποσά από την ΙΔΙΑ κρίση με την
+ * πραγματική κίνηση (`cancellationPreviewOf`), πριν από την επιβεβαίωση (Airbnb: η πολιτική ορίζει την επιστροφή).
+ */
+function CancelMoneyLine({ view }: { readonly view: RegistryIssuanceView }): React.ReactElement | null {
+  const { t } = useTranslation([REGISTRY_NS]);
+  if (view.state.kind !== 'open') return null;
+  const preview = cancellationPreviewOf(view.state.record, nowISO());
+  if (preview.kind === 'none') return null;
+  if (preview.kind === 'frozen') return <p className="m-0 text-sm text-foreground">{t(CANCEL_KEYS.moneyFrozen)}</p>;
+  const amounts = { refund: formatMinor(preview.refundMinor), retained: formatMinor(preview.retainedMinor) };
+  return (
+    <p className="m-0 text-sm text-foreground">
+      {preview.basis === 'office-resolution' ? t(CANCEL_KEYS.moneyResolved, amounts) : t(CANCEL_KEYS.moneySettle, amounts)}
+    </p>
+  );
+}
+
 export function IssuanceCancelDialog({ view }: { readonly view: RegistryIssuanceView }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
   return (
     <IssuanceDialogShell trigger={t(ISSUANCE_KEYS.cancel)} triggerVariant="ghost" title={t(CANCEL_KEYS.title)} description={t(CANCEL_KEYS.description)}>
       {(close) => (
-        <DialogActionFooter
-          cancelLabel={t(CANCEL_KEYS.keep)} confirmLabel={t(CANCEL_KEYS.confirm)} busyLabel={t(ISSUANCE_KEYS.saving)}
-          confirmVariant="destructive" onCancel={close} isSubmitting={false}
-          onConfirm={() => { close(); actions?.act({ action: 'cancel', ...issuanceTargetOf(view) }); }}
-        />
+        <>
+          <CancelMoneyLine view={view} />
+          <DialogActionFooter
+            cancelLabel={t(CANCEL_KEYS.keep)} confirmLabel={t(CANCEL_KEYS.confirm)} busyLabel={t(ISSUANCE_KEYS.saving)}
+            confirmVariant="destructive" onCancel={close} isSubmitting={false}
+            onConfirm={() => { close(); actions?.act({ action: 'cancel', ...issuanceTargetOf(view) }); }}
+          />
+        </>
       )}
     </IssuanceDialogShell>
   );

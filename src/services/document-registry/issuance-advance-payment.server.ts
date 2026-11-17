@@ -12,14 +12,14 @@ import 'server-only';
  *    ⇒ `unchanged`). Webhook + cron + επιστροφή browser για την ίδια κίνηση γράφουν **μία** φορά.
  * 🔑 **Η μεταφορά και στο `duplicate`**: η κίνηση μπορεί να γράφτηκε σε προηγούμενη εκτέλεση που κατέρρευσε πριν από τη
  *    μεταφορά — η δηλωτική πράξη + μίσθωση την ολοκληρώνει χωρίς δεύτερη.
- * 🔑 **Άρνηση του μειωτή = χρήματα που μπήκαν χωρίς να γίνουν δεκτά** (ακυρωμένη ανάθεση, άλλο ποσό) ⇒ `subject-refused`,
- *    σφάλμα προς άνθρωπο — ποτέ σιωπηλή απώλεια. Η αυτόματη επιστροφή είναι Φ5.
+ * 🔑 **Άρνηση του μειωτή = χρήματα που μπήκαν χωρίς να γίνουν δεκτά** (ακυρωμένη ανάθεση, άλλο ποσό) ⇒ `subject-refused`
+ *    + Φ5γ (Ζ-8): εντολή **πλήρους** επιστροφής από τον ΕΝΑ εκτελεστή — ποτέ σιωπηλή απώλεια, ποτέ βρόχος (Θ-7).
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { nowISO } from '@/lib/date-local';
-import { issuanceKeyOf } from '@/lib/document-validity/issuance-assignment';
+import { issuanceKeyOf, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { IssuanceAdvanceAction } from '@/lib/document-validity/issuance-advance-reducer';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -27,11 +27,12 @@ import type { IssuanceAdvancePayableSubject } from '@/server/payments/payable-su
 import type { PayableMovementInput, PayableMovementOutcome } from '@/server/payments/payable-subject-registry';
 import { ensureHeldTransfer, heldTransferDescriptionOf } from '@/server/payments/payment-held-transfer';
 import type { ProviderMovement } from '@/server/payments/payment-provider';
-import { announceAdvanceFunded } from '@/server/issuance-invitations/issuance-advance-notifier';
+import { scheduleSettlement } from '@/server/payments/payment-settlement-order';
+import { announceAdvanceFunded, announceAdvanceMilestone, latestAdvanceMilestone } from '@/server/issuance-invitations/issuance-advance-notifier';
 
 import { readDocumentRegistry } from './document-registry.service';
 import type { DocumentRegistryResponse, RegistryPropertyLabel } from './document-registry.types';
-import type { DocumentIssuanceAssignment } from './issuance-assignment-schema';
+import { issuanceRecordOf, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
 import { stageIssuanceAction, type IssuanceWriteOutcome } from './issuance-assignments.server';
 import { readHostedIssuanceAssignment } from './issuance-engagement-host-adapter';
 
@@ -113,15 +114,46 @@ export async function recordIssuanceAdvanceMovement(
     return 'subject-absent';
   }
   const outcome = await writeAdvanceEvent(db, context, advanceActionOf(subject, movement), provider.id);
-  if (!outcome.ok) {
-    logger.error('Provider money the advance writer refused — needs a human (refund is Φ5)', {
-      checkoutId: checkout.checkoutId, assignmentId: subject.assignmentId, movement: movement.kind, refusal: outcome.refusal,
-    });
-    return 'subject-refused';
-  }
+  if (!outcome.ok) return refusedMovement(db, input, issuanceRecordOf(context.assignment), outcome.refusal);
   if (movement.kind === 'payment') {
     await holdFunds(db, input);
     if (outcome.outcome === 'changed') await announceAdvanceFunded(db, { context, record: outcome.record, now: new Date() });
   }
+  if (movement.kind === 'refund' && outcome.outcome === 'changed') {
+    const milestone = latestAdvanceMilestone(outcome.record, 'refunded');
+    if (milestone !== null) await announceAdvanceMilestone(db, { context, record: outcome.record, milestone, now: new Date() });
+  }
   return outcome.outcome === 'changed' ? 'recorded' : 'duplicate';
+}
+
+/** Η πληρωμή της συνεδρίας **έγινε** ποτέ δεκτή από την ανάθεση; (αλλιώς είναι χρήματα χωρίς λόγο — Θ-6). */
+function isAcceptedPayment(record: IssuanceAssignmentRecord, paymentReference: string | null): boolean {
+  return record.advanceEvents.some((event) => event.kind === 'funded' && event.paymentReference === paymentReference);
+}
+
+/**
+ * ADR-943 Φ5γ (Ζ-8 · Θ-6 · Θ-7) — **κίνηση που ο μειωτής αρνήθηκε**. Πληρωμή ⇒ χρήματα χωρίς λόγο ⇒ εντολή **πλήρους**
+ * επιστροφής (`refused-payment`, στη στιγμή της πληρωμής ⇒ ίδια εντολή σε κάθε συγχρονισμό), εκτός αν ο πάροχος δείχνει
+ * ήδη όλα πίσω (κανένας βρόχος). Επιστροφή πληρωμής που δεν έγινε ποτέ δεκτή ⇒ τα χρήματα γύρισαν, τίποτα για την
+ * ανάθεση. Οτιδήποτε άλλο ⇒ σφάλμα προς άνθρωπο, ποτέ σιωπηλά.
+ */
+async function refusedMovement(
+  db: Firestore, input: PayableMovementInput<IssuanceAdvancePayableSubject>, record: IssuanceAssignmentRecord, refusal: string,
+): Promise<PayableMovementOutcome> {
+  const { checkout, subject, movement } = input;
+  const facts = { checkoutId: checkout.checkoutId, assignmentId: subject.assignmentId, movement: movement.kind, refusal };
+  const accepted = isAcceptedPayment(record, checkout.paymentReference ?? (movement.kind === 'payment' ? movement.reference : null));
+  if (accepted) {
+    logger.error('Provider money the advance writer refused — needs a human', facts);
+    return 'subject-refused';
+  }
+  if (movement.kind === 'refund' || input.refundedTotalMinor >= movement.amountMinor) {
+    logger.info('Refused advance payment — the money is back with the payer', facts);
+    return 'duplicate';
+  }
+  logger.error('Provider money the advance writer refused — full refund ordered', facts);
+  await scheduleSettlement(db, checkout.checkoutId, {
+    refundMinor: checkout.amountMinor, releaseMinor: 0, basis: 'refused-payment', dueAt: movement.occurredAt,
+  }, Date.now());
+  return 'subject-refused';
 }

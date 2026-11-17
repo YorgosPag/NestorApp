@@ -71,9 +71,10 @@ export function deliveryDaysOf(text: string): number | null {
 
 /**
  * Το ποσό σε λεπτά — από τη ΜΙΑ γραμματική αριθμού της εφαρμογής (`parseStrictDecimal`: «150,50» · «1.200,50» ·
- * «150.50»)· οτιδήποτε άλλο, ή περισσότερα από δύο δεκαδικά (δεν χωρά σε λεπτά χωρίς στρογγύλευση) ⇒ `null`.
+ * «150.50»)· οτιδήποτε άλλο, ή περισσότερα από δύο δεκαδικά (δεν χωρά σε λεπτά χωρίς στρογγύλευση) ⇒ `null`. Η ΜΙΑ
+ * ανάγνωση ποσού των φορμών του γραφείου (και η διαίρεση της διαφοράς προκαταβολής, ADR-943 Φ5γ).
  */
-function amountMinorOf(amount: string): number | null {
+export function amountMinorOf(amount: string): number | null {
   const major = parseStrictDecimal(amount);
   if (major === null || major <= 0) return null;
   const minor = minorFromMajor(major);

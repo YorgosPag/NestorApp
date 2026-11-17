@@ -140,6 +140,16 @@ export const issuanceAssignmentBody = z.discriminatedUnion('action', [
   }),
   /** §45.20 Φ6γ — το γραφείο **απορρίπτει** το αίτημα νέας ημερομηνίας του μηχανικού, με αιτιολογία (η αποδοχή = `schedule-delivery`). */
   z.object({ action: z.literal('decline-delivery-change'), ...target, reason: requiredText(DELIVERY_CHANGE_POLICY.reasonMax) }),
+  /**
+   * ADR-943 Φ5γ (Θ-5) — η απόφαση του γραφείου στη διαφορά της προκαταβολής: πόσα **συνολικά** στον μηχανικό, με αιτιολογία.
+   * Όριο ποσού και «μόνο σε διαφορά» τα κρίνει ο μειωτής, που ξέρει τι εισπράχθηκε.
+   */
+  z.object({
+    action: z.literal('resolve-advance-dispute'),
+    ...target,
+    releaseMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    reason: requiredText(ADVANCE_POLICY.resolutionReasonMax),
+  }),
   z.object({ action: z.literal('cancel'), ...target }),
 ]);
 
@@ -307,6 +317,7 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
     case 'schedule-delivery': return { kind: 'schedule-delivery', dueOn: request.dueOn, reason: request.reason };
     case 'set-inspection-contact': return { kind: 'set-inspection-contact', contactId: request.contactId, role: request.role, roleOther: request.roleOther };
     case 'decline-delivery-change': return { kind: 'decline-delivery-change', reason: request.reason };
+    case 'resolve-advance-dispute': return { kind: 'resolve-advance-dispute', releaseMinor: request.releaseMinor, reason: request.reason };
     case 'cancel': return { kind: 'cancel' };
   }
 }

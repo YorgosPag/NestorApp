@@ -7,7 +7,8 @@
  *   - `decide`   { outcome, channel, note, expectedOwnerContactId } — καταγράφεται η απόφαση του ΥΠΕΥΘΥΝΟΥ ιδιοκτήτη
  *   - `notify`   { channel } — ο επαγγελματίας ενημερώθηκε
  *   - `respond`  { outcome } — αποδέχτηκε / αρνήθηκε
- *   - `cancel`
+ *   - `resolve-advance-dispute` { releaseMinor, reason } — ADR-943 Φ5γ: απόφαση του γραφείου στη διαφορά της προκαταβολής
+ *   - `cancel` (ADR-943 Φ5γ: με κρατημένα χρήματα ⇒ διακανονισμός κατά την πολιτική, πριν από το γεγονός η εντολή)
  *   - CAS: `expectedStage` = ό,τι είδε ο άνθρωπος· αλλαγή στο μεταξύ ⇒ 409 `STALE`, ποτέ σιωπηλή υπερκάλυψη
  *   - ίδια πρόταση ξανά ⇒ `unchanged`· σύνορο ιδεμποτίας ADR-872 μέσα στο `withAuth`
  *
@@ -34,6 +35,8 @@ const ISSUANCE_REFUSAL_STATUS: Readonly<Record<IssuanceRefusal, readonly [number
   unqualified: [422, 'UNQUALIFIED'],
   'lead-undesignated': [409, 'LEAD_UNDESIGNATED'],
   'lead-changed': [409, 'LEAD_CHANGED'],
+  // ADR-943 Φ5γ — κρατημένα χρήματα κινούνται αυτή τη στιγμή· τίποτα δεν γράφτηκε, ο άνθρωπος ξαναδοκιμάζει.
+  'settlement-busy': [409, 'SETTLEMENT_BUSY'],
   stale: [409, 'STALE'],
   'transition-refused': [409, 'TRANSITION_REFUSED'],
   // §28 — π.χ. καταγραφή απόφασης χωρίς κανάλι· δομικά ανέφικτο από τη φόρμα, άρα σφάλμα του πελάτη.

@@ -270,7 +270,7 @@ function advanceLinkEmail(named: Named, input: Extract<IssuanceEmailInput, { kin
   const { language, office, property, document } = named;
   const w = ADVANCE_LINK_EMAIL_TEXTS[language];
   const details = [
-    invitationDetailLine(w.amountLabel, input.amount),
+    invitationDetailLine(w.amountLabel[input.moment], input.amount),
     ...(input.releaseAt === null ? [] : [invitationDetailLine(w.releaseAtLabel, formatOperatorDateTime(input.releaseAt, language))]),
     invitationDetailLine(w.nextLabel, w.next[input.moment]),
     ...(input.accessCode ? [invitationDetailLine(w.accessCodeLabel, w.accessCodeHowTo)] : []),

@@ -63,10 +63,11 @@ export interface CheckoutMarketplace {
 
 /**
  * Γιατί κινούνται τα κρατημένα χρήματα — ο ίδιος λόγος γράφεται και στο γεγονός της αποδέσμευσης. Κάθε λόγος μπαίνει
- * **μαζί** με τον παραγωγό του (απόφαση Giorgio Α1): Φ5α η αυτόματη αποδέσμευση· η ακύρωση, η απόφαση γραφείου σε διαφορά
- * και η άρνηση είσπραξης στη Φ5β.
+ * **μαζί** με τον παραγωγό του (απόφαση Giorgio Α1): Φ5α η αυτόματη αποδέσμευση (`window-elapsed`)· Φ5γ η ακύρωση
+ * (`cancellation`), η απόφαση γραφείου σε διαφορά (`office-resolution`) — οι τρεις του τομέα,
+ * `ADVANCE_RELEASE_BASES` — και η άρνηση είσπραξης (`refused-payment`: χρήματα που ο τομέας δεν δέχτηκε, πάντα όλα πίσω).
  */
-export const SETTLEMENT_BASES = ['window-elapsed'] as const;
+export const SETTLEMENT_BASES = ['window-elapsed', 'cancellation', 'office-resolution', 'refused-payment'] as const;
 
 export type SettlementBasis = (typeof SETTLEMENT_BASES)[number];
 
@@ -79,6 +80,11 @@ export interface CheckoutSettlementOrder {
   readonly basis: SettlementBasis;
   /** Από πότε εκτελείται (ISO)· η αυτόματη αποδέσμευση = το τέλος του παραθύρου αντίρρησης. */
   readonly dueAt: string;
+}
+
+/** Ίδια εντολή; — ίδια ποσά, ίδιος λόγος, ίδια στιγμή. Η ΜΙΑ σύγκριση (εκτελεστής · κρίση του είδους). */
+export function sameSettlementOrder(a: CheckoutSettlementOrder, b: CheckoutSettlementOrder): boolean {
+  return a.refundMinor === b.refundMinor && a.releaseMinor === b.releaseMinor && a.basis === b.basis && a.dueAt === b.dueAt;
 }
 
 export interface PaymentCheckoutRecord {

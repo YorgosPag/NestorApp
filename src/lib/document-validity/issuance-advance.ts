@@ -72,6 +72,8 @@ export const ADVANCE_POLICY = {
    * — ο νέος ανακαλεί τους παλαιότερους πέρα από αυτό το όριο (κανένα σφάλμα δεν γεννά απεριόριστους ζωντανούς συνδέσμους).
    */
   liveLinksCap: 3,
+  /** Φ5γ (Θ-5) — μέγιστο μήκος αιτιολογίας της απόφασης του γραφείου σε διαφορά. */
+  resolutionReasonMax: 1_000,
 } as const;
 
 /**
@@ -118,8 +120,11 @@ export type StartObjectionBy =
   | { readonly by: 'office'; readonly uid: string }
   | { readonly by: 'owner-link'; readonly invitationId: string };
 
-/** Γιατί αποδεσμεύτηκαν: πέρασε το παράθυρο χωρίς αντίρρηση, ή αποφάσισε το γραφείο μετά από αντίρρηση. */
-export const ADVANCE_RELEASE_BASES = ['window-elapsed', 'office-resolution'] as const;
+/**
+ * Γιατί αποδεσμεύτηκαν: πέρασε το παράθυρο χωρίς αντίρρηση · αποφάσισε το γραφείο μετά από αντίρρηση · Φ5γ: ακύρωση μετά
+ * την έναρξη (ό,τι κρατά ο μηχανικός κατά την πολιτική).
+ */
+export const ADVANCE_RELEASE_BASES = ['window-elapsed', 'office-resolution', 'cancellation'] as const;
 export type AdvanceReleaseBasis = (typeof ADVANCE_RELEASE_BASES)[number];
 
 export type AdvanceEvent =
@@ -131,6 +136,14 @@ export type AdvanceEvent =
   /** Ο μηχανικός δηλώνει «έγινε η αυτοψία» — ανοίγει το παράθυρο αντίρρησης. */
   | { readonly kind: 'work-started'; readonly at: string; readonly byUid: string; readonly engagementId: string }
   | { readonly kind: 'start-objected'; readonly reason: string; readonly at: string; readonly objection: StartObjectionBy }
+  /**
+   * Φ5γ (Θ-5) — **η απόφαση του γραφείου** στη διαφορά: πόσα πάνε συνολικά στον μηχανικό και πόσα πίσω (σύνολα πάνω στο
+   * εισπραχθέν — η εντολή χρημάτων είναι δηλωτική). Οριστική· υπερισχύει της πολιτικής (Ζ-5).
+   */
+  | {
+      readonly kind: 'dispute-resolved'; readonly releaseMinor: MinorAmount; readonly refundMinor: MinorAmount;
+      readonly reason: string; readonly at: string; readonly byUid: string;
+    }
   /** Ο πάροχος βεβαίωσε ότι το κρατημένο ποσό αποδεσμεύτηκε προς τον μηχανικό. */
   | {
       readonly kind: 'released'; readonly amountMinor: MinorAmount; readonly transferReference: string;
@@ -151,7 +164,7 @@ export type AdvanceEventKind = AdvanceEvent['kind'];
  * - `awaiting-payment` — εγκρίθηκε, δεν πληρώθηκε (μπάλα στον ιδιοκτήτη)·
  * - `held` — πληρώθηκε, κρατείται· ο μηχανικός μπορεί να ξεκινήσει·
  * - `release-pending` — δηλώθηκε έναρξη· αποδεσμεύεται στο `objectionUntil` αν δεν υπάρξει αντίρρηση·
- * - `disputed` — αντίρρηση μέσα στο παράθυρο· αποφασίζει το γραφείο·
+ * - `disputed` — αντίρρηση μέσα στο παράθυρο· αποφασίζει το γραφείο (`resolution` ⇒ αποφάσισε, τα χρήματα κινούνται)·
  * - `released` — στον μηχανικό (ίσως με μεταγενέστερη μερική επιστροφή)·
  * - `refunded` — ολόκληρο το εισπραχθέν επεστράφη.
  */
@@ -159,12 +172,22 @@ export type AdvanceState =
   | { readonly kind: 'none' }
   | { readonly kind: 'awaiting-payment'; readonly amountMinor: MinorAmount }
   | { readonly kind: 'held'; readonly fundedMinor: MinorAmount; readonly refundedMinor: MinorAmount }
-  | { readonly kind: 'release-pending'; readonly fundedMinor: MinorAmount; readonly objectionUntil: string }
-  | { readonly kind: 'disputed'; readonly fundedMinor: MinorAmount; readonly reason: string }
+  | { readonly kind: 'release-pending'; readonly fundedMinor: MinorAmount; readonly refundedMinor: MinorAmount; readonly objectionUntil: string }
+  | {
+      readonly kind: 'disputed'; readonly fundedMinor: MinorAmount; readonly refundedMinor: MinorAmount; readonly reason: string;
+      readonly resolution: AdvanceDisputeResolution | null;
+    }
   | { readonly kind: 'released'; readonly fundedMinor: MinorAmount; readonly releasedMinor: MinorAmount; readonly refundedMinor: MinorAmount }
   | { readonly kind: 'refunded'; readonly fundedMinor: MinorAmount; readonly refundedMinor: MinorAmount };
 
 export type AdvanceStateKind = AdvanceState['kind'];
+
+/** Φ5γ — η απόφαση του γραφείου, όπως τη χρειάζονται κατάσταση και εντολή χρημάτων (χωρίς αιτιολογία). */
+export interface AdvanceDisputeResolution {
+  readonly releaseMinor: MinorAmount;
+  readonly refundMinor: MinorAmount;
+  readonly at: string;
+}
 
 /** Τα γεγονότα που κρίνουν την προκαταβολή — δομικά, ώστε το φύλλο να μην εισάγει τον μειωτή. */
 export interface AdvanceFacts extends QuoteAgreementFacts {
@@ -185,23 +208,44 @@ export function objectionUntilOf(startedAtIso: string): string {
   return new Date(Date.parse(startedAtIso) + ADVANCE_POLICY.objectionWindowHours * 3_600_000).toISOString();
 }
 
+/** Η ζωντανή αντίρρηση: η τελευταία, αν ήρθε μετά την (τελευταία) δήλωση έναρξης. */
+function liveObjectionOf(events: readonly AdvanceEvent[]): Extract<AdvanceEvent, { kind: 'start-objected' }> | null {
+  const started = lastOf(events, 'work-started');
+  const objected = lastOf(events, 'start-objected');
+  return started !== null && objected !== null && objected.at >= started.at ? objected : null;
+}
+
+/**
+ * Φ5γ — **η απόφαση του γραφείου** για τη ζωντανή αντίρρηση, αν υπάρχει. Ζει στα γεγονότα και μετά την κίνηση των χρημάτων
+ * (η κατάσταση γίνεται `released`/`refunded`), ώστε η εντολή να ξέρει ότι **αυτή** κρίνει — ποτέ η πολιτική ακύρωσης.
+ */
+export function advanceResolutionOf(facts: AdvanceFacts): AdvanceDisputeResolution | null {
+  const objected = liveObjectionOf(facts.advanceEvents);
+  const resolved = lastOf(facts.advanceEvents, 'dispute-resolved');
+  if (objected === null || resolved === null || resolved.at < objected.at) return null;
+  return { releaseMinor: resolved.releaseMinor, refundMinor: resolved.refundMinor, at: resolved.at };
+}
+
 /** Η κατάσταση μετά την πληρωμή — από τα γεγονότα **μόνο** (η συμφωνία μπορεί να αλλάξει, τα χρήματα κινήθηκαν). */
-function fundedStateOf(events: readonly AdvanceEvent[], fundedMinor: MinorAmount): AdvanceState {
+function fundedStateOf(facts: AdvanceFacts, fundedMinor: MinorAmount): AdvanceState {
+  const events = facts.advanceEvents;
   const refundedMinor = sumOf(events, 'refunded');
   const releasedMinor = sumOf(events, 'released');
   if (refundedMinor >= fundedMinor) return { kind: 'refunded', fundedMinor, refundedMinor };
   if (releasedMinor > 0) return { kind: 'released', fundedMinor, releasedMinor, refundedMinor };
   const started = lastOf(events, 'work-started');
   if (started === null) return { kind: 'held', fundedMinor, refundedMinor };
-  const objected = lastOf(events, 'start-objected');
-  if (objected !== null && objected.at >= started.at) return { kind: 'disputed', fundedMinor, reason: objected.reason };
-  return { kind: 'release-pending', fundedMinor, objectionUntil: objectionUntilOf(started.at) };
+  const objected = liveObjectionOf(events);
+  if (objected !== null) {
+    return { kind: 'disputed', fundedMinor, refundedMinor, reason: objected.reason, resolution: advanceResolutionOf(facts) };
+  }
+  return { kind: 'release-pending', fundedMinor, refundedMinor, objectionUntil: objectionUntilOf(started.at) };
 }
 
 /** **Η μία κρίση** «πού είναι η προκαταβολή;» — όλοι οι αναγνώστες (μειωτής, οθόνη, cron, ειδοποιήσεις) ρωτούν εδώ. */
 export function advanceStateOf(facts: AdvanceFacts): AdvanceState {
   const fundedMinor = sumOf(facts.advanceEvents, 'funded');
-  if (fundedMinor > 0) return fundedStateOf(facts.advanceEvents, fundedMinor);
+  if (fundedMinor > 0) return fundedStateOf(facts, fundedMinor);
   const agreed = agreedQuoteOf(facts);
   return agreed?.advance ? { kind: 'awaiting-payment', amountMinor: agreed.advance.amountMinor } : { kind: 'none' };
 }
@@ -244,8 +288,8 @@ export function advanceGlanceOf(facts: AdvanceFacts): AdvanceGlance | null {
 /** Ό,τι εισπράχθηκε και **δεν** επεστράφη — η βάση του ΜΑΡΚ προκαταβολής και του συμψηφισμού στο τελικό (Κ-7). */
 export function advanceCollectedMinor(state: AdvanceState): MinorAmount {
   switch (state.kind) {
-    case 'held': case 'released': return state.fundedMinor - state.refundedMinor;
-    case 'release-pending': case 'disputed': return state.fundedMinor;
+    // Φ5γ: και η εκκρεμής αποδέσμευση / η διαφορά αφαιρούν ό,τι ήδη επεστράφη (μερική επιστροφή ακύρωσης ή απόφασης).
+    case 'held': case 'released': case 'release-pending': case 'disputed': return state.fundedMinor - state.refundedMinor;
     case 'none': case 'awaiting-payment': case 'refunded': return 0;
   }
 }
@@ -272,7 +316,8 @@ export function isAdvancePageLive(facts: AdvanceFacts, nowIso: string): boolean 
 export type AdvanceTimelineEntry =
   | { readonly kind: 'funded' | 'released' | 'refunded'; readonly at: string; readonly amountMinor: MinorAmount }
   | { readonly kind: 'work-started'; readonly at: string }
-  | { readonly kind: 'start-objected'; readonly at: string; readonly by: StartObjectionBy['by'] };
+  | { readonly kind: 'start-objected'; readonly at: string; readonly by: StartObjectionBy['by'] }
+  | { readonly kind: 'dispute-resolved'; readonly at: string; readonly releaseMinor: MinorAmount; readonly refundMinor: MinorAmount };
 
 /**
  * Φ5β — **το χρονολόγιο των χρημάτων** (πληρώθηκε → αυτοψία → αντίρρηση → αποδέσμευση/επιστροφή) για κάθε οθόνη. Από τα
@@ -284,6 +329,7 @@ export function advanceTimelineOf(facts: AdvanceFacts): readonly AdvanceTimeline
       case 'funded': case 'released': case 'refunded': return { kind: event.kind, at: event.at, amountMinor: event.amountMinor };
       case 'work-started': return { kind: 'work-started', at: event.at };
       case 'start-objected': return { kind: 'start-objected', at: event.at, by: event.objection.by };
+      case 'dispute-resolved': return { kind: 'dispute-resolved', at: event.at, releaseMinor: event.releaseMinor, refundMinor: event.refundMinor };
     }
   });
 }
@@ -324,16 +370,33 @@ function retainedAfterStartMinor(terms: AdvanceTerms, collected: MinorAmount, wi
  * δεν κρατά ο μηχανικός. Η ΜΙΑ κρίση — τη ρωτούν η ακύρωση (Φ5) και ο πίνακας της έγκρισης ({@link cancellationScheduleOf}).
  */
 export function refundDueOnCancelOf(facts: CancellationFacts, atIso: string): MinorAmount {
-  const state = advanceStateOf(facts);
-  const collected = advanceCollectedMinor(state);
-  if (state.kind === 'held') return collected;
-  if (state.kind !== 'release-pending' && state.kind !== 'disputed' && state.kind !== 'released') return 0;
+  return Math.max(0, cancellationRefundTotalOf(facts, atIso) - sumOf(facts.advanceEvents, 'refunded'));
+}
+
+/**
+ * Φ5γ — **πόσα επιστρέφονται ΣΥΝΟΛΙΚΑ** αν ακυρωθεί τη στιγμή `atIso`: πάνω σε ό,τι **εισπράχθηκε** (`funded`), ποτέ στο
+ * καθαρό — η εντολή χρημάτων είναι δηλωτική («συνολικά επιστραμμένα Χ») και πρέπει να μένει ίδια πριν και μετά από μια
+ * μερική επιστροφή. Πριν από την έναρξη: όλο (Κ-5).
+ */
+export function cancellationRefundTotalOf(facts: CancellationFacts, atIso: string): MinorAmount {
+  const fundedMinor = sumOf(facts.advanceEvents, 'funded');
+  if (fundedMinor === 0 || lastOf(facts.advanceEvents, 'work-started') === null) return fundedMinor;
   const terms = agreedQuoteOf(facts)?.advance ?? null;
   // Αμυντικά: χρήματα χωρίς συμφωνημένο όρο (η αναθεώρηση μετά την πληρωμή απαγορεύεται) ⇒ ποτέ παρακράτηση.
-  if (terms === null) return collected;
+  if (terms === null) return fundedMinor;
   const waived = lastOf(facts.advanceEvents, 'funded')?.withdrawalWaiverAt != null;
   const withdrawal = !isWithinWithdrawalPeriod(facts, atIso) ? 'outside' : waived ? 'waived' : 'not-waived';
-  return collected - Math.min(collected, retainedAfterStartMinor(terms, collected, withdrawal));
+  return fundedMinor - Math.min(fundedMinor, retainedAfterStartMinor(terms, fundedMinor, withdrawal));
+}
+
+/** Ό,τι εισπράχθηκε ποτέ (πριν από επιστροφές) — η βάση κάθε εντολής χρημάτων. */
+export function advanceFundedMinor(facts: AdvanceFacts): MinorAmount {
+  return sumOf(facts.advanceEvents, 'funded');
+}
+
+/** Ό,τι έχει ήδη επιστραφεί / αποδεσμευτεί (βεβαιωμένο από τον πάροχο). */
+export function advanceMovedMinor(facts: AdvanceFacts): { readonly refundedMinor: MinorAmount; readonly releasedMinor: MinorAmount } {
+  return { refundedMinor: sumOf(facts.advanceEvents, 'refunded'), releasedMinor: sumOf(facts.advanceEvents, 'released') };
 }
 
 /** Μία γραμμή του πίνακα ακύρωσης που βλέπει ο ιδιοκτήτης **πριν** εγκρίνει — ποσά, όχι κείμενο πολιτικής. */

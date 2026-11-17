@@ -240,6 +240,16 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_OBJECTED: 'properties.documentIssuanceAdvanceObjected',
   /**
+   * ADR-943 Φ5γ — **ο πάροχος επέστρεψε χρήματα της προκαταβολής** στον ιδιοκτήτη (ακύρωση · απόφαση διαφοράς): στο γραφείο
+   * και στον μηχανικό. Προτίμηση: `documentIssuancePayments`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_REFUNDED: 'properties.documentIssuanceAdvanceRefunded',
+  /**
+   * ADR-943 Φ5γ (Θ-5) — **το γραφείο αποφάσισε για τη διαφορά**: πόσα στον μηχανικό, πόσα πίσω. Στο γραφείο **με** την
+   * αιτιολογία· στον μηχανικό **χωρίς** (Ε-9′). Προτίμηση: `documentIssuancePayments`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_DISPUTE_RESOLVED: 'properties.documentIssuanceAdvanceDisputeResolved',
+  /**
    * ADR-916 §5.15 Φ-Δ.2 (Ο7) — **ο αγοραστής απάντησε στην πρόσκληση παράδοσης** (αποδοχή · άρνηση). Προς όποιον την
    * έστειλε (αν είναι άνθρωπος) + τους διαχειριστές του χώρου· προσγείωση στην καρτέλα «Παράδοση». Το σώμα λέει την
    * **επόμενη κίνηση** από την ίδια κρίση με την καρτέλα. Προτίμηση: `handoverInvitationAnswers`.
@@ -649,6 +659,19 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'documentIssuancePayments',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  // ADR-943 Φ5γ — επιστροφή · απόφαση διαφοράς: ΠΛΗΡΟΦΟΡΙΑ (τα χρήματα κινήθηκαν / θα κινηθούν όπως αποφασίστηκε).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_REFUNDED]: {
+    category: 'properties',
+    settingKey: 'documentIssuancePayments',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_DISPUTE_RESOLVED]: {
+    category: 'properties',
+    settingKey: 'documentIssuancePayments',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
   // ADR-916 Φ-Δ.2 — απάντηση αγοραστή στην πρόσκληση παράδοσης: ΠΛΗΡΟΦΟΡΙΑ· η άρνηση ανεβαίνει σε ΠΡΟΕΙΔΟΠΟΙΗΣΗ ανά αποστολή.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_HANDOVER_INVITATION_ANSWERED]: {

@@ -16,15 +16,13 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { advanceCollectedMinor, advanceStateOf } from '@/lib/document-validity/issuance-advance';
+import { advanceStateOf } from '@/lib/document-validity/issuance-advance';
 import { issuanceKeyOf, type IssuanceAssignmentRecord, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
 import { createModuleLogger } from '@/lib/telemetry';
 import { issueAdvanceLink } from '@/server/issuance-invitations/issuance-advance-link';
 import { announceAdvanceMilestone, latestAdvanceMilestone } from '@/server/issuance-invitations/issuance-advance-notifier';
-import { findFundedAdvanceCheckout } from '@/server/payments/payment-checkout-store';
-import { scheduleSettlement, type ScheduleOutcome } from '@/server/payments/payment-settlement';
 
-import { fundedPaymentReferenceOf } from './issuance-advance-settlement.server';
+import { ensureAdvanceSettlement, type EnsureSettlementResult } from './issuance-advance-settlement-order.server';
 import { writeEngagementIssuanceAction, type EngagementIssuanceRefusal } from './issuance-engagement-action.server';
 
 const logger = createModuleLogger('IssuanceAdvanceStart');
@@ -45,20 +43,15 @@ export type AdvanceStartResult =
   | { readonly ok: true; readonly outcome: 'changed' | 'unchanged'; readonly releaseAt: string }
   | { readonly ok: false; readonly refusal: AdvanceStartRefusal };
 
-/** Η εντολή αυτόματης αποδέσμευσης: ολόκληρο το εισπραχθέν, στο τέλος του παραθύρου (`null` ⇒ όχι `release-pending`). */
-async function scheduleAutoRelease(db: Firestore, companyId: string, assignmentId: string, record: IssuanceAssignmentRecord, nowMs: number): Promise<{ readonly releaseAt: string; readonly scheduled: ScheduleOutcome } | null> {
+/**
+ * Η εντολή αυτόματης αποδέσμευσης — από τον ΕΝΑ παραγωγό (Φ5γ, Θ-1): ο τομέας λέει ποσό και στιγμή (`null` ⇒ όχι
+ * `release-pending`).
+ */
+async function scheduleAutoRelease(db: Firestore, companyId: string, assignmentId: string, record: IssuanceAssignmentRecord, nowMs: number): Promise<{ readonly releaseAt: string; readonly ensured: EnsureSettlementResult } | null> {
   const state = advanceStateOf(record);
   if (state.kind !== 'release-pending') return null;
-  const paymentReference = fundedPaymentReferenceOf(record);
-  const checkout = paymentReference === null ? null : await findFundedAdvanceCheckout(db, companyId, assignmentId, paymentReference);
-  if (checkout === null) {
-    logger.error('Advance in release-pending without its funded checkout — needs a human', { assignmentId });
-    return { releaseAt: state.objectionUntil, scheduled: 'refused' };
-  }
-  const scheduled = await scheduleSettlement(db, checkout.checkoutId, {
-    refundMinor: 0, releaseMinor: advanceCollectedMinor(state), basis: 'window-elapsed', dueAt: state.objectionUntil,
-  }, nowMs);
-  return { releaseAt: state.objectionUntil, scheduled };
+  const ensured = await ensureAdvanceSettlement(db, { companyId, assignmentId, record, nowMs });
+  return { releaseAt: state.objectionUntil, ensured };
 }
 
 /** **«Έγινε η αυτοψία»** — βλ. κεφαλίδα. */
@@ -68,7 +61,7 @@ export async function declareIssuanceWorkStarted(db: Firestore, input: AdvanceSt
   const { outcome, assignment, registry, companyId } = written;
   const schedule = await scheduleAutoRelease(db, companyId, assignment.id, outcome.record, input.now.getTime());
   if (schedule === null) return { ok: false, refusal: 'transition-refused' };
-  if (schedule.scheduled === 'busy' || schedule.scheduled === 'refused') return { ok: false, refusal: 'settlement-unavailable' };
+  if (schedule.ensured.kind !== 'ordered') return { ok: false, refusal: 'settlement-unavailable' };
   const milestone = latestAdvanceMilestone(outcome.record, 'work-started');
   const label = registry.properties[assignment.propertyId];
   if (outcome.outcome === 'changed' && milestone !== null && label !== undefined) {

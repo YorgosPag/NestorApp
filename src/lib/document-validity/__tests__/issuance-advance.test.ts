@@ -142,7 +142,7 @@ describe('ADR-943 Κ-4 — έναρξη, παράθυρο αντίρρησης, 
     expect(refusalOf(assigned(), START, ENGINEER)).toBe('transition-refused');
     expect(refusalOf(funded(), START, OFFICE)).toBe('actor-refused');
     const record = started();
-    expect(stateOf(record)).toEqual({ kind: 'release-pending', fundedMinor: 4_000, objectionUntil: objectionUntilOf(T0) });
+    expect(stateOf(record)).toEqual({ kind: 'release-pending', fundedMinor: 4_000, refundedMinor: 0, objectionUntil: objectionUntilOf(T0) });
     const again = act(record, START, ENGINEER);
     expect(again.ok && again.changed).toBe(false);
   });
@@ -159,10 +159,13 @@ describe('ADR-943 Κ-4 — έναρξη, παράθυρο αντίρρησης, 
     expect(refusalOf(started(), object, at(OFFICE, '2026-11-18T09:00:00.000Z'))).toBe('transition-refused');
     expect(refusalOf(started(), { kind: 'object-start', reason: '   ' }, OFFICE)).toBe('terms-refused');
     const disputed = apply(started(), object, OFFICE);
-    expect(stateOf(disputed)).toEqual({ kind: 'disputed', fundedMinor: 4_000, reason: 'Δεν ήρθε κανείς' });
+    expect(stateOf(disputed)).toEqual({ kind: 'disputed', fundedMinor: 4_000, refundedMinor: 0, reason: 'Δεν ήρθε κανείς', resolution: null });
     const windowRelease: IssuanceAction = { kind: 'advance-released', amountMinor: 4_000, transferReference: 'tra_1', basis: 'window-elapsed' };
     expect(refusalOf(disputed, windowRelease, at(SYSTEM, '2026-11-20T09:00:00.000Z'))).toBe('transition-refused');
-    const resolved = apply(disputed, { ...windowRelease, basis: 'office-resolution' }, SYSTEM);
+    // ADR-943 Φ5γ (Θ-5): αποδέσμευση «απόφαση γραφείου» μόνο ΑΦΟΥ καταγραφεί η απόφαση.
+    expect(refusalOf(disputed, { ...windowRelease, basis: 'office-resolution' }, SYSTEM)).toBe('transition-refused');
+    const decided = apply(disputed, { kind: 'resolve-advance-dispute', releaseMinor: 4_000, reason: 'Η αυτοψία έγινε' }, OFFICE);
+    const resolved = apply(decided, { ...windowRelease, basis: 'office-resolution' }, SYSTEM);
     expect(stateOf(resolved).kind).toBe('released');
   });
 });

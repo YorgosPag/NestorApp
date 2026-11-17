@@ -40,18 +40,23 @@ export interface PayableMovementInput<S extends PayableSubject = PayableSubject>
   readonly subject: S;
   readonly movement: ProviderMovement;
   readonly provider: PaymentProvider;
+  /**
+   * ADR-943 Φ5γ (Θ-7) — πόσα έχει επιστρέψει **συνολικά** ο πάροχος για αυτή τη συνεδρία (από την ίδια ανάγνωση). Ένας
+   * handler που αρνείται πληρωμή ξέρει έτσι αν τα χρήματα **έχουν ήδη γυρίσει** — καμία νέα εντολή επιστροφής, κανένας βρόχος.
+   */
+  readonly refundedTotalMinor: number;
 }
 
 /** Καταγράφει **μία** κίνηση του παρόχου στον γραφέα του είδους της συνεδρίας. Σφάλμα βάσης ⇒ ρίχνει. */
 export function recordPayableMovement(
-  checkout: PaymentCheckoutRecord, movement: ProviderMovement, provider: PaymentProvider,
+  checkout: PaymentCheckoutRecord, movement: ProviderMovement, provider: PaymentProvider, refundedTotalMinor: number,
 ): Promise<PayableMovementOutcome> {
   const { subject } = checkout;
   switch (subject.kind) {
     case 'invoice':
-      return recordInvoiceMovement({ checkout, subject, movement, provider });
+      return recordInvoiceMovement({ checkout, subject, movement, provider, refundedTotalMinor });
     case 'issuance-advance':
-      return recordIssuanceAdvanceMovement({ checkout, subject, movement, provider });
+      return recordIssuanceAdvanceMovement({ checkout, subject, movement, provider, refundedTotalMinor });
   }
 }
 
@@ -59,7 +64,13 @@ export function recordPayableMovement(
  * ADR-943 Φ5 — **η κρίση του είδους** πριν κινηθούν κρατημένα χρήματα: `proceed` · `void` (η εντολή δεν ισχύει πια — σβήνει
  * χωρίς κίνηση) · `hold` (δεν κρίνεται τώρα — μένει, θέλει άνθρωπο). Σφάλμα ανάγνωσης ⇒ ρίχνει (ξαναδοκιμάζεται).
  */
-export type SettlementJudgement = 'proceed' | 'void' | 'hold';
+export type SettlementJudgement =
+  | 'proceed' | 'void' | 'hold'
+  /**
+   * ADR-943 Φ5γ (Θ-2) — η εντολή δεν μοιάζει πια με ό,τι λέει ο τομέας (π.χ. αυτόματη αποδέσμευση που πρόλαβε ακύρωση):
+   * ο εκτελεστής την **ξαναγράφει** με αυτήν — η εντολή συγκλίνει στον τομέα, καμία δεν ξεχνιέται.
+   */
+  | { readonly reschedule: CheckoutSettlementOrder };
 
 export function judgePayableSettlement(
   checkout: PaymentCheckoutRecord, order: CheckoutSettlementOrder, now: Date,
@@ -76,7 +87,7 @@ export function judgePayableSettlement(
 
 /** ADR-943 Φ5 — **η καταγραφή** μιας ολοκληρωμένης κίνησης στον γραφέα του είδους. Ιδεμποτικό. Σφάλμα ⇒ ρίχνει. */
 export function recordPayableSettlement(
-  checkout: PaymentCheckoutRecord, order: CheckoutSettlementOrder, provider: PaymentProvider, transferReference: string,
+  checkout: PaymentCheckoutRecord, order: CheckoutSettlementOrder, provider: PaymentProvider, transferReference: string | null,
 ): Promise<void> {
   const { subject } = checkout;
   switch (subject.kind) {

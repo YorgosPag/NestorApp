@@ -21,9 +21,10 @@
 import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
 
 import {
-  ADVANCE_POLICY, advanceCollectedMinor, advanceStateOf, canObjectToStart, isAdvanceReleaseDue,
+  ADVANCE_POLICY, advanceCollectedMinor, advanceFundedMinor, advanceStateOf, canObjectToStart, isAdvanceReleaseDue,
   type AdvanceEvent, type AdvanceReleaseBasis, type AdvanceState, type StartObjectionBy,
 } from './issuance-advance';
+import { advanceSettlementDueOf } from './issuance-advance-settlement';
 import type { IssuanceActor } from './issuance-actor';
 import type { IssuanceAssignmentRecord, IssuanceReduction } from './issuance-assignment';
 import { MYDATA_MARK_PATTERN, type IssuanceReceipt } from './issuance-quote';
@@ -43,6 +44,11 @@ export type IssuanceAdvanceAction =
    * (`issuance-advance-checkout.ts`), όπως τη συμμετοχή του `engagement`.
    */
   | { readonly kind: 'object-start'; readonly reason: string }
+  /**
+   * Φ5γ (Θ-5) — `office`: η απόφαση στη διαφορά — πόσα **συνολικά** στον μηχανικό (0 = όλα πίσω · όλο = όλα στον μηχανικό ·
+   * ενδιάμεσο = διαίρεση), με αιτιολογία. Οριστική.
+   */
+  | { readonly kind: 'resolve-advance-dispute'; readonly releaseMinor: number; readonly reason: string }
   /** `system` — ο πάροχος βεβαίωσε την αποδέσμευση προς τον μηχανικό. */
   | {
       readonly kind: 'advance-released'; readonly amountMinor: number; readonly transferReference: string;
@@ -60,6 +66,7 @@ const ACTORS_OF: Readonly<Record<IssuanceAdvanceActionKind, readonly IssuanceAct
   'advance-funded': ['system'],
   'start-work': ['engagement'],
   'object-start': ['office', 'link'],
+  'resolve-advance-dispute': ['office'],
   'advance-released': ['system'],
   'advance-refunded': ['system'],
   'record-advance-receipt': ['engagement', 'office'],
@@ -70,6 +77,8 @@ const STAGES_OF: Readonly<Record<IssuanceAdvanceActionKind, readonly IssuanceSta
   'advance-funded': ['accepted'],
   'start-work': ['accepted'],
   'object-start': ['accepted'],
+  // Φ5γ — η διαφορά επιβιώνει της ακύρωσης: τα χρήματα παγώνουν ως την απόφαση (Θ-4).
+  'resolve-advance-dispute': ['accepted', 'cancelled'],
   'advance-released': ['accepted', 'cancelled'],
   'advance-refunded': ['accepted', 'cancelled'],
   'record-advance-receipt': ['accepted', 'cancelled'],
@@ -111,10 +120,19 @@ function funded(record: IssuanceAssignmentRecord, state: AdvanceState, action: E
   });
 }
 
+/**
+ * Επιτρέπεται αποδέσμευση με αυτόν τον λόγο; — η αυτόματη μόνο όταν λήξει το παράθυρο· ακύρωση και απόφαση μόνο όταν ο
+ * τομέας (Θ-1) λέει **αυτόν** τον λόγο και το ποσό χωρά σε ό,τι οφείλεται στον μηχανικό.
+ */
+function releaseAllowed(record: IssuanceAssignmentRecord, state: AdvanceState, basis: AdvanceReleaseBasis, amountMinor: number, at: string): boolean {
+  const due = advanceSettlementDueOf(record);
+  if (due === null || due.basis !== basis || amountMinor > due.releaseMinor) return false;
+  return basis !== 'window-elapsed' || isAdvanceReleaseDue(state, at);
+}
+
 function released(record: IssuanceAssignmentRecord, state: AdvanceState, action: Extract<IssuanceAdvanceAction, { kind: 'advance-released' }>, at: string): Reduction {
   if (hasReference(record, action.transferReference)) return UNCHANGED(record);
-  const allowed = action.basis === 'window-elapsed' ? isAdvanceReleaseDue(state, at) : state.kind === 'disputed' || state.kind === 'release-pending';
-  if (!allowed) return REFUSED('transition-refused');
+  if (!releaseAllowed(record, state, action.basis, action.amountMinor, at)) return REFUSED('transition-refused');
   if (!isPositiveAmount(action.amountMinor) || action.amountMinor > advanceCollectedMinor(state)) return REFUSED('terms-refused');
   return appended(record, { kind: 'released', amountMinor: action.amountMinor, transferReference: action.transferReference, basis: action.basis, at });
 }
@@ -151,6 +169,17 @@ function objected(record: IssuanceAssignmentRecord, state: AdvanceState, action:
   return appended(record, { kind: 'start-objected', reason, at: actor.nowIso, objection: objectionByOf(actor) });
 }
 
+/** Θ-5 — η απόφαση του γραφείου: μόνο σε διαφορά, ποσό μέσα σε ό,τι κρατείται, αιτιολογία· οριστική (ίδια ⇒ `unchanged`). */
+function resolved(record: IssuanceAssignmentRecord, state: AdvanceState, action: Extract<IssuanceAdvanceAction, { kind: 'resolve-advance-dispute' }>, uid: string, at: string): Reduction {
+  if (state.kind !== 'disputed') return REFUSED('transition-refused');
+  if (state.resolution !== null) return state.resolution.releaseMinor === action.releaseMinor ? UNCHANGED(record) : REFUSED('transition-refused');
+  const reason = action.reason.trim();
+  if (reason.length === 0 || reason.length > ADVANCE_POLICY.resolutionReasonMax) return REFUSED('terms-refused');
+  if (!isMinorAmount(action.releaseMinor) || action.releaseMinor > advanceCollectedMinor(state)) return REFUSED('terms-refused');
+  const refundMinor = advanceFundedMinor(record) - action.releaseMinor;
+  return appended(record, { kind: 'dispute-resolved', releaseMinor: action.releaseMinor, refundMinor, reason, at, byUid: uid });
+}
+
 function uidOf(actor: IssuanceActor): string | null {
   return actor.kind === 'office' || actor.kind === 'engagement' ? actor.uid : null;
 }
@@ -166,6 +195,7 @@ export function reduceIssuanceAdvance(record: IssuanceAssignmentRecord | null, a
     case 'advance-refunded': return refunded(record, state, action, actor.nowIso);
     case 'start-work': return actor.kind === 'engagement' ? started(record, state, actor) : REFUSED('actor-refused');
     case 'object-start': return actor.kind === 'office' || actor.kind === 'link' ? objected(record, state, action, actor) : REFUSED('actor-refused');
+    case 'resolve-advance-dispute': return actor.kind === 'office' ? resolved(record, state, action, actor.uid, actor.nowIso) : REFUSED('actor-refused');
     case 'record-advance-receipt': {
       const uid = uidOf(actor);
       return uid === null ? REFUSED('actor-refused') : receipted(record, state, action, uid, actor.nowIso);

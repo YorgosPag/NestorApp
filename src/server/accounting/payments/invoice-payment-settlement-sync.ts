@@ -63,8 +63,10 @@ async function recordMovements(
   provider: PaymentProvider, checkout: PaymentCheckoutRecord, movements: readonly ProviderMovement[],
 ): Promise<CheckoutSyncOutcome> {
   let recorded = false;
+  // ADR-943 Φ5γ (Θ-7) — ο handler μαθαίνει από την ΙΔΙΑ ανάγνωση πόσα έχουν ήδη επιστραφεί.
+  const refundedTotalMinor = movements.reduce((sum, movement) => (movement.kind === 'refund' ? sum + movement.amountMinor : sum), 0);
   for (const movement of chronologicalMovements(movements)) {
-    const outcome = await recordPayableMovement(checkout, movement, provider);
+    const outcome = await recordPayableMovement(checkout, movement, provider, refundedTotalMinor);
     if (outcome === 'subject-absent' || outcome === 'subject-refused') return outcome;
     recorded = recorded || outcome === 'recorded';
   }

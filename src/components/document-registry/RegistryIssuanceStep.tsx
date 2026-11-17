@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { qualificationLookupUrl } from '@/config/document-validity/document-issuers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
+import { canProposeIssuance } from '@/lib/document-validity/issuance-assignment';
 import type {
   IssuanceApprovalRequest,
   IssuanceAssignmentRecord,
@@ -334,7 +335,7 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
       {state.stage === 'accepted' ? <RegistryIssuanceSpaceLine view={view} /> : null}
       {/* ADR-943 Φ5β2 — πού είναι η προκαταβολή · αίτημα πληρωμής / νέος σύνδεσμος στον ιδιοκτήτη. */}
       {state.stage === 'accepted' && state.record.decision !== null ? (
-        <RegistryIssuanceAdvanceLine view={view} ownerName={nameOf(t, state.record.decision.ownerContactId, registry)} />
+        <RegistryIssuanceAdvanceLine view={view} record={state.record} ownerName={nameOf(t, state.record.decision.ownerContactId, registry)} />
       ) : null}
       {/* ADR-942 Φ1 — τι ζήτησε ο μηχανικός· ανέβασμα κατευθείαν στον φάκελο του ακινήτου (θεματοφυλακή του κατόχου). */}
       {state.stage === 'accepted' ? <RegistryIssuanceDocumentRequests view={view} canAct={(actions?.canAct ?? false) && !saving} /> : null}
@@ -364,9 +365,14 @@ function NoAssignment({ view, registry }: { readonly view: RegistryIssuanceView;
   const actions = useIssuanceAssignmentActions();
   const last = view.state.kind === 'none' ? view.state : null;
   const lastName = last?.last === null || last === null ? null : nameOf(t, last.last.professionalContactId, registry);
+  // ADR-943 Φ5γ — ζουν ακόμη χρήματα στην ακυρωμένη ανάθεση: η γραμμή προκαταβολής μένει, η νέα πρόταση περιμένει.
+  const moneyRecord = last?.last != null && !canProposeIssuance(view.state) ? last.last : null;
   return (
     <>
-      {actions?.canAct ? <IssuanceProposeDialog view={view} names={candidateNames(t, view, registry)} trigger="assign" /> : null}
+      {actions?.canAct && moneyRecord === null ? <IssuanceProposeDialog view={view} names={candidateNames(t, view, registry)} trigger="assign" /> : null}
+      {moneyRecord?.decision != null ? (
+        <RegistryIssuanceAdvanceLine view={view} record={moneyRecord} ownerName={nameOf(t, moneyRecord.decision.ownerContactId, registry)} />
+      ) : null}
       <p className="m-0 text-xs text-muted-foreground">{t(ISSUANCE_KEYS.assignHint)}</p>
       {lastName === null ? null : (
         <p className="m-0 text-xs text-muted-foreground">{t(last?.fulfilled ? ISSUANCE_KEYS.lastFulfilled : ISSUANCE_KEYS.lastClosed, { name: lastName })}</p>

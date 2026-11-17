@@ -63,6 +63,7 @@ const REFUSALS = [
   ['actor-refused', 422, 'ACTOR_REFUSED'],
   ['terms-refused', 409, 'TERMS_REFUSED'],
   ['receipt-mismatch', 422, 'RECEIPT_MISMATCH'],
+  ['settlement-busy', 409, 'SETTLEMENT_BUSY'],
 ] as const;
 
 describe('PUT /api/document-registry/issuance-assignments', () => {

@@ -349,7 +349,10 @@
       "title": "Cancel assignment",
       "description": "The assignment closes and is recorded in the property history. If the professional was already notified, let them know too.",
       "confirm": "Cancel assignment",
-      "keep": "Back"
+      "keep": "Back",
+      "moneySettle": "Advance: {refund} goes back to the owner · the engineer keeps {retained}. The approved cancellation policy sets the amounts; the payment provider moves the money automatically.",
+      "moneyResolved": "Advance: the dispute decision applies — {refund} to the owner · {retained} to the engineer.",
+      "moneyFrozen": "Advance: the site visit is disputed. The money stays held until you decide the dispute."
     },
     "error": {
       "failed": "The assignment was not saved. Please try again.",
@@ -366,7 +369,8 @@
       "coOwnerUnknown": "One of the selected co-owners can no longer be informed. Reopen the dialog.",
       "linksUnavailable": "Links are unavailable right now — nothing was sent.",
       "termsRefused": "The quote was not accepted: check amount, VAT, validity and scope — or the quote changed in the meantime.",
-      "receiptMismatch": "The receipt does not match the approved price (or the MARK is not 15 digits). If the price changed, record a revision first."
+      "receiptMismatch": "The receipt does not match the approved price (or the MARK is not 15 digits). If the price changed, record a revision first.",
+      "settlementBusy": "The advance money is moving right now — nothing was saved. Please try again in a minute."
     },
     "send": {
       "ownerTrigger": "Send for approval",
@@ -649,6 +653,23 @@
           "UNAVAILABLE": "The link was not created. Please try again shortly.",
           "generic": "The link was not sent. Please try again."
         }
+      },
+      "dispute": {
+        "trigger": "Decide the dispute",
+        "title": "Decide the advance dispute",
+        "description": "The decision is final and the payment provider carries it out at once. It overrides the cancellation policy.",
+        "objection": "The objection: “{reason}”",
+        "held": "Held: {amount}",
+        "legend": "What happens to the money",
+        "releaseAll": "All to the engineer",
+        "refundAll": "All back to the owner",
+        "split": "Split",
+        "splitLabel": "Amount to the engineer (€)",
+        "splitHint": "From 0.01 up to less than {amount}; the rest goes back to the owner.",
+        "summary": "To the engineer {release} · back to the owner {refund}",
+        "reasonLabel": "Reason (the office sees it; the engineer and the owner see only the amounts)",
+        "submit": "Final decision",
+        "decided": "Decided: {release} to the engineer · {refund} to the owner"
       },
       "legend": "Advance payment",
       "request": "I ask for an advance payment before I start",

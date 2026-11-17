@@ -165,6 +165,10 @@ export const CANCEL_KEYS = {
   description: `${K}issuance.cancelDialog.description`,
   confirm: `${K}issuance.cancelDialog.confirm`,
   keep: `${K}issuance.cancelDialog.keep`,
+  /** ADR-943 Φ5γ (Ζ-4) — τι γίνεται με τα κρατημένα χρήματα, **πριν** την επιβεβαίωση. */
+  moneySettle: `${K}issuance.cancelDialog.moneySettle`,
+  moneyResolved: `${K}issuance.cancelDialog.moneyResolved`,
+  moneyFrozen: `${K}issuance.cancelDialog.moneyFrozen`,
 } as const;
 
 /**
@@ -174,6 +178,7 @@ export const CANCEL_KEYS = {
 export const ISSUANCE_REFUSAL_CODES = [
   'NOT_FOUND', 'ASSIGNMENTS_UNAVAILABLE', 'CONTACT_UNAVAILABLE', 'UNQUALIFIED',
   'LEAD_UNDESIGNATED', 'LEAD_CHANGED', 'STALE', 'TRANSITION_REFUSED', 'ACTOR_REFUSED', 'TERMS_REFUSED', 'RECEIPT_MISMATCH',
+  'SETTLEMENT_BUSY',
 ] as const;
 export type IssuanceRefusalCode = (typeof ISSUANCE_REFUSAL_CODES)[number];
 
@@ -190,6 +195,7 @@ export const ISSUANCE_ERROR_KEYS: Readonly<Record<IssuanceRefusalCode | 'failed'
   ACTOR_REFUSED: `${K}issuance.error.actorRefused`,
   TERMS_REFUSED: `${K}issuance.error.termsRefused`,
   RECEIPT_MISMATCH: `${K}issuance.error.receiptMismatch`,
+  SETTLEMENT_BUSY: `${K}issuance.error.settlementBusy`,
 };
 
 /**
@@ -316,6 +322,25 @@ export const ISSUANCE_ADVANCE_LINK_KEYS = {
   sending: `${K}issuance.advance.ownerLink.sending`,
   sent: `${K}issuance.advance.ownerLink.sent`,
   sentUndelivered: `${K}issuance.advance.ownerLink.sentUndelivered`,
+} as const;
+
+/** ADR-943 Φ5γ (Θ-5) — η απόφαση του γραφείου στη διαφορά της προκαταβολής. */
+export const ISSUANCE_ADVANCE_DISPUTE_KEYS = {
+  trigger: `${K}issuance.advance.dispute.trigger`,
+  title: `${K}issuance.advance.dispute.title`,
+  description: `${K}issuance.advance.dispute.description`,
+  objection: `${K}issuance.advance.dispute.objection`,
+  held: `${K}issuance.advance.dispute.held`,
+  legend: `${K}issuance.advance.dispute.legend`,
+  releaseAll: `${K}issuance.advance.dispute.releaseAll`,
+  refundAll: `${K}issuance.advance.dispute.refundAll`,
+  split: `${K}issuance.advance.dispute.split`,
+  splitLabel: `${K}issuance.advance.dispute.splitLabel`,
+  splitHint: `${K}issuance.advance.dispute.splitHint`,
+  summary: `${K}issuance.advance.dispute.summary`,
+  reasonLabel: `${K}issuance.advance.dispute.reasonLabel`,
+  submit: `${K}issuance.advance.dispute.submit`,
+  decided: `${K}issuance.advance.dispute.decided`,
 } as const;
 
 /** Οι αρνήσεις της πόρτας (`ADVANCE_LINK_REFUSAL_STATUS`) — ο κωδικός είναι και το κλειδί· άγνωστος ⇒ `generic`. */

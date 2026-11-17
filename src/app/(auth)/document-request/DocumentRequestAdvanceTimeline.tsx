@@ -29,6 +29,8 @@ function entryText(t: Translate, entry: AdvanceTimelineEntry): string {
         : t('document-request:advance.timeline.objectedByOffice');
     case 'released': return t('document-request:advance.timeline.released', { amount: formatMinor(entry.amountMinor) });
     case 'refunded': return t('document-request:advance.timeline.refunded', { amount: formatMinor(entry.amountMinor) });
+    case 'dispute-resolved':
+      return t('document-request:advance.timeline.disputeResolved', { refund: formatMinor(entry.refundMinor), release: formatMinor(entry.releaseMinor) });
   }
 }
 

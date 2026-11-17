@@ -1104,6 +1104,11 @@
     "releasedBody": "The payment provider released the advance of {amount} to the engineer.",
     "objected": "Objection to the site visit: {title}",
     "objectedBody": "The site visit was disputed: “{reason}”. The advance of {amount} stays held and will not be released automatically — the office decides.",
-    "objectedEngineerBody": "The site visit was disputed. The advance of {amount} stays held until the office decides."
+    "objectedEngineerBody": "The site visit was disputed. The advance of {amount} stays held until the office decides.",
+    "refunded": "Advance refunded: {title}",
+    "refundedBody": "The payment provider refunded {amount} of the advance to the owner.",
+    "resolved": "Dispute decided: {title}",
+    "resolvedBody": "The office decided: {release} to the engineer, {refund} back to the owner. Reason: “{reason}”.",
+    "resolvedEngineerBody": "The office decided the dispute: {release} to you, {refund} back to the owner."
   }
 }

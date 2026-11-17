@@ -7,7 +7,8 @@
 
 import type { PayeeTransfer, MarketplaceCapability } from '../payment-marketplace';
 import type { PaymentProvider } from '../payment-provider';
-import { executeSettlement, scheduleSettlement, sweepDueSettlements } from '../payment-settlement';
+import { executeSettlement, sweepDueSettlements } from '../payment-settlement';
+import { scheduleSettlement } from '../payment-settlement-order';
 import { advanceCheckoutDoc, EMPTY_MARKETPLACE, fakeCheckoutDb, type Doc } from './checkout-fake-firestore.fixture';
 
 jest.mock('../payable-subject-registry', () => ({
@@ -151,5 +152,58 @@ describe('sweepDueSettlements — το cron', () => {
     await expect(sweepDueSettlements(db, () => provider, NOW_MS)).resolves.toEqual({
       considered: 1, settled: 1, voided: 0, waiting: 0, failed: 0, truncated: false,
     });
+  });
+});
+
+describe('ADR-943 Φ5γ — επιστροφή χωρίς μεταφορά (Θ-6) · η εντολή συγκλίνει στον τομέα (Θ-2)', () => {
+  const REFUND_ALL = { refundMinor: 4000, releaseMinor: 0, basis: 'refused-payment', dueAt: DUE } as const;
+  const CANCELLATION = { refundMinor: 2000, releaseMinor: 2000, basis: 'cancellation', dueAt: DUE } as const;
+
+  it('αρνημένη πληρωμή χωρίς μεταφορά ⇒ επιστροφή κατευθείαν, κανένας αντιλογισμός', async () => {
+    const { db, read } = fakeCheckoutDb(advanceCheckoutDoc({ ...EMPTY_MARKETPLACE, settlement: REFUND_ALL }));
+    const { provider, capability, calls } = marketplaceMock();
+    await expect(executeSettlement(db, provider, 'pchk_1', NOW_MS)).resolves.toBe('settled');
+    expect(calls).toEqual(['refund']);
+    expect(capability.readTransfer).not.toHaveBeenCalled();
+    expect(capability.reconcilePaymentRefund).toHaveBeenCalledWith({ paymentReference: 'pmt_1', refundedTotalMinor: 4000 });
+    expect(registry.recordPayableSettlement).toHaveBeenCalledWith(expect.objectContaining({ checkoutId: 'pchk_1' }), REFUND_ALL, provider, null);
+    expect((read()?.marketplace as Doc).settlement).toBeNull();
+  });
+
+  it('μεταφορά ΟΦΕΙΛΕΤΑΙ (`transferDue`) ⇒ περιμένει τη μεταφορά — ποτέ επιστροφή που θα άφηνε μεταφορά πάνω σε επιστραμμένα', async () => {
+    const { db, read } = fakeCheckoutDb(advanceCheckoutDoc({ ...EMPTY_MARKETPLACE, transferDue: true, settlement: REFUND_ALL }));
+    const { provider, calls } = marketplaceMock();
+    await expect(executeSettlement(db, provider, 'pchk_1', NOW_MS)).resolves.toBe('awaiting-transfer');
+    expect(calls).toEqual([]);
+    expect((read()?.marketplace as Doc).settlement).toEqual(REFUND_ALL);
+  });
+
+  it('ο τομέας ζητά άλλη εντολή που οφείλεται ήδη ⇒ ξαναγράφεται και εκτελείται στο ΙΔΙΟ κάλεσμα', async () => {
+    registry.judgePayableSettlement.mockResolvedValueOnce({ reschedule: CANCELLATION }).mockResolvedValueOnce('proceed');
+    const { db, read } = fakeCheckoutDb(advanceCheckoutDoc({ ...HELD, settlement: RELEASE_ALL }));
+    const { provider, calls } = marketplaceMock();
+    await expect(executeSettlement(db, provider, 'pchk_1', NOW_MS)).resolves.toBe('settled');
+    expect(calls).toEqual(['reversal', 'refund', 'release']);
+    expect(registry.recordPayableSettlement).toHaveBeenCalledWith(expect.objectContaining({ checkoutId: 'pchk_1' }), CANCELLATION, provider, 'trn_1');
+    expect((read()?.marketplace as Doc).settlement).toBeNull();
+  });
+
+  it('νέα εντολή του μέλλοντος ⇒ rescheduled: γραμμένη, καμία κίνηση', async () => {
+    const later = { ...CANCELLATION, dueAt: '2026-11-20T09:00:00.000Z' };
+    registry.judgePayableSettlement.mockResolvedValueOnce({ reschedule: later });
+    const { db, read } = fakeCheckoutDb(advanceCheckoutDoc({ ...HELD, settlement: RELEASE_ALL }));
+    const { provider, calls } = marketplaceMock();
+    await expect(executeSettlement(db, provider, 'pchk_1', NOW_MS)).resolves.toBe('rescheduled');
+    expect(calls).toEqual([]);
+    expect(read()?.marketplace).toEqual({ ...HELD, settlement: later, lease: null });
+  });
+
+  it('νέα εντολή που δεν καλύπτει τη συνεδρία ⇒ held: η παλιά μένει, καμία κίνηση', async () => {
+    registry.judgePayableSettlement.mockResolvedValueOnce({ reschedule: { ...CANCELLATION, releaseMinor: 1000 } });
+    const { db, read } = fakeCheckoutDb(advanceCheckoutDoc({ ...HELD, settlement: RELEASE_ALL }));
+    const { provider, calls } = marketplaceMock();
+    await expect(executeSettlement(db, provider, 'pchk_1', NOW_MS)).resolves.toBe('held');
+    expect(calls).toEqual([]);
+    expect(read()?.marketplace).toEqual({ ...HELD, settlement: RELEASE_ALL, lease: null });
   });
 });

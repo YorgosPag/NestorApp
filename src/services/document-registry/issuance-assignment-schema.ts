@@ -115,6 +115,11 @@ const advanceEventsSchema = z.array(z.discriminatedUnion('kind', [
       z.object({ by: z.literal('owner-link'), invitationId: nonEmpty }),
     ]),
   }),
+  // ADR-943 Φ5γ (Θ-5) — η απόφαση του γραφείου στη διαφορά (σύνολα πάνω στο εισπραχθέν).
+  z.object({
+    kind: z.literal('dispute-resolved'), releaseMinor: minor, refundMinor: minor,
+    reason: z.string().min(1).max(ADVANCE_POLICY.resolutionReasonMax), at: nonEmpty, byUid: nonEmpty,
+  }),
   z.object({ kind: z.literal('released'), amountMinor: minor, transferReference: nonEmpty, basis: z.enum(ADVANCE_RELEASE_BASES), at: nonEmpty }),
   z.object({ kind: z.literal('refunded'), amountMinor: minor, reference: nonEmpty, at: nonEmpty }),
 ])).max(ADVANCE_POLICY.maxEvents).default([]);

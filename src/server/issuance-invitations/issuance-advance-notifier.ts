@@ -55,11 +55,11 @@ async function send(input: Parameters<typeof dispatchNotification>[0]): Promise<
 }
 
 /** Ένα ορόσημο των χρημάτων — το γεγονός που το γέννησε (η ταυτότητα της ειδοποίησης και τα ποσά βγαίνουν από αυτό). */
-export type AdvanceMilestone = Extract<AdvanceEvent, { kind: 'funded' | 'work-started' | 'start-objected' | 'released' }>;
+export type AdvanceMilestone = Extract<AdvanceEvent, { kind: 'funded' | 'work-started' | 'start-objected' | 'released' | 'refunded' | 'dispute-resolved' }>;
 
 interface MilestoneNotice {
   readonly eventType: Parameters<typeof dispatchNotification>[0]['eventType'];
-  readonly key: 'funded' | 'workStarted' | 'objected' | 'released';
+  readonly key: 'funded' | 'workStarted' | 'objected' | 'released' | 'refunded' | 'resolved';
   /** Η ταυτότητα του ορόσημου — μία ειδοποίηση ανά ορόσημο και αποδέκτη, όσες φορές κι αν ξανατρέξει ο καλών. */
   readonly identity: string;
   readonly bodyParams: Readonly<Record<string, string>>;
@@ -92,7 +92,19 @@ function noticeOf(milestone: AdvanceMilestone, fundedMinor: number): MilestoneNo
       };
     case 'released':
       return { eventType: types.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_RELEASED, key: 'released', identity: milestone.transferReference, bodyParams: amount(milestone.amountMinor), toEngineer: true, engineerBody: null };
+    case 'refunded':
+      return { eventType: types.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_REFUNDED, key: 'refunded', identity: milestone.reference, bodyParams: amount(milestone.amountMinor), toEngineer: true, engineerBody: null };
+    case 'dispute-resolved': return resolvedNoticeOf(milestone);
   }
+}
+
+/** Θ-5 — η απόφαση: γραφείο **με** την αιτιολογία, μηχανικός **χωρίς** (Ε-9′). */
+function resolvedNoticeOf(milestone: Extract<AdvanceMilestone, { kind: 'dispute-resolved' }>): MilestoneNotice {
+  const split = { release: formatMinorIn(milestone.releaseMinor, 'el'), refund: formatMinorIn(milestone.refundMinor, 'el') };
+  return {
+    eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_DISPUTE_RESOLVED, key: 'resolved', identity: `resolved:${milestone.at}`,
+    toEngineer: true, bodyParams: { ...split, reason: milestone.reason }, engineerBody: { key: 'resolvedEngineerBody', params: split },
+  };
 }
 
 function fundedMinorOf(record: IssuanceAssignmentRecord): number {

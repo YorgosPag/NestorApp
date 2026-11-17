@@ -16,11 +16,15 @@ import 'server-only';
  *      γράφτηκε στην αυτοψία ακυρώνεται αν στο μεταξύ ήρθε αντίρρηση — η εντολή είναι πρόθεση, ο τομέας η αλήθεια.
  *   🔑 **Η αλήθεια καταγράφεται από τον πάροχο**: η αποδέσμευση με την αναφορά της μεταφοράς· η επιστροφή από τον ΙΔΙΟ
  *      συγχρονισμό που διαβάζει τις επιστροφές στο API (Κ-8).
+ *   🔑 Φ5γ (Θ-2) — **η εντολή συγκλίνει στον τομέα**: κρίση `reschedule` ⇒ η εντολή ξαναγράφεται υπό την ίδια μίσθωση και
+ *      (αν οφείλεται ήδη) εκτελείται στο ίδιο κάλεσμα.
+ *   🔑 Φ5γ (Θ-6) — **επιστροφή χωρίς μεταφορά**: χρήματα που ο τομέας δεν δέχτηκε δεν απέκτησαν ποτέ μεταφορά· επιστρέφονται
+ *      ολόκληρα κατευθείαν, **μόνο** αν καμία μεταφορά δεν είναι καν οφειλόμενη (`transferDue`) — αλλιώς περιμένουμε τη
+ *      μεταφορά και ακολουθούμε τη σειρά αντιλογισμός → επιστροφή.
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generatePaymentTransferLeaseHolderId } from '@/services/enterprise-id.service';
@@ -28,8 +32,8 @@ import { generatePaymentTransferLeaseHolderId } from '@/services/enterprise-id.s
 import { judgePayableSettlement, recordPayableSettlement } from './payable-subject-registry';
 import { claimCheckoutLease, releaseCheckoutLease } from './payment-checkout-lease';
 import {
-  checkoutRecordOf,
   listCheckoutsWithDueSettlement,
+  type CheckoutMarketplace,
   type CheckoutSettlementOrder,
   type PaymentCheckoutRecord,
 } from './payment-checkout-store';
@@ -38,41 +42,6 @@ import type { PaymentProvider } from './payment-provider';
 
 const logger = createModuleLogger('PaymentSettlement');
 
-export type ScheduleOutcome =
-  /** Η εντολή γράφτηκε (νέα ή αντικατάσταση της προηγούμενης). */
-  | 'scheduled'
-  /** Η ίδια εντολή υπήρχε ήδη. */
-  | 'unchanged'
-  /** Κίνηση σε εξέλιξη (ζωντανή μίσθωση) — ο καλών ξαναδοκιμάζει. */
-  | 'busy'
-  /** Δεν υπάρχει / δεν είναι marketplace / τα ποσά δεν καλύπτουν ακριβώς τη συνεδρία. */
-  | 'refused';
-
-function sameOrder(a: CheckoutSettlementOrder, b: CheckoutSettlementOrder): boolean {
-  return a.refundMinor === b.refundMinor && a.releaseMinor === b.releaseMinor && a.basis === b.basis && a.dueAt === b.dueAt;
-}
-
-/**
- * **Γράφει την εντολή** διακανονισμού, πριν από κάθε κίνηση. Ιδεμποτικό. Τα ποσά πρέπει να καλύπτουν **ακριβώς** τη
- * συνεδρία (ό,τι δεν επιστρέφεται, αποδεσμεύεται — κανένα χρήμα «στη μέση»).
- */
-export function scheduleSettlement(
-  db: Firestore, checkoutId: string, order: CheckoutSettlementOrder, nowMs: number,
-): Promise<ScheduleOutcome> {
-  const ref = db.collection(COLLECTIONS.ACCOUNTING_PAYMENT_CHECKOUTS).doc(checkoutId);
-  return db.runTransaction(async (tx): Promise<ScheduleOutcome> => {
-    const snap = await tx.get(ref);
-    const checkout = snap.exists ? checkoutRecordOf(snap.id, snap.data()) : null;
-    const marketplace = checkout?.marketplace ?? null;
-    if (checkout === null || marketplace === null) return 'refused';
-    if (order.refundMinor + order.releaseMinor !== checkout.amountMinor) return 'refused';
-    if (marketplace.settlement !== null && sameOrder(marketplace.settlement, order)) return 'unchanged';
-    if (marketplace.lease !== null && Date.parse(marketplace.lease.until) > nowMs) return 'busy';
-    tx.update(ref, { 'marketplace.settlement': order, updatedAt: new Date(nowMs).toISOString() });
-    return 'scheduled';
-  });
-}
-
 export type SettlementOutcome =
   /** Τα χρήματα κινήθηκαν όπως λέει η εντολή· η εντολή έσβησε. */
   | 'settled'
@@ -80,23 +49,37 @@ export type SettlementOutcome =
   | 'voided'
   /** Ο τομέας δεν μπορεί να κριθεί τώρα (π.χ. η ανάθεση δεν βρέθηκε) — η εντολή μένει, θέλει άνθρωπο. */
   | 'held'
+  /** Φ5γ — ο τομέας ζήτησε άλλη εντολή· γράφτηκε, και δεν οφείλεται ακόμη (ή περιμένει μεταφορά). */
+  | 'rescheduled'
   /** Δεν υπάρχει εντολή · δεν ήρθε η ώρα της · η μεταφορά δεν έγινε ακόμη · άλλος κρατά τη μίσθωση · όχι marketplace. */
   | 'nothing' | 'not-due' | 'awaiting-transfer' | 'busy' | 'not-applicable';
 
 type Declined = 'nothing' | 'not-due' | 'awaiting-transfer';
 
+/** Θ-6 — επιστροφή χωρίς μεταφορά: τίποτα δεν αποδεσμεύεται και καμία μεταφορά δεν δημιουργήθηκε ούτε οφείλεται. */
+function isRefundWithoutTransfer(marketplace: CheckoutMarketplace, order: CheckoutSettlementOrder): boolean {
+  return marketplace.transferReference === null && !marketplace.transferDue && order.releaseMinor === 0;
+}
+
 function readinessOf(checkout: PaymentCheckoutRecord, nowMs: number): Declined | null {
   const marketplace = checkout.marketplace;
   if (marketplace === null || marketplace.settlement === null) return 'nothing';
   if (Date.parse(marketplace.settlement.dueAt) > nowMs) return 'not-due';
-  return marketplace.transferReference === null || checkout.paymentReference === null ? 'awaiting-transfer' : null;
+  if (checkout.paymentReference === null) return 'awaiting-transfer';
+  const ready = marketplace.transferReference !== null || isRefundWithoutTransfer(marketplace, marketplace.settlement);
+  return ready ? null : 'awaiting-transfer';
 }
 
 /** Οι κινήσεις στον πάροχο — δηλωτικές, με τη σειρά της κεφαλίδας. Σφάλμα ⇒ ρίχνει (η εντολή μένει). */
 async function moveMoney(
   marketplace: MarketplaceCapability, checkout: PaymentCheckoutRecord, order: CheckoutSettlementOrder,
-  transferReference: string, paymentReference: string,
+  transferReference: string | null, paymentReference: string,
 ): Promise<void> {
+  if (transferReference === null) {
+    // Θ-6 — καμία μεταφορά δεν υπάρχει ούτε οφείλεται: η πληρωμή είναι ανεκκαθάριστη, επιστρέφεται κατευθείαν.
+    await marketplace.reconcilePaymentRefund({ paymentReference, refundedTotalMinor: order.refundMinor });
+    return;
+  }
   const transfer = await marketplace.readTransfer(transferReference);
   if (transfer.amountMinor !== checkout.amountMinor) throw new Error('Transfer amount differs from the checkout — needs a human');
   if (order.refundMinor > 0) {
@@ -111,12 +94,13 @@ async function moveMoney(
 async function settleUnderLease(db: Firestore, provider: PaymentProvider, marketplace: MarketplaceCapability, checkout: PaymentCheckoutRecord, holder: string, nowMs: number): Promise<SettlementOutcome> {
   const order = checkout.marketplace?.settlement ?? null;
   const transferReference = checkout.marketplace?.transferReference ?? null;
-  if (order === null || transferReference === null || checkout.paymentReference === null) throw new Error('claimed settlement without order');
+  if (order === null || checkout.paymentReference === null) throw new Error('claimed settlement without order');
   const judgement = await judgePayableSettlement(checkout, order, new Date(nowMs));
   if (judgement === 'hold') {
     await releaseCheckoutLease(db, checkout.checkoutId, holder, nowISO());
     return 'held';
   }
+  if (typeof judgement === 'object') return rescheduleUnderLease(db, checkout, holder, judgement.reschedule);
   if (judgement === 'proceed') {
     await moveMoney(marketplace, checkout, order, transferReference, checkout.paymentReference);
     await recordPayableSettlement(checkout, order, provider, transferReference);
@@ -126,11 +110,31 @@ async function settleUnderLease(db: Firestore, provider: PaymentProvider, market
   return judgement === 'proceed' ? 'settled' : 'voided';
 }
 
+/** Θ-2 — η εντολή ξαναγράφεται με ό,τι λέει ο τομέας (πάντα να καλύπτει ακριβώς τη συνεδρία), και η μίσθωση φεύγει. */
+async function rescheduleUnderLease(db: Firestore, checkout: PaymentCheckoutRecord, holder: string, next: CheckoutSettlementOrder): Promise<SettlementOutcome> {
+  if (next.refundMinor + next.releaseMinor !== checkout.amountMinor) {
+    logger.error('Domain asked for a settlement that does not cover the checkout — needs a human', { checkoutId: checkout.checkoutId, basis: next.basis });
+    await releaseCheckoutLease(db, checkout.checkoutId, holder, nowISO());
+    return 'held';
+  }
+  await releaseCheckoutLease(db, checkout.checkoutId, holder, nowISO(), { 'marketplace.settlement': next });
+  logger.info('Settlement rescheduled by the domain', { checkoutId: checkout.checkoutId, basis: next.basis, dueAt: next.dueAt });
+  return 'rescheduled';
+}
+
 /**
  * **Εκτελεί την εντολή** διακανονισμού της συνεδρίας, αν οφείλεται. Ιδεμποτικό, ασφαλές σε ταυτόχρονους καλούντες.
- * Σφάλμα παρόχου/βάσης ⇒ ρίχνει· η εντολή μένει γραμμένη και το cron ξαναδοκιμάζει.
+ * Σφάλμα παρόχου/βάσης ⇒ ρίχνει· η εντολή μένει γραμμένη και το cron ξαναδοκιμάζει. Εντολή που ο τομέας ξαναέγραψε (Θ-2)
+ * εκτελείται στο ίδιο κάλεσμα αν οφείλεται ήδη — **μία** φορά (καμία ανακύκλωση).
  */
 export async function executeSettlement(db: Firestore, provider: PaymentProvider, checkoutId: string, nowMs: number): Promise<SettlementOutcome> {
+  const outcome = await executeSettlementOnce(db, provider, checkoutId, nowMs);
+  if (outcome !== 'rescheduled') return outcome;
+  const again = await executeSettlementOnce(db, provider, checkoutId, nowMs);
+  return again === 'not-due' || again === 'awaiting-transfer' ? 'rescheduled' : again;
+}
+
+async function executeSettlementOnce(db: Firestore, provider: PaymentProvider, checkoutId: string, nowMs: number): Promise<SettlementOutcome> {
   const marketplace = provider.marketplace;
   if (marketplace === null) return 'not-applicable';
   const holder = generatePaymentTransferLeaseHolderId();

@@ -2,7 +2,8 @@ import 'server-only';
 
 /**
  * @fileoverview ADR-943 Φ5β (Ζ-1 · Ζ-2) — **ο ΕΝΑΣ εκδότης συνδέσμου προκαταβολής**: νέος σύνδεσμος σε **κάθε** email προς
- *   τον ιδιοκτήτη της απόφασης («έγινε η αυτοψία» · «αίτημα πληρωμής»), δεμένος στην απόφαση, με τον κωδικό του φακέλου.
+ *   τον ιδιοκτήτη της απόφασης («έγινε η αυτοψία» · «αίτημα πληρωμής» · Φ5γ «επιστροφή»), δεμένος στην απόφαση, με τον
+ *   κωδικό του φακέλου.
  * @related issuance-invitation-kind.ts (σκοπός `advance`) · issuance-advance-payer.ts (ποιος τον εξαργυρώνει) ·
  *   services/email-templates/issuance-invitation-email.ts (είδος `advance-link`)
  * @module server/issuance-invitations/issuance-advance-link
@@ -17,6 +18,7 @@ import 'server-only';
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 import { advanceCollectedMinor, advanceSettledAtOf, advanceStateOf, ADVANCE_POLICY } from '@/lib/document-validity/issuance-advance';
+import { advanceSettlementDueOf } from '@/lib/document-validity/issuance-advance-settlement';
 import type { IssuanceAssignmentRecord, IssuanceDecision } from '@/lib/document-validity/issuance-assignment';
 import { documentRequestLocation } from '@/lib/document-validity/document-request-link';
 import { publicUrl } from '@/lib/http/public-origin';
@@ -65,9 +67,13 @@ function approvedDecisionOf(record: IssuanceAssignmentRecord): IssuanceDecision 
   return decision !== null && decision.outcome === 'approved' ? decision : null;
 }
 
-/** Το ποσό που λέει το email: ό,τι περιμένει πληρωμή, αλλιώς ό,τι κρατείται (`advanceCollectedMinor`). */
-function emailAmountMinorOf(record: IssuanceAssignmentRecord): MinorAmount {
+/**
+ * Το ποσό που λέει το email: ό,τι περιμένει πληρωμή, αλλιώς ό,τι κρατείται (`advanceCollectedMinor`)· Φ5γ — στη στιγμή
+ * `settlement`, ό,τι επιστρέφεται **συνολικά** (η ΙΔΙΑ κρίση με την εντολή χρημάτων, `advanceSettlementDueOf`).
+ */
+function emailAmountMinorOf(record: IssuanceAssignmentRecord, moment: AdvanceLinkMoment): MinorAmount {
   const state = advanceStateOf(record);
+  if (moment === 'settlement') return advanceSettlementDueOf(record)?.refundMinor ?? 0;
   return state.kind === 'awaiting-payment' ? state.amountMinor : advanceCollectedMinor(state);
 }
 
@@ -133,8 +139,8 @@ async function deliver(db: Firestore, request: AdvanceLinkRequest, minted: Minte
   return deliverInvitationEmail({
     invitationId: invitation.id, kind: 'document-issuance-advance-link', inviteeEmail: invitation.inviteeEmail, inviterUid: invitation.invitedByUid,
     compose: async (language) => (link === null ? null : buildIssuanceEmail({
-      kind: 'advance-link', language, facts, moment: request.moment, amount: formatMinorIn(emailAmountMinorOf(request.record), language ?? 'el'),
-      releaseAt: state.kind === 'release-pending' ? state.objectionUntil : null, expiresAt: invitation.expiresAt, link, accessCode,
+      kind: 'advance-link', language, facts, moment: request.moment, amount: formatMinorIn(emailAmountMinorOf(request.record, request.moment), language ?? 'el'),
+      releaseAt: state.kind === 'release-pending' && request.moment !== 'settlement' ? state.objectionUntil : null, expiresAt: invitation.expiresAt, link, accessCode,
     })),
   });
 }

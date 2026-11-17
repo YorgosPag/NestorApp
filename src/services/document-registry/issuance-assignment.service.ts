@@ -26,6 +26,7 @@ import { engageApprovedProfessional } from '@/server/issuance-invitations/issuan
 import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import { readOwnedContactDocs } from '@/server/lib/owned-contact-docs';
 import { readDocumentRegistry } from './document-registry.service';
+import { announceOfficeMoneyAction, orderMoneyBeforeOfficeAction, settleAfterOfficeAction } from './issuance-advance-office-money.server';
 import type { DocumentRegistryResponse } from './document-registry.types';
 import { issuanceAssignmentIdOf } from './issuance-assignment-schema';
 import { writeIssuanceAction, type IssuanceWriteOutcome } from './issuance-assignments.server';
@@ -43,9 +44,10 @@ export interface IssuanceRequester {
  * - `contact-unavailable` — ο επαγγελματίας (ή ο υπεύθυνος αυτοψίας, §45.15) δεν είναι επαφή του γραφείου
  * - `lead-undesignated` · `lead-changed` — η απόφαση δεν έχει (πια) τον ίδιο υπεύθυνο
  * - `stale` · `transition-refused` · `unqualified` · `actor-refused` — από τον γραφέα / τον μειωτή
+ * - `settlement-busy`     — ADR-943 Φ5γ: κρατημένα χρήματα κινούνται αυτή τη στιγμή· τίποτα δεν γράφτηκε, ξαναδοκιμάστε
  */
 export type IssuanceRefusal =
-  | 'absent' | 'unavailable' | 'contact-unavailable' | 'lead-undesignated' | 'lead-changed'
+  | 'absent' | 'unavailable' | 'contact-unavailable' | 'lead-undesignated' | 'lead-changed' | 'settlement-busy'
   | Extract<IssuanceWriteOutcome, { ok: false }>['refusal'];
 
 export type IssuanceResult = Extract<IssuanceWriteOutcome, { ok: true }> | { readonly ok: false; readonly refusal: IssuanceRefusal };
@@ -104,6 +106,9 @@ export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequ
   if (leadRefusal !== null) return leadRefusal;
   const names = await namesFor(db, actor, body, registry);
   if (names === null) return refused('contact-unavailable');
+  // ADR-943 Φ5γ (Θ-3) — ακύρωση / απόφαση διαφοράς: πρώτα η εντολή χρημάτων της εγγραφής όπως θα είναι, μετά το γεγονός.
+  const money = await orderMoneyBeforeOfficeAction(db, { companyId: actor.companyId, uid: actor.uid, body, latestIssuedOn: issuance.latestIssuedOn, now });
+  if (money?.kind === 'busy') return refused('settlement-busy');
   const result = await writeIssuanceAction(db, {
     companyId: actor.companyId,
     writer: { kind: 'office', uid: actor.uid, name: actor.name, expectedStage: body.expectedStage },
@@ -115,6 +120,11 @@ export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequ
     nowIso: now.toISOString(),
   });
   await engageOnRecordedApproval(db, actor, body, result, now);
+  if (result.ok && result.outcome === 'changed' && money !== null) {
+    // Πρώτα τα λόγια (πάνω στην εγγραφή της πράξης — ό,τι θα κινηθεί), μετά τα χρήματα.
+    await announceOfficeMoneyAction(db, { companyId: actor.companyId, body, record: result.record, registry, uid: actor.uid, now });
+    await settleAfterOfficeAction(db, money, now);
+  }
   if (result.ok && result.outcome === 'changed') {
     // §45.20 Φ6γ — νέα ημερομηνία ή απόρριψη που απάντησε σε αίτημα του μηχανικού ⇒ ο μηχανικός μαθαίνει (ποτέ δεν πετά).
     await announceDeliveryChange(db, {
