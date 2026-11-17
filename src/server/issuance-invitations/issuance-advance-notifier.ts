@@ -1,8 +1,9 @@
 import 'server-only';
 
 /**
- * @fileoverview ADR-943 §5.9 — **οι ειδοποιήσεις της προκαταβολής**: «η προκαταβολή κατατέθηκε — μπορείτε να ξεκινήσετε»
- *   (μηχανικός στον χώρο του + γραφείο) και «ο ιδιοκτήτης θέλει να πληρώσει — ενεργοποιήστε τη λήψη πληρωμών» (μηχανικός).
+ * @fileoverview ADR-943 §5.9 · Φ5α — **οι ειδοποιήσεις της προκαταβολής**: τα ορόσημα των χρημάτων («κατατέθηκε — μπορείτε
+ *   να ξεκινήσετε» · «έγινε η αυτοψία — αποδεσμεύεται στις …» · «αποδεσμεύτηκε») και «ο ιδιοκτήτης θέλει να πληρώσει —
+ *   ενεργοποιήστε τη λήψη πληρωμών» (μηχανικός).
  * @related issuance-delivery-change-notifier.ts (το ίδιο ιδίωμα) · issuance-active-engagement.ts (ο ΕΝΑΣ δρόμος προς τον μηχανικό)
  * @module server/issuance-invitations/issuance-advance-notifier
  *
@@ -17,8 +18,9 @@ import { createBundleTranslate } from '@/i18n/bundle-translate';
 import elShared from '@/i18n/locales/el/common-shared.json';
 import { documentExpiryHref } from '@/lib/document-validity/document-registry-view';
 import { issuanceKeyOf, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
-import { advanceStateOf } from '@/lib/document-validity/issuance-advance';
+import { objectionUntilOf, type AdvanceEvent } from '@/lib/document-validity/issuance-advance';
 import { formatMinorIn } from '@/lib/money/money';
+import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import { viewDestination } from '@/lib/notifications/notification-destination';
 import { PRIVATE_PROFILE_ROUTE } from '@/lib/routes/accountRoutes';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -52,41 +54,66 @@ async function send(input: Parameters<typeof dispatchNotification>[0]): Promise<
   }
 }
 
-/** Το ποσό που **εισπράχθηκε** (από τα γεγονότα, η μία κρίση) — ποτέ το εγκεκριμένο. */
-function fundedAmountOf(record: IssuanceAssignmentRecord): string {
-  const state = advanceStateOf(record);
-  return state.kind === 'held' ? formatMinorIn(state.fundedMinor, 'el') : '';
+/** Ένα ορόσημο των χρημάτων — το γεγονός που το γέννησε (η ταυτότητα της ειδοποίησης και τα ποσά βγαίνουν από αυτό). */
+export type AdvanceMilestone = Extract<AdvanceEvent, { kind: 'funded' | 'work-started' | 'released' }>;
+
+interface MilestoneNotice {
+  readonly eventType: Parameters<typeof dispatchNotification>[0]['eventType'];
+  readonly key: 'funded' | 'workStarted' | 'released';
+  /** Η ταυτότητα του ορόσημου — μία ειδοποίηση ανά ορόσημο και αποδέκτη, όσες φορές κι αν ξανατρέξει ο καλών. */
+  readonly identity: string;
+  readonly bodyParams: Readonly<Record<string, string>>;
+  /** Ο μηχανικός μαθαίνει **ό,τι δεν έκανε ο ίδιος**· την αυτοψία τη δήλωσε εκείνος. */
+  readonly toEngineer: boolean;
+}
+
+/** Ορόσημο ⇒ ειδοποίηση. Το ποσό είναι **το ποσό του γεγονότος** — ποτέ το εγκεκριμένο. */
+function noticeOf(milestone: AdvanceMilestone, fundedMinor: number): MilestoneNotice {
+  const { PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_FUNDED: FUNDED, PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_WORK_STARTED: STARTED, PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_RELEASED: RELEASED } = NOTIFICATION_EVENT_TYPES;
+  switch (milestone.kind) {
+    case 'funded':
+      return { eventType: FUNDED, key: 'funded', identity: milestone.paymentReference, bodyParams: { amount: formatMinorIn(milestone.amountMinor, 'el') }, toEngineer: true };
+    case 'work-started':
+      return {
+        eventType: STARTED, key: 'workStarted', identity: `started:${milestone.at}`, toEngineer: false,
+        bodyParams: { amount: formatMinorIn(fundedMinor, 'el'), releaseAt: formatOperatorDateTime(objectionUntilOf(milestone.at), 'el') },
+      };
+    case 'released':
+      return { eventType: RELEASED, key: 'released', identity: milestone.transferReference, bodyParams: { amount: formatMinorIn(milestone.amountMinor, 'el') }, toEngineer: true };
+  }
+}
+
+function fundedMinorOf(record: IssuanceAssignmentRecord): number {
+  return record.advanceEvents.reduce((sum, event) => (event.kind === 'funded' ? sum + event.amountMinor : sum), 0);
 }
 
 /**
- * «Η προκαταβολή κατατέθηκε και κρατείται — μπορείτε να ξεκινήσετε» (Κ-4): στον μηχανικό, **μόνο** με ενεργή συμμετοχή,
- * και σε όποιον πρότεινε / έστειλε στο γραφείο. Μία ανά πληρωμή και αποδέκτη. Ποτέ δεν πετά.
+ * **Ένα ορόσημο των χρημάτων** (Κ-4): σε όποιον πρότεινε / έστειλε στο γραφείο, και στον μηχανικό — **μόνο** με ενεργή
+ * συμμετοχή, και μόνο για ό,τι δεν έκανε ο ίδιος. Μία ανά ορόσημο και αποδέκτη. Ποτέ δεν πετά.
  */
-export async function announceAdvanceFunded(
+export async function announceAdvanceMilestone(
   db: Firestore,
-  input: { readonly context: AdvanceNoticeContext; readonly record: IssuanceAssignmentRecord; readonly now: Date },
+  input: { readonly context: AdvanceNoticeContext; readonly record: IssuanceAssignmentRecord; readonly milestone: AdvanceMilestone; readonly now: Date },
 ): Promise<void> {
   try {
     const { context, record } = input;
     const { assignment } = context;
+    const notice = noticeOf(input.milestone, fundedMinorOf(record));
     const titleParams = { title: context.label.name ?? assignment.id };
-    const bodyParams = { amount: fundedAmountOf(record) };
-    const funded = record.advanceEvents.filter((event) => event.kind === 'funded').at(-1);
-    const eventKey = funded?.kind === 'funded' ? funded.paymentReference : input.now.toISOString();
     const content = (recipientId: string) => ({
-      eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_FUNDED,
+      eventType: notice.eventType,
       recipientId,
       tenantId: assignment.companyId,
-      title: noticeT('documentIssuanceAdvance.funded', titleParams),
-      titleKey: 'documentIssuanceAdvance.funded',
+      title: noticeT(`documentIssuanceAdvance.${notice.key}`, titleParams),
+      titleKey: `documentIssuanceAdvance.${notice.key}`,
       titleParams,
-      body: noticeT('documentIssuanceAdvance.fundedBody', bodyParams),
-      bodyKey: 'documentIssuanceAdvance.fundedBody',
-      bodyParams,
-      eventId: `document-issuance-advance-funded:${assignment.id}:${eventKey}:${recipientId}`,
+      body: noticeT(`documentIssuanceAdvance.${notice.key}Body`, notice.bodyParams),
+      bodyKey: `documentIssuanceAdvance.${notice.key}Body`,
+      bodyParams: notice.bodyParams,
+      eventId: `document-issuance-advance-${notice.key}:${assignment.id}:${notice.identity}:${recipientId}`,
       source: SOURCE(),
     });
-    const engagement = await activeIssuanceEngagementOf(db, assignment, context.registry, input.now.toISOString());
+    const engagement = notice.toEngineer ? await activeIssuanceEngagementOf(db, assignment, context.registry, input.now.toISOString()) : null;
     const office = viewDestination(documentExpiryHref(undefined, { doc: issuanceKeyOf(assignment.propertyId, assignment.documentKind) }), orgWorkspace(assignment.companyId));
     const officeUids = [...new Set([record.proposedByUid, ...(record.notice === null ? [] : [record.notice.byUid])])];
     await Promise.all([
@@ -94,8 +121,23 @@ export async function announceAdvanceFunded(
       ...(engagement === null ? [] : [caseEngagementChangedDestination(engagement).then((dest) => send({ ...content(engagement.uid), ...dest }))]),
     ]);
   } catch (error) {
-    logger.error('Η κατάθεση προκαταβολής δεν ανακοινώθηκε', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Το ορόσημο προκαταβολής δεν ανακοινώθηκε', { milestone: input.milestone.kind, error: error instanceof Error ? error.message : String(error) });
   }
+}
+
+/** Το τελευταίο γεγονός ενός είδους — το ορόσημο που μόλις γράφτηκε. */
+export function latestAdvanceMilestone<K extends AdvanceMilestone['kind']>(record: IssuanceAssignmentRecord, kind: K): Extract<AdvanceMilestone, { kind: K }> | null {
+  const found = [...record.advanceEvents].reverse().find((event): event is Extract<AdvanceMilestone, { kind: K }> => event.kind === kind);
+  return found ?? null;
+}
+
+/** «Η προκαταβολή κατατέθηκε και κρατείται — μπορείτε να ξεκινήσετε». */
+export async function announceAdvanceFunded(
+  db: Firestore,
+  input: { readonly context: AdvanceNoticeContext; readonly record: IssuanceAssignmentRecord; readonly now: Date },
+): Promise<void> {
+  const milestone = latestAdvanceMilestone(input.record, 'funded');
+  if (milestone !== null) await announceAdvanceMilestone(db, { ...input, milestone });
 }
 
 /**

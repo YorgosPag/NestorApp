@@ -225,6 +225,16 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_PAYEE_REQUIRED: 'properties.documentIssuanceAdvancePayeeRequired',
   /**
+   * ADR-943 Φ5α — **ο μηχανικός δήλωσε «έγινε η αυτοψία»**: η προκαταβολή αποδεσμεύεται στο τέλος του παραθύρου αντίρρησης
+   * (48ω). Στο γραφείο (ο ιδιοκτήτης μαθαίνει με email στη Φ5β). Προτίμηση: `documentIssuancePayments`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_WORK_STARTED: 'properties.documentIssuanceAdvanceWorkStarted',
+  /**
+   * ADR-943 Φ5α — **η προκαταβολή αποδεσμεύτηκε στον μηχανικό** (ο πάροχος βεβαίωσε): στον μηχανικό στον χώρο του και στο
+   * γραφείο. Προτίμηση: `documentIssuancePayments`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_RELEASED: 'properties.documentIssuanceAdvanceReleased',
+  /**
    * ADR-916 §5.15 Φ-Δ.2 (Ο7) — **ο αγοραστής απάντησε στην πρόσκληση παράδοσης** (αποδοχή · άρνηση). Προς όποιον την
    * έστειλε (αν είναι άνθρωπος) + τους διαχειριστές του χώρου· προσγείωση στην καρτέλα «Παράδοση». Το σώμα λέει την
    * **επόμενη κίνηση** από την ίδια κρίση με την καρτέλα. Προτίμηση: `handoverInvitationAnswers`.
@@ -615,6 +625,18 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'documentIssuancePayments',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_WORK_STARTED]: {
+    category: 'properties',
+    settingKey: 'documentIssuancePayments',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_RELEASED]: {
+    category: 'properties',
+    settingKey: 'documentIssuancePayments',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
   // ADR-916 Φ-Δ.2 — απάντηση αγοραστή στην πρόσκληση παράδοσης: ΠΛΗΡΟΦΟΡΙΑ· η άρνηση ανεβαίνει σε ΠΡΟΕΙΔΟΠΟΙΗΣΗ ανά αποστολή.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_HANDOVER_INVITATION_ANSWERED]: {

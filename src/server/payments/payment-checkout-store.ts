@@ -53,6 +53,32 @@ export interface CheckoutMarketplace {
    * ταυτόχρονα (webhook + cron + επιστροφή browser). Μόνο ο κάτοχος ζωντανής μίσθωσης μιλά στον πάροχο.
    */
   readonly lease: { readonly holder: string; readonly until: string } | null;
+  /**
+   * ADR-943 Φ5 (Ζ-6) — η **εντολή διακανονισμού** που οφείλεται: πόσα επιστρέφονται στον πληρωτή, πόσα αποδεσμεύονται
+   * στον δικαιούχο, γιατί, και από πότε. Γράφεται **πριν** από κάθε κίνηση χρημάτων και σβήνει μόνο όταν ολοκληρωθεί·
+   * τη βλέπει το cron (`listCheckoutsWithDueSettlement`). `null` ⇒ καμία εκκρεμής κίνηση.
+   */
+  readonly settlement: CheckoutSettlementOrder | null;
+}
+
+/**
+ * Γιατί κινούνται τα κρατημένα χρήματα — ο ίδιος λόγος γράφεται και στο γεγονός της αποδέσμευσης. Κάθε λόγος μπαίνει
+ * **μαζί** με τον παραγωγό του (απόφαση Giorgio Α1): Φ5α η αυτόματη αποδέσμευση· η ακύρωση, η απόφαση γραφείου σε διαφορά
+ * και η άρνηση είσπραξης στη Φ5β.
+ */
+export const SETTLEMENT_BASES = ['window-elapsed'] as const;
+
+export type SettlementBasis = (typeof SETTLEMENT_BASES)[number];
+
+/** Η εντολή διακανονισμού — **δηλωτική**: τελικά ποσά, ποτέ «κάνε άλλη μία επιστροφή». */
+export interface CheckoutSettlementOrder {
+  /** Συνολικά επιστραμμένα στον πληρωτή (λεπτά). */
+  readonly refundMinor: number;
+  /** Συνολικά αποδεσμευμένα στον δικαιούχο (λεπτά). Μαζί με το `refundMinor` = όλο το ποσό της συνεδρίας. */
+  readonly releaseMinor: number;
+  readonly basis: SettlementBasis;
+  /** Από πότε εκτελείται (ISO)· η αυτόματη αποδέσμευση = το τέλος του παραθύρου αντίρρησης. */
+  readonly dueAt: string;
 }
 
 export interface PaymentCheckoutRecord {
@@ -102,6 +128,21 @@ function leaseOf(data: unknown): CheckoutMarketplace['lease'] {
   return holder === null || until === null ? null : { holder, until };
 }
 
+function isNonNegativeMinor(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+/** Η εντολή διακανονισμού, ή `null` όταν λείπει· ⚠️ υπάρχει αλλά δεν διαβάζεται ⇒ `'unreadable'` (ποτέ «καμία εντολή»). */
+function settlementOrderOf(data: unknown): CheckoutSettlementOrder | null | 'unreadable' {
+  if (data === undefined || data === null) return null;
+  const raw = plainRecordOrNull(data);
+  const dueAt = trimmedStringOrNull(raw?.dueAt);
+  const { refundMinor, releaseMinor, basis } = raw ?? {};
+  if (dueAt === null || !isOneOf(SETTLEMENT_BASES, basis)) return 'unreadable';
+  if (!isNonNegativeMinor(refundMinor) || !isNonNegativeMinor(releaseMinor)) return 'unreadable';
+  return { refundMinor, releaseMinor, basis, dueAt };
+}
+
 /**
  * Η κράτηση marketplace, ή `null` όταν λείπει (τιμολόγιο). ⚠️ Υπάρχει αλλά δεν διαβάζεται ⇒ `'unreadable'`: η συνεδρία
  * είναι τότε **ανύπαρκτη** — ποτέ «χωρίς κράτηση», που θα έστελνε χρήματα τρίτου στον λογαριασμό εμπόρου.
@@ -113,7 +154,9 @@ function checkoutMarketplaceOf(data: unknown): CheckoutMarketplace | null | 'unr
   const transferReference = raw?.transferReference;
   if (payeeReference === null || typeof raw?.transferDue !== 'boolean') return 'unreadable';
   if (transferReference !== null && typeof transferReference !== 'string') return 'unreadable';
-  return { payeeReference, transferReference, transferDue: raw?.transferDue === true, lease: leaseOf(raw?.lease) };
+  const settlement = settlementOrderOf(raw?.settlement);
+  if (settlement === 'unreadable') return 'unreadable';
+  return { payeeReference, transferReference, transferDue: raw?.transferDue === true, lease: leaseOf(raw?.lease), settlement };
 }
 
 /** Έγγραφο ⇒ συνεδρία, ή `null` όταν λείπει κάποιο υποχρεωτικό πεδίο ή έχει άλλη μορφή (και άγνωστο είδος αντικειμένου). */
@@ -219,12 +262,16 @@ async function attemptScopeDocsOf(db: Firestore, subject: PayableSubject) {
       // σε έναν μισθωτή, και ο καλών έχει ήδη επαληθεύσει ότι ο σύνδεσμος είναι ενεργός (`findActiveShareOf`).
       return (await checkoutsOf(db).where('shareId', '==', subject.shareId).get()).docs;
     case 'issuance-advance':
-      // Δύο ισότητες ⇒ συγχώνευση μονο-πεδιακών δεικτών, κανένας σύνθετος. Ο μισθωτής ρητά (CHECK 3.10 · 3.35).
-      return (await checkoutsOf(db)
-        .where('companyId', '==', subject.companyId)
-        .where('assignmentId', '==', subject.assignmentId)
-        .get()).docs;
+      return advanceScopeDocsOf(db, subject.companyId, subject.assignmentId);
   }
+}
+
+/** Οι συνεδρίες προκαταβολής μιας ανάθεσης — δύο ισότητες ⇒ μονο-πεδιακοί δείκτες· ο μισθωτής ρητά (CHECK 3.10 · 3.35). */
+async function advanceScopeDocsOf(db: Firestore, companyId: string, assignmentId: string) {
+  return (await checkoutsOf(db)
+    .where('companyId', '==', companyId)
+    .where('assignmentId', '==', assignmentId)
+    .get()).docs;
 }
 
 /** Οι συνεδρίες marketplace των οποίων η μεταφορά **οφείλεται** — το δίχτυ ασφαλείας του cron (ADR-943 §5.9). */
@@ -232,6 +279,30 @@ export async function listCheckoutsAwaitingTransfer(db: Firestore, limit: number
   // tenant-scope-exempt: εργασία συστήματος (cron) πάνω σε ΚΑΘΕ μισθωτή εκ σχεδιασμού· ο μισθωτής κάθε συνεδρίας
   // διαβάζεται από το έγγραφό της. Μία ισότητα ⇒ αυτόματος δείκτης.
   return readableCheckoutsOf(await checkoutsOf(db).where('marketplace.transferDue', '==', true).limit(limit).get());
+}
+
+/**
+ * ADR-943 Φ5 — οι συνεδρίες με εντολή διακανονισμού που **οφείλεται τώρα** (cron). Μία ανισότητα σε ένα πεδίο, χωρίς
+ * ταξινόμηση ⇒ αυτόματος μονο-πεδιακός δείκτης.
+ */
+export async function listCheckoutsWithDueSettlement(db: Firestore, nowIso: string, limit: number): Promise<PaymentCheckoutRecord[]> {
+  // tenant-scope-exempt: εργασία συστήματος (cron) πάνω σε ΚΑΘΕ μισθωτή εκ σχεδιασμού· ο μισθωτής κάθε συνεδρίας
+  // διαβάζεται από το έγγραφό της.
+  return readableCheckoutsOf(await checkoutsOf(db).where('marketplace.settlement.dueAt', '<=', nowIso).limit(limit).get());
+}
+
+/**
+ * ADR-943 Φ5 — **η πληρωμένη συνεδρία** μιας προκαταβολής: της ίδιας ανάθεσης, με την πληρωμή του γεγονότος `funded`.
+ * Το ίδιο ρητό ερώτημα εμβέλειας με την έναρξη (μισθωτής + ανάθεση)· `null` ⇒ καμία ή αμφίσημη (ποτέ «η πρώτη»).
+ */
+export async function findFundedAdvanceCheckout(
+  db: Firestore, companyId: string, assignmentId: string, paymentReference: string,
+): Promise<PaymentCheckoutRecord | null> {
+  const docs = await advanceScopeDocsOf(db, companyId, assignmentId);
+  const found = docs
+    .map((doc) => checkoutRecordOf(doc.id, doc.data()))
+    .filter((record): record is PaymentCheckoutRecord => record !== null && record.paymentReference === paymentReference);
+  return found.length === 1 ? found[0] : null;
 }
 
 /**

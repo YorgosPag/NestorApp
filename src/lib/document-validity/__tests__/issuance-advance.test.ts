@@ -6,6 +6,7 @@
 
 import {
   advanceCollectedMinor,
+  advanceGlanceOf,
   advanceStateOf,
   cancellationScheduleOf,
   isAdvanceTermsValid,
@@ -160,6 +161,21 @@ describe('ADR-943 Κ-4 — έναρξη, παράθυρο αντίρρησης, 
     expect(refusalOf(disputed, windowRelease, at(SYSTEM, '2026-11-20T09:00:00.000Z'))).toBe('transition-refused');
     const resolved = apply(disputed, { ...windowRelease, basis: 'office-resolution' }, SYSTEM);
     expect(stateOf(resolved).kind).toBe('released');
+  });
+});
+
+describe('ADR-943 Φ5α — η ματιά της προκαταβολής (μία για κάθε οθόνη)', () => {
+  it('χωρίς προκαταβολή ⇒ null· εγκρίθηκε ⇒ αναμένεται πληρωμή με τους όρους της συμφωνίας', () => {
+    expect(advanceGlanceOf(runAll(ASSIGNED.slice(0, 1)))).toBeNull();
+    expect(advanceGlanceOf(assigned())).toEqual({ terms: TERMS.advance, state: 'awaiting-payment', releaseAt: null, collectedMinor: 0 });
+  });
+
+  it('μετά την αυτοψία ⇒ πότε αποδεσμεύεται (το ΙΔΙΟ `objectionUntil` με τον μειωτή)· μετά την αποδέσμευση ⇒ καμία ώρα', () => {
+    expect(advanceGlanceOf(funded())).toMatchObject({ state: 'held', releaseAt: null, collectedMinor: 4_000 });
+    expect(advanceGlanceOf(started())).toMatchObject({ state: 'release-pending', releaseAt: objectionUntilOf(T0), collectedMinor: 4_000 });
+    const release: IssuanceAction = { kind: 'advance-released', amountMinor: 4_000, transferReference: 'tra_1', basis: 'window-elapsed' };
+    const released = apply(started(), release, at(SYSTEM, objectionUntilOf(T0)));
+    expect(advanceGlanceOf(released)).toMatchObject({ state: 'released', releaseAt: null, collectedMinor: 4_000 });
   });
 });
 

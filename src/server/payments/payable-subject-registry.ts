@@ -14,9 +14,10 @@ import 'server-only';
 
 import { recordInvoiceMovement } from '@/server/accounting/payments/invoice-payable-subject';
 import { recordIssuanceAdvanceMovement } from '@/services/document-registry/issuance-advance-payment.server';
+import { judgeIssuanceAdvanceSettlement, recordIssuanceAdvanceSettlement } from '@/services/document-registry/issuance-advance-settlement.server';
 
 import type { PayableSubject } from './payable-subject';
-import type { PaymentCheckoutRecord } from './payment-checkout-store';
+import type { CheckoutSettlementOrder, PaymentCheckoutRecord } from './payment-checkout-store';
 import type { PaymentProvider, ProviderMovement } from './payment-provider';
 
 /** Τι έγινε με μία κίνηση στον γραφέα του είδους. */
@@ -51,5 +52,37 @@ export function recordPayableMovement(
       return recordInvoiceMovement({ checkout, subject, movement, provider });
     case 'issuance-advance':
       return recordIssuanceAdvanceMovement({ checkout, subject, movement, provider });
+  }
+}
+
+/**
+ * ADR-943 Φ5 — **η κρίση του είδους** πριν κινηθούν κρατημένα χρήματα: `proceed` · `void` (η εντολή δεν ισχύει πια — σβήνει
+ * χωρίς κίνηση) · `hold` (δεν κρίνεται τώρα — μένει, θέλει άνθρωπο). Σφάλμα ανάγνωσης ⇒ ρίχνει (ξαναδοκιμάζεται).
+ */
+export type SettlementJudgement = 'proceed' | 'void' | 'hold';
+
+export function judgePayableSettlement(
+  checkout: PaymentCheckoutRecord, order: CheckoutSettlementOrder, now: Date,
+): Promise<SettlementJudgement> {
+  const { subject } = checkout;
+  switch (subject.kind) {
+    // Το τιμολόγιο πληρώνεται στον έμπορο (`marketplace: null`) — δεν έχει ποτέ κρατημένα χρήματα να κινηθούν.
+    case 'invoice':
+      return Promise.resolve('void');
+    case 'issuance-advance':
+      return judgeIssuanceAdvanceSettlement(checkout, subject, order, now);
+  }
+}
+
+/** ADR-943 Φ5 — **η καταγραφή** μιας ολοκληρωμένης κίνησης στον γραφέα του είδους. Ιδεμποτικό. Σφάλμα ⇒ ρίχνει. */
+export function recordPayableSettlement(
+  checkout: PaymentCheckoutRecord, order: CheckoutSettlementOrder, provider: PaymentProvider, transferReference: string,
+): Promise<void> {
+  const { subject } = checkout;
+  switch (subject.kind) {
+    case 'invoice':
+      return Promise.resolve();
+    case 'issuance-advance':
+      return recordIssuanceAdvanceSettlement({ checkout, subject, order, provider, transferReference });
   }
 }

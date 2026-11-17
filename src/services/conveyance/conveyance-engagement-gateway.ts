@@ -219,6 +219,28 @@ export function deliveryChangeRejectionOf(error: unknown): DeliveryChangeRejecti
 }
 
 // =============================================================================
+// ΠΡΟΚΑΤΑΒΟΛΗ — «Έγινε η αυτοψία» (ADR-943 Φ5α)
+// =============================================================================
+
+/** Οι ονομασμένες αρνήσεις της πόρτας — ό,τι άλλο είναι γενικό σφάλμα. */
+export const START_WORK_REJECTIONS = [
+  'NOT_FOUND', 'ENGAGEMENT_NOT_ACTIVE', 'UNAVAILABLE', 'STALE', 'TRANSITION_REFUSED', 'SETTLEMENT_UNAVAILABLE',
+] as const;
+export type StartWorkRejection = (typeof START_WORK_REJECTIONS)[number];
+
+/** Ο μηχανικός δηλώνει «έγινε η αυτοψία» — ανοίγει το παράθυρο αντίρρησης· `releaseAt` = πότε αποδεσμεύεται. */
+export function declareIssuanceWorkStarted(
+  engagementId: string,
+  body: { readonly expectedStage: IssuanceStage | null },
+): Promise<{ readonly outcome: 'changed' | 'unchanged'; readonly releaseAt: string }> {
+  return apiClient.post(API_ROUTES.ENGAGEMENTS.ISSUANCE_START_WORK(engagementId), body);
+}
+
+export function startWorkRejectionOf(error: unknown): StartWorkRejection | null {
+  return namedError(error, START_WORK_REJECTIONS);
+}
+
+// =============================================================================
 // ΠΡΟΣΚΛΗΣΗ ΜΕ EMAIL — ο επαγγελματίας (ADR-901 Φ3)
 // =============================================================================
 

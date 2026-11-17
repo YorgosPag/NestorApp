@@ -186,7 +186,7 @@ describe('recordPayableMovement — το μητρώο', () => {
 const ADVANCE: IssuanceAdvancePayableSubject = {
   kind: 'issuance-advance', companyId: 'comp_1', assignmentId: 'dia_1', withdrawalWaiverAt: '2026-11-17T09:00:00.000Z',
 };
-const MARKETPLACE = { payeeReference: 'sel_1', transferReference: null, transferDue: false, lease: null };
+const MARKETPLACE = { payeeReference: 'sel_1', transferReference: null, transferDue: false, lease: null, settlement: null };
 
 function advanceDoc(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

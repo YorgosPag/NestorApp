@@ -1172,6 +1172,8 @@ export const API_ROUTES = {
     DOCUMENT_REQUESTS: (engagementId: string) => `/api/engagements/${engagementId}/document-requests` as const,
     // ADR-915 §45.20 Φ6γ — ο μηχανικός ζητά νέα ημερομηνία παράδοσης (το γραφείο απαντά).
     ISSUANCE_DELIVERY_CHANGE: (engagementId: string) => `/api/engagements/${engagementId}/issuance/delivery-change` as const,
+    // ADR-943 Φ5α — ο μηχανικός δηλώνει «έγινε η αυτοψία» (ανοίγει το παράθυρο αντίρρησης της προκαταβολής).
+    ISSUANCE_START_WORK: (engagementId: string) => `/api/engagements/${engagementId}/issuance/start-work` as const,
     // ADR-901 Φ3 — η εξαργύρωση πρόσκλησης με email (ο επαγγελματίας, από `/case-invite/[token]`).
     INVITATION_REDEEM: '/api/engagement-invitations/redeem',
   },

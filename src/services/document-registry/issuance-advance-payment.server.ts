@@ -66,8 +66,8 @@ function advanceActionOf(subject: IssuanceAdvancePayableSubject, movement: Provi
     : { kind: 'advance-refunded', amountMinor: movement.amountMinor, reference: movement.reference };
 }
 
-/** Η γραφή του γεγονότος από τον ΕΝΑ γραφέα, σε δική της συναλλαγή· ίχνος μετά την επιτυχία. */
-async function writeAdvanceEvent(
+/** Η γραφή του γεγονότος χρημάτων από τον ΕΝΑ γραφέα (actor `system`), σε δική της συναλλαγή· ίχνος μετά την επιτυχία. */
+export async function writeAdvanceEvent(
   db: Firestore, context: HostedIssuanceContext, action: IssuanceAdvanceAction, provider: string,
 ): Promise<IssuanceWriteOutcome> {
   const { assignment, label } = context;

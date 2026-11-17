@@ -12,6 +12,7 @@
  */
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
+import type { AdvanceGlance } from '@/lib/document-validity/issuance-advance';
 import type { BallInCourtParty, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
 import type { DeliveryChangeGlance } from '@/lib/document-validity/issuance-delivery-change';
 import type { IssuanceLateness } from '@/lib/document-validity/issuance-delivery-due';
@@ -123,6 +124,11 @@ export interface IssuanceAgreementView {
   readonly owners: readonly IssuanceOwnerView[] | null;
   /** §45.20 Φ6γ — το αίτημα νέας ημερομηνίας **αυτής** της συμμετοχής: εκκρεμεί ή η τελευταία απάντηση. */
   readonly deliveryChange: DeliveryChangeGlance;
+  /**
+   * ADR-943 Φ5α — η προκαταβολή της συμφωνίας (ο ΙΔΙΟΣ υπολογισμός με κάθε άλλη οθόνη, `advanceGlanceOf`)· `null` ⇒ χωρίς
+   * προκαταβολή. 🔒 Ε-9′: μόνο ποσά και στιγμές — καμία αιτιολογία αντίρρησης του ιδιοκτήτη (ό,τι ειπώθηκε ανήκει στο γραφείο).
+   */
+  readonly advance: AdvanceGlance | null;
 }
 
 /**

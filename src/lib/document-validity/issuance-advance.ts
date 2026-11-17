@@ -205,6 +205,31 @@ export function canObjectToStart(state: AdvanceState, nowIso: string): boolean {
   return state.kind === 'release-pending' && nowIso < state.objectionUntil;
 }
 
+/**
+ * Φ5α — **η ματιά** της προκαταβολής για κάθε οθόνη (μηχανικός · σελίδα ιδιοκτήτη · γραφείο): οι συμφωνημένοι όροι, πού
+ * βρίσκονται τα χρήματα, και **πότε** αποδεσμεύονται αν δεν υπάρξει αντίρρηση. `null` ⇒ η συμφωνία δεν έχει προκαταβολή
+ * και δεν κινήθηκαν χρήματα. Οι όροι από τη **συμφωνία**· η κατάσταση από τα **γεγονότα** (`advanceStateOf`).
+ */
+export interface AdvanceGlance {
+  readonly terms: AdvanceTerms | null;
+  readonly state: AdvanceStateKind;
+  /** `release-pending` ⇒ η στιγμή της αυτόματης αποδέσμευσης (ISO)· αλλιώς `null`. */
+  readonly releaseAt: string | null;
+  /** Ό,τι εισπράχθηκε και δεν επεστράφη (`advanceCollectedMinor`). */
+  readonly collectedMinor: MinorAmount;
+}
+
+export function advanceGlanceOf(facts: AdvanceFacts): AdvanceGlance | null {
+  const state = advanceStateOf(facts);
+  if (state.kind === 'none') return null;
+  return {
+    terms: agreedQuoteOf(facts)?.advance ?? null,
+    state: state.kind,
+    releaseAt: state.kind === 'release-pending' ? state.objectionUntil : null,
+    collectedMinor: advanceCollectedMinor(state),
+  };
+}
+
 /** Ό,τι εισπράχθηκε και **δεν** επεστράφη — η βάση του ΜΑΡΚ προκαταβολής και του συμψηφισμού στο τελικό (Κ-7). */
 export function advanceCollectedMinor(state: AdvanceState): MinorAmount {
   switch (state.kind) {

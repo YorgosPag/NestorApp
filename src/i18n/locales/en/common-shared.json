@@ -1093,6 +1093,10 @@
     "funded": "Advance paid: {title}",
     "fundedBody": "The owner paid the advance of {amount}. The money is held by the payment provider — you can start the site visit.",
     "payeeRequired": "The owner wants to pay the advance: {title}",
-    "payeeRequiredBody": "Turn on “Receive payments” in your profile to accept the advance."
+    "payeeRequiredBody": "Turn on “Receive payments” in your profile to accept the advance.",
+    "workStarted": "Site visit done: {title}",
+    "workStartedBody": "The engineer declared the site visit done. The advance of {amount} is released to the engineer at {releaseAt}, unless someone objects by then.",
+    "released": "Advance released: {title}",
+    "releasedBody": "The payment provider released the advance of {amount} to the engineer."
   }
 }

@@ -507,6 +507,30 @@
           "generic": "The request was not sent. Please try again."
         }
       },
+      "advance": {
+        "title": "Advance payment",
+        "amount": "Advance {amount} · cancellation policy: {policy}",
+        "held": "The advance is held by the payment provider. Once the site visit is done, declare it here.",
+        "releasePending": "You declared the site visit. The advance is released to you at {date}, unless someone objects by then.",
+        "disputed": "There is an objection to the start — the money stays held and the office decides.",
+        "released": "The advance of {amount} has been paid to you.",
+        "trigger": "Site visit done",
+        "confirmTitle": "Declare the site visit",
+        "confirmDescription": "You declare that the site visit at the property took place. The owner and the office have 48 hours to object; after that the advance is released to you automatically.",
+        "cancel": "Cancel",
+        "confirm": "Declare the site visit",
+        "sending": "Recording…",
+        "sent": "The site visit was recorded. The advance is released at {date}.",
+        "errors": {
+          "NOT_FOUND": "The assignment was not found.",
+          "ENGAGEMENT_NOT_ACTIVE": "Your access to this assignment is no longer active.",
+          "UNAVAILABLE": "The service is unavailable right now. Try again shortly.",
+          "STALE": "The assignment changed in the meantime — the page was refreshed. Check and try again.",
+          "TRANSITION_REFUSED": "The site visit can only be declared once the advance has been paid and is held.",
+          "SETTLEMENT_UNAVAILABLE": "The site visit was recorded, but the release is not scheduled yet. Press again shortly.",
+          "generic": "The site visit was not recorded. Try again."
+        }
+      },
       "scope": "The space gives access to this assignment only. Your contact details are not shown to anyone without your own choice."
     },
     "myCases": {

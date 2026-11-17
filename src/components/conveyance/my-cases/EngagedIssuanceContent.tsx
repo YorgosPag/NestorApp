@@ -20,6 +20,7 @@ import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { CopyValueButton } from '@/components/shared/CopyValueButton';
+import { EngagedAdvance } from './EngagedAdvance';
 import { EngagedDeliveryChange } from './EngagedDeliveryChange';
 import { agencyProfileRoute } from '@/components/mandate/agency-directory-route';
 import { agencyDoorFor } from '@/lib/agency/agency-door';
@@ -237,6 +238,10 @@ function Agreement({ agreement, view, onChanged }: {
         engagementId={view.engagementId} stage={view.stage} currentDueOn={agreement.dueOn}
         glance={agreement.deliveryChange} onChanged={onChanged}
       />
+      {/* ADR-943 Φ5α — η προκαταβολή: πού είναι τα χρήματα + «Έγινε η αυτοψία». */}
+      {agreement.advance !== null && (
+        <EngagedAdvance engagementId={view.engagementId} stage={view.stage} advance={agreement.advance} onChanged={onChanged} />
+      )}
     </section>
   );
 }

@@ -26,12 +26,8 @@ import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generatePaymentTransferLeaseHolderId } from '@/services/enterprise-id.service';
 
-import {
-  checkoutRecordOf,
-  listCheckoutsAwaitingTransfer,
-  type CheckoutMarketplace,
-  type PaymentCheckoutRecord,
-} from './payment-checkout-store';
+import { CHECKOUT_LEASE_MS, claimCheckoutLease, releaseCheckoutLease } from './payment-checkout-lease';
+import { checkoutRecordOf, listCheckoutsAwaitingTransfer, type PaymentCheckoutRecord } from './payment-checkout-store';
 import type { PaymentProvider } from './payment-provider';
 
 const logger = createModuleLogger('PaymentHeldTransfer');
@@ -40,8 +36,8 @@ const logger = createModuleLogger('PaymentHeldTransfer');
 export const HELD_TRANSFER_POLICY = {
   /** Προμήθεια πλατφόρμας **0** (απόφαση Giorgio 2026-11-16, ADR-943 Κ-2). */
   commissionMinor: 0,
-  /** Πόσο ζει η μίσθωση: πολύ πάνω από μία κλήση στον πάροχο, αρκετά λίγο ώστε η κατάρρευση να ξεπερνιέται γρήγορα. */
-  leaseMs: 2 * 60 * 1000,
+  /** Πόσο ζει η μίσθωση — η ΜΙΑ μίσθωση χρημάτων της συνεδρίας (`payment-checkout-lease.ts`). */
+  leaseMs: CHECKOUT_LEASE_MS,
 } as const;
 
 /**
@@ -64,24 +60,13 @@ function checkoutRef(db: Firestore, checkoutId: string) {
   return db.collection(COLLECTIONS.ACCOUNTING_PAYMENT_CHECKOUTS).doc(checkoutId);
 }
 
-type Claim =
-  | { readonly kind: 'claimed'; readonly checkout: PaymentCheckoutRecord; readonly marketplace: CheckoutMarketplace }
-  | HeldTransferOutcome;
-
 /** Συναλλαγή: η μεταφορά υπάρχει ήδη ⇒ αυτή· ζωντανή ξένη μίσθωση ⇒ `busy`· αλλιώς μίσθωση **και** οφειλή. */
-function claimLease(db: Firestore, checkoutId: string, holder: string, nowMs: number): Promise<Claim> {
-  const ref = checkoutRef(db, checkoutId);
-  return db.runTransaction(async (tx): Promise<Claim> => {
-    const snap = await tx.get(ref);
-    const checkout = snap.exists ? checkoutRecordOf(snap.id, snap.data()) : null;
-    const marketplace = checkout?.marketplace ?? null;
-    if (checkout === null || marketplace === null) return { kind: 'not-applicable' };
-    if (marketplace.transferReference !== null) return { kind: 'transferred', transferReference: marketplace.transferReference };
-    if (marketplace.lease !== null && Date.parse(marketplace.lease.until) > nowMs) return { kind: 'busy' };
-    const lease = { holder, until: new Date(nowMs + HELD_TRANSFER_POLICY.leaseMs).toISOString() };
-    tx.update(ref, { 'marketplace.lease': lease, 'marketplace.transferDue': true, updatedAt: new Date(nowMs).toISOString() });
-    return { kind: 'claimed', checkout, marketplace: { ...marketplace, lease, transferDue: true } };
-  });
+function claimLease(db: Firestore, checkoutId: string, holder: string, nowMs: number) {
+  return claimCheckoutLease<HeldTransferOutcome>(db, checkoutId, holder, nowMs, (_checkout, marketplace) => (
+    marketplace.transferReference !== null
+      ? { proceed: false, result: { kind: 'transferred', transferReference: marketplace.transferReference } }
+      : { proceed: true, patch: { 'marketplace.transferDue': true } }
+  ));
 }
 
 /** Συναλλαγή: η αναφορά γράφεται, η οφειλή σβήνει, η μίσθωση φεύγει. Ίδια αναφορά ήδη γραμμένη ⇒ καμία αλλαγή. */
@@ -103,16 +88,6 @@ function completeTransfer(db: Firestore, checkoutId: string, transferReference: 
   });
 }
 
-/** Η μίσθωση φεύγει μετά από βλάβη — μόνο αν είναι ακόμη **δική μας** (η οφειλή μένει για το cron). */
-async function releaseLease(db: Firestore, checkoutId: string, holder: string, nowIso: string): Promise<void> {
-  const ref = checkoutRef(db, checkoutId);
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const lease = snap.exists ? checkoutRecordOf(snap.id, snap.data())?.marketplace?.lease ?? null : null;
-    if (lease?.holder === holder) tx.update(ref, { 'marketplace.lease': null, updatedAt: nowIso });
-  });
-}
-
 export interface HeldTransferInput {
   readonly checkoutId: string;
   /** Η πληρωμή στον πάροχο (`pmt_…`) — από την κίνηση που μόλις καταγράφηκε ή από τη συνεδρία (cron). */
@@ -131,6 +106,7 @@ export async function ensureHeldTransfer(db: Firestore, provider: PaymentProvide
   if (marketplaceCapability === null) return { kind: 'not-applicable' };
   const holder = generatePaymentTransferLeaseHolderId();
   const claim = await claimLease(db, input.checkoutId, holder, input.nowMs);
+  if (claim.kind === 'declined') return claim.result;
   if (claim.kind !== 'claimed') return claim;
   try {
     const transfer = await marketplaceCapability.ensureTransfer({
@@ -145,7 +121,8 @@ export async function ensureHeldTransfer(db: Firestore, provider: PaymentProvide
     logger.info('Held transfer ensured', { checkoutId: input.checkoutId, provider: provider.id, held: transfer.held });
     return { kind: 'transferred', transferReference: transfer.reference };
   } catch (error) {
-    await releaseLease(db, input.checkoutId, holder, nowISO()).catch(() => undefined);
+    // Η μίσθωση φεύγει μόνο αν είναι ακόμη δική μας· η οφειλή μένει για το cron.
+    await releaseCheckoutLease(db, input.checkoutId, holder, nowISO()).catch(() => undefined);
     throw error;
   }
 }

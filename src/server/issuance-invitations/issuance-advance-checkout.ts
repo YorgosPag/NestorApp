@@ -179,7 +179,7 @@ function newAdvanceCheckout(payer: AdvancePayer, input: AdvanceCheckoutInput, pr
     checkoutId: generatePaymentCheckoutId(), companyId: payer.invitation.companyId, subject,
     provider: provider.id, method: input.body.method, amountMinor, currency: 'EUR', status: 'pending',
     providerReference: null, paymentReference: null, lastFailure: null,
-    marketplace: { payeeReference, transferReference: null, transferDue: false, lease: null },
+    marketplace: { payeeReference, transferReference: null, transferDue: false, lease: null, settlement: null },
     createdAt, expiresAt: new Date(input.now.getTime() + CHECKOUT_LIFETIME_MS).toISOString(), updatedAt: createdAt,
   };
 }

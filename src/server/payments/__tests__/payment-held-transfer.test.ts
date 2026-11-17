@@ -5,55 +5,16 @@
  * για ταυτόχρονους καλούντες· η οφειλή μένει γραμμένη όταν ο πάροχος αποτυγχάνει (το cron την ξαναπιάνει).
  */
 
-import type { Firestore } from 'firebase-admin/firestore';
-
 import { ensureHeldTransfer, HELD_TRANSFER_POLICY, sweepHeldTransfers } from '../payment-held-transfer';
+import { advanceCheckoutDoc, EMPTY_MARKETPLACE, fakeCheckoutDb, type Doc } from './checkout-fake-firestore.fixture';
 import type { MarketplaceCapability, PayeeTransferTarget } from '../payment-marketplace';
 import type { PaymentProvider } from '../payment-provider';
 
 const NOW_MS = Date.parse('2026-11-17T10:00:00.000Z');
 
-type Doc = Record<string, unknown>;
-
-/** Εφαρμόζει ενημέρωση με διαδρομές «a.b» — όπως το `update` του Firestore. */
-function applyUpdate(doc: Doc, patch: Doc): Doc {
-  const next: Doc = structuredClone(doc);
-  for (const [path, value] of Object.entries(patch)) {
-    const keys = path.split('.');
-    let node: Doc = next;
-    for (const key of keys.slice(0, -1)) node = (node[key] ?? (node[key] = {})) as Doc;
-    node[keys[keys.length - 1]] = value;
-  }
-  return next;
-}
-
-function fakeDb(initial: Doc) {
-  let stored: Doc | null = structuredClone(initial);
-  const ref = { id: 'pchk_1' };
-  const snapshot = () => ({ id: 'pchk_1', exists: stored !== null, data: () => (stored === null ? undefined : structuredClone(stored)) });
-  const db = {
-    collection: () => ({
-      doc: () => ref,
-      where: () => ({ limit: () => ({ get: async () => ({ docs: stored === null ? [] : [snapshot()] }) }) }),
-    }),
-    runTransaction: async <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn({
-      get: async () => snapshot(),
-      update: (_ref: unknown, patch: Doc) => { stored = applyUpdate(stored ?? {}, patch); },
-    }),
-  };
-  return { db: db as unknown as Firestore, read: () => stored };
-}
-
-function checkoutDoc(marketplace: Doc | null): Doc {
-  return {
-    companyId: 'comp_1', subjectKind: 'issuance-advance', assignmentId: 'dia_1', withdrawalWaiverAt: '2026-11-17T09:00:00.000Z',
-    provider: 'everypay', method: 'card', amountMinor: 4000, currency: 'EUR', status: 'paid', providerReference: 'pnt_1',
-    paymentReference: 'pmt_1', lastFailure: null, marketplace, createdAt: '2026-11-17T09:00:00.000Z',
-    expiresAt: '2026-11-17T09:30:00.000Z',
-  };
-}
-
-const MARKETPLACE: Doc = { payeeReference: 'sel_1', transferReference: null, transferDue: false, lease: null };
+const fakeDb = fakeCheckoutDb;
+const checkoutDoc = advanceCheckoutDoc;
+const MARKETPLACE: Doc = EMPTY_MARKETPLACE;
 
 function providerWith(ensureTransfer: jest.Mock): PaymentProvider {
   const marketplace = { ensureTransfer } as unknown as MarketplaceCapability;
@@ -76,7 +37,7 @@ describe('ensureHeldTransfer', () => {
       paymentReference: 'pmt_1', payeeReference: 'sel_1', amountMinor: 4000, commissionMinor: 0, description: 'pchk_1', hold: true,
     });
     expect(HELD_TRANSFER_POLICY.commissionMinor).toBe(0);
-    expect(read()?.marketplace).toEqual({ payeeReference: 'sel_1', transferReference: 'trn_1', transferDue: false, lease: null });
+    expect(read()?.marketplace).toEqual({ payeeReference: 'sel_1', transferReference: 'trn_1', transferDue: false, lease: null, settlement: null });
   });
 
   it('η μεταφορά υπάρχει ήδη ⇒ καμία κλήση στον πάροχο (webhook + cron + επιστροφή = μία μεταφορά)', async () => {
@@ -106,7 +67,7 @@ describe('ensureHeldTransfer', () => {
     const { db, read } = fakeDb(checkoutDoc(MARKETPLACE));
     const ensureTransfer = jest.fn(async () => { throw new Error('provider down'); });
     await expect(ensureHeldTransfer(db, providerWith(ensureTransfer), INPUT)).rejects.toThrow('provider down');
-    expect(read()?.marketplace).toEqual({ ...MARKETPLACE, transferDue: true, lease: null });
+    expect(read()?.marketplace).toEqual({ ...MARKETPLACE, transferDue: true, lease: null, settlement: null });
   });
 
   it('συνεδρία χωρίς κράτηση (τιμολόγιο) ή πάροχος χωρίς marketplace ⇒ not-applicable', async () => {
