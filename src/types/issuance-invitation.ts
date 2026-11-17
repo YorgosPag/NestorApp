@@ -13,7 +13,7 @@
 import type { IssuerQualification } from '@/config/document-validity/document-issuers';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import type { EnergyClass } from '@/constants/energy-classes';
-import type { AdvanceStateKind, AdvanceTerms } from '@/lib/document-validity/issuance-advance';
+import type { AdvanceStateKind, AdvanceTerms, AdvanceTimelineEntry } from '@/lib/document-validity/issuance-advance';
 import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
 import type { CheckoutLaunch, InvoiceCheckoutAttemptResponse, OnlinePaymentMethod } from '@/subapps/accounting/types/online-payment';
 import type { IssuanceAudience } from '@/lib/document-validity/issuance-request';
@@ -32,7 +32,20 @@ export interface IssuanceInvitation extends InvitationRecordCore {
   readonly contactId: string;
   /** §29 — ο κωδικός του δεύτερου καναλιού (HMAC + μετρητής)· `null` = ο σύνδεσμος αρκεί. */
   readonly accessCode: StoredAccessCode | null;
+  /** ADR-943 Φ5β — **τι ζητά** ο σύνδεσμος: απάντηση (§28) ή τη σελίδα της προκαταβολής (Ζ-1). */
+  readonly purpose: IssuanceLinkPurpose;
 }
+
+/**
+ * ADR-943 Φ5β — ο **σκοπός** ενός συνδέσμου ανάθεσης.
+ * - `answer` — ο σύνδεσμος του αιτήματος (έγκριση/απάντηση, §28)· όλα τα έγγραφα πριν από τη Φ5β.
+ * - `advance` — **μόνο** η σελίδα της προκαταβολής (πληρωμή · χρονολόγιο · αντίρρηση), ποτέ φόρμα απάντησης· δεμένος
+ *   στην απόφαση που εγκρίθηκε (`decidedAt`). `codeHolderId` = η πρόσκληση που **κρατά** τον κωδικό §29 του «φακέλου»
+ *   (ο ίδιος κωδικός που ήδη ξέρει ο ιδιοκτήτης, πρότυπο DocuSign) — `null` ⇒ ο σύνδεσμος αρκεί.
+ */
+export type IssuanceLinkPurpose =
+  | { readonly kind: 'answer' }
+  | { readonly kind: 'advance'; readonly decidedAt: string; readonly codeHolderId: string | null };
 
 /**
  * **Η δημόσια όψη του συνδέσμου** (§28 Η-Β11) — ό,τι χρειάζεται ο άνθρωπος για να αποφασίσει, τίποτα παραπάνω: ονόματα,
@@ -141,6 +154,12 @@ export interface IssuanceAdvancePaymentView {
   readonly methods: readonly OnlinePaymentMethod[];
   /** Ο μηχανικός δέχεται πληρωμές (δικαιούχος `authorized`, όπως τον ξέρουμε) — αλλιώς «περιμένουμε τον μηχανικό». */
   readonly payeeReady: boolean;
+  /** Φ5β — η στιγμή της αυτόματης αποδέσμευσης (ISO) όσο τρέχει το παράθυρο αντίρρησης· αλλιώς `null`. */
+  readonly releaseAt: string | null;
+  /** Φ5β (Ζ-3) — μπορεί ο ιδιοκτήτης να φέρει αντίρρηση **τώρα**; (`canObjectToStart`, κρίση του διακομιστή). */
+  readonly canObject: boolean;
+  /** Φ5β — το χρονολόγιο των χρημάτων (πληρώθηκε → αυτοψία → αντίρρηση → αποδέσμευση/επιστροφή). */
+  readonly timeline: readonly AdvanceTimelineEntry[];
 }
 
 /**
@@ -186,6 +205,15 @@ export type IssuanceAdvanceAttemptResponse =
 export type IssuanceAdvanceCheckoutResult =
   | { readonly status: 'started'; readonly checkoutId: string; readonly launch: CheckoutLaunch }
   | { readonly status: 'refused'; readonly reason: IssuanceAdvanceCheckoutRefusal };
+
+/**
+ * ADR-943 Φ5β (Ζ-3) — η έκβαση της αντίρρησης του ιδιοκτήτη: καταγράφηκε (η αυτόματη αποδέσμευση **δεν** θα γίνει —
+ * αποφασίζει το γραφείο) ή `not-objectable` (το παράθυρο έκλεισε / δεν άνοιξε). Η όψη επιστρέφεται ξανά, ώστε η σελίδα να
+ * δείξει την **αλήθεια** του διακομιστή (καμία αισιόδοξη κατάσταση πάνω σε χρήματα).
+ */
+export type IssuanceAdvanceObjectionResult =
+  | { readonly status: 'objected'; readonly advance: IssuanceAdvancePaymentView }
+  | { readonly status: 'refused'; readonly reason: 'not-objectable' };
 
 /**
  * Οι αρνήσεις του συνδέσμου πέρα από τις κοινές της πρόσκλησης:

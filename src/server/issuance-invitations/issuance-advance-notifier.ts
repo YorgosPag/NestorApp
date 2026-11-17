@@ -55,31 +55,43 @@ async function send(input: Parameters<typeof dispatchNotification>[0]): Promise<
 }
 
 /** Ένα ορόσημο των χρημάτων — το γεγονός που το γέννησε (η ταυτότητα της ειδοποίησης και τα ποσά βγαίνουν από αυτό). */
-export type AdvanceMilestone = Extract<AdvanceEvent, { kind: 'funded' | 'work-started' | 'released' }>;
+export type AdvanceMilestone = Extract<AdvanceEvent, { kind: 'funded' | 'work-started' | 'start-objected' | 'released' }>;
 
 interface MilestoneNotice {
   readonly eventType: Parameters<typeof dispatchNotification>[0]['eventType'];
-  readonly key: 'funded' | 'workStarted' | 'released';
+  readonly key: 'funded' | 'workStarted' | 'objected' | 'released';
   /** Η ταυτότητα του ορόσημου — μία ειδοποίηση ανά ορόσημο και αποδέκτη, όσες φορές κι αν ξανατρέξει ο καλών. */
   readonly identity: string;
   readonly bodyParams: Readonly<Record<string, string>>;
   /** Ο μηχανικός μαθαίνει **ό,τι δεν έκανε ο ίδιος**· την αυτοψία τη δήλωσε εκείνος. */
   readonly toEngineer: boolean;
+  /**
+   * 🔒 Ε-9′ — το σώμα **προς τον μηχανικό**, όταν διαφέρει από του γραφείου (π.χ. αντίρρηση **χωρίς** την αιτιολογία του
+   * ιδιοκτήτη). `null` ⇒ το ίδιο σώμα.
+   */
+  readonly engineerBody: { readonly key: string; readonly params: Readonly<Record<string, string>> } | null;
 }
 
 /** Ορόσημο ⇒ ειδοποίηση. Το ποσό είναι **το ποσό του γεγονότος** — ποτέ το εγκεκριμένο. */
 function noticeOf(milestone: AdvanceMilestone, fundedMinor: number): MilestoneNotice {
-  const { PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_FUNDED: FUNDED, PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_WORK_STARTED: STARTED, PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_RELEASED: RELEASED } = NOTIFICATION_EVENT_TYPES;
+  const types = NOTIFICATION_EVENT_TYPES;
+  const amount = (minor: number) => ({ amount: formatMinorIn(minor, 'el') });
   switch (milestone.kind) {
     case 'funded':
-      return { eventType: FUNDED, key: 'funded', identity: milestone.paymentReference, bodyParams: { amount: formatMinorIn(milestone.amountMinor, 'el') }, toEngineer: true };
+      return { eventType: types.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_FUNDED, key: 'funded', identity: milestone.paymentReference, bodyParams: amount(milestone.amountMinor), toEngineer: true, engineerBody: null };
     case 'work-started':
       return {
-        eventType: STARTED, key: 'workStarted', identity: `started:${milestone.at}`, toEngineer: false,
-        bodyParams: { amount: formatMinorIn(fundedMinor, 'el'), releaseAt: formatOperatorDateTime(objectionUntilOf(milestone.at), 'el') },
+        eventType: types.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_WORK_STARTED, key: 'workStarted', identity: `started:${milestone.at}`, toEngineer: false, engineerBody: null,
+        bodyParams: { ...amount(fundedMinor), releaseAt: formatOperatorDateTime(objectionUntilOf(milestone.at), 'el') },
+      };
+    case 'start-objected':
+      return {
+        eventType: types.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_OBJECTED, key: 'objected', identity: `objected:${milestone.at}`, toEngineer: true,
+        bodyParams: { ...amount(fundedMinor), reason: milestone.reason },
+        engineerBody: { key: 'objectedEngineerBody', params: amount(fundedMinor) },
       };
     case 'released':
-      return { eventType: RELEASED, key: 'released', identity: milestone.transferReference, bodyParams: { amount: formatMinorIn(milestone.amountMinor, 'el') }, toEngineer: true };
+      return { eventType: types.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_RELEASED, key: 'released', identity: milestone.transferReference, bodyParams: amount(milestone.amountMinor), toEngineer: true, engineerBody: null };
   }
 }
 
@@ -100,25 +112,30 @@ export async function announceAdvanceMilestone(
     const { assignment } = context;
     const notice = noticeOf(input.milestone, fundedMinorOf(record));
     const titleParams = { title: context.label.name ?? assignment.id };
-    const content = (recipientId: string) => ({
-      eventType: notice.eventType,
-      recipientId,
-      tenantId: assignment.companyId,
-      title: noticeT(`documentIssuanceAdvance.${notice.key}`, titleParams),
-      titleKey: `documentIssuanceAdvance.${notice.key}`,
-      titleParams,
-      body: noticeT(`documentIssuanceAdvance.${notice.key}Body`, notice.bodyParams),
-      bodyKey: `documentIssuanceAdvance.${notice.key}Body`,
-      bodyParams: notice.bodyParams,
-      eventId: `document-issuance-advance-${notice.key}:${assignment.id}:${notice.identity}:${recipientId}`,
-      source: SOURCE(),
-    });
+    const content = (recipientId: string, forEngineer: boolean) => {
+      const body = forEngineer && notice.engineerBody !== null
+        ? notice.engineerBody
+        : { key: `${notice.key}Body`, params: notice.bodyParams };
+      return {
+        eventType: notice.eventType,
+        recipientId,
+        tenantId: assignment.companyId,
+        title: noticeT(`documentIssuanceAdvance.${notice.key}`, titleParams),
+        titleKey: `documentIssuanceAdvance.${notice.key}`,
+        titleParams,
+        body: noticeT(`documentIssuanceAdvance.${body.key}`, body.params),
+        bodyKey: `documentIssuanceAdvance.${body.key}`,
+        bodyParams: body.params,
+        eventId: `document-issuance-advance-${notice.key}:${assignment.id}:${notice.identity}:${recipientId}`,
+        source: SOURCE(),
+      };
+    };
     const engagement = notice.toEngineer ? await activeIssuanceEngagementOf(db, assignment, context.registry, input.now.toISOString()) : null;
     const office = viewDestination(documentExpiryHref(undefined, { doc: issuanceKeyOf(assignment.propertyId, assignment.documentKind) }), orgWorkspace(assignment.companyId));
     const officeUids = [...new Set([record.proposedByUid, ...(record.notice === null ? [] : [record.notice.byUid])])];
     await Promise.all([
-      ...officeUids.map((uid) => send({ ...content(uid), ...office })),
-      ...(engagement === null ? [] : [caseEngagementChangedDestination(engagement).then((dest) => send({ ...content(engagement.uid), ...dest }))]),
+      ...officeUids.map((uid) => send({ ...content(uid, false), ...office })),
+      ...(engagement === null ? [] : [caseEngagementChangedDestination(engagement).then((dest) => send({ ...content(engagement.uid, true), ...dest }))]),
     ]);
   } catch (error) {
     logger.error('Το ορόσημο προκαταβολής δεν ανακοινώθηκε', { milestone: input.milestone.kind, error: error instanceof Error ? error.message : String(error) });

@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * @fileoverview ADR-943 §5.9 — **το βήμα «Πληρωμή προκαταβολής»** της σελίδας-συνδέσμου, μετά την έγκριση με προκαταβολή.
+ * @fileoverview ADR-943 §5.9 · Φ5β — **η σελίδα της προκαταβολής**: πληρωμή μετά την έγκριση, και (Φ5β) πότε αποδεσμεύονται
+ *   τα χρήματα, αντίρρηση του ιδιοκτήτη, χρονολόγιο.
  * @related useAdvancePayment.ts (η κατάσταση) · DocumentRequestGate.tsx (ο καλών) · IssuanceAdvanceSchedule.tsx (ο πίνακας)
  * @module app/(auth)/document-request/DocumentRequestAdvance
  *
@@ -26,6 +27,8 @@ import { formatMinor } from '@/lib/money/money';
 import type { OnlinePaymentMethod } from '@/subapps/accounting/types/online-payment';
 import type { IssuanceAdvanceCheckoutRefusal, IssuanceAdvancePaymentView } from '@/types/issuance-invitation';
 
+import { DocumentRequestAdvanceObjection } from './DocumentRequestAdvanceObjection';
+import { DocumentRequestAdvanceTimeline } from './DocumentRequestAdvanceTimeline';
 import { DocumentRequestFailureState } from './DocumentRequestFailureState';
 import { Fact } from './DocumentRequestFact';
 import { useAdvancePayment, type AdvancePayment } from './useAdvancePayment';
@@ -131,6 +134,9 @@ export function DocumentRequestAdvance({ token, advance, accessCode }: { readonl
       <AdvanceFacts view={payment.view} />
       <IssuanceAdvanceSchedule terms={payment.view.advance} />
       <AdvanceStatus payment={payment} />
+      {/* Φ5β — πότε αποδεσμεύονται · αντίρρηση (Ζ-3) · τι έγινε ως τώρα με τα χρήματα. */}
+      <DocumentRequestAdvanceObjection token={token} accessCode={accessCode} view={payment.view} adopt={payment.adopt} />
+      <DocumentRequestAdvanceTimeline timeline={payment.view.timeline} />
       {awaiting ? <StartRequest checked={consented} onChange={setConsented} disabled={payment.phase.kind === 'starting'} /> : null}
       {awaiting ? <PayActions payment={payment} consented={consented} /> : null}
     </AuthCardSection>

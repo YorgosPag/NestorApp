@@ -32,6 +32,8 @@ export interface AdvancePayment {
   /** Η απόπειρα που παρακολουθείται και πού βρίσκεται η αναμονή — `null` ⇒ καμία. */
   readonly watch: PaymentWatchPhase | null;
   readonly pay: (method: OnlinePaymentMethod) => void;
+  /** Φ5β — η όψη που επέστρεψε μια πράξη (π.χ. η αντίρρηση): η αλήθεια του διακομιστή, όχι αισιόδοξη υπόθεση. */
+  readonly adopt: (next: IssuanceAdvancePaymentView) => void;
 }
 
 /** Σιωπηλή ανανέωση της όψης — μόνο όταν ο σύνδεσμος δείχνει ακόμη την πληρωμή (αλλιώς μένει η τελευταία γνωστή). */
@@ -41,11 +43,11 @@ function useAdvanceView(token: string, initial: IssuanceAdvancePaymentView) {
     const outcome = await fetchDocumentRequest(token);
     if (outcome.ok && outcome.data.access === 'advance') setView(outcome.data.advance);
   }, [token]);
-  return { view, refresh };
+  return { view, refresh, adopt: setView };
 }
 
 export function useAdvancePayment(token: string, initial: IssuanceAdvancePaymentView, accessCode: string | null, locale: 'el' | 'en'): AdvancePayment {
-  const { view, refresh } = useAdvanceView(token, initial);
+  const { view, refresh, adopt } = useAdvanceView(token, initial);
   const [phase, setPhase] = useState<AdvancePaymentPhase>({ kind: 'idle' });
   const [attemptId, setAttemptId] = useState<string | null>(returnedAttemptId);
   const readAttempt = useCallback(async (checkoutId: string): Promise<AttemptReading | null> => {
@@ -69,5 +71,5 @@ export function useAdvancePayment(token: string, initial: IssuanceAdvancePayment
     });
   }, [token, locale, accessCode]);
 
-  return { view, phase, watch: active ? watch : null, pay };
+  return { view, phase, watch: active ? watch : null, pay, adopt };
 }

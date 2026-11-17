@@ -7,8 +7,11 @@
 import {
   advanceCollectedMinor,
   advanceGlanceOf,
+  advanceSettledAtOf,
   advanceStateOf,
+  advanceTimelineOf,
   cancellationScheduleOf,
+  isAdvancePageLive,
   isAdvanceTermsValid,
   isWithinWithdrawalPeriod,
   maxAdvanceMinorOf,
@@ -176,6 +179,46 @@ describe('ADR-943 Φ5α — η ματιά της προκαταβολής (μί�
     const release: IssuanceAction = { kind: 'advance-released', amountMinor: 4_000, transferReference: 'tra_1', basis: 'window-elapsed' };
     const released = apply(started(), release, at(SYSTEM, objectionUntilOf(T0)));
     expect(advanceGlanceOf(released)).toMatchObject({ state: 'released', releaseAt: null, collectedMinor: 4_000 });
+  });
+});
+
+describe('ADR-943 Φ5β — η σελίδα του ιδιοκτήτη: αντίρρηση με σύνδεσμο · χρονολόγιο · ζωή της σελίδας', () => {
+  const LINK: IssuanceActor = { kind: 'link', invitationId: 'dinv_owner', verifiedBy: 'link', nowIso: T0 };
+  const OBJECT: IssuanceAction = { kind: 'object-start', reason: 'Δεν ήρθε κανείς' };
+  const RELEASE: IssuanceAction = { kind: 'advance-released', amountMinor: 4_000, transferReference: 'tra_1', basis: 'window-elapsed' };
+
+  it('ο σύνδεσμος φέρνει αντίρρηση ⇒ `owner-link` (ο δράστης από τον actor, ποτέ από το αίτημα)', () => {
+    const disputed = apply(started(), OBJECT, LINK);
+    expect(stateOf(disputed).kind).toBe('disputed');
+    expect(disputed.advanceEvents.at(-1)).toMatchObject({ kind: 'start-objected', objection: { by: 'owner-link', invitationId: 'dinv_owner' } });
+  });
+
+  it('ο σύνδεσμος ΔΕΝ γράφει τίποτα άλλο της προκαταβολής, ούτε αντίρρηση έξω από το παράθυρο', () => {
+    expect(refusalOf(started(), OBJECT, at(LINK, objectionUntilOf(T0)))).toBe('transition-refused');
+    expect(refusalOf(funded(), OBJECT, LINK)).toBe('transition-refused');
+    expect(refusalOf(funded(), START, LINK)).toBe('actor-refused');
+    expect(refusalOf(started(), RELEASE, at(LINK, objectionUntilOf(T0)))).toBe('actor-refused');
+  });
+
+  it('χρονολόγιο: τα γεγονότα με τη σειρά τους, χωρίς αιτιολογίες (Ε-9′)', () => {
+    const timeline = advanceTimelineOf(apply(started(), OBJECT, LINK));
+    expect(timeline).toEqual([
+      { kind: 'funded', at: T0, amountMinor: 4_000 },
+      { kind: 'work-started', at: T0 },
+      { kind: 'start-objected', at: T0, by: 'owner-link' },
+    ]);
+    expect(JSON.stringify(timeline)).not.toContain('Δεν ήρθε κανείς');
+  });
+
+  it('η σελίδα ζει όσο ζουν τα χρήματα + 30 ημέρες (Ζ-1)', () => {
+    expect(advanceSettledAtOf(started())).toBeNull();
+    expect(isAdvancePageLive(started(), '2027-12-31T00:00:00.000Z')).toBe(true);
+    const settledAt = objectionUntilOf(T0);
+    const released = apply(started(), RELEASE, at(SYSTEM, settledAt));
+    expect(advanceSettledAtOf(released)).toBe(settledAt);
+    const day = 86_400_000;
+    expect(isAdvancePageLive(released, new Date(Date.parse(settledAt) + 30 * day - 1).toISOString())).toBe(true);
+    expect(isAdvancePageLive(released, new Date(Date.parse(settledAt) + 30 * day).toISOString())).toBe(false);
   });
 });
 

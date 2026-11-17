@@ -22,7 +22,7 @@ import { isMinorAmount, type MinorAmount } from '@/lib/money/money';
 
 import {
   ADVANCE_POLICY, advanceCollectedMinor, advanceStateOf, canObjectToStart, isAdvanceReleaseDue,
-  type AdvanceEvent, type AdvanceReleaseBasis, type AdvanceState,
+  type AdvanceEvent, type AdvanceReleaseBasis, type AdvanceState, type StartObjectionBy,
 } from './issuance-advance';
 import type { IssuanceActor } from './issuance-actor';
 import type { IssuanceAssignmentRecord, IssuanceReduction } from './issuance-assignment';
@@ -37,7 +37,11 @@ export type IssuanceAdvanceAction =
     }
   /** `engagement` — ο μηχανικός δηλώνει «έγινε η αυτοψία». */
   | { readonly kind: 'start-work' }
-  /** γραφείο — αντίρρηση του ιδιοκτήτη μέσα στο παράθυρο (καταγραφή). */
+  /**
+   * αντίρρηση μέσα στο παράθυρο: το γραφείο (καταγραφή για λογαριασμό του ιδιοκτήτη) ή ο ίδιος ο ιδιοκτήτης με σύνδεσμο
+   * (Φ5β, Ζ-3). Ότι ο σύνδεσμος ανήκει στον ιδιοκτήτη της απόφασης το αποδεικνύει ο διακομιστής πριν από τον μειωτή
+   * (`issuance-advance-checkout.ts`), όπως τη συμμετοχή του `engagement`.
+   */
   | { readonly kind: 'object-start'; readonly reason: string }
   /** `system` — ο πάροχος βεβαίωσε την αποδέσμευση προς τον μηχανικό. */
   | {
@@ -55,7 +59,7 @@ export type IssuanceAdvanceActionKind = IssuanceAdvanceAction['kind'];
 const ACTORS_OF: Readonly<Record<IssuanceAdvanceActionKind, readonly IssuanceActor['kind'][]>> = {
   'advance-funded': ['system'],
   'start-work': ['engagement'],
-  'object-start': ['office'],
+  'object-start': ['office', 'link'],
   'advance-released': ['system'],
   'advance-refunded': ['system'],
   'record-advance-receipt': ['engagement', 'office'],
@@ -135,11 +139,16 @@ function started(record: IssuanceAssignmentRecord, state: AdvanceState, actor: E
   return appended(record, { kind: 'work-started', at: actor.nowIso, byUid: actor.uid, engagementId: actor.engagementId });
 }
 
-function objected(record: IssuanceAssignmentRecord, state: AdvanceState, action: Extract<IssuanceAdvanceAction, { kind: 'object-start' }>, actor: Extract<IssuanceActor, { kind: 'office' }>): Reduction {
+/** Ποιος έφερε την αντίρρηση — από τον actor, ποτέ από το αίτημα. */
+function objectionByOf(actor: Extract<IssuanceActor, { kind: 'office' | 'link' }>): StartObjectionBy {
+  return actor.kind === 'office' ? { by: 'office', uid: actor.uid } : { by: 'owner-link', invitationId: actor.invitationId };
+}
+
+function objected(record: IssuanceAssignmentRecord, state: AdvanceState, action: Extract<IssuanceAdvanceAction, { kind: 'object-start' }>, actor: Extract<IssuanceActor, { kind: 'office' | 'link' }>): Reduction {
   if (!canObjectToStart(state, actor.nowIso)) return REFUSED('transition-refused');
   const reason = action.reason.trim();
   if (reason.length === 0 || reason.length > ADVANCE_POLICY.objectionReasonMax) return REFUSED('terms-refused');
-  return appended(record, { kind: 'start-objected', reason, at: actor.nowIso, objection: { by: 'office', uid: actor.uid } });
+  return appended(record, { kind: 'start-objected', reason, at: actor.nowIso, objection: objectionByOf(actor) });
 }
 
 function uidOf(actor: IssuanceActor): string | null {
@@ -156,7 +165,7 @@ export function reduceIssuanceAdvance(record: IssuanceAssignmentRecord | null, a
     case 'advance-released': return released(record, state, action, actor.nowIso);
     case 'advance-refunded': return refunded(record, state, action, actor.nowIso);
     case 'start-work': return actor.kind === 'engagement' ? started(record, state, actor) : REFUSED('actor-refused');
-    case 'object-start': return actor.kind === 'office' ? objected(record, state, action, actor) : REFUSED('actor-refused');
+    case 'object-start': return actor.kind === 'office' || actor.kind === 'link' ? objected(record, state, action, actor) : REFUSED('actor-refused');
     case 'record-advance-receipt': {
       const uid = uidOf(actor);
       return uid === null ? REFUSED('actor-refused') : receipted(record, state, action, uid, actor.nowIso);

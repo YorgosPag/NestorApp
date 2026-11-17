@@ -16,13 +16,14 @@ import { z } from 'zod';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { DOCUMENT_KINDS, type DocumentKind } from '@/config/document-validity/document-validity';
+import { ADVANCE_POLICY } from '@/lib/document-validity/issuance-advance';
 import { ISSUANCE_AUDIENCES, type IssuanceAudience } from '@/lib/document-validity/issuance-request';
 import { mintAccessCode, storedAccessCodeSchema } from '@/server/invitations/invitation-access-code';
 import { mintInvitationLinkReissue, newPendingInvitationCore } from '@/server/invitations/invitation-lifecycle';
 import type { InvitationLocator } from '@/server/invitations/invitation-redeem';
 import { defaultInvitationExpiryMs, mintInvitationToken } from '@/server/invitations/invitation-token';
 import { generateDocumentIssuanceInvitationId } from '@/services/enterprise-id.service';
-import type { IssuanceInvitation } from '@/types/issuance-invitation';
+import type { IssuanceInvitation, IssuanceLinkPurpose } from '@/types/issuance-invitation';
 import { INVITATION_STATES, type InvitationDocumentCore } from '@/types/invitation-core';
 
 /** Το μυστικό υπογραφής των συνδέσμων ανάθεσης — **μόνο** αυτού του είδους. */
@@ -62,7 +63,17 @@ const invitationSchema = z.object({
   accessCode: storedAccessCodeSchema.nullable().default(null),
   /** §31 — σύνδεσμοι που επανεκδόθηκαν (υπενθυμίσεις)· τα έγγραφα του §28–§30 διαβάζονται ως «κανένας». */
   reissuedNonceHashes: z.array(nonEmpty).max(ISSUANCE_LINK_REISSUE_CAP).default([]),
+  /** ADR-943 Φ5β — ο σκοπός· τα έγγραφα πριν από τη Φ5β διαβάζονται ως «απάντηση» (καμία μετάπτωση). */
+  purpose: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('answer') }),
+    z.object({ kind: z.literal('advance'), decidedAt: nonEmpty, codeHolderId: nonEmpty.nullable() }),
+  ]).default({ kind: 'answer' }),
 });
+
+/** Ο σύνδεσμος οδηγεί **μόνο** στη σελίδα της προκαταβολής (ADR-943 Φ5β) — ποτέ στη φόρμα απάντησης. */
+export function isAdvanceLink(invitation: IssuanceInvitation): invitation is IssuanceInvitation & { readonly purpose: Extract<IssuanceLinkPurpose, { kind: 'advance' }> } {
+  return invitation.purpose.kind === 'advance';
+}
 
 /** Ωμό έγγραφο → σύνδεσμος, fail-closed: ό,τι δεν καταλαβαίνουμε **δεν** απαντά τίποτα. */
 export function parseIssuanceInvitation(raw: unknown, expectedId: string): IssuanceInvitation | null {
@@ -100,8 +111,24 @@ export interface IssuanceInvitationDraft {
   readonly email: string;
   readonly actorUid: string;
   readonly nowValue: string;
-  /** §29 — ζητά ο σύνδεσμος και κωδικό που λέει το γραφείο; */
+  /** §29 — ζητά ο σύνδεσμος και κωδικό που λέει το γραφείο; (σύνδεσμος προκαταβολής: γίνεται ο ίδιος κάτοχος του κωδικού) */
   readonly requireAccessCode: boolean;
+  /** ADR-943 Φ5β — απάντηση (προεπιλογή) ή σελίδα προκαταβολής. */
+  readonly purpose?: IssuanceLinkPurpose;
+}
+
+const DAY_MS = 86_400_000;
+
+/** Η λήξη της υπογραφής ανά σκοπό: 7 ημέρες για απάντηση (§28) · 120 για τη σελίδα προκαταβολής (Ζ-1, Stripe). */
+function linkExpiryMsOf(purpose: IssuanceLinkPurpose, nowValue: string): number {
+  return purpose.kind === 'advance'
+    ? Date.parse(nowValue) + ADVANCE_POLICY.linkLifetimeDays * DAY_MS
+    : defaultInvitationExpiryMs(nowValue);
+}
+
+/** Σύνδεσμος προκαταβολής με **δικό** του κωδικό ⇒ κάτοχος του κωδικού είναι ο ίδιος (οι επόμενοι τον κληρονομούν). */
+function mintedPurposeOf(purpose: IssuanceLinkPurpose, id: string, ownsCode: boolean): IssuanceLinkPurpose {
+  return purpose.kind === 'advance' && ownsCode ? { ...purpose, codeHolderId: id } : purpose;
 }
 
 /** **Νέος σύνδεσμος** — το έγγραφο + το ωμό token (ωμό **μόνο** στο email). Πετά αν λείπει το μυστικό. */
@@ -114,7 +141,8 @@ export interface MintedIssuanceInvitation {
 
 export async function mintIssuanceInvitation(draft: IssuanceInvitationDraft): Promise<MintedIssuanceInvitation> {
   const id = generateDocumentIssuanceInvitationId();
-  const expiresAtMs = defaultInvitationExpiryMs(draft.nowValue);
+  const purpose = draft.purpose ?? { kind: 'answer' };
+  const expiresAtMs = linkExpiryMsOf(purpose, draft.nowValue);
   const { token, nonceHash } = await mintInvitationToken(ISSUANCE_INVITE_SECRET_ENV, { id, expiresAtMs, locator: [] });
   // Το ίδιο μυστικό με τον σύνδεσμο: λείπει ⇒ πετά **πριν** από κάθε εγγραφή (ο καλών λέει `secret-missing`).
   const code = draft.requireAccessCode ? mintAccessCode(ISSUANCE_INVITE_SECRET_ENV, id) : null;
@@ -127,6 +155,7 @@ export async function mintIssuanceInvitation(draft: IssuanceInvitationDraft): Pr
     audience: draft.audience,
     contactId: draft.contactId,
     accessCode: code?.stored ?? null,
+    purpose: mintedPurposeOf(purpose, id, code !== null),
   };
   return { invitation, token, accessCode: code?.code ?? null };
 }

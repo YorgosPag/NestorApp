@@ -235,6 +235,11 @@ export const NOTIFICATION_EVENT_TYPES = {
    */
   PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_RELEASED: 'properties.documentIssuanceAdvanceReleased',
   /**
+   * ADR-943 Φ5β (Ζ-3) — **αντίρρηση στην αυτοψία** μέσα στο παράθυρο: η αυτόματη αποδέσμευση **δεν** θα γίνει, αποφασίζει
+   * το γραφείο. Στο γραφείο **με** την αιτιολογία· στον μηχανικό **χωρίς** (Ε-9′). Προτίμηση: `documentIssuancePayments`.
+   */
+  PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_OBJECTED: 'properties.documentIssuanceAdvanceObjected',
+  /**
    * ADR-916 §5.15 Φ-Δ.2 (Ο7) — **ο αγοραστής απάντησε στην πρόσκληση παράδοσης** (αποδοχή · άρνηση). Προς όποιον την
    * έστειλε (αν είναι άνθρωπος) + τους διαχειριστές του χώρου· προσγείωση στην καρτέλα «Παράδοση». Το σώμα λέει την
    * **επόμενη κίνηση** από την ίδια κρίση με την καρτέλα. Προτίμηση: `handoverInvitationAnswers`.
@@ -637,6 +642,13 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
     settingKey: 'documentIssuancePayments',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  // ADR-943 Φ5β — αντίρρηση: ΠΡΟΕΙΔΟΠΟΙΗΣΗ (τα χρήματα κρατούνται ως την απόφαση του γραφείου).
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DOCUMENT_ISSUANCE_ADVANCE_OBJECTED]: {
+    category: 'properties',
+    settingKey: 'documentIssuancePayments',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.WARNING,
   },
   // ADR-916 Φ-Δ.2 — απάντηση αγοραστή στην πρόσκληση παράδοσης: ΠΛΗΡΟΦΟΡΙΑ· η άρνηση ανεβαίνει σε ΠΡΟΕΙΔΟΠΟΙΗΣΗ ανά αποστολή.
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_HANDOVER_INVITATION_ANSWERED]: {

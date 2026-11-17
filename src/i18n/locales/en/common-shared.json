@@ -1101,6 +1101,9 @@
     "workStarted": "Site visit done: {title}",
     "workStartedBody": "The engineer declared the site visit done. The advance of {amount} is released to the engineer at {releaseAt}, unless someone objects by then.",
     "released": "Advance released: {title}",
-    "releasedBody": "The payment provider released the advance of {amount} to the engineer."
+    "releasedBody": "The payment provider released the advance of {amount} to the engineer.",
+    "objected": "Objection to the site visit: {title}",
+    "objectedBody": "The site visit was disputed: “{reason}”. The advance of {amount} stays held and will not be released automatically — the office decides.",
+    "objectedEngineerBody": "The site visit was disputed. The advance of {amount} stays held until the office decides."
   }
 }

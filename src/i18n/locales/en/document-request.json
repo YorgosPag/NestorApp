@@ -73,7 +73,7 @@
     },
     "expired": {
       "title": "The link has expired",
-      "body": "Links are valid for 7 days. Ask the office to send it again."
+      "body": "This link is no longer valid. Ask the office to send you a new one."
     },
     "used": {
       "title": "You have already answered",
@@ -164,6 +164,28 @@
       "slow": "The confirmation is taking longer — do not pay again.",
       "failed": "The payment was not completed. You can try again.",
       "timedOut": "No confirmation yet. If you paid, it will appear shortly."
+    },
+    "timeline": {
+      "heading": "What happened to the money",
+      "funded": "You paid {amount} — held by the payment provider",
+      "workStarted": "The professional declared the site visit done",
+      "objectedByOwner": "You objected — the office decides",
+      "objectedByOffice": "The office recorded an objection — the office decides",
+      "released": "{amount} paid out to the professional",
+      "refunded": "{amount} refunded to you"
+    },
+    "objection": {
+      "releaseAt": "If everything went well, you need to do nothing: the advance is paid out automatically on {date} ({relative}).",
+      "trigger": "Something went wrong",
+      "heading": "Object to the site visit",
+      "intro": "Tell us what went wrong. The advance will stay held and will not be paid out automatically; the office will contact you and decide.",
+      "reasonLabel": "What went wrong?",
+      "cancel": "Back",
+      "confirm": "Submit objection",
+      "sending": "Submitting…",
+      "done": "Your objection was recorded. The money stays held until the office decides.",
+      "closed": "The objection window closed in the meantime.",
+      "failed": "The objection was not recorded. Please try again."
     }
   }
 }

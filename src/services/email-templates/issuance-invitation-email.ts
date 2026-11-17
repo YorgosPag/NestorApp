@@ -40,6 +40,7 @@ import {
   invitationDetailLine,
   type InvitationEmailLine,
 } from './invitation-email-shared';
+import { ADVANCE_LINK_EMAIL_TEXTS, type AdvanceLinkMoment } from './issuance-advance-link-email-texts';
 import { ISSUANCE_EMAIL_TEXTS, type IssuanceEmailWording } from './issuance-invitation-email-texts';
 
 /** Οι ονομασίες, ανά γλώσσα, από τα **ίδια** locale της οθόνης. */
@@ -91,6 +92,14 @@ export type IssuanceEmailInput =
   | {
     readonly kind: 'delivery-reminder'; readonly language: unknown; readonly facts: IssuanceEmailFacts;
     readonly moment: DeliveryReminderMoment; readonly dueOn: string | null; readonly spaceLink: string | null;
+  }
+  /**
+   * ADR-943 Φ5β (Ζ-1) — **νέος σύνδεσμος προκαταβολής** (αυτοψία · αίτημα πληρωμής). `amount` = το ποσό ήδη μορφοποιημένο
+   * από τον καλούντα· `releaseAt` μόνο στην αυτοψία· `accessCode` = η σελίδα θα ζητήσει τον κωδικό του φακέλου (§29).
+   */
+  | {
+    readonly kind: 'advance-link'; readonly language: unknown; readonly facts: IssuanceEmailFacts; readonly moment: AdvanceLinkMoment;
+    readonly amount: string; readonly releaseAt: string | null; readonly expiresAt: string; readonly link: string; readonly accessCode: boolean;
   };
 
 /** Ο σύνδεσμος εισόδου στον χώρο (απόλυτος, έτοιμος από τον καλούντα) και η λήξη του. */
@@ -253,10 +262,31 @@ function deliveryReminderEmail(named: Named, input: Extract<IssuanceEmailInput, 
     : composeInvitationEmail({ ...framing, link: input.spaceLink, core: w });
 }
 
+/**
+ * ADR-943 Φ5β — **νέος σύνδεσμος προκαταβολής**: ένα κουμπί προς τη σελίδα της προκαταβολής (πληρωμή · χρονολόγιο ·
+ * αντίρρηση). Στην αυτοψία λέει **πότε** φεύγουν τα χρήματα και ότι, αν όλα πήγαν καλά, δεν χρειάζεται τίποτα.
+ */
+function advanceLinkEmail(named: Named, input: Extract<IssuanceEmailInput, { kind: 'advance-link' }>): ConfirmationEmailResult {
+  const { language, office, property, document } = named;
+  const w = ADVANCE_LINK_EMAIL_TEXTS[language];
+  const details = [
+    invitationDetailLine(w.amountLabel, input.amount),
+    ...(input.releaseAt === null ? [] : [invitationDetailLine(w.releaseAtLabel, formatOperatorDateTime(input.releaseAt, language))]),
+    invitationDetailLine(w.nextLabel, w.next[input.moment]),
+    ...(input.accessCode ? [invitationDetailLine(w.accessCodeLabel, w.accessCodeHowTo)] : []),
+    invitationDetailLine(w.expiresLabel, formatOperatorDate(input.expiresAt, language)),
+  ];
+  return composeInvitationEmail({
+    language, subject: w.subject[input.moment](document, property), heading: w.heading[input.moment],
+    intro: lineOf(w.intro[input.moment], [office, document, property]), details, link: input.link, core: w,
+  });
+}
+
 /** **Το μήνυμα, στη γλώσσα του παραλήπτη.** Ο σύνδεσμος έρχεται έτοιμος (απόλυτος) από τον καλούντα. */
 export function buildIssuanceEmail(input: IssuanceEmailInput): ConfirmationEmailResult {
   const named = namedOf(input);
   const { w, language, office, property, document, professional } = named;
+  if (input.kind === 'advance-link') return advanceLinkEmail(named, input);
   if (input.kind === 'receipt') return receiptEmail(named, input);
   if (input.kind === 'space') return spaceEmail(named, input);
   if (input.kind === 'delivery-reminder') return deliveryReminderEmail(named, input);

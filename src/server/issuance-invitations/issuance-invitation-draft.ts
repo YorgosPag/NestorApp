@@ -100,7 +100,8 @@ function coOwnerIdsOf(body: IssuanceSendBody, open: OpenAssignment): readonly st
   return (open.label.ownerContactIds ?? []).filter((id) => id !== open.leadId);
 }
 
-async function peopleOf(db: Firestore, companyId: string, ids: readonly string[]): Promise<ReadonlyMap<string, DraftPerson>> {
+/** Οι επαφές του γραφείου (όνομα · κύριο email) — ο ΕΝΑΣ αναγνώστης παραληπτών για κάθε email της ανάθεσης. */
+export async function readIssuancePeople(db: Firestore, companyId: string, ids: readonly string[]): Promise<ReadonlyMap<string, DraftPerson>> {
   const docs = await readOwnedContactDocs(db, companyId, ids);
   return new Map([...docs].map(([contactId, data]) => [contactId, {
     contactId,
@@ -126,7 +127,7 @@ export async function draftIssuanceMessage(db: Firestore, companyId: string, bod
   if (recipientId === 'lead-undesignated' || recipientId === 'lead-changed') return refused(recipientId);
   const coOwnerIds = coOwnerIdsOf(body, open);
   const ids = [recipientId, open.record.professionalContactId, ...coOwnerIds, ...(open.leadId === null ? [] : [open.leadId])];
-  const [people, officeName] = await Promise.all([peopleOf(db, companyId, ids), readWorkspaceName(companyId).catch(() => '')]);
+  const [people, officeName] = await Promise.all([readIssuancePeople(db, companyId, ids), readWorkspaceName(companyId).catch(() => '')]);
   const recipient = people.get(recipientId);
   if (recipient === undefined || recipient.email === null) return refused('no-email');
   const coOwners = coOwnerIds.flatMap((id) => people.get(id) ?? []);

@@ -9,7 +9,7 @@
  */
 
 import { IDEMPOTENCY_KEY_HEADER } from '@/lib/api/idempotency/idempotency-contract';
-import type { IssuanceLinkAnswerBody, IssuanceLinkUnlockBody } from '@/lib/document-validity/issuance-request';
+import type { IssuanceAdvanceObjectionBody, IssuanceLinkAnswerBody, IssuanceLinkUnlockBody } from '@/lib/document-validity/issuance-request';
 import { isOneOf } from '@/lib/type-guards';
 import { generateIdempotencyKey } from '@/services/enterprise-id.service';
 import { CORE_INVITATION_REFUSALS } from '@/types/invitation-core';
@@ -18,6 +18,7 @@ import {
   type IssuanceAdvanceAttemptResponse,
   type IssuanceAdvanceCheckoutBody,
   type IssuanceAdvanceCheckoutResult,
+  type IssuanceAdvanceObjectionResult,
   type IssuanceLinkLanding,
   type IssuanceLinkUnlocked,
   type IssuanceSpaceView,
@@ -28,6 +29,7 @@ const VIEW_API = '/api/issuance-link';
 const ANSWER_API = '/api/issuance-link/answer';
 const UNLOCK_API = '/api/issuance-link/unlock';
 const ADVANCE_CHECKOUT_API = '/api/issuance-link/advance-checkout';
+const ADVANCE_OBJECTION_API = '/api/issuance-link/advance-objection';
 
 /** Κάθε αποτυχία που μπορεί να ονομάσει η σελίδα — ίδιοι κωδικοί με την πόρτα (`issuance-link-door.ts`). */
 export const DOCUMENT_REQUEST_FAILURES = [
@@ -89,6 +91,11 @@ export function unlockDocumentRequest(token: string, body: IssuanceLinkUnlockBod
 /** ADR-943 §5.9 — έναρξη πληρωμής προκαταβολής: ένα κλειδί ιδεμποτίας ανά πάτημα, **ποτέ** ποσό. */
 export function startAdvanceCheckout(token: string, body: IssuanceAdvanceCheckoutBody): Promise<ApiOutcome<IssuanceAdvanceCheckoutResult>> {
   return postWithLink(ADVANCE_CHECKOUT_API, token, body);
+}
+
+/** ADR-943 Φ5β (Ζ-3) — η αντίρρηση του ιδιοκτήτη στην αυτοψία: ένα κλειδί ιδεμποτίας ανά πάτημα (και ο κωδικός, §29). */
+export function objectToAdvance(token: string, body: IssuanceAdvanceObjectionBody): Promise<ApiOutcome<IssuanceAdvanceObjectionResult>> {
+  return postWithLink(ADVANCE_OBJECTION_API, token, body);
 }
 
 /** ADR-943 §5.9 — η έκβαση μιας απόπειρας προκαταβολής (GET, καμία πράξη). */

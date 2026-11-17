@@ -181,19 +181,24 @@ export function readInvitationByToken<TDoc extends InvitationDocumentCore>(
 }
 
 /**
- * **Ο κάτοχος ενός ΕΞΑΡΓΥΡΩΜΕΝΟΥ συνδέσμου** (ADR-943 §5.9) — η ίδια υπογραφή, το ίδιο έγγραφο, το ίδιο nonce· αλλά
- * κατάσταση `accepted` **αντί** για `pending`. Αποδεικνύει «είσαι αυτός που απάντησε **ναι** με αυτόν τον σύνδεσμο»: η
- * μόνη χρήση είναι **ακολουθία** της απάντησης (π.χ. η πληρωμή της προκαταβολής που μόλις εγκρίθηκε). Η λήξη είναι αυτή
- * της **υπογραφής** (`readInvitationToken`) — η αποθηκευμένη λήξη αφορούσε την απάντηση, που δόθηκε.
- * ⚠️ Ο καλών **πρέπει** να ξανακρίνει ότι η απάντηση αυτού του συνδέσμου είναι ακόμη η ισχύουσα (π.χ. η απόφαση της
- * ανάθεσης δείχνει **αυτό** το `invitationId`).
+ * **Ζωντανός ή ΕΞΑΡΓΥΡΩΜΕΝΟΣ σύνδεσμος, με ΜΙΑ ανάγνωση** (ADR-943 §5.9 · Φ5β) — η ίδια υπογραφή, το ίδιο έγγραφο, το
+ * ίδιο nonce:
+ * - `pending` ⇒ οι έλεγχοι της όψης ({@link readInvitationByToken}, χωρίς παραλήπτη)·
+ * - `accepted` ⇒ «είσαι αυτός που απάντησε **ναι** με αυτόν τον σύνδεσμο» — χρήση μόνο ως **ακολουθία** της απάντησης
+ *   (π.χ. η πληρωμή της προκαταβολής που μόλις εγκρίθηκε). Η λήξη είναι της **υπογραφής** (`readInvitationToken`) — η
+ *   αποθηκευμένη λήξη αφορούσε την απάντηση, που δόθηκε.
+ * Για είδος που δίνει **την ίδια** σελίδα σε δύο είδη συνδέσμων (τη σελίδα προκαταβολής, από τον σύνδεσμο που ενέκρινε
+ * **ή** από νέο σύνδεσμο κάθε email). ⚠️ Ο καλών **πρέπει** να κρίνει ποια κατάσταση δέχεται για ποιο έγγραφο, και ότι η
+ * απάντηση/απόφαση στην οποία δένεται ο σύνδεσμος είναι ακόμη η ισχύουσα.
  */
-export function readRedeemedInvitationByToken<TDoc extends InvitationDocumentCore>(
+export function readLiveOrRedeemedInvitationByToken<TDoc extends InvitationDocumentCore>(
   db: Firestore,
   kind: InvitationLocator<TDoc>,
   input: { readonly token: string; readonly nowValue: string },
 ): Promise<InvitationByToken<TDoc>> {
-  return readByToken(db, kind, input, refusalOfRedeemedInvitation);
+  return readByToken(db, kind, input, (stored, nonceHash) => (stored.state === 'accepted'
+    ? refusalOfRedeemedInvitation(stored, nonceHash)
+    : refusalOfStoredInvitation(stored, { nowValue: input.nowValue, nonceHash, recipientEmail: null })));
 }
 
 // =============================================================================

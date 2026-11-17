@@ -58,7 +58,7 @@ import type {
 import { advancePaymentLinkOf, viewIssuanceAdvance } from './issuance-advance-checkout';
 import { announceIssuanceAnswer, type IssuanceLinkEvent } from './issuance-answer-notifier';
 import { sendIssuanceAnswerReceipt } from './issuance-answer-receipt';
-import { ISSUANCE_INVITATION_LOCATOR, isIssuanceLinkLocked, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
+import { ISSUANCE_INVITATION_LOCATOR, isAdvanceLink, isIssuanceLinkLocked, issuanceInvitationsCollection, parseIssuanceInvitation } from './issuance-invitation-kind';
 import { checkIssuanceAccessCode, issuanceGateViewOf, type IssuanceAccessCheck } from './issuance-link-access';
 import { resolveOwnerAttestation } from './issuance-link-owners';
 import { quoteFacetsOf } from './issuance-link-view';
@@ -121,14 +121,27 @@ export async function resolveIssuanceInvitation(db: Firestore, invitation: Issua
   return { ok: true, link: { invitation, registry, label, record: issuance.record, latestIssuedOn: issuance.latestIssuedOn } };
 }
 
-/** Token → σύνδεσμος → η ανάθεση. */
-async function resolveLink(db: Firestore, token: string, now: Date): Promise<Resolution> {
+/**
+ * ADR-943 Φ5β — ο σύνδεσμος **δεν** απαντά: οδηγεί στη σελίδα της προκαταβολής. `answered` = απαντήθηκε ήδη (ο σύνδεσμος
+ * που ενέκρινε — η αρχική άρνηση `already-used` αν δεν υπάρχει προκαταβολή)· `advance` = σύνδεσμος προκαταβολής (η άρνηση
+ * της σελίδας λέγεται όπως είναι).
+ */
+type ToAdvancePage = { readonly ok: false; readonly toAdvance: 'answered' | 'advance' };
+
+/** Token → σύνδεσμος → η ανάθεση — ή (Φ5β) η σελίδα της προκαταβολής, **ποτέ** η φόρμα απάντησης. */
+async function resolveLink(db: Firestore, token: string, now: Date): Promise<Resolution | ToAdvancePage> {
   const found = await readInvitationByToken(db, ISSUANCE_INVITATION_LOCATOR, { token, nowValue: now.toISOString(), recipientEmail: null });
   if (found.kind === 'secret-missing') return { ok: false, unavailable: 'secret-missing' };
-  if (found.kind === 'refused') return { ok: false, refusal: found.reason };
+  if (found.kind === 'refused') return found.reason === 'already-used' ? { ok: false, toAdvance: 'answered' } : { ok: false, refusal: found.reason };
   const invitation = parseIssuanceInvitation(found.stored, found.invitationId);
   if (invitation === null) return { ok: false, unavailable: 'invitation-corrupt' };
+  if (isAdvanceLink(invitation)) return { ok: false, toAdvance: 'advance' };
   return resolveIssuanceInvitation(db, invitation, now);
+}
+
+/** Η άρνηση/αδυναμία μιας επίλυσης που **δεν** οδηγεί σε σελίδα προκαταβολής. */
+function failureOf(resolved: Exclude<Resolution, { ok: true }>): LinkRefused | { readonly kind: 'unavailable' } {
+  return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
 }
 
 export function officeNameOf(link: ResolvedLink): Promise<string | null> {
@@ -169,8 +182,7 @@ export type LinkViewOutcome =
  */
 export async function viewIssuanceLink(db: Firestore, token: string, now: Date): Promise<LinkViewOutcome> {
   const resolved = await resolveLink(db, token, now);
-  if (!resolved.ok && 'refusal' in resolved && resolved.refusal === 'already-used') return advanceLandingOf(db, token, now);
-  if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
+  if (!resolved.ok) return 'toAdvance' in resolved ? advanceLandingOf(db, token, resolved.toAdvance, now) : failureOf(resolved);
   const { link } = resolved;
   if (isIssuanceLinkLocked(link.invitation)) return { kind: 'refused', reason: 'code-locked', remaining: 0 };
   const ref = issuanceInvitationsCollection(db).doc(link.invitation.id);
@@ -255,30 +267,34 @@ export type LinkUnlockOutcome =
   | { readonly kind: 'unavailable' };
 
 /**
- * ADR-943 §5.9 — ο σύνδεσμος **απαντήθηκε**: αν ενέκρινε προσφορά με προκαταβολή, η σελίδα δείχνει την πληρωμή της· αλλιώς
- * η αρχική άρνηση (`already-used`), όπως πριν. Καμία εγγραφή — όπως κάθε όψη.
+ * Η άρνηση της σελίδας προκαταβολής προς τον άνθρωπο: σύνδεσμος προκαταβολής ⇒ όπως είναι (`superseded` · `expired` …)·
+ * σύνδεσμος που απαντήθηκε **χωρίς** προκαταβολή ⇒ η αρχική άρνηση `already-used`, όπως πριν (ADR-943 §5.9).
  */
-async function advanceLandingOf(db: Firestore, token: string, now: Date): Promise<LinkViewOutcome> {
+function advanceRefusalOf(landing: LinkRefused, via: ToAdvancePage['toAdvance']): LinkRefused {
+  return via === 'advance' || landing.remaining !== undefined ? landing : { kind: 'refused', reason: 'already-used' };
+}
+
+/** ADR-943 §5.9 · Φ5β — η σελίδα της προκαταβολής στη θέση της όψης. Καμία εγγραφή — όπως κάθε όψη. */
+async function advanceLandingOf(db: Firestore, token: string, via: ToAdvancePage['toAdvance'], now: Date): Promise<LinkViewOutcome> {
   const landing = await viewIssuanceAdvance(db, token, null, now);
   const noop = async (): Promise<void> => undefined;
   if (landing.kind === 'advance') return { kind: 'view', landing: { access: 'advance', advance: landing.advance }, markOpened: noop };
   if (landing.kind === 'code-required') return { kind: 'view', landing: { access: 'code-required', gate: landing.gate }, markOpened: noop };
-  return landing.kind === 'unavailable' ? landing : { kind: 'refused', reason: 'already-used' };
+  return landing.kind === 'unavailable' ? landing : advanceRefusalOf(landing, via);
 }
 
-/** Το ξεκλείδωμα ενός **απαντημένου** συνδέσμου (ADR-943 §5.9): η πληρωμή της προκαταβολής, ή η αρχική άρνηση. */
-async function unlockAdvanceOf(db: Firestore, token: string, accessCode: string, now: Date): Promise<LinkUnlockOutcome> {
+/** Το ξεκλείδωμα της σελίδας προκαταβολής (ADR-943 §5.9 · Φ5β): η όψη της, ή η άρνηση. */
+async function unlockAdvanceOf(db: Firestore, token: string, accessCode: string, via: ToAdvancePage['toAdvance'], now: Date): Promise<LinkUnlockOutcome> {
   const landing = await viewIssuanceAdvance(db, token, accessCode, now);
   if (landing.kind === 'advance' || landing.kind === 'unavailable') return landing;
-  if (landing.kind === 'refused' && landing.remaining !== undefined) return landing;
-  return { kind: 'refused', reason: 'already-used' };
+  // Η όψη δεν επιστρέφει πύλη όταν δόθηκε κωδικός· αμυντικά, πύλη ⇒ «λείπει ο κωδικός».
+  return landing.kind === 'code-required' ? { kind: 'refused', reason: 'code-required' } : advanceRefusalOf(landing, via);
 }
 
 /** **Το ξεκλείδωμα** (§29) — μία προσπάθεια κωδικού ⇒ η πλήρης όψη. Καμία πράξη στην ανάθεση. */
 export async function unlockIssuanceLink(db: Firestore, token: string, accessCode: string, now: Date): Promise<LinkUnlockOutcome> {
   const resolved = await resolveLink(db, token, now);
-  if (!resolved.ok && 'refusal' in resolved && resolved.refusal === 'already-used') return unlockAdvanceOf(db, token, accessCode, now);
-  if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
+  if (!resolved.ok) return 'toAdvance' in resolved ? unlockAdvanceOf(db, token, accessCode, resolved.toAdvance, now) : failureOf(resolved);
   const check = await guardAccess(db, resolved.link, accessCode, now.toISOString());
   if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
   return { kind: 'view', view: await viewOf(db, resolved.link) };
@@ -344,7 +360,12 @@ export type LinkAnswerOutcome =
 /** **Η απάντηση** — μόνο από POST. Ένα κλικ ⇒ ένα αποτέλεσμα· δύο κλικ ⇒ `already-used`. */
 export async function answerIssuanceLink(db: Firestore, token: string, answer: IssuanceLinkAnswerBody, now: Date): Promise<LinkAnswerOutcome> {
   const resolved = await resolveLink(db, token, now);
-  if (!resolved.ok) return 'refusal' in resolved ? { kind: 'refused', reason: resolved.refusal } : { kind: 'unavailable' };
+  // Φ5β — ο σύνδεσμος προκαταβολής δεν απαντά ποτέ· ο απαντημένος λέει `already-used`, όπως πριν.
+  if (!resolved.ok) {
+    return 'toAdvance' in resolved
+      ? { kind: 'refused', reason: resolved.toAdvance === 'advance' ? 'answer-mismatch' : 'already-used' }
+      : failureOf(resolved);
+  }
   const { link } = resolved;
   if (LINK_ANSWER_AUDIENCE[answer.answer] !== link.invitation.audience) return { kind: 'refused', reason: 'answer-mismatch' };
   const check = await guardAccess(db, link, answer.accessCode, now.toISOString());

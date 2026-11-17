@@ -61,6 +61,17 @@ export const ADVANCE_POLICY = {
   maxPercentOfTotal: 50,
   /** Φ4 — οι ημέρες υπαναχώρησης από τη σύναψη (ν.2251/1994 άρθρο 3ε · Οδηγία 2011/83 άρθρο 9). */
   withdrawalDays: 14,
+  /**
+   * Φ5β (Ζ-1) — η **σελίδα προκαταβολής** ζει όσο ζουν τα χρήματα: κάθε σύνδεσμος υπογράφεται για το πολύ 120 ημέρες, και
+   * σβήνει 30 ημέρες μετά το τέλος τους (αποδέσμευση ή επιστροφή). Πρακτική Stripe hosted invoice (30 ημ. μετά, ≤ 120 ημ.).
+   */
+  linkLifetimeDays: 120,
+  linkAfterSettledDays: 30,
+  /**
+   * Φ5β — πόσοι σύνδεσμοι προκαταβολής ζουν ταυτόχρονα για μία απόφαση: κάθε email δουλεύει (Stripe), αλλά **φραγμένα**
+   * — ο νέος ανακαλεί τους παλαιότερους πέρα από αυτό το όριο (κανένα σφάλμα δεν γεννά απεριόριστους ζωντανούς συνδέσμους).
+   */
+  liveLinksCap: 3,
 } as const;
 
 /**
@@ -237,6 +248,44 @@ export function advanceCollectedMinor(state: AdvanceState): MinorAmount {
     case 'release-pending': case 'disputed': return state.fundedMinor;
     case 'none': case 'awaiting-payment': case 'refunded': return 0;
   }
+}
+
+/**
+ * Φ5β — **πότε τελείωσαν τα χρήματα**: η στιγμή του τελευταίου γεγονότος αποδέσμευσης/επιστροφής, μόνο όταν η κατάσταση
+ * είναι τελική (`released` · `refunded`). `null` ⇒ τα χρήματα ζουν ακόμη (ή δεν κινήθηκαν).
+ */
+export function advanceSettledAtOf(facts: AdvanceFacts): string | null {
+  const kind = advanceStateOf(facts).kind;
+  if (kind !== 'released' && kind !== 'refunded') return null;
+  const last = [...facts.advanceEvents].reverse().find((event) => event.kind === 'released' || event.kind === 'refunded');
+  return last?.at ?? null;
+}
+
+/** Ζ-1 — ζει ακόμη η σελίδα προκαταβολής; — ως 30 ημέρες μετά το τέλος των χρημάτων (η λήξη της υπογραφής κρίνεται αλλού). */
+export function isAdvancePageLive(facts: AdvanceFacts, nowIso: string): boolean {
+  const settledAt = advanceSettledAtOf(facts);
+  if (settledAt === null) return true;
+  return Date.parse(nowIso) < Date.parse(settledAt) + ADVANCE_POLICY.linkAfterSettledDays * 86_400_000;
+}
+
+/** Μία γραμμή του χρονολογίου χρημάτων — **τι** έγινε, **πότε**, και (όπου κινήθηκαν) **πόσα**. */
+export type AdvanceTimelineEntry =
+  | { readonly kind: 'funded' | 'released' | 'refunded'; readonly at: string; readonly amountMinor: MinorAmount }
+  | { readonly kind: 'work-started'; readonly at: string }
+  | { readonly kind: 'start-objected'; readonly at: string; readonly by: StartObjectionBy['by'] };
+
+/**
+ * Φ5β — **το χρονολόγιο των χρημάτων** (πληρώθηκε → αυτοψία → αντίρρηση → αποδέσμευση/επιστροφή) για κάθε οθόνη. Από τα
+ * γεγονότα, με τη σειρά τους· **χωρίς** αιτιολογίες ή ταυτότητες ανθρώπων (Ε-9′: η ίδια λίστα δείχνεται παντού).
+ */
+export function advanceTimelineOf(facts: AdvanceFacts): readonly AdvanceTimelineEntry[] {
+  return facts.advanceEvents.map((event): AdvanceTimelineEntry => {
+    switch (event.kind) {
+      case 'funded': case 'released': case 'refunded': return { kind: event.kind, at: event.at, amountMinor: event.amountMinor };
+      case 'work-started': return { kind: 'work-started', at: event.at };
+      case 'start-objected': return { kind: 'start-objected', at: event.at, by: event.objection.by };
+    }
+  });
 }
 
 /** Τα γεγονότα της ακύρωσης — και **πότε** εγκρίθηκε η προσφορά (η σύναψη της σύμβασης). */

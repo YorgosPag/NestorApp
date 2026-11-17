@@ -14,7 +14,7 @@
     "src/i18n/generated/routes/demands.el.json": "f15243c6529ea9be6b0a1a4d181ff19e7c5866fcc9953aa98635f63969f3d9e2",
     "src/i18n/generated/routes/demands__demandId.el.json": "4c206917e9429edff64b6d64d393521e17a6718fda664c1a7ca51d289f16a27a",
     "src/i18n/generated/routes/demands__new.el.json": "f85744543c4c75526818bd08771e4729c8a79fd26d564a081d9dc8eeb660a3ed",
-    "src/i18n/generated/routes/document-request.el.json": "6bac6a655412fce938197a4a3b4211286e901d5e72ec8a11ec0589837515c4ff",
+    "src/i18n/generated/routes/document-request.el.json": "a0fd6892dd7ab35ce9ab352829e1f815fa2719c8af696774858195ad7508b350",
     "src/i18n/generated/routes/dossiers.el.json": "3b60c708244b90058a464268b96faf8f4e849674d2772c398730460e70729403",
     "src/i18n/generated/routes/dossiers__dossierId.el.json": "4bc633fff60b3b6e918f6038bdb4a2966f5e0a884b11ca9c6c6a2383a605d967",
     "src/i18n/generated/routes/email__preferences__token.el.json": "9b5d55434fde64f1b24fd2a82b48af474c5fe8eb3ffdcb5990f1ab08586ed7c0",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4257180d1db8439a15141701b830e5d44d48b715bd64c752d98f5cc3f97a4220",
+  "inputsSha256": "a44bdc93a8dae741817d988616a56e528ddfd5ab92ea404a80e97cfc0006df5f",
   "languages": [
     "el"
   ],
@@ -2060,6 +2060,76 @@
     "document-request": {
       "page": "src/app/(auth)/document-request/page.tsx",
       "wants": {
+        "common": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.close"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "conveyance": {
           "keys": [
             "items.energy_certificate.label",
@@ -2146,6 +2216,17 @@
             "advance.continue",
             "advance.heading",
             "advance.intro",
+            "advance.objection.cancel",
+            "advance.objection.closed",
+            "advance.objection.confirm",
+            "advance.objection.done",
+            "advance.objection.failed",
+            "advance.objection.heading",
+            "advance.objection.intro",
+            "advance.objection.reasonLabel",
+            "advance.objection.releaseAt",
+            "advance.objection.sending",
+            "advance.objection.trigger",
             "advance.payCard",
             "advance.payIris",
             "advance.payeeHint",
@@ -2153,6 +2234,13 @@
             "advance.refused.notPayable",
             "advance.refused.payeeNotReady",
             "advance.refused.providerUnavailable",
+            "advance.timeline.funded",
+            "advance.timeline.heading",
+            "advance.timeline.objectedByOffice",
+            "advance.timeline.objectedByOwner",
+            "advance.timeline.refunded",
+            "advance.timeline.released",
+            "advance.timeline.workStarted",
             "advance.watch.failed",
             "advance.watch.slow",
             "advance.watch.timedOut",
@@ -41071,7 +41159,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1348942
+    "sliceBytes": 1350851
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

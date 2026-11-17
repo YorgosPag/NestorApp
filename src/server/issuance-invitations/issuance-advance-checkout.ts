@@ -1,15 +1,18 @@
 import 'server-only';
 
 /**
- * @fileoverview ADR-943 §5.9 — **η πληρωμή της προκαταβολής με τον σύνδεσμο που ενέκρινε**: όψη, έναρξη, έκβαση απόπειρας.
- * @related issuance-invitation-answer.ts (η έγκριση) · server/payments/payment-checkout-launch.ts (ο πάροχος) ·
+ * @fileoverview ADR-943 §5.9 · Φ5β — **η σελίδα της προκαταβολής**: όψη (με χρονολόγιο και δυνατότητα αντίρρησης), έναρξη
+ *   πληρωμής, έκβαση απόπειρας.
+ * @related issuance-advance-payer.ts (ποιος πληρώνει) · issuance-invitation-answer.ts (η έγκριση) ·
+ *   server/payments/payment-checkout-launch.ts (ο πάροχος) ·
  *   server/payments/payment-payee-service.ts (`readyPayeeOf`) · services/document-registry/issuance-advance-payment.server.ts
  *   (η καταγραφή της είσπραξης + η κρατημένη μεταφορά)
  * @module server/issuance-invitations/issuance-advance-checkout
  *
- * 🔑 **Ποιος πληρώνει**: ο κάτοχος του συνδέσμου που **ενέκρινε** (`readRedeemedInvitationByToken`) — και μόνο όσο η απόφαση
- *    της ανάθεσης δείχνει **αυτό** το `invitationId` (βάση `owner-link-approval`). Νέα πρόταση/ακύρωση ⇒ `superseded`.
- * 🔑 **§29 ισχύει και εδώ**: σύνδεσμος με κωδικό ⇒ τίποτα για ακίνητο ή ποσό πριν τον κωδικό· κάθε πράξη τον φέρνει ξανά.
+ * 🔑 **Ποιος πληρώνει** (Ζ-2): ο ιδιοκτήτης της ισχύουσας απόφασης — από τον σύνδεσμο που ενέκρινε **ή** από σύνδεσμο
+ *    προκαταβολής της ίδιας απόφασης (`resolveAdvancePayer`). Νέα πρόταση/ακύρωση ⇒ `superseded`.
+ * 🔑 **§29 ισχύει και εδώ**: σύνδεσμος με κωδικό ⇒ τίποτα για ακίνητο ή ποσό πριν τον κωδικό· κάθε πράξη τον φέρνει ξανά —
+ *    ο κωδικός του **φακέλου** (`checkPayerAccess`), όχι νέος ανά email.
  * 🔑 **Σειρά της έναρξης** (Airbnb/Upwork: πρώτα τρόπος απόδοσης, μετά χρήματα): η προκαταβολή περιμένει πληρωμή → ο
  *    λογαριασμός έχει marketplace και τον τρόπο → ο μηχανικός είναι **ενεργός στον χώρο** και ο δικαιούχος του `authorized`
  *    **στο API** (αλλιώς ειδοποιείται και ο ιδιοκτήτης ακούει «περιμένουμε τον μηχανικό») → κλείνουν οι ανοιχτές συνεδρίες
@@ -27,12 +30,11 @@ import { publicUrl } from '@/lib/http/public-origin';
 import type { IssuanceSpaceLink } from '@/services/email-templates/issuance-invitation-email';
 import elRequest from '@/i18n/locales/el/document-request.json';
 import enRequest from '@/i18n/locales/en/document-request.json';
-import { issuanceStateOf, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
-import { advanceStateOf, type AdvanceState } from '@/lib/document-validity/issuance-advance';
+import type { IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
+import { advanceStateOf, advanceTimelineOf, canObjectToStart } from '@/lib/document-validity/issuance-advance';
 import { agreedQuoteOf } from '@/lib/document-validity/issuance-quote';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
 import { trimmedStringOrNull } from '@/lib/type-guards';
-import { readRedeemedInvitationByToken } from '@/server/invitations/invitation-redeem';
 import type { IssuanceAdvancePayableSubject } from '@/server/payments/payable-subject';
 import { closePendingCheckoutsOf } from '@/server/payments/payment-checkout-closing';
 import { CHECKOUT_LIFETIME_MS, launchCheckoutAtProvider } from '@/server/payments/payment-checkout-launch';
@@ -43,8 +45,6 @@ import type { PaymentProvider } from '@/server/payments/payment-provider';
 import { paymentProviderForCompany } from '@/server/payments/payment-provider-registry';
 import { attemptExpiresInMs, paymentAttemptOutcomeOf } from '@/server/accounting/payments/invoice-payment-attempt';
 import { generatePaymentCheckoutId } from '@/services/enterprise-id.service';
-import { readHostedIssuanceContext, type HostedIssuanceContext } from '@/services/document-registry/issuance-advance-payment.server';
-import { issuanceRecordOf } from '@/services/document-registry/issuance-assignment-schema';
 import type { OnlinePaymentMethod } from '@/subapps/accounting/types/online-payment';
 import type {
   IssuanceAdvanceAttemptResponse,
@@ -57,55 +57,9 @@ import type {
 
 import { announcePayeeRequired } from './issuance-advance-notifier';
 import { activeIssuanceEngagementOf } from './issuance-active-engagement';
+import { accessHolderOf, checkPayerAccess, readPayerLink, resolveAdvancePayer, type AdvancePayer } from './issuance-advance-payer';
 import type { LinkRefused } from './issuance-invitation-answer';
-import { ISSUANCE_INVITATION_LOCATOR, parseIssuanceInvitation } from './issuance-invitation-kind';
 import { checkIssuanceAccessCode, issuanceGateViewOf } from './issuance-link-access';
-
-/** Ο υπεύθυνος που ενέκρινε, η ανάθεση όπως τη βλέπει το γραφείο, και πού βρίσκεται η προκαταβολή. */
-interface AdvancePayer {
-  readonly invitation: IssuanceInvitation;
-  readonly context: HostedIssuanceContext;
-  readonly record: IssuanceAssignmentRecord;
-  readonly state: AdvanceState;
-}
-
-type PayerResolution = { readonly ok: true; readonly payer: AdvancePayer } | LinkRefused | { readonly kind: 'unavailable' };
-
-const SUPERSEDED: LinkRefused = { kind: 'refused', reason: 'superseded' };
-
-/** Token ⇒ η πρόσκληση ενός **απαντημένου** συνδέσμου (ο ΕΝΑΣ δρόμος για όψη, έναρξη και έκβαση απόπειρας). */
-async function readApprovingInvitation(
-  db: Firestore, token: string, now: Date,
-): Promise<{ readonly invitation: IssuanceInvitation } | LinkRefused | { readonly kind: 'unavailable' }> {
-  const found = await readRedeemedInvitationByToken(db, ISSUANCE_INVITATION_LOCATOR, { token, nowValue: now.toISOString() });
-  if (found.kind === 'secret-missing') return { kind: 'unavailable' };
-  if (found.kind === 'refused') return { kind: 'refused', reason: found.reason };
-  const invitation = parseIssuanceInvitation(found.stored, found.invitationId);
-  return invitation === null ? { kind: 'unavailable' } : { invitation };
-}
-
-/** Η απόφαση της ανάθεσης είναι **η έγκριση αυτού του συνδέσμου** — και η ανάθεση είναι ανοιχτή, αναληφθείσα. */
-function approvedByThisLink(record: IssuanceAssignmentRecord, latestIssuedOn: string | null, invitationId: string): boolean {
-  const decision = record.decision;
-  const state = issuanceStateOf(record, latestIssuedOn);
-  return state.kind === 'open' && state.stage === 'accepted' && decision !== null && decision.outcome === 'approved'
-    && decision.basis === 'owner-link-approval' && decision.invitationId === invitationId;
-}
-
-/** Token ⇒ ο κάτοχος του συνδέσμου που ενέκρινε **προσφορά με προκαταβολή**. Κάθε άλλη περίπτωση ⇒ ονομασμένη άρνηση. */
-async function resolveAdvancePayer(db: Firestore, token: string, now: Date): Promise<PayerResolution> {
-  const read = await readApprovingInvitation(db, token, now);
-  if (!('invitation' in read)) return read;
-  const { invitation } = read;
-  if (invitation.audience !== 'owner') return SUPERSEDED;
-  const context = await readHostedIssuanceContext(db, invitation.companyId, invitation.assignmentId, now);
-  if (context === 'unknown') return { kind: 'unavailable' };
-  if (context === null) return SUPERSEDED;
-  const record = issuanceRecordOf(context.assignment);
-  if (!approvedByThisLink(record, context.latestIssuedOn, invitation.id)) return SUPERSEDED;
-  const state = advanceStateOf(record);
-  return state.kind === 'none' ? SUPERSEDED : { ok: true, payer: { invitation, context, record, state } };
-}
 
 function marketplaceMethodsOf(provider: PaymentProvider | null): readonly OnlinePaymentMethod[] {
   return provider === null || provider.marketplace === null ? [] : provider.methods;
@@ -118,7 +72,7 @@ function engineerUidOf(db: Firestore, payer: AdvancePayer, now: Date): Promise<s
 }
 
 /** Η όψη — **καμία** κλήση στον πάροχο, καμία εγγραφή (GET): ο δικαιούχος όπως τον ξέρουμε. */
-async function advanceViewOf(db: Firestore, payer: AdvancePayer, now: Date): Promise<IssuanceAdvancePaymentView> {
+export async function advanceViewOf(db: Firestore, payer: AdvancePayer, now: Date): Promise<IssuanceAdvancePaymentView> {
   const { invitation, context, record } = payer;
   const provider = paymentProviderForCompany(invitation.companyId);
   const engineerUid = await engineerUidOf(db, payer, now);
@@ -135,6 +89,10 @@ async function advanceViewOf(db: Firestore, payer: AdvancePayer, now: Date): Pro
     state: payer.state.kind,
     methods: marketplaceMethodsOf(provider),
     payeeReady: payee?.status === 'authorized',
+    // Φ5β — πότε αποδεσμεύεται · αν μπορεί να φέρει αντίρρηση **τώρα** · τι έγινε ως τώρα (ο ΕΝΑΣ τομέας).
+    releaseAt: payer.state.kind === 'release-pending' ? payer.state.objectionUntil : null,
+    canObject: canObjectToStart(payer.state, now.toISOString()),
+    timeline: advanceTimelineOf(record),
   };
 }
 
@@ -144,23 +102,27 @@ export type AdvanceLanding =
   | LinkRefused
   | { readonly kind: 'unavailable' };
 
+/** Χωρίς κωδικό σε σύνδεσμο που τον ζητά ⇒ μόνο η πύλη (σε ποιον · ποιο γραφείο), από τον **κάτοχο** του κωδικού. */
+async function gateOf(payer: AdvancePayer, holder: IssuanceInvitation): Promise<AdvanceLanding> {
+  const recipientName = payer.context.registry.people[payer.invitation.contactId]?.name ?? null;
+  const officeName = await readWorkspaceName(payer.invitation.companyId).then(trimmedStringOrNull, () => null);
+  return { kind: 'code-required', gate: issuanceGateViewOf(holder, recipientName, officeName) };
+}
+
 /**
- * **Η όψη της πληρωμής** για σύνδεσμο που απαντήθηκε (`already-used` στην όψη της απάντησης). Με κωδικό (§29): χωρίς
- * `accessCode` ⇒ μόνο η πύλη· με κωδικό ⇒ μία προσπάθεια, μετά η όψη. Καλείται από την όψη **και** το ξεκλείδωμα.
+ * **Η όψη της σελίδας προκαταβολής** — για σύνδεσμο που ενέκρινε (`already-used` στην όψη της απάντησης) ή για σύνδεσμο
+ * προκαταβολής. Με κωδικό (§29): χωρίς `accessCode` ⇒ μόνο η πύλη· με κωδικό ⇒ μία προσπάθεια, μετά η όψη. Καλείται από
+ * την όψη **και** το ξεκλείδωμα.
  */
 export async function viewIssuanceAdvance(db: Firestore, token: string, accessCode: string | null, now: Date): Promise<AdvanceLanding> {
   const resolved = await resolveAdvancePayer(db, token, now);
   if (!('ok' in resolved)) return resolved;
   const { payer } = resolved;
-  if (payer.invitation.accessCode !== null) {
-    if (accessCode === null) {
-      const recipientName = payer.context.registry.people[payer.invitation.contactId]?.name ?? null;
-      const officeName = await readWorkspaceName(payer.invitation.companyId).then(trimmedStringOrNull, () => null);
-      return { kind: 'code-required', gate: issuanceGateViewOf(payer.invitation, recipientName, officeName) };
-    }
-    const check = await checkIssuanceAccessCode(db, payer.invitation, accessCode, now.toISOString());
-    if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
-  }
+  const holder = await accessHolderOf(db, payer.invitation);
+  if (holder === null) return { kind: 'unavailable' };
+  if (holder.accessCode !== null && accessCode === null) return gateOf(payer, holder);
+  const check = await checkIssuanceAccessCode(db, holder, accessCode, now.toISOString());
+  if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
   return { kind: 'advance', advance: await advanceViewOf(db, payer, now) };
 }
 
@@ -211,7 +173,8 @@ export async function startIssuanceAdvanceCheckout(db: Firestore, token: string,
   const resolved = await resolveAdvancePayer(db, token, input.now);
   if (!('ok' in resolved)) return resolved;
   const { payer } = resolved;
-  const check = await checkIssuanceAccessCode(db, payer.invitation, input.body.accessCode, input.now.toISOString());
+  const check = await checkPayerAccess(db, payer.invitation, input.body.accessCode, input.now.toISOString());
+  if ('kind' in check) return check;
   if (!check.ok) return { kind: 'refused', reason: check.refusal, remaining: check.remaining };
   if (payer.state.kind !== 'awaiting-payment') return refusedWith('not-payable');
   const provider = paymentProviderForCompany(payer.invitation.companyId);
@@ -239,7 +202,7 @@ export function advancePaymentLinkOf(token: string, invitation: IssuanceInvitati
 
 /** **Η έκβαση μιας απόπειρας** — μόνο για συνεδρία της **ίδιας** ανάθεσης· ξένη ή ανύπαρκτη ⇒ ίδια άρνηση. */
 export async function readIssuanceAdvanceAttempt(db: Firestore, token: string, checkoutId: string, now: Date): Promise<IssuanceAdvanceAttemptResponse | LinkRefused | { readonly kind: 'unavailable' }> {
-  const read = await readApprovingInvitation(db, token, now);
+  const read = await readPayerLink(db, token, now);
   if (!('invitation' in read)) return read;
   const { invitation } = read;
   const record = await readPaymentCheckout(db, checkoutId);

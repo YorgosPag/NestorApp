@@ -29,7 +29,7 @@ import {
   REGISTRY_NUMBER_MAX,
   type IssuanceAction,
 } from './issuance-assignment';
-import { CANCELLATION_POLICIES } from './issuance-advance';
+import { ADVANCE_POLICY, CANCELLATION_POLICIES } from './issuance-advance';
 import { DELIVERY_CHANGE_POLICY } from './issuance-delivery-change';
 import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from './issuance-inspection-contact';
 import { OWNER_ATTESTATION_POLICY, OWNER_VERDICTS, type IssuanceOwnerAttestation } from './issuance-owner-attestation';
@@ -238,6 +238,16 @@ export const issuanceAdvanceCheckoutBody = z.object({
   acknowledgesWithdrawalLoss: z.literal(true),
   accessCode: typedAccessCode.nullable().default(null),
 }).strict();
+
+/**
+ * ADR-943 Φ5β (Ζ-3) — το σώμα του `POST /api/issuance-link/advance-objection`: η αιτιολογία της αντίρρησης του ιδιοκτήτη
+ * (κείμενο ανθρώπου, όριο του τομέα) και ο κωδικός §29. Ο μειωτής ξανακρίνει παράθυρο και μήκος.
+ */
+export const issuanceAdvanceObjectionBody = z.object({
+  reason: z.string().trim().min(1).max(ADVANCE_POLICY.objectionReasonMax),
+  accessCode: typedAccessCode.nullable().default(null),
+}).strict();
+export type IssuanceAdvanceObjectionBody = z.infer<typeof issuanceAdvanceObjectionBody>;
 
 /** Ποιο ακροατήριο δίνει κάθε απάντηση — ιδιοκτήτης εγκρίνει/αρνείται, επαγγελματίας προσφέρει/αρνείται. */
 export const LINK_ANSWER_AUDIENCE: Readonly<Record<IssuanceLinkAnswer, IssuanceAudience>> = {

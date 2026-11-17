@@ -17,8 +17,9 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { advanceCollectedMinor, advanceStateOf } from '@/lib/document-validity/issuance-advance';
-import type { IssuanceAssignmentRecord, IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import { issuanceKeyOf, type IssuanceAssignmentRecord, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
 import { createModuleLogger } from '@/lib/telemetry';
+import { issueAdvanceLink } from '@/server/issuance-invitations/issuance-advance-link';
 import { announceAdvanceMilestone, latestAdvanceMilestone } from '@/server/issuance-invitations/issuance-advance-notifier';
 import { findFundedAdvanceCheckout } from '@/server/payments/payment-checkout-store';
 import { scheduleSettlement, type ScheduleOutcome } from '@/server/payments/payment-settlement';
@@ -72,6 +73,13 @@ export async function declareIssuanceWorkStarted(db: Firestore, input: AdvanceSt
   const label = registry.properties[assignment.propertyId];
   if (outcome.outcome === 'changed' && milestone !== null && label !== undefined) {
     await announceAdvanceMilestone(db, { context: { assignment, registry, label }, record: outcome.record, milestone, now: input.now });
+    // Φ5β (Ζ-1) — ο ιδιοκτήτης μαθαίνει **με email**, με νέο σύνδεσμο προς τη σελίδα του (πότε φεύγουν · αντίρρηση).
+    const latestIssuedOn = registry.issuance[issuanceKeyOf(assignment.propertyId, assignment.documentKind)]?.latestIssuedOn ?? null;
+    const told = await issueAdvanceLink(db, {
+      context: { assignment, registry, label, latestIssuedOn }, record: outcome.record, moment: 'work-started',
+      actorUid: outcome.record.approvalRequest?.byUid ?? outcome.record.proposedByUid, requireAccessCode: false, now: input.now,
+    });
+    if (!told.ok) logger.warn('Owner not emailed about the site visit', { assignmentId: assignment.id, refusal: told.refusal });
   }
   return { ok: true, outcome: outcome.outcome, releaseAt: schedule.releaseAt };
 }
