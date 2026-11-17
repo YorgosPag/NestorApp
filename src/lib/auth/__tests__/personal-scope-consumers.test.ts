@@ -280,6 +280,34 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
       + 'και «ξένος» απαντά ΙΔΙΟ 404 με «ανύπαρκτος».',
   },
   {
+    route: 'src/app/api/property-dossiers/[dossierId]/access/route.ts',
+    why:
+      'ΟΙ ΘΕΣΕΙΣ ΠΡΟΣΒΑΣΗΣ ΤΟΥ ΦΑΚΕΛΟΥ (ADR-916 Φ-Ε1 Σ2) — «ποιος βλέπει τον φάκελό μου;». Ο φάκελος είναι '
+      + 'ΠΡΟΣΩΠΙΚΟΣ και ο ιδιώτης δεν έχει εταιρεία ⇒ με withAuth θα έπαιρνε 401. Η κρίση «δικός σου;» = '
+      + 'dossier.userId == actor.ctx.uid (readOwnedDossier)· ξένος ⇒ ΙΔΙΟ 404 με ανύπαρκτο. Η απάντηση έχει '
+      + 'email προσκεκλημένων ⇒ μόνο στον κάτοχο.',
+  },
+  {
+    route: 'src/app/api/property-dossiers/[dossierId]/access/invitations/route.ts',
+    why:
+      'Η ΠΡΟΣΚΛΗΣΗ ΣΤΟΝ ΦΑΚΕΛΟ ΙΔΙΩΤΗ (ADR-916 Φ-Ε1 Σ2) — ο κάτοχος καλεί δικηγόρο/συμβολαιογράφο με email, '
+      + 'μέσω της ΜΙΑΣ μηχανής ADR-853. Ίδιος λόγος με τις πόρτες του φακέλου (προσωπικός, χωρίς εταιρεία). '
+      + 'Ο κάτοχος = actor.ctx.uid (το .strict() σχήμα δεν έχει πεδίο κατόχου)· ξένος ⇒ 404.',
+  },
+  {
+    route: 'src/app/api/property-dossiers/[dossierId]/access/invitations/[invitationId]/revoke/route.ts',
+    why:
+      'ΑΚΥΡΩΣΗ ΠΡΟΣΚΛΗΣΗΣ ΦΑΚΕΛΟΥ (ADR-916 Φ-Ε1 Σ2). Ίδιος λόγος. Η πρόσκληση κρίνεται ΜΕΣΑ στη συναλλαγή '
+      + 'ως «αυτού του φακέλου, από αυτόν τον κάτοχο» (revokeDossierInvitation)· αλλιώς ΙΔΙΟ 404.',
+  },
+  {
+    route: 'src/app/api/property-dossiers/[dossierId]/access/[engagementId]/route.ts',
+    why:
+      'ΑΝΑΚΛΗΣΗ · ΑΝΑΝΕΩΣΗ · ΑΛΛΑΓΗ ΕΥΡΟΥΣ συμμετοχής φακέλου (ADR-916 Φ-Ε1 Σ2). Ίδιος λόγος. Η συμμετοχή ζει '
+      + 'ΚΑΤΩ από τον φάκελο (property_dossiers/{id}/engagements) ⇒ συμμετοχή άλλου φακέλου είναι δομικά 404· '
+      + 'η μετάβαση περνά από τον ΕΝΑ γραφέα (transitionEngagement).',
+  },
+  {
     route: 'src/app/api/owner-properties/stats/route.ts',
     why:
       '«ΠΟΣΟΙ ΕΙΔΑΝ ΚΑΙ ΠΟΣΟΙ ΜΕ ΠΛΗΣΙΑΣΑΝ;» (ADR-777 §8.72) — απευθύνεται στον ΙΔΙΟΚΤΗΤΗ, που κατά την '

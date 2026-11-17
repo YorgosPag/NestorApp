@@ -54,8 +54,11 @@ import type { PropertyDossier } from '@/types/property-dossier';
 import { readDossierReadyFiles, readPropertyDossier } from './dossier-media.reader';
 import { dossierFileReach } from './dossier-share-reach';
 
-/** Ο κάτοχος δεν έχει ακόμη ζωντανή όψη πρόσβασης (Σ4) ⇒ ρητά κανένα έγγραφο-σήμα. */
-const NO_LIVE_VIEW: EngagementRosterSignal = () => undefined;
+/**
+ * Ο κάτοχος δεν έχει ακόμη ζωντανή όψη πρόσβασης (Σ4) ⇒ ρητά κανένα έγγραφο-σήμα. Το ΕΝΑ σήμα του φακέλου: το
+ * μοιράζονται η αποδοχή (εδώ) και οι πράξεις του κατόχου (`dossier-access-host.service.ts`).
+ */
+export const NO_LIVE_VIEW: EngagementRosterSignal = () => undefined;
 
 /** Χωρίς γραφέα σήματος, η αναθεώρηση της όψης δεν αλλάζει ποτέ — ρητή σταθερά, όχι «ξεχασμένο 0». */
 const NO_SIGNAL_REVISION = 0;

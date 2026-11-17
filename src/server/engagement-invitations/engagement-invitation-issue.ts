@@ -27,6 +27,7 @@ import { invitationSignalOf } from '@/server/engagements/engagement-hosts';
 import {
   presentedInvitationState,
   revokeInvitationAt,
+  type RevokeInvitationOutcome,
   stageInvitationWithSupersede,
   writeInvitationWithSupersede,
 } from '@/server/invitations/invitation-lifecycle';
@@ -44,9 +45,11 @@ import type {
 } from '@/types/engagement';
 import {
   isConveyanceInvitation,
+  isDossierInvitation,
   isIssuanceInvitation,
   type CaseInvitationSummary,
   type ConveyanceEngagementInvitation,
+  type DossierEngagementInvitation,
   type IssuanceEngagementInvitation,
   type CredentialHint,
   type EngagementInvitation,
@@ -252,6 +255,22 @@ async function readCaseInvitations(db: Firestore, hostCompanyId: string, caseId:
     .filter((invitation): invitation is ConveyanceEngagementInvitation => invitation !== null && isConveyanceInvitation(invitation));
 }
 
+/**
+ * **Η πιο πρόσφατη πρόσκληση ανά θέση**, ως περίληψη του οικοδεσπότη (η ληγμένη `pending` ⇒ `expired`). ΕΝΑΣ κανόνας
+ * «πιο πρόσφατη = μεγαλύτερο `createdAt`» για υπόθεση και φάκελο.
+ */
+function latestSummariesByRole<R extends string>(
+  invitations: Iterable<EngagementInvitation & { readonly role: R }>,
+  nowValue: string,
+): ReadonlyMap<R, CaseInvitationSummary> {
+  const latest = new Map<R, EngagementInvitation>();
+  for (const invitation of invitations) {
+    const current = latest.get(invitation.role);
+    if (!current || invitation.createdAt > current.createdAt) latest.set(invitation.role, invitation);
+  }
+  return new Map([...latest].map(([role, invitation]) => [role, summaryOf(invitation, nowValue)]));
+}
+
 /** Η **πιο πρόσφατη** πρόσκληση κάθε θέσης, όπως τη βλέπει ο οικοδεσπότης (η ληγμένη `pending` ⇒ `expired`). */
 export async function latestCaseInvitations(
   db: Firestore,
@@ -259,12 +278,7 @@ export async function latestCaseInvitations(
   caseId: string,
   nowValue: string,
 ): Promise<ReadonlyMap<LegalProfessionalRole, CaseInvitationSummary>> {
-  const latest = new Map<LegalProfessionalRole, ConveyanceEngagementInvitation>();
-  for (const invitation of await readCaseInvitations(db, hostCompanyId, caseId)) {
-    const current = latest.get(invitation.role);
-    if (!current || invitation.createdAt > current.createdAt) latest.set(invitation.role, invitation);
-  }
-  return new Map([...latest].map(([role, invitation]) => [role, summaryOf(invitation, nowValue)]));
+  return latestSummariesByRole(await readCaseInvitations(db, hostCompanyId, caseId), nowValue);
 }
 
 function summaryOf(invitation: EngagementInvitation, nowValue: string): CaseInvitationSummary {
@@ -349,4 +363,66 @@ export async function revokePendingCaseInvitations(
     observe: invitationSignalOf(db, invitation),
   })));
   return outcomes.filter((outcome) => outcome.kind === 'revoked').length;
+}
+
+// =============================================================================
+// 3. ΟΙ ΠΡΟΣΚΛΗΣΕΙΣ ΤΟΥ ΦΑΚΕΛΟΥ ΙΔΙΩΤΗ (ADR-916 Φ-Ε1 Σ2)
+// =============================================================================
+
+/** Όσες προσκλήσεις ενός φακέλου διαβάζει η όψη του κατόχου — φραγμένο ρητά (2 ρόλοι × επαναποστολές). */
+const DOSSIER_SCAN_LIMIT = 100;
+
+/**
+ * Είναι το έγγραφο πρόσκληση **αυτού** του φακέλου, που εξέδωσε **αυτός** ο κάτοχος; Ο φάκελος που άλλαξε χέρια δεν
+ * δίνει στον νέο κάτοχο τις προσκλήσεις του παλιού (ADR-866 Φ4) — ίδια αρχή με το `openDossier` του οικοδεσπότη.
+ */
+function isDossierInvitationOf(invitation: EngagementInvitation | null, dossierId: string, ownerUid: string): invitation is DossierEngagementInvitation {
+  return invitation !== null && isDossierInvitation(invitation)
+    && invitation.subject.dossierId === dossierId && invitation.invitedByUid === ownerUid;
+}
+
+/**
+ * Η **πιο πρόσφατη** πρόσκληση κάθε ρόλου του φακέλου, όπως τη βλέπει ο κάτοχος (η ληγμένη `pending` ⇒ `expired`).
+ * **Μία** ισότητα (`subject.dossierId`, το ίδιο φίλτρο με το supersede) ⇒ κανένας σύνθετος δείκτης.
+ */
+export async function latestDossierInvitations(
+  db: Firestore,
+  dossierId: string,
+  ownerUid: string,
+  nowValue: string,
+): Promise<ReadonlyMap<DossierEngagementRole, CaseInvitationSummary>> {
+  const snapshot = await engagementInvitationsCollection(db)
+    .where('subject.dossierId', '==', dossierId)
+    .limit(DOSSIER_SCAN_LIMIT)
+    .get();
+  const owned = snapshot.docs
+    .map((doc) => engagementInvitationFromDocument(doc.data(), doc.id))
+    .filter((invitation): invitation is DossierEngagementInvitation => isDossierInvitationOf(invitation, dossierId, ownerUid));
+  return latestSummariesByRole(owned, nowValue);
+}
+
+/** Η έκβαση της ακύρωσης — **με τον ρόλο** της πρόσκλησης, ώστε το ίχνος να λέει ποια θέση (χωρίς δεύτερη ανάγνωση). */
+export type DossierInvitationRevocation =
+  | Extract<RevokeInvitationOutcome, { kind: 'absent' }>
+  | (Exclude<RevokeInvitationOutcome, { kind: 'absent' }> & { readonly role: DossierEngagementRole });
+
+/**
+ * **Ανάκληση μιας εκκρεμούς πρόσκλησης φακέλου** από τον κάτοχο. Ξένη ή άλλου φακέλου ≡ `absent` (ποτέ «υπάρχει
+ * αλλού»)· ήδη κλειστή ⇒ `already`, καμία γραφή (ιδεμποτησία). Ο σύνδεσμος του email σταματά **αμέσως**.
+ */
+export async function revokeDossierInvitation(
+  db: Firestore,
+  input: { readonly dossierId: string; readonly invitationId: string; readonly ownerUid: string; readonly nowValue: string },
+): Promise<DossierInvitationRevocation> {
+  const ref = engagementInvitationsCollection(db).doc(input.invitationId);
+  const invitation = engagementInvitationFromDocument((await ref.get()).data(), input.invitationId);
+  if (!isDossierInvitationOf(invitation, input.dossierId, input.ownerUid)) return { kind: 'absent' };
+  const outcome = await revokeInvitationAt(db, ref, {
+    // 🔴 Ο ΙΔΙΟΣ έλεγχος μέσα στη συναλλαγή — η ανάγνωση πριν από αυτήν δίνει μόνο ρόλο και σήμα.
+    isOwned: (stored) => isDossierInvitationOf(engagementInvitationFromDocument(stored, input.invitationId), input.dossierId, input.ownerUid),
+    revokedByUid: input.ownerUid,
+    nowValue: input.nowValue,
+    observe: invitationSignalOf(db, invitation),
+  });
+  return outcome.kind === 'absent' ? outcome : { ...outcome, role: invitation.role };
 }
