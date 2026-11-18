@@ -158,20 +158,59 @@ export function projectAddressVocabulary(
   const bag: AddressFieldBag = {};
 
   writeAdminLevels(bag, source, from, to, 'skip', options.clearedIdsAsNull);
+  writeTextFields(bag, source, from, to, 'skip', options.includePostal);
+  return bag;
+}
 
-  // Ταξιδεύουν πάντα — η «Περιοχή / Συνοικία» δεν είναι ταχυδρομικό πεδίο.
-  for (const field of ADJACENT_FIELD_KEYS) {
-    const binding = HIERARCHY_ADJACENT_VOCABULARY[field];
-    write(bag, binding[to], readName(source, binding[from]));
+/**
+ * Τα **κειμενικά** πεδία δίπλα στην ιεραρχία: πάντα το `neighborhood` («ταξιδεύει πάντα»,
+ * δεν είναι ταχυδρομικό) και, αν ζητηθούν, τα ταχυδρομικά.
+ *
+ * @param missing `'skip'` = συγχώνευση (το κενό παραλείπεται)· `'clear'` = **κάτοπτρο**: το
+ *   κενό **γράφεται** κενό. Πεδίο που η **πηγή δεν κρατά** (`NOT_STORED`) δεν αγγίζεται ποτέ —
+ *   «δεν το ξέρω» δεν είναι «είναι κενό».
+ */
+function writeTextFields(
+  bag: AddressFieldBag,
+  source: Readonly<Record<string, unknown>>,
+  from: AddressVocabulary,
+  to: AddressVocabulary,
+  missing: 'skip' | 'clear',
+  includePostal: boolean,
+): void {
+  const bindings: Array<Readonly<Record<AddressVocabulary, Slot>>> =
+    ADJACENT_FIELD_KEYS.map((field) => HIERARCHY_ADJACENT_VOCABULARY[field]);
+  if (includePostal) {
+    for (const field of POSTAL_FIELD_KEYS) bindings.push(POSTAL_FIELD_VOCABULARY[field]);
   }
-
-  if (options.includePostal) {
-    for (const field of POSTAL_FIELD_KEYS) {
-      const binding = POSTAL_FIELD_VOCABULARY[field];
-      write(bag, binding[to], readName(source, binding[from]));
-    }
+  for (const binding of bindings) {
+    if (binding[from] === NOT_STORED) continue;
+    const value = readName(source, binding[from]);
+    write(bag, binding[to], missing === 'clear' ? (value ?? '') : value);
   }
+}
 
+/**
+ * **Κάτοπτρο** ταχυδρομικών πεδίων + `neighborhood` από ένα δοχείο σε άλλο — το κενό
+ * **γράφεται** κενό.
+ *
+ * 🔑 Η ερώτηση της **έδρας επαφής** (ADR-332 §D30): η έδρα ζει σε δύο δοχεία (επίπεδα πεδία
+ * **και** θέση 0 της λίστας) και το δεύτερο πρέπει να είναι **ακριβές είδωλο** του πρώτου
+ * μετά από κάθε διόρθωση του editor. Ο συγχρονισμός ήταν χειρόγραφη λίστα τεσσάρων πεδίων
+ * (οδός, αριθμός, Τ.Κ., πόλη) — η «Περιοχή / Συνοικία» **έλειπε**, φαινόταν στην οθόνη και
+ * χανόταν στην αποθήκευση. Εδώ τα πεδία προκύπτουν από **τον πίνακα**, άρα νέο πεδίο του
+ * λεξιλογίου καθρεφτίζεται χωρίς να το θυμηθεί κανείς.
+ *
+ * ⚠️ Τα οκτώ διοικητικά επίπεδα **δεν** είναι εδώ: τα γράφει ο δικός τους ιδιοκτήτης
+ * ({@link overwriteAdminHierarchy} / `projectAddressVocabulary`).
+ */
+export function mirrorAddressTextFields(
+  source: Readonly<Record<string, unknown>>,
+  from: AddressVocabulary,
+  to: AddressVocabulary,
+): AddressFieldBag {
+  const bag: AddressFieldBag = {};
+  writeTextFields(bag, source, from, to, 'clear', true);
   return bag;
 }
 

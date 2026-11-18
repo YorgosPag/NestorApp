@@ -6,6 +6,8 @@ import { getSafeFieldValue } from '../contactMapper';
 // ADR-332 D18: η ανάγνωση της λίστας διευθύνσεων ζει σε ΕΝΑ σημείο και για τα
 // τρία είδη επαφής — ήταν ιδιωτική εδώ, ενώ individual/service δεν είχαν καμία.
 import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
+import { buildFlatFieldsFromCompanyHq } from '@/utils/contacts/address-info-builder';
+import { readCompanyScalarFields } from '../schema/company-field-schema';
 
 /** Extended company contact with custom fields access */
 interface ExtendedCompanyContact extends CompanyContact {
@@ -84,36 +86,25 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
   const companyAddresses = resolveContactAddresses(contact, 'company');
   // HQ address: prioritize companyAddresses[0] (has hierarchy), fallback to legacy addresses[0]
   const hqAddr = companyAddresses.find(a => a.type === 'headquarters') ?? companyAddresses[0];
-  const legacyAddr = contact.addresses?.[0];
-  // Root-level flat fields (saved by UnifiedContactTabbedSection)
   const rootRecord = contact as unknown as Record<string, unknown>;
+  // ADR-332 §D30: ΚΑΘΕ βαθμωτό πεδίο από τον ΕΝΑ πίνακα (εκεί ζει και η Δ.Ο.Υ.).
+  const scalars = readCompanyScalarFields(rootRecord);
 
   const formData: ContactFormData = {
     ...initialFormData,
     type: 'company',
     id: contact.id,
 
-    companyName: getSafeFieldValue(companyContact, 'companyName'),
-    vatNumber: getSafeFieldValue(companyContact, 'vatNumber'),
-    taxOffice: getSafeFieldValue(companyContact, 'taxOffice'),
+    ...scalars,
+    legalForm: (scalars.legalForm as CompanyContact['legalForm']) || '',
+    activityType: toLegacyKadActivityType(scalars.activityType),
     companyVatNumber: getSafeFieldValue(companyContact, 'vatNumber') ||
       getSafeFieldValue(companyContact, 'companyVatNumber'),
 
-    street: hqAddr?.street || legacyAddr?.street || '',
-    streetNumber: hqAddr?.number || legacyAddr?.number || '',
-    city: hqAddr?.city || legacyAddr?.city || '',
-    postalCode: hqAddr?.postalCode || legacyAddr?.postalCode || '',
-    // Administrative Hierarchy: companyAddresses[0] → root-level flat fields → legacy addresses[0]
-    municipality: hqAddr?.municipalityName || (rootRecord.municipality as string) || legacyAddr?.municipality || '',
-    municipalityId: hqAddr?.municipalityId ?? (rootRecord.municipalityId as string | null) ?? legacyAddr?.municipalityId ?? null,
-    regionalUnit: hqAddr?.regionalUnitName || (rootRecord.regionalUnit as string) || legacyAddr?.regionalUnit || '',
-    region: hqAddr?.regionName || hqAddr?.region || (rootRecord.region as string) || legacyAddr?.region || '',
-    decentAdmin: hqAddr?.decentAdminName || (rootRecord.decentAdmin as string) || legacyAddr?.decentAdmin || '',
-    majorGeo: hqAddr?.majorGeoName || (rootRecord.majorGeo as string) || legacyAddr?.majorGeo || '',
-    settlement: hqAddr?.city || (rootRecord.settlement as string) || legacyAddr?.settlement || '',
-    settlementId: hqAddr?.settlementId ?? (rootRecord.settlementId as string | null) ?? legacyAddr?.settlementId ?? null,
-    community: hqAddr?.communityName || (rootRecord.community as string) || legacyAddr?.community || '',
-    municipalUnit: hqAddr?.municipalUnitName || (rootRecord.municipalUnit as string) || legacyAddr?.municipalUnit || '',
+    // Έδρα: `companyAddresses[0]` → top-level κάτοπτρα → `addresses[0]`, μέσα από τον πίνακα
+    // (ADR-772) — μαζί με το `neighborhood`, που εδώ δεν διαβαζόταν ποτέ (ADR-332 §D30).
+    ...buildFlatFieldsFromCompanyHq(hqAddr, contact.addresses?.[0], rootRecord),
+    ...(hqAddr?.country ? { hqAddressCountry: hqAddr.country } : {}),
     companyAddresses,
     phone: contact.phones?.[0]?.number || '',
     email: contact.emails?.[0]?.email || '',
@@ -132,23 +123,9 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     photoPreview: getSafeFieldValue(companyContact, 'photoURL'),
     photoURL: getSafeFieldValue(companyContact, 'photoURL'),
 
-    notes: getSafeFieldValue(contact, 'notes'),
-
-    gemiNumber: getContactValue(companyContact, 'gemiNumber') || getContactValue(companyContact, 'registrationNumber'),
-    tradeName: getContactValue(companyContact, 'tradeName'),
-    legalForm: (getContactValue(companyContact, 'legalForm') as CompanyContact['legalForm']) || '',
-    gemiStatus: getContactValue(companyContact, 'gemiStatus'),
-    gemiStatusDate: getContactValue(companyContact, 'gemiStatusDate'),
-    chamber: getContactValue(companyContact, 'chamber'),
-    activityCodeKAD: getContactValue(companyContact, 'activityCodeKAD'),
-    activityDescription: getContactValue(companyContact, 'activityDescription'),
-    activityType: toLegacyKadActivityType(getContactValue(companyContact, 'activityType')),
     activities: resolveActivities(companyContact),
     activityValidFrom: getContactValue(companyContact, 'activityValidFrom'),
     activityValidTo: getContactValue(companyContact, 'activityValidTo'),
-    capitalAmount: getContactValue(companyContact, 'capitalAmount'),
-    currency: getContactValue(companyContact, 'currency'),
-    extraordinaryCapital: getContactValue(companyContact, 'extraordinaryCapital')
   };
 
 

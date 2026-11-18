@@ -49,6 +49,7 @@ import {
   withContactAddressAt,
   withHumanPoint,
 } from './contact-address-drag';
+import { applyHqEditorChange } from './addresses-section-form-mapping';
 
 export interface HqAddressMutationsDeps {
   formData: ContactFormData;
@@ -222,41 +223,12 @@ export function useHqAddressMutations({
 }: HqAddressMutationsDeps): HqAddressMutations {
   /**
    * Το `AddressEditor` διόρθωσε βασικά πεδία (συμφιλίωση / πρόταση) — η ιεραρχία **μένει**.
-   *
-   * ⚠️ Η «Πόλη» του editor αντιστοιχεί στο ορατό πεδίο «Οικισμός / Πόλη», που διαβάζει
-   * `settlement || city`. Αν γράψουμε μόνο το `city`, η διόρθωση καταλήγει σε σκιώδες
-   * πεδίο και η οθόνη μένει με την παλιά τιμή.
+   * Η μετάβαση ζει στο καθαρό `applyHqEditorChange` (ADR-332 §D30): εκεί τα δύο δοχεία της
+   * έδρας μένουν είδωλα μέσα από τον πίνακα, όχι με χειρόγραφη λίστα πεδίων.
    */
   const handleHqChange = useCallback((addr: ResolvedAddressFields) => {
     if (!setFormData) return;
-    setFormData(prev => {
-      const existing = (prev.companyAddresses ?? []) as CompanyAddress[];
-      const updatedAddresses = existing.length > 0
-        ? [{ ...existing[0], street: addr.street ?? existing[0].street, number: addr.number ?? existing[0].number, postalCode: addr.postalCode ?? existing[0].postalCode, city: addr.city ?? existing[0].city }, ...existing.slice(1)]
-        : existing;
-
-      const cityApplied = addr.city !== undefined;
-      const settlementRenamed = cityApplied && addr.city !== ((prev.settlement as string) ?? '');
-
-      return {
-        ...prev,
-        street: addr.street ?? (prev.street as string) ?? '',
-        streetNumber: addr.number ?? (prev.streetNumber as string) ?? '',
-        postalCode: addr.postalCode ?? (prev.postalCode as string) ?? '',
-        city: addr.city ?? (prev.city as string) ?? '',
-        neighborhood: addr.neighborhood ?? (prev.neighborhood as string) ?? '',
-        region: addr.region ?? (prev.region as string) ?? '',
-        ...(cityApplied ? { settlement: addr.city } : {}),
-        // Το όνομα άλλαξε από πηγή εκτός ιεραρχίας → το προηγούμενο `settlementId`
-        // δεν αντιστοιχεί πλέον στο εμφανιζόμενο όνομα. Ταυτότητα και ετικέτα
-        // δεν επιτρέπεται να αποκλίνουν.
-        ...(settlementRenamed ? { settlementId: null } : {}),
-        // Ο έλεγχος `!== undefined` ξεχωρίζει «ο editor εφάρμοσε το πεδίο» από «δεν το άγγιξε»·
-        // μέσα σε αυτόν, το κενό σημαίνει «ο άνθρωπος το καθάρισε» ⇒ `undefined` (ADR-332 Ζ4α).
-        ...(addr.country !== undefined ? { hqAddressCountry: toStoredCountryCode(addr.country) } : {}),
-        ...(updatedAddresses.length > 0 ? { companyAddresses: updatedAddresses } : {}),
-      };
-    });
+    setFormData(prev => applyHqEditorChange(prev, addr));
   }, [setFormData]);
 
   const applyConfirmedDrag = useCallback((

@@ -13,22 +13,14 @@
  */
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
-
-/**
- * Πεδία εταιρείας που ζουν στα `customFields` του Firestore εγγράφου.
- *
- * ⚠️ Το `municipality` είναι εδώ **σκοπίμως**: για εταιρείες κρατιέται ως πεδίο
- * ΓΕΜΗ. Γι' αυτό η αφαίρεσή του από το top level πρέπει να μείνει κλειδωμένη
- * στον κλάδο εταιρείας — σε φυσικό πρόσωπο ή υπηρεσία το ίδιο όνομα είναι
- * επίπεδο της **διοικητικής ιεραρχίας** και η διαγραφή του θα έσβηνε διεύθυνση.
- */
-const COMPANY_CUSTOM_FIELD_KEYS = [
-  'gemiStatus', 'gemiStatusDate',
-  'activityCodeKAD', 'activityDescription', 'activityType',
-  'chamber', 'capitalAmount', 'currency', 'extraordinaryCapital',
-  'registrationDate', 'lastUpdateDate',
-  'gemiDepartment', 'prefecture', 'municipality',
-] as const;
+// ADR-332 §D30: ο κατάλογος **παράγεται** από το σχήμα πεδίων εταιρείας — ήταν τρίτη
+// χειρόγραφη λίστα των ίδιων ονομάτων, δίπλα στους δύο mappers.
+//
+// ⚠️ Το `municipality` είναι στον κατάλογο **σκοπίμως**: για εταιρείες κρατιέται ως πεδίο
+// ΓΕΜΗ. Γι' αυτό η αφαίρεσή του από το top level πρέπει να μείνει κλειδωμένη στον κλάδο
+// εταιρείας — σε φυσικό πρόσωπο ή υπηρεσία το ίδιο όνομα είναι επίπεδο της **διοικητικής
+// ιεραρχίας** και η διαγραφή του θα έσβηνε διεύθυνση.
+import { COMPANY_CUSTOM_FIELD_KEYS } from '@/utils/contactForm/schema/company-field-schema';
 
 /**
  * Top-level πεδία που αφαιρούνται από το payload εταιρείας επειδή η κανονική

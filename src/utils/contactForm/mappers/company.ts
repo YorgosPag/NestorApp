@@ -12,32 +12,23 @@ import type { ContactFormData, KadActivity, CompanyAddress } from '@/types/Conta
 import type { AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { buildEnterpriseContactArrays } from '../extractors/arrays';
+import { writeCompanyScalarFields } from '../schema/company-field-schema';
 
-/** Custom fields for company contact */
-interface CompanyCustomFields {
-  gemiStatus?: string;
-  gemiStatusDate?: string;
-  activityCodeKAD?: string;
-  activityDescription?: string;
-  activityType?: string;
+/**
+ * Custom fields for company contact — τα βαθμωτά από το σχήμα (ADR-332 §D30), οι συλλογές ρητά.
+ */
+interface CompanyCustomFields extends Record<string, unknown> {
   activities?: KadActivity[];
   companyAddresses?: CompanyAddress[];
-  chamber?: string;
-  capitalAmount?: string;
-  currency?: string;
-  extraordinaryCapital?: string;
-  registrationDate?: string;
-  lastUpdateDate?: string;
-  gemiDepartment?: string;
-  prefecture?: string;
-  municipality?: string;
 }
 
-/** Mapped company contact data (partial, without timestamps) */
-interface MappedCompanyContactData {
+/**
+ * Mapped company contact data (partial, without timestamps).
+ * Τα βαθμωτά top-level πεδία (`companyName`, `taxOffice`, …) τα γεννά το σχήμα — ο τύπος εδώ
+ * δεν τα απαριθμεί ξανά, αλλιώς θα ήταν τέταρτη χειρόγραφη λίστα.
+ */
+interface MappedCompanyContactData extends Record<string, unknown> {
   type: 'company';
-  companyName?: string;
-  vatNumber?: string;
   logoURL?: string;
   photoURL?: string;
   multiplePhotoURLs: string[];
@@ -47,11 +38,6 @@ interface MappedCompanyContactData {
   websites?: WebsiteInfo[];
   isFavorite: boolean;
   status: 'active' | 'inactive' | 'archived';
-  notes?: string;
-  registrationNumber?: string;
-  gemiNumber?: string;
-  tradeName?: string;
-  legalForm?: string;
   customFields: CompanyCustomFields;
 }
 
@@ -66,12 +52,12 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
   const photoURL = extractPhotoURL(formData, 'company representative'); // 🔧 FIX: Εξαγωγή φωτογραφίας εκπροσώπου
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για companies
   const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'company');
+  // ADR-332 §D30: ΚΑΘΕ βαθμωτό πεδίο από τον ΕΝΑ πίνακα — εδώ έλειπε η Δ.Ο.Υ.
+  const scalars = writeCompanyScalarFields(formData);
 
-  // 🔍 DEBUG: Final mapped object
   const result: MappedCompanyContactData = {
+    ...scalars.root,
     type: 'company',
-    companyName: formData.companyName,
-    vatNumber: formData.vatNumber, // 🔧 FIX: Use correct field name
     logoURL,
     photoURL,
     multiplePhotoURLs,
@@ -86,18 +72,8 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
     websites: enterpriseData.websites,
     isFavorite: false,
     status: 'active',
-    notes: formData.notes,
-    registrationNumber: formData.gemiNumber,
-    gemiNumber: formData.gemiNumber,
-    tradeName: formData.tradeName,
-    legalForm: formData.legalForm,
     customFields: {
-      gemiStatus: formData.gemiStatus,
-      gemiStatusDate: formData.gemiStatusDate,
-      // Legacy singular fields (backward compatibility)
-      activityCodeKAD: formData.activityCodeKAD,
-      activityDescription: formData.activityDescription,
-      activityType: formData.activityType,
+      ...scalars.customFields,
       // Multi-KAD activities array
       activities: formData.activities ?? [],
       // Multi-address array — η λίστα **του saver** (κλαδεμένη, με ταυτότητες), όχι η ωμή
@@ -105,15 +81,6 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
       // οπότε η δημιουργία εταιρείας παρέκαμπτε **και** τη δικλείδα D20 **και** τα `id` —
       // ενώ τα αδέλφια `individual.ts` / `service.ts` περνούσαν ήδη από το `enterpriseData`.
       companyAddresses: enterpriseData.customFields?.companyAddresses ?? [],
-      chamber: formData.chamber,
-      capitalAmount: formData.capitalAmount,
-      currency: formData.currency,
-      extraordinaryCapital: formData.extraordinaryCapital,
-      registrationDate: formData.registrationDate,
-      lastUpdateDate: formData.lastUpdateDate,
-      gemiDepartment: formData.gemiDepartment,
-      prefecture: formData.prefecture,
-      municipality: formData.municipality,
     }
   };
 
