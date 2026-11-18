@@ -437,6 +437,11 @@
       "completedTitle": "Construction completed?",
       "completed": "The unit is declared ready, but this still says “under construction”. Upload the certificate issued on completion."
     },
+    "lifecycle": {
+      "notCompleted": "Selected automatically from the operational status: the unit is not completed, so a certificate cannot be issued yet.",
+      "completed": "Selected automatically from the operational status “Ready”: the certificate is now due. Undo restores the previous answer, including the study estimate.",
+      "undo": "Undo"
+    },
     "form": {
       "class": "Energy class, as on the certificate",
       "classPlaceholder": "No class",

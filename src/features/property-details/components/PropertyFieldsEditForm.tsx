@@ -56,6 +56,7 @@ import {
   PROPERTY_CARD_COLORS, PROPERTY_MICRO_TEXT,
 } from './property-fields-constants';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
+import { useEnergyLifecycleFollow } from '@/hooks/energy-certificate/useEnergyLifecycleFollow';
 import { PropertyFieldsDetailCards } from './PropertyFieldsDetailCards';
 import { PropertyAutoComputedNote, PropertyDetailCardHeader, levelAggregateOf } from './PropertyDetailCardHeader';
 import { PropertyDescriptionField } from './PropertyDescriptionField';
@@ -98,6 +99,8 @@ export function PropertyFieldsEditForm({
 }: PropertyFieldsEditFormProps) {
   const colors = useSemanticColors();
   const aggregate = levelAggregateOf(isMultiLevel, activeLevelId, aggregatedTotals);
+  // ADR-777 §8.102.1 — η ενεργειακή απάντηση ακολουθεί την κατάσταση μέχρι να την πάρει ο άνθρωπος (ΕΝΑΣ κάτοχος).
+  const energyLifecycle = useEnergyLifecycleFollow(formData, setFormData, isEditing);
   return (
     <form
       id={isEditing ? 'property-fields-form' : undefined}
@@ -310,7 +313,7 @@ export function PropertyFieldsEditForm({
                 {t('dialog.addUnit.fields.status')}
               </Label>
               <Select value={formData.operationalStatus} disabled={!isEditing || isHierarchyLocked}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, operationalStatus: value as OperationalStatus }))}>
+                onValueChange={(value) => energyLifecycle.changeOperationalStatus(value as OperationalStatus)}>
                 <SelectTrigger size="sm">
                   <SelectValue placeholder={t('dialog.addUnit.placeholders.status')} />
                 </SelectTrigger>
@@ -457,6 +460,7 @@ export function PropertyFieldsEditForm({
         property={property}
         formData={formData}
         setFormData={setFormData}
+        energyLifecycle={energyLifecycle}
         isEditing={isEditing}
         isSoldOrRented={isSoldOrRented}
         isMultiLevel={isMultiLevel}

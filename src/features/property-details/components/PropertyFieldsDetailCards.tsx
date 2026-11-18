@@ -32,8 +32,8 @@ import { EnergyCertificateFields } from '@/components/shared/energy-certificate/
 import { EnergyCertificateImport } from '@/components/shared/energy-certificate/EnergyCertificateImport';
 import { useCompanyPropertyImportPort } from '@/hooks/energy-certificate/useEnergyCertificateImportPorts';
 import { useEnergyConstructionContext } from '@/hooks/energy-certificate/useProjectEnergyStudies';
-import type { EnergyCertificatePatch } from '@/lib/energy-certificate/energy-certificate';
-import { energyOfForm, patchedEnergyFormSlice } from '@/lib/energy-certificate/energy-certificate-form';
+import { energyOfForm } from '@/lib/energy-certificate/energy-certificate-form';
+import type { EnergyLifecycleControl } from '@/hooks/energy-certificate/useEnergyLifecycleFollow';
 import { isFinalContractSigned } from '@/lib/conveyance/case-state';
 import { OrientationPlausibilityWarning } from '@/components/properties/shared/OrientationPlausibilityWarning';
 import { OrientationCompassGrid } from '@/components/properties/shared/OrientationCompassGrid';
@@ -46,10 +46,13 @@ type DetailCardsProps = Pick<PropertyFieldsEditFormProps,
   'property' | 'formData' | 'setFormData' | 'isEditing' | 'isSoldOrRented' |
   'isMultiLevel' | 'activeLevelId' | 'currentLevelData' | 'aggregatedTotals' |
   'toggleArrayItem' | 'updateLevelField' | 't' | 'iconSizes' | 'quick'
->;
+> & {
+  /** ADR-777 §8.102.1 — ο ΕΝΑΣ κάτοχος της ενεργειακής απάντησης (κατάσταση · διόρθωση · αναίρεση). */
+  readonly energyLifecycle: EnergyLifecycleControl;
+};
 
 export function PropertyFieldsDetailCards(props: DetailCardsProps) {
-  const { quick, property, ...row2Props } = props;
+  const { quick, property, energyLifecycle, ...row2Props } = props;
   const {
     formData, setFormData, isEditing, isSoldOrRented,
     isMultiLevel, activeLevelId, currentLevelData, aggregatedTotals,
@@ -66,8 +69,8 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
   // ADR-777 §8.102 — μονάδα που χτίζεται: «υπό κατασκευή» + εκτίμηση της ΜΕΑ από τα έγγραφα του έργου.
   // Η ΤΑΥΤΟΤΗΤΑ του έργου (`projectId`, ίδια με τη λίστα και τον server) — ποτέ ο καθρέφτης ονόματος `project`.
   const energyConstruction = useEnergyConstructionContext(property.projectId, formData.operationalStatus, energyCertificate);
-  const applyEnergyPatch = (patch: EnergyCertificatePatch) =>
-    setFormData(prev => ({ ...prev, ...patchedEnergyFormSlice(prev, patch) }));
+  // Χειροκίνητη διόρθωση ή ΠΕΑ: η απάντηση γίνεται του ανθρώπου — περνά από τον κάτοχο, ποτέ απευθείας στη φόρμα.
+  const { applyEnergyPatch } = energyLifecycle;
   // Η φόρμα κρατά `string[]`· η πυξίδα και η πρόταση μιλούν το λεξιλόγιο — φιλτράρισμα μέσα από τη ρίζα, όχι cast.
   const orientationSource: readonly string[] = isMultiLevel && activeLevelId
     ? (currentLevelData?.orientations ?? [])
@@ -256,7 +259,12 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
               </fieldset>
               {/* ADR-777 §8.94 — το ΠΕΑ: τα ΙΔΙΑ πεδία με το «Βελτίωσε την αγγελία σου» του ιδιώτη. Η κλάση μένει στο
                   `formData.energyClass` (τη διαβάζουν πληρότητα και έλεγχοι αληθοφάνειας)· το μπλοκ συντίθεται εδώ. */}
-              <EnergyConstructionWarning notice={energyConstruction.notice} />
+              <EnergyConstructionWarning
+                notice={energyConstruction.notice}
+                follow={energyLifecycle.follow}
+                onUndo={energyLifecycle.undo}
+                disabled={energyLocked}
+              />
               <EnergyCertificateFields
                 value={energyCertificate}
                 onChange={applyEnergyPatch}
