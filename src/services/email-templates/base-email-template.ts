@@ -153,7 +153,6 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
   const companyLogoSrc = companyLogoUrlOverride && companyLogoUrlOverride.trim().length > 0
     ? companyLogoUrlOverride.trim()
     : emailAssetUrl(DEFAULT_COMPANY_LOGO.publicPath);
-  const appLogoSrc = emailAssetUrl(NESTOR_APP_LOGO.publicPath);
   // ADR-857 — από τη ρίζα. ⚠️ Το `companyName ?? appName` παρακάτω **μένει**: η εταιρεία του
   // πελάτη είναι **δεδομένα ενοίκου** και προηγείται· το όνομα του προϊόντος είναι η εφεδρεία.
   const appName = PRODUCT_NAME;
@@ -213,15 +212,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
         <!-- Email container (max 600px) -->
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:${BRAND.white};border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
 
-          <!-- HEADER — Company identity (logo + name + contacts) -->
-          <tr>
-            <td style="background-color:${BRAND.navy};padding:28px 32px 24px;text-align:center;">
-              ${renderEmailImage(companyLogoSrc, companyName ?? appName, DEFAULT_COMPANY_LOGO, 'display:block;margin:0 auto 12px;max-width:120px;height:auto;border-radius:12px;')}
-              ${companyName ? `<p style="margin:0;font-size:20px;font-weight:700;color:${BRAND.white};line-height:1.3;">${escapeHtml(companyName)}</p>` : ''}
-              ${headerSubtitle ? `<p style="margin:4px 0 0;font-size:12px;color:${BRAND.navySoft};letter-spacing:0.04em;">${escapeHtml(headerSubtitle)}</p>` : ''}
-              ${headerContacts}
-            </td>
-          </tr>
+          ${renderIdentityHeaderRow({ logoSrc: companyLogoSrc, logoAlt: companyName ?? appName, name: companyName, subtitle: headerSubtitle, contactsHtml: headerContacts })}
 
           <!-- CONTENT AREA -->
           <tr>
@@ -230,31 +221,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
             </td>
           </tr>
 
-          <!-- DIVIDER -->
-          <tr>
-            <td style="padding:0 32px;">
-              <hr style="border:none;border-top:1px solid ${BRAND.border};margin:0;" />
-            </td>
-          </tr>
-
-          <!-- APP BRANDING — λογότυπο προϊόντος + πνευματικά δικαιώματα.
-               ⚠️ ADR-861 Φ1 (απόφαση Giorgio 2026-09-15): η γραμμή «©» γράφει το όνομα του
-               **προϊόντος**, από τη ρίζα. Ο υπεύθυνος της υπηρεσίας δηλώνεται χωριστά
-               (constants/platform-operator.ts) — αναθεωρεί το ADR-857 §3.Β. -->
-          <tr>
-            <td style="padding:16px 32px 20px;text-align:center;">
-              <!--[if !mso]><!-- ADR-853 §19 Θ3: το λογότυπο εμφανίζεται **μόνο** όταν υπάρχει δημόσια διεύθυνση assets -->
-              ${renderEmailImage(appLogoSrc, '', NESTOR_APP_LOGO, 'display:inline-block;vertical-align:middle;max-width:28px;height:auto;border-radius:5px;margin-right:8px;border:0;')}
-              <!--<![endif]-->
-              <span style="font-size:11px;color:${BRAND.grayLight};vertical-align:middle;font-weight:600;">
-                ${appName}
-              </span>
-              <br/>
-              <span style="font-size:10px;color:${BRAND.border};">
-                &copy; ${calendarDayOf(new Date()).slice(0, 4)} ${PRODUCT_NAME}. ${escapeHtml(baseEmailTexts(lang).rightsReserved)}
-              </span>
-            </td>
-          </tr>
+          ${renderAppBrandingFooterRows(lang)}
 
         </table>
         <!-- /Email container -->
@@ -423,6 +390,84 @@ function renderEmailImage(
 ): string {
   if (src === null) return '';
   return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" width="${asset.renderWidth}" height="${asset.renderHeight}" style="${style}" />`;
+}
+
+// ============================================================================
+// ΤΑΥΤΟΤΗΤΑ ΠΛΑΙΣΙΟΥ — κεφαλίδα + υποσέλιδο (ΕΝΑ σημείο για κάθε πλαίσιο email)
+// ============================================================================
+
+/**
+ * Η ζώνη ταυτότητας στην κορυφή της κάρτας: λογότυπο + όνομα (+ υπότιτλος, επαφές).
+ *
+ * 🔑 Κοινή στο `wrapInBrandedTemplate` **και** στο πλαίσιο των email ειδοποιήσεων
+ * (`notification-email-render.ts`) — εξήχθη για να μη γεννηθεί δίδυμο (N.18). Ο αποστολέας
+ * αποφασίζει **ποιο** λογότυπο (εταιρείας ή προϊόντος)· η ζώνη μόνο το αποδίδει.
+ */
+export function renderIdentityHeaderRow(p: {
+  readonly logoSrc: string | null;
+  readonly logoAlt: string;
+  readonly name?: string;
+  readonly subtitle?: string;
+  readonly contactsHtml?: string;
+}): string {
+  return `<!-- HEADER — Company identity (logo + name + contacts) -->
+          <tr>
+            <td style="background-color:${BRAND.navy};padding:28px 32px 24px;text-align:center;">
+              ${renderEmailImage(p.logoSrc, p.logoAlt, DEFAULT_COMPANY_LOGO, 'display:block;margin:0 auto 12px;max-width:120px;height:auto;border-radius:12px;')}
+              ${p.name ? `<p style="margin:0;font-size:20px;font-weight:700;color:${BRAND.white};line-height:1.3;">${escapeHtml(p.name)}</p>` : ''}
+              ${p.subtitle ? `<p style="margin:4px 0 0;font-size:12px;color:${BRAND.navySoft};letter-spacing:0.04em;">${escapeHtml(p.subtitle)}</p>` : ''}
+              ${p.contactsHtml ?? ''}
+            </td>
+          </tr>`;
+}
+
+/** Η ζώνη ταυτότητας του **προϊόντος** — για ό,τι στέλνει η ίδια η πλατφόρμα (όχι μια εταιρεία-μισθωτής). */
+export function renderAppIdentityHeaderRow(): string {
+  return renderIdentityHeaderRow({
+    logoSrc: emailAssetUrl(NESTOR_APP_LOGO.publicPath),
+    logoAlt: PRODUCT_NAME,
+    name: PRODUCT_NAME,
+  });
+}
+
+/**
+ * Διαχωριστικό + υποσέλιδο προϊόντος (λογότυπο Nestor App + «©») — κοινό σε κάθε πλαίσιο email.
+ *
+ * ⚠️ ADR-861 Φ1 (απόφαση Giorgio 2026-09-15): η γραμμή «©» γράφει το όνομα του **προϊόντος**,
+ * από τη ρίζα. Ο υπεύθυνος της υπηρεσίας δηλώνεται χωριστά (constants/platform-operator.ts) —
+ * αναθεωρεί το ADR-857 §3.Β. ADR-853 §19 Θ3: το λογότυπο εμφανίζεται **μόνο** όταν υπάρχει
+ * δημόσια διεύθυνση assets.
+ *
+ * 🔴 **Καμία ελληνική λέξη μέσα σε σχόλιο HTML** (2026-11-18): τα σχόλια HTML **ταξιδεύουν** με
+ * το email — ένα αγγλικό μήνυμα κουβαλούσε ελληνικό κείμενο στον κώδικά του (άγκυρα Γ0 του
+ * `email-digest.test.ts`). Η τεκμηρίωση ζει εδώ, στο TypeScript.
+ *
+ * @param lang η γλώσσα του εγγράφου (για το «Με την επιφύλαξη…»)
+ */
+export function renderAppBrandingFooterRows(lang: string | undefined): string {
+  const appLogoSrc = emailAssetUrl(NESTOR_APP_LOGO.publicPath);
+  return `<!-- DIVIDER -->
+          <tr>
+            <td style="padding:0 32px;">
+              <hr style="border:none;border-top:1px solid ${BRAND.border};margin:0;" />
+            </td>
+          </tr>
+
+          <!-- APP BRANDING -->
+          <tr>
+            <td style="padding:16px 32px 20px;text-align:center;">
+              <!--[if !mso]><!-- -->
+              ${renderEmailImage(appLogoSrc, '', NESTOR_APP_LOGO, 'display:inline-block;vertical-align:middle;max-width:28px;height:auto;border-radius:5px;margin-right:8px;border:0;')}
+              <!--<![endif]-->
+              <span style="font-size:11px;color:${BRAND.grayLight};vertical-align:middle;font-weight:600;">
+                ${PRODUCT_NAME}
+              </span>
+              <br/>
+              <span style="font-size:10px;color:${BRAND.border};">
+                &copy; ${calendarDayOf(new Date()).slice(0, 4)} ${PRODUCT_NAME}. ${escapeHtml(baseEmailTexts(lang).rightsReserved)}
+              </span>
+            </td>
+          </tr>`;
 }
 
 // ADR-877 §6 — καθαρά SSoT (χωρίς `server-only`)· επανεξάγονται για τους ~20 υπάρχοντες καταναλωτές.

@@ -3,7 +3,9 @@
  * Η ΑΠΟΔΟΣΗ ΤΩΝ EMAIL ΕΙΔΟΠΟΙΗΣΕΩΝ — κείμενο + HTML, με συνδέσμους (ADR-848)
  * =============================================================================
  *
- * **Καθαρές συναρτήσεις. Καμία Firestore, κανένα δίκτυο, κανένα ρολόι, κανένα env.**
+ * **Καθαρές συναρτήσεις. Καμία Firestore, κανένα δίκτυο.** ⚠️ Εξαίρεση (2026-11-18): η κεφαλίδα και
+ * το υποσέλιδο ταυτότητας (`base-email-template`) διαβάζουν τη διεύθυνση assets του λογότυπου από
+ * το env, και το «©» τη χρονιά από το ρολόι — ίδια συμπεριφορά με κάθε άλλο email της πλατφόρμας.
  * Οι σύνδεσμοι έρχονται ως **ένεση** ({@link EmailLinks}): εδώ δεν ρωτιέται ποιο
  * είναι το domain ή ποιο το μυστικό — μόνο *«υπάρχει σύνδεσμος για αυτό;»*.
  *
@@ -41,7 +43,12 @@ import { emailTextsFor, type EmailWording } from '@/server/comms/email-texts';
 // ⚠️ **Τοπικό αντίγραφο δεν επιτρέπεται** — το `escapeHtml` και τα χρώματα έρχονται από
 // το SSoT των προτύπων email. Υπάρχουν ήδη **δύο** υλοποιήσεις escape στο repo
 // (`email-templates` και `telegram/admin/format`)· μια τρίτη θα ήταν η γνωστή απόκλιση.
-import { BRAND, escapeHtml } from '@/services/email-templates/base-email-template';
+import {
+  BRAND,
+  escapeHtml,
+  renderAppBrandingFooterRows,
+  renderAppIdentityHeaderRow,
+} from '@/services/email-templates/base-email-template';
 
 // =============================================================================
 // ΣΥΜΒΟΛΑΙΟ
@@ -225,7 +232,16 @@ function footerHtml(wording: EmailWording, manage: ManageLink | null): string {
 const PREHEADER_STYLE =
   'display:none;mso-hide:all;visibility:hidden;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden;opacity:0;';
 
-/** Το έγγραφο: `lang`, `color-scheme`, κρυφό preheader, μία κάρτα, υποσέλιδο. */
+/**
+ * Το έγγραφο: `lang`, `color-scheme`, κρυφό preheader, μία κάρτα, υποσέλιδο.
+ *
+ * 🏷️ **Η κάρτα φέρει την ταυτότητα του Nestor App** (κεφαλίδα + υποσέλιδο με λογότυπο) — ίδια
+ * με κάθε email που στέλνει η πλατφόρμα (επιβεβαίωση email, προσκλήσεις). Ως 2026-11-18 οι
+ * ειδοποιήσεις ήταν τα **μόνα** email χωρίς κανένα λογότυπο — και μια ειδοποίηση ασφαλείας
+ * («Άλλαξε ο λογαριασμός πίστωσης») χωρίς σήμα μοιάζει με phishing. Τα κομμάτια έρχονται από
+ * το SSoT του `base-email-template.ts`, όχι αντίγραφο. ⚠️ Το λογότυπο λύνει τη διεύθυνση
+ * assets από το env (ADR-853 §19)· χωρίς δημόσια διεύθυνση η `<img>` απλώς δεν γράφεται.
+ */
 function documentHtml(parts: {
   readonly language: HumanLanguage;
   readonly title: string;
@@ -241,8 +257,10 @@ function documentHtml(parts: {
     `<body style="margin:0;padding:0;background-color:${BRAND.bgLight};">`,
     `<div style="${PREHEADER_STYLE}">${escapeHtml(parts.preheader)}</div>`,
     '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td align="center" style="padding:24px 12px;">',
-    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background-color:${BRAND.white};border:1px solid ${BRAND.border};border-radius:8px;">`,
+    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background-color:${BRAND.white};border:1px solid ${BRAND.border};border-radius:8px;overflow:hidden;">`,
+    renderAppIdentityHeaderRow(),
     `<tr><td style="padding:24px;font-family:${FONT};font-size:15px;line-height:1.5;color:${BRAND.gray};">${parts.bodyHtml}</td></tr>`,
+    renderAppBrandingFooterRows(parts.language),
     `</table><table role="presentation" width="100%" style="max-width:560px;"><tr><td style="padding:0 8px;">${parts.footer}</td></tr></table>`,
     '</td></tr></table></body></html>',
   ].join('');
