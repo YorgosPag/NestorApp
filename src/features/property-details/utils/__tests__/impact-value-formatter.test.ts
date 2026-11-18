@@ -11,6 +11,14 @@ type FakeT = (key: string, options?: { defaultValue?: string }) => string;
  */
 const DICT: Record<string, string> = {
   'properties:impactGuard.emptyValue': 'κενό',
+  'properties:impactGuard.unrenderableValue': 'άλλαξε — οι λεπτομέρειες φαίνονται στη φόρμα',
+  'properties-enums:energyClass.aPlus': 'Α+',
+  'properties-enums:energyClass.bPlus': 'Β+',
+  'properties-enums:energyClass.c': 'Γ',
+  'properties-enums:energyCertificate.absence.pending': 'Το πιστοποιητικό είναι υπό έκδοση',
+  'properties-enums:energyCertificate.absence.underConstruction': 'Το ακίνητο είναι υπό κατασκευή· το πιστοποιητικό εκδίδεται με την ολοκλήρωση',
+  'properties-enums:energyCertificate.projection.class': 'Αναμενόμενη ενεργειακή κλάση, όπως στη ΜΕΑ',
+  'properties-enums:energyCertificate.scope.unit': 'Αυτή τη μονάδα',
   'properties-enums:units.sqm': 'τ.μ.',
   'properties-detail:fields.areas.gross': 'Μικτό',
   'properties-detail:fields.areas.net': 'Καθαρό',
@@ -92,9 +100,39 @@ describe('formatImpactValue', () => {
     expect(formatImpactValue(fakeT as never, 'condition', 'new')).toBe('Νέο');
   });
 
-  test('energy → class prefix + letter', () => {
-    const raw = JSON.stringify({ class: 'A+' });
-    expect(formatImpactValue(fakeT as never, 'energy', raw)).toBe('Ενεργειακή κλάση A+');
+  test('energy → class prefix + Greek class label (the stored value is European: C ⇒ Γ)', () => {
+    expect(formatImpactValue(fakeT as never, 'energy', JSON.stringify({ class: 'A+' }))).toBe('Ενεργειακή κλάση Α+');
+    expect(formatImpactValue(fakeT as never, 'energy', JSON.stringify({ class: 'C' }))).toBe('Ενεργειακή κλάση Γ');
+  });
+
+  // ADR-777 §8.102 — μετρημένο live 2026-11-18: το «υπό κατασκευή» έβγαινε ως `{"class":null,…}`.
+  test('energy · under construction + MEA projection → words, never JSON', () => {
+    const raw = JSON.stringify({
+      class: null, primaryEnergy: null, co2Emissions: null, issuedOn: null, usefulArea: null, finalEnergy: null,
+      scope: null, sourceFileId: null, absence: 'under-construction',
+      projection: { class: 'B+', scope: 'unit', sourceFileId: 'file_d5f82e7c-d50a-47b5-9cf0-afcf40146343' },
+    });
+    expect(formatImpactValue(fakeT as never, 'energy', raw)).toBe(
+      'Το ακίνητο είναι υπό κατασκευή· το πιστοποιητικό εκδίδεται με την ολοκλήρωση'
+      + ' · Αναμενόμενη ενεργειακή κλάση, όπως στη ΜΕΑ: Β+ · Αυτή τη μονάδα',
+    );
+  });
+
+  test('energy · absence without projection → the absence reason; nothing declared → emptyValue', () => {
+    expect(formatImpactValue(fakeT as never, 'energy', JSON.stringify({ class: null, absence: 'pending', projection: null })))
+      .toBe('Το πιστοποιητικό είναι υπό έκδοση');
+    expect(formatImpactValue(fakeT as never, 'energy', JSON.stringify({ class: null, absence: null }))).toBe('κενό');
+  });
+
+  test('CLASS GUARD — an unrecognised structure is never shown raw, in any field', () => {
+    const unknownObject = JSON.stringify({ heatingType: null, somethingNew: { nested: true } });
+    expect(formatImpactValue(fakeT as never, 'systemsOverride', unknownObject))
+      .toBe('άλλαξε — οι λεπτομέρειες φαίνονται στη φόρμα');
+    expect(formatImpactValue(fakeT as never, 'name', '{"a":1}')).toBe('άλλαξε — οι λεπτομέρειες φαίνονται στη φόρμα');
+    expect(formatImpactValue(fakeT as never, 'linkedSpaces', JSON.stringify([{ foo: 1 }])))
+      .toBe('άλλαξε — οι λεπτομέρειες φαίνονται στη φόρμα');
+    // ελεύθερο κείμενο που απλώς ξεκινά με αγκύλη δεν είναι δομή
+    expect(formatImpactValue(fakeT as never, 'name', '[Κτίριο Α] Διαμέρισμα')).toBe('[Κτίριο Α] Διαμέρισμα');
   });
 
   test('systemsOverride → heating/cooling labels + values', () => {
@@ -253,7 +291,7 @@ describe('field presentation contract', () => {
     layout: { state: 'formatted', why: 'δομημένο αντικείμενο διαρρύθμισης (υπνοδωμάτια/μπάνια/wc)' },
     orientations: { state: 'formatted', why: 'πίνακας enum προσανατολισμών' },
     condition: { state: 'formatted', why: 'enum properties-enums:condition.*' },
-    energy: { state: 'formatted', why: 'ενεργειακή κλάση με πρόθεμα ετικέτας' },
+    energy: { state: 'formatted', why: 'readEnergyCertificate — κλάση ΠΕΑ, ή λόγος απουσίας + εκτίμηση ΜΕΑ (ADR-777 §8.102)' },
     systemsOverride: { state: 'formatted', why: 'enum θέρμανσης και ψύξης με ετικέτες' },
     finishes: { state: 'formatted', why: 'enum δαπέδων, κουφωμάτων και υαλοπινάκων' },
     interiorFeatures: { state: 'formatted', why: 'πίνακας enum εσωτερικών χαρακτηριστικών' },

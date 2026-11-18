@@ -594,6 +594,7 @@
       "dependencies": "Dependencies"
     },
     "emptyValue": "empty",
+    "unrenderableValue": "changed — details are in the form",
     "commercial": {
       "askingPrice": "Asking price",
       "rentPrice": "Monthly rent",

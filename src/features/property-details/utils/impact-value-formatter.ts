@@ -1,4 +1,10 @@
 import type { TFunction } from 'i18next';
+import { readEnergyCertificate } from '@/lib/energy-certificate/energy-certificate';
+import {
+  ENERGY_CERTIFICATE_ABSENCE_KEY,
+  ENERGY_CERTIFICATE_SCOPE_KEY,
+  ENERGY_CLASS_LABEL_KEY,
+} from '@/lib/energy-certificate/energy-certificate-keys';
 import { isPlainRecord } from '@/lib/type-guards';
 
 const VALUE_SEPARATOR = ' · ';
@@ -97,16 +103,33 @@ function formatCondition(t: TFunction, raw: string): string {
   return t(`properties-enums:condition.${raw}`, { defaultValue: raw });
 }
 
+/**
+ * Το ενεργειακό μέσα από τον ΕΝΑ αναγνώστη (`readEnergyCertificate`, ADR-777 §8.94/§8.102) και τους ΙΔΙΟΥΣ πίνακες
+ * ετικετών με τη φόρμα: κλάση ΠΕΑ · ή λόγος απουσίας («υπό κατασκευή» …) + εκτίμηση ΜΕΑ. Η κλάση με την ελληνική της
+ * ετικέτα (Γ · Ζ · Η), ποτέ το αποθηκευμένο λατινικό γράμμα. Η παραπομπή στο αρχείο της ΜΕΑ δεν λέει τίποτα σε
+ * άνθρωπο εδώ — μένει στη φόρμα.
+ */
 function formatEnergy(t: TFunction, raw: string): string {
   const value = parse(raw);
   if (!isPlainRecord(value)) {
     return raw;
   }
-  const energyClass = readString(value, 'class');
-  if (!energyClass) {
-    return raw;
+  const certificate = readEnergyCertificate(value);
+  if (certificate.class !== null) {
+    return `${t('properties-enums:energy.class')} ${t(ENERGY_CLASS_LABEL_KEY[certificate.class])}`;
   }
-  return `${t('properties-enums:energy.class')} ${energyClass}`;
+  if (certificate.absence === null) {
+    return t('properties:impactGuard.emptyValue');
+  }
+  const segments = [t(ENERGY_CERTIFICATE_ABSENCE_KEY[certificate.absence])];
+  const { projection } = certificate;
+  if (projection !== null) {
+    segments.push(`${t('properties-enums:energyCertificate.projection.class')}: ${t(ENERGY_CLASS_LABEL_KEY[projection.class])}`);
+    if (projection.scope !== null) {
+      segments.push(t(ENERGY_CERTIFICATE_SCOPE_KEY[projection.scope]));
+    }
+  }
+  return segments.join(VALUE_SEPARATOR);
 }
 
 function formatSystemsOverride(t: TFunction, raw: string): string {
@@ -277,12 +300,26 @@ function formatLinkedSpaces(t: TFunction, raw: string): string {
       );
     }
 
-    return parts.length > 0 ? parts.join(' · ') : JSON.stringify(entry);
+    return parts.length > 0 ? parts.join(' · ') : t('properties:impactGuard.unrenderableValue');
   });
 
   return segments.join(LIST_SEPARATOR);
 }
 
+/** Αποθηκευμένη δομή (αντικείμενο/πίνακας) που κανένας μορφοποιητής δεν αναγνώρισε — ποτέ αυτούσια σε άνθρωπο. */
+function isStructuredJson(text: string): boolean {
+  const head = text.trimStart()[0];
+  if (head !== '{' && head !== '[') {
+    return false;
+  }
+  const value = parse(text);
+  return Array.isArray(value) || isPlainRecord(value);
+}
+
+/**
+ * Η παρουσίαση μιας τιμής του ελέγχου επιπτώσεων. 🔑 **Ποτέ ωμό JSON** (μετρημένο live 2026-11-18, ADR-777 §8.102):
+ * όποια δομή δεν αναγνωρίσει ο μορφοποιητής του πεδίου λέγεται «άλλαξε — δείτε τη φόρμα», όχι `{"class":null,…}`.
+ */
 export function formatImpactValue(
   t: TFunction,
   field: string,
@@ -292,7 +329,16 @@ export function formatImpactValue(
   if (raw === null) {
     return t('properties:impactGuard.emptyValue');
   }
+  const text = formatFieldValue(t, field, raw, context);
+  return isStructuredJson(text) ? t('properties:impactGuard.unrenderableValue') : text;
+}
 
+function formatFieldValue(
+  t: TFunction,
+  field: string,
+  raw: string,
+  context?: { commercialStatus?: string },
+): string {
   switch (field) {
     case 'type':
       return formatType(t, raw);

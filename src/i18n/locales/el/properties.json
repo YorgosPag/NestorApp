@@ -594,6 +594,7 @@
       "dependencies": "Εξαρτήσεις"
     },
     "emptyValue": "κενό",
+    "unrenderableValue": "άλλαξε — οι λεπτομέρειες φαίνονται στη φόρμα",
     "commercial": {
       "askingPrice": "Τιμή ζήτησης",
       "rentPrice": "Μηνιαίο ενοίκιο",
