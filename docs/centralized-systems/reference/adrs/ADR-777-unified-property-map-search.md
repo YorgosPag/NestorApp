@@ -18679,3 +18679,15 @@ baseline του φρουρού `property-display-area` (4 στο `useSalesProper
 **Διόρθωση live (2026-11-18):** η σελίδα **κάθε** ακινήτου **χωρίς έργο** έπεφτε (`Cannot read properties of undefined (reading 'trim')`,
 μετρημένο στο `prop_a0000002-…`): το `Property.project` φτάνει `undefined` παρότι ο τύπος λέει `string`, και το
 `useEnergyConstructionContext` έλεγχε μόνο `null`. Πλέον δέχεται `string | null | undefined` και ελέγχει με `typeof`.
+
+**Ρίζα (2026-11-18, διορθώνει το προηγούμενο):** το `prop_a0000002-…` **ανήκει** σε έργο («ΕΡΓΟ ΗΡΑΚΛΕΙΟΥ» στη λίστα) — άρα
+δεν έπεφτε επειδή «δεν έχει έργο». Η φόρμα διάβαζε το `property.project`, που στον τύπο της σελίδας
+(`types/property-viewer.ts`) είναι **καθρέφτης ονόματος που δεν γράφεται** και **δεν υπάρχει στο έγγραφο**
+(`usePropertyCardModel.ts` το λέει ρητά). Η λίστα (`usePropertyCardModel` · `usePropertyLocationLine`) και ο server
+(`property-energy-patch` → `existing.projectId`) ρωτούν την **ταυτότητα** `projectId`. Με το `typeof` η σελίδα σταμάτησε
+να πέφτει, αλλά **κάθε** μονάδα φαινόταν «χωρίς έργο» ⇒ `studies === null` ⇒ η ΜΕΑ δεν προσφερόταν **ποτέ**. Πλέον η φόρμα
+περνά `property.projectId` — **ένας** αναγνώστης της ταυτότητας του έργου σε οθόνη, λίστα και server· κανένας δεύτερος
+resolver (το `projectId` είναι αποθηκευμένο, ADR-284).
+- 🔍 **Ίδιος καθρέφτης, άλλοι αναγνώστες (ΔΕΝ αγγίχτηκαν — θέλουν χωριστό έλεγχο):** `sales-dialog-utils.ts:29` ·
+  `SellDialog.tsx:109` · `LegalTabContent.tsx:75` (εφεδρεία) · `property-identity-parts.tsx:75` ·
+  `ShowcaseDetailSections.tsx:281` · `property-normalizer.ts:205`.

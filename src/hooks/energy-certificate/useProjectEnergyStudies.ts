@@ -56,9 +56,11 @@ export function useProjectEnergyStudies(projectId: string | null, enabled: boole
  * **Το πλαίσιο κατασκευής της φόρμας του γραφείου** — η υπενθύμιση του κύκλου ζωής και οι ΜΕΑ του έργου. Οι μελέτες
  * ζητούνται μόνο όταν η απάντηση είναι «υπό κατασκευή»: καμία ανάγνωση για τις μονάδες που δεν τις χρειάζονται.
  *
- * @param projectId το έργο της μονάδας (`Property.project`, που ο mapper γεμίζει και από το `projectId`) — `''`/`null`/
- *   `undefined` = χωρίς έργο. ⚠️ Ο τύπος λέει `string`, αλλά μονάδα χωρίς έργο φτάνει εδώ **`undefined`** (μετρημένο live
- *   2026-11-18: `.trim()` πάνω σε `undefined` έριξε όλη τη σελίδα του ακινήτου) — γι' αυτό ο έλεγχος είναι `typeof`.
+ * @param projectId η **ταυτότητα** του έργου της μονάδας (`Property.projectId` — η ίδια που διαβάζουν η λίστα,
+ *   `usePropertyCardModel`, και ο server, `property-energy-patch`) — `''`/`null`/`undefined` = χωρίς έργο.
+ *   ⛔ **Ποτέ** το `Property.project`: είναι καθρέφτης **ονόματος** που δεν υπάρχει στο έγγραφο (μετρημένο live
+ *   2026-11-18: έφτασε `undefined` σε ακίνητο μέσα σε έργο ⇒ `.trim()` έριξε τη σελίδα, και η ΜΕΑ δεν θα προσφερόταν
+ *   ποτέ). Το `projectId` είναι προαιρετικό στον τύπο — γι' αυτό ο έλεγχος είναι `typeof`.
  */
 export function useEnergyConstructionContext(
   projectId: string | null | undefined,
