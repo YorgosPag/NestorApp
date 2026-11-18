@@ -21,6 +21,8 @@ import {
   buildDeletedAddressUpdate,
   buildPrimaryAddressUpdate,
   buildProjectAddressSelection,
+  buildUnlinkedAddressUpdate,
+  buildingOnlyAddresses,
   createInitialBuildingAddresses,
   createManualBuildingAddress,
   getBuildingAddressCardId,
@@ -35,6 +37,8 @@ interface UseBuildingAddressesCardStateResult {
   hasProject: boolean;
   localAddresses: ProjectAddress[];
   projectAddresses: ProjectAddress[];
+  /** ADR-332 — διευθύνσεις του κτιρίου που δεν υπάρχουν στο έργο· κενό όσο οι διευθύνσεις του έργου δεν φορτώθηκαν. */
+  buildingOnly: ProjectAddress[];
   loadingProject: boolean;
   isSaving: boolean;
   selectedCount: number;
@@ -59,6 +63,7 @@ interface UseBuildingAddressesCardStateResult {
   setProjectPrimaryAddress: (projectAddress: ProjectAddress) => Promise<void>;
   setManualPrimaryAddress: (index: number) => Promise<void>;
   deleteManualAddress: (index: number) => Promise<void>;
+  unlinkBuildingOnlyAddress: (address: ProjectAddress) => Promise<void>;
   handleMarkerClick: (address: ProjectAddress) => void;
   /** Φ2β — κρατημένες ανθρώπινες πινέζες που απέχουν από τη νέα τους διεύθυνση. */
   positionAdvisories: readonly AddressPositionDrift[];
@@ -83,6 +88,8 @@ export function useBuildingAddressesCardState({
   );
   const [projectAddresses, setProjectAddresses] = useState<ProjectAddress[]>([]);
   const [loadingProject, setLoadingProject] = useState(false);
+  /** Φορτώθηκαν με ΕΠΙΤΥΧΙΑ οι διευθύνσεις του έργου; — μόνο τότε ξέρουμε ποιες του κτιρίου είναι «εκτός έργου». */
+  const [projectLoaded, setProjectLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editorMode, setEditorMode] = useState<BuildingAddressEditorMode | null>(null);
   const [editorIndex, setEditorIndex] = useState<number | null>(null);
@@ -116,6 +123,7 @@ export function useBuildingAddressesCardState({
   useEffect(() => {
     if (!projectId) {
       setProjectAddresses([]);
+      setProjectLoaded(false);
       return;
     }
 
@@ -123,10 +131,12 @@ export function useBuildingAddressesCardState({
 
     const fetchProjectAddresses = async () => {
       setLoadingProject(true);
+      setProjectLoaded(false);
       try {
         const result = await getProjectAddresses(projectId);
         if (!isCancelled) {
           setProjectAddresses(result.addresses);
+          setProjectLoaded(true);
         }
       } catch (error) {
         logger.error('Failed to fetch project addresses', { error, projectId });
@@ -304,6 +314,31 @@ export function useBuildingAddressesCardState({
     }
   }, [confirm, localAddresses, notifyError, persistAddresses, success, t]);
 
+  const buildingOnly = useMemo(
+    () => (projectLoaded ? buildingOnlyAddresses(localAddresses, projectAddresses) : []),
+    [localAddresses, projectAddresses, projectLoaded],
+  );
+
+  /** ADR-332 — «Αποσύνδεση» διεύθυνσης που ανήκει μόνο στο κτίριο: φεύγει από το κτίριο, το έργο δεν αγγίζεται. */
+  const unlinkBuildingOnlyAddress = useCallback(async (address: ProjectAddress) => {
+    const confirmed = await confirm({
+      title: t('address.labels.unlinkBuildingOnly'),
+      description: address.isPrimary
+        ? t('address.labels.confirmUnlinkBuildingOnlyPrimary')
+        : t('address.labels.confirmUnlinkBuildingOnly'),
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+    setIsSaving(true);
+    try {
+      if (await persistAddresses(buildUnlinkedAddressUpdate(localAddresses, address.id))) {
+        success(t('address.labels.addressRemoved'));
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }, [confirm, localAddresses, persistAddresses, success, t]);
+
   const handleMarkerClick = useCallback((address: ProjectAddress) => {
     const element = document.getElementById(getBuildingAddressCardId(address.id));
     if (!element) {
@@ -321,6 +356,7 @@ export function useBuildingAddressesCardState({
     hasProject,
     localAddresses,
     projectAddresses,
+    buildingOnly,
     loadingProject,
     isSaving,
     selectedCount,
@@ -343,6 +379,7 @@ export function useBuildingAddressesCardState({
     setProjectPrimaryAddress,
     setManualPrimaryAddress,
     deleteManualAddress,
+    unlinkBuildingOnlyAddress,
     handleMarkerClick,
     positionAdvisories,
     relocateAddress,
@@ -377,5 +414,7 @@ export function useBuildingAddressesCardState({
     setProjectPrimaryAddress,
     toggleProjectAddress,
     deleteManualAddress,
+    buildingOnly,
+    unlinkBuildingOnlyAddress,
   ]);
 }

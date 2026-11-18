@@ -92,7 +92,12 @@
       "addressRemoved": "Address unlinked from building",
       "addressLinked": "Address linked to building!",
       "projectPrimary": "Project Primary",
-      "goToProjectAddresses": "Add Project Addresses"
+      "goToProjectAddresses": "Add Project Addresses",
+      "buildingOnlyTitle": "Building addresses outside the project",
+      "buildingOnlyHint": "The building has these addresses, but they are not among the project addresses. Unlink any that no longer apply.",
+      "unlinkBuildingOnly": "Unlink",
+      "confirmUnlinkBuildingOnly": "The address will be removed from the building. The project addresses do not change.",
+      "confirmUnlinkBuildingOnlyPrimary": "This is the building primary address. It will be removed from the building and the first remaining address becomes primary. The project addresses do not change."
     },
     "validation": {
       "streetRequired": "Street is required",

@@ -4,18 +4,18 @@
  * @fileoverview **ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ ΑΠΟ ΤΟΝ ΧΑΡΤΗ** — ο άνθρωπος πατά το κτίριο, μετά τις πλευρές του με ανοίγματα, και οι
  * όψεις βγαίνουν μόνες τους με τον **αληθινό** Βορρά (ADR-937 Φάση Γ). Για ακίνητα χωρίς κάτοψη.
  * @related lib/property/orientation-from-map (ο υπολογισμός) · lib/maps/maplibre (το σύνορο του χάρτη, CHECK 3.75) ·
- *   lib/maps/use-default-basemap (το στυλ — έχει τη στρώση `buildings` των διανυσματικών πλακιδίων)
+ *   lib/maps/use-default-basemap (το στυλ — έχει τη στρώση `buildings` των διανυσματικών πλακιδίων) ·
+ *   ./orientation-map/useOrientationMapPick (η αλληλεπίδραση) · ./orientation-map/orientation-map-layers (οι στρώσεις)
  * @module components/properties/shared/OrientationFromMapDialog
  *
  * 🔑 **Δεν είναι μαντεψιά του συστήματος**: τις πλευρές τις διαλέγει ο ίδιος ο άνθρωπος, ο χάρτης απλώς μεταφράζει «αυτή
  *    η πλευρά» σε «Νοτιοδυτικό». Γι' αυτό η «Εφαρμογή» γράφει κατευθείαν στη **φόρμα** (που ο άνθρωπος αποθηκεύει) και όχι
- *    σε πρόταση.
+ *    σε πρόταση. Το κτίριο στη θέση **προτείνεται** τονισμένο· το «Άλλο κτίριο» το αλλάζει ρητά.
  * ⚠️ Το περίγραμμα OSM δεν αποθηκεύεται (ODbL) — μόνο οι κατευθύνσεις.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback } from 'react';
 import type { TFunction } from 'i18next';
-import type { FeatureCollection, LineString } from 'geojson';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -27,43 +27,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ORIENTATION_LABELS, type OrientationType } from '@/constants/property-features-enterprise';
-import { Layer, Map, Source, type LayerProps, type MapLayerMouseEvent } from '@/lib/maps/maplibre';
+import { Layer, Map, Source } from '@/lib/maps/maplibre';
 import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
-import { buildingRingOf, orientationsOfSelectedEdges } from '@/lib/property/orientation-from-map';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
-/** Η στρώση κτιρίων του στυλ Protomaps (`@protomaps/basemaps`). Στον εφεδρικό χάρτη δεν υπάρχει — τότε το κλικ δεν κάνει τίποτα. */
-const BUILDINGS_LAYER = 'buildings';
-const EDGE_SOURCE = 'orientation-edges';
-const EDGE_LAYER = 'orientation-edges-line';
-const BUILDING_ZOOM = 18;
-
-/* eslint-disable design-system/no-hardcoded-colors -- Το MapLibre δέχεται ΜΟΝΟ literal χρώματα στο `paint`: δεν αποτιμά
-   CSS custom properties (ίδια δήλωση με το `components/geo/PlaceMap.tsx`). */
-const EDGE_LINE: LayerProps = {
-  id: EDGE_LAYER,
-  type: 'line',
-  source: EDGE_SOURCE,
-  paint: {
-    'line-color': ['case', ['==', ['get', 'selected'], 1], '#d97706', '#2563eb'],
-    'line-width': ['case', ['==', ['get', 'selected'], 1], 7, 4],
-  },
-};
-/* eslint-enable design-system/no-hardcoded-colors */
-
-function edgesGeoJson(ring: readonly GeoPoint[], selected: ReadonlySet<number>): FeatureCollection<LineString> {
-  return {
-    type: 'FeatureCollection',
-    features: ring.map((a, i) => {
-      const b = ring[(i + 1) % ring.length];
-      return {
-        type: 'Feature',
-        properties: { index: i, selected: selected.has(i) ? 1 : 0 },
-        geometry: { type: 'LineString', coordinates: [[a.lng, a.lat], [b.lng, b.lat]] },
-      };
-    }),
-  };
-}
+import {
+  BUILDING_ZOOM,
+  EDGE_LINE_LAYER,
+  EDGE_SOURCE,
+  HOVER_OUTLINE_LAYER,
+  HOVER_SOURCE,
+  buildingOutlineLayer,
+  edgesGeoJson,
+  ringGeoJson,
+} from './orientation-map/orientation-map-layers';
+import { useOrientationMapPick, type OrientationMapPick } from './orientation-map/useOrientationMapPick';
 
 export interface OrientationFromMapDialogProps {
   readonly open: boolean;
@@ -74,63 +52,71 @@ export interface OrientationFromMapDialogProps {
   readonly t: TFunction;
 }
 
+type HintKey =
+  | 'orientation.map.noBuildings'
+  | 'orientation.map.pickBuilding'
+  | 'orientation.map.suggested'
+  | 'orientation.map.pickEdges';
+
+function hintKey(pick: OrientationMapPick): HintKey {
+  if (pick.buildingSource === null) return 'orientation.map.noBuildings';
+  if (pick.ring === null) return 'orientation.map.pickBuilding';
+  return pick.suggested ? 'orientation.map.suggested' : 'orientation.map.pickEdges';
+}
+
+function OrientationMapLayers({ pick }: { readonly pick: OrientationMapPick }) {
+  return (
+    <>
+      {pick.buildingSource && <Layer {...buildingOutlineLayer(pick.buildingSource)} />}
+      {!pick.ring && pick.hoverRing && (
+        <Source id={HOVER_SOURCE} type="geojson" data={ringGeoJson(pick.hoverRing)}>
+          <Layer {...HOVER_OUTLINE_LAYER} />
+        </Source>
+      )}
+      {pick.ring && (
+        <Source id={EDGE_SOURCE} type="geojson" data={edgesGeoJson(pick.ring, pick.selected, pick.hoverEdge)}>
+          <Layer {...EDGE_LINE_LAYER} />
+        </Source>
+      )}
+    </>
+  );
+}
+
 export function OrientationFromMapDialog({ open, onOpenChange, center, onApply, t }: OrientationFromMapDialogProps) {
   const basemap = useDefaultBasemap();
-  const [ring, setRing] = useState<GeoPoint[] | null>(null);
-  const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
+  const pick = useOrientationMapPick(center);
+  const { reset, values } = pick;
 
-  const values = useMemo(() => (ring ? orientationsOfSelectedEdges(ring, selected) : []), [ring, selected]);
-
-  const handleClick = useCallback((event: MapLayerMouseEvent) => {
-    const edge = event.features?.find((f) => f.layer.id === EDGE_LAYER);
-    const index = Number(edge?.properties?.index);
-    if (edge && Number.isInteger(index)) {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (next.has(index)) next.delete(index);
-        else next.add(index);
-        return next;
-      });
-      return;
-    }
-    const map = event.target;
-    if (!map.getLayer(BUILDINGS_LAYER)) return;
-    const building = map.queryRenderedFeatures(event.point, { layers: [BUILDINGS_LAYER] })[0];
-    const next = building ? buildingRingOf(building.geometry) : null;
-    if (next) {
-      setRing(next);
-      setSelected(new Set());
-    }
-  }, []);
+  const handleOpenChange = useCallback((next: boolean) => {
+    if (!next) reset();
+    onOpenChange(next);
+  }, [onOpenChange, reset]);
 
   const apply = () => {
     onApply(values);
-    onOpenChange(false);
+    handleOpenChange(false);
   };
 
-  const hint = ring === null ? t('orientation.map.pickBuilding') : t('orientation.map.pickEdges');
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent size="xl">
         <DialogHeader>
           <DialogTitle>{t('orientation.map.title')}</DialogTitle>
-          <DialogDescription>{hint}</DialogDescription>
+          <DialogDescription>{t(hintKey(pick))}</DialogDescription>
         </DialogHeader>
         <figure className="relative m-0 h-[60vh] overflow-hidden rounded-lg border border-border">
           <Map
             initialViewState={{ latitude: center.lat, longitude: center.lng, zoom: BUILDING_ZOOM }}
             style={{ width: '100%', height: '100%' }}
             {...basemap}
-            interactiveLayerIds={ring ? [EDGE_LAYER] : []}
-            onClick={handleClick}
-            cursor="pointer"
+            onClick={pick.onClick}
+            onMouseMove={pick.onMouseMove}
+            onMouseOut={pick.onMouseLeave}
+            onStyleData={pick.onStyleData}
+            onIdle={pick.onIdle}
+            cursor={pick.cursor}
           >
-            {ring && (
-              <Source id={EDGE_SOURCE} type="geojson" data={edgesGeoJson(ring, selected)}>
-                <Layer {...EDGE_LINE} />
-              </Source>
-            )}
+            <OrientationMapLayers pick={pick} />
           </Map>
         </figure>
         <p aria-live="polite" className="m-0 text-sm">
@@ -139,7 +125,10 @@ export function OrientationFromMapDialog({ open, onOpenChange, center, onApply, 
             : t('orientation.map.noneSelected')}
         </p>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" disabled={pick.ring === null} onClick={pick.changeBuilding}>
+            {t('orientation.map.changeBuilding')}
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
             {t('orientation.map.cancel')}
           </Button>
           <Button type="button" disabled={values.length === 0} onClick={apply}>

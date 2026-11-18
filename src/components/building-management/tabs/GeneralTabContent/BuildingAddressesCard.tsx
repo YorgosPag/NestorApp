@@ -13,6 +13,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { BuildingAddressesBuildingOnlyList } from './building-addresses-card/BuildingAddressesBuildingOnlyList';
 import { BuildingAddressesEditor } from './building-addresses-card/BuildingAddressesEditor';
 import { BuildingAddressesMapPane } from './building-addresses-card/BuildingAddressesMapPane';
 import { BuildingAddressesManualList } from './building-addresses-card/BuildingAddressesManualList';
@@ -30,6 +31,7 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
     hasProject,
     localAddresses,
     projectAddresses,
+    buildingOnly,
     loadingProject,
     isSaving,
     selectedCount,
@@ -51,6 +53,7 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
     setProjectPrimaryAddress,
     setManualPrimaryAddress,
     deleteManualAddress,
+    unlinkBuildingOnlyAddress,
     handleMarkerClick,
     positionAdvisories,
     relocateAddress,
@@ -115,16 +118,23 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
 
           {hasProject && !loadingProject && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <BuildingAddressesProjectSelection
-                localAddresses={localAddresses}
-                projectAddresses={projectAddresses}
-                isSaving={isSaving}
-                selectedCount={selectedCount}
-                isAddressSelected={isAddressSelected}
-                onToggleProjectAddress={toggleProjectAddress}
-                onSetPrimary={setProjectPrimaryAddress}
-                onOpenProjectLocations={() => { if (props.projectId) router.push(getProjectTabUrl(props.projectId, 'locations')); }}
-              />
+              <section className="space-y-4">
+                <BuildingAddressesProjectSelection
+                  localAddresses={localAddresses}
+                  projectAddresses={projectAddresses}
+                  isSaving={isSaving}
+                  selectedCount={selectedCount}
+                  isAddressSelected={isAddressSelected}
+                  onToggleProjectAddress={toggleProjectAddress}
+                  onSetPrimary={setProjectPrimaryAddress}
+                  onOpenProjectLocations={() => { if (props.projectId) router.push(getProjectTabUrl(props.projectId, 'locations')); }}
+                />
+                <BuildingAddressesBuildingOnlyList
+                  addresses={buildingOnly}
+                  isSaving={isSaving}
+                  onUnlink={unlinkBuildingOnlyAddress}
+                />
+              </section>
               <BuildingAddressesMapPane
                 addresses={localAddresses}
                 onMarkerClick={handleMarkerClick}

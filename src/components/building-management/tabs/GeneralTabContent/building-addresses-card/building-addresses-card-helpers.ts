@@ -42,21 +42,42 @@ export function ensureSinglePrimaryAddress(addresses: ProjectAddress[]): Project
   }));
 }
 
+/**
+ * Οι διευθύνσεις του κτιρίου που **δεν** υπάρχουν στο έργο (π.χ. χειροκίνητη διεύθυνση από πριν μπει το κτίριο σε έργο,
+ * ή διεύθυνση που αφαιρέθηκε από το έργο). Χωρίς αυτή τη λίστα η καρτέλα δείχνει μόνο διευθύνσεις έργου και αυτές
+ * μένουν στο κτίριο **αόρατες και αμετακίνητες** (ADR-332).
+ * ⚠️ Έχει νόημα μόνο όταν οι διευθύνσεις του έργου **φορτώθηκαν**: σε αποτυχία φόρτωσης όλες θα έμοιαζαν «εκτός έργου».
+ */
+export function buildingOnlyAddresses(
+  localAddresses: readonly ProjectAddress[],
+  projectAddresses: readonly ProjectAddress[]
+): ProjectAddress[] {
+  const projectIds = new Set(projectAddresses.map((address) => address.id));
+  return localAddresses.filter((address) => !projectIds.has(address.id));
+}
+
+/** Το κτίριο χωρίς αυτή τη διεύθυνση — με ακριβώς μία κύρια ανάμεσα σε όσες μένουν. */
+export function buildUnlinkedAddressUpdate(
+  localAddresses: readonly ProjectAddress[],
+  addressId: string
+): ProjectAddress[] {
+  return ensureSinglePrimaryAddress(localAddresses.filter((address) => address.id !== addressId));
+}
+
 export function buildProjectAddressSelection(
   localAddresses: ProjectAddress[],
   projectAddress: ProjectAddress
 ): ProjectAddress[] {
-  const nextAddresses = localAddresses.some((address) => address.id === projectAddress.id)
-    ? localAddresses.filter((address) => address.id !== projectAddress.id)
-    : [
-        ...localAddresses,
-        {
-          ...projectAddress,
-          isPrimary: localAddresses.length === 0 ? true : projectAddress.isPrimary,
-        },
-      ];
-
-  return ensureSinglePrimaryAddress(nextAddresses);
+  if (localAddresses.some((address) => address.id === projectAddress.id)) {
+    return buildUnlinkedAddressUpdate(localAddresses, projectAddress.id);
+  }
+  return ensureSinglePrimaryAddress([
+    ...localAddresses,
+    {
+      ...projectAddress,
+      isPrimary: localAddresses.length === 0 ? true : projectAddress.isPrimary,
+    },
+  ]);
 }
 
 export function buildPrimaryAddressUpdate(
