@@ -4,7 +4,9 @@
  *
  * Το κλαδί ελέγχθηκε πάνω σε παλιό `main`. Αν το `main` κινήθηκε, το πράσινο εκείνο
  * δεν λέει τίποτα για το αποτέλεσμα της ένωσης, άρα ξανακρίνεται το ίδιο το αποτέλεσμα:
- * rebase, ένα commit, πλήρες pre-commit. Δεν κάνει ποτέ push.
+ * rebase, ένα commit, πλήρες pre-commit. Το ίδιο και όταν το `main` ΔΕΝ κινήθηκε αλλά
+ * κάποιο commit έχει δέντρο που το hook δεν ενέκρινε ποτέ (χειροκίνητο rebase, §18 ·
+ * `verified-trees.js`). Δεν κάνει ποτέ push.
  */
 
 const fs = require('node:fs');
@@ -14,6 +16,8 @@ const { LAND_LOCK, MAIN_BRANCH, locate } = require('./config');
 const { commitsAhead, git, isDirty, primaryDir, revision, tryGit } = require('./git');
 const { tryHarvest } = require('./handoffs');
 const { requireWorkspace } = require('./lifecycle');
+const { unverifiedCommits } = require('./verified-trees');
+const { cleanGitEnv } = require('../git-hook-env');
 
 function withLandLock(primary, action) {
   const lock = path.join(git(primary, ['rev-parse', '--git-common-dir']), LAND_LOCK);
@@ -106,14 +110,14 @@ function land(task, { cwd = process.cwd(), env = process.env } = {}) {
     assertLandable(primary, entry, target.branch);
     const base = revision(primary, MAIN_BRANCH);
     const moved = git(primary, ['merge-base', MAIN_BRANCH, target.branch]) !== base;
-    if (moved) {
-      rebaseOntoMain(entry.dir);
-      recommitThroughGates(entry.dir, base);
-    }
+    if (moved) rebaseOntoMain(entry.dir);
+    // §18: όχι μόνο «κινήθηκε το main;» — και «ενέκρινε το hook ΑΥΤΑ τα δέντρα;» (χειροκίνητο rebase).
+    const reverified = moved || unverifiedCommits(entry.dir, base, cleanGitEnv()).length > 0;
+    if (reverified) recommitThroughGates(entry.dir, base);
     fastForwardMain(primary, target.branch, base);
     // Μετά την ένταξη, όχι πριν: το `main` ήδη κινήθηκε, άρα μια αποτυχία εδώ αναφέρεται, δεν ακυρώνει.
     const handoffs = tryHarvest(entry.dir, primary);
-    return { ...target, reverified: moved, head: revision(primary, MAIN_BRANCH), handoffs };
+    return { ...target, reverified, head: revision(primary, MAIN_BRANCH), handoffs };
   });
 }
 

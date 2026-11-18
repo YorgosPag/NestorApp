@@ -40,9 +40,25 @@ function createSandbox() {
   return { sandbox, primary, env };
 }
 
+const posix = (file) => file.replace(/\\/g, '/');
+
+/**
+ * Pre-commit που κάνει ό,τι το πραγματικό όταν περνά (ADR-925 §18): καταγράφει το δέντρο που
+ * ενέκρινε. Κάθε πέρασμα γράφει τα σταδιοποιημένα του στο `seen`, για να μετρηθεί ποιος τον έτρεξε.
+ */
+function installStampingHook({ sandbox, primary }) {
+  const hooks = path.join(sandbox, 'stamp-hooks');
+  const seen = path.join(sandbox, 'stamp-seen.txt');
+  const recorder = posix(path.resolve(__dirname, '../lib/agent-worktree/verified-trees.js'));
+  fs.mkdirSync(hooks, { recursive: true });
+  write(hooks, 'pre-commit', `#!/bin/sh\ngit diff --cached --name-only >> "${posix(seen)}"\nnode "${recorder}"\n`);
+  git(primary, ['config', 'core.hooksPath', posix(hooks)]);
+  return { seen };
+}
+
 const removeSandbox = ({ sandbox }) => fs.rmSync(sandbox, { recursive: true, force: true });
 
 const openWorkspace = ({ primary, env }, task) =>
   createWorkspace(task, { cwd: primary, env, minimumFree: 0, install: fakeInstall });
 
-module.exports = { commitIn, createSandbox, fakeInstall, openWorkspace, removeSandbox, write };
+module.exports = { commitIn, createSandbox, fakeInstall, installStampingHook, openWorkspace, removeSandbox, write };

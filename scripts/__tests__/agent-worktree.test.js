@@ -11,7 +11,7 @@ const { assertDiskRoom, assertTask, locate } = require('../lib/agent-worktree/co
 const { git } = require('../lib/agent-worktree/git');
 const { clearResidue, createWorkspace, listWorkspaces, removeWorkspace } = require('../lib/agent-worktree/lifecycle');
 const { composeLandMessage, land } = require('../lib/agent-worktree/land');
-const { commitIn, createSandbox, fakeInstall, openWorkspace, removeSandbox, write } = require('./agent-worktree-fixture');
+const { commitIn, createSandbox, fakeInstall, installStampingHook, openWorkspace, removeSandbox, write } = require('./agent-worktree-fixture');
 
 jest.setTimeout(60000);
 
@@ -277,12 +277,36 @@ describe('υπολείμματα', () => {
 });
 
 describe('ένταξη', () => {
-  it('fast-forward όταν το main δεν κινήθηκε, χωρίς δεύτερο πέρασμα από τις πύλες', () => {
+  it('fast-forward όταν το main δεν κινήθηκε και το hook ενέκρινε τα δέντρα, χωρίς δεύτερο πέρασμα', () => {
+    const { seen } = installStampingHook({ sandbox, primary });
     const { dir } = open('task-one');
     commitIn(dir, 'work.txt', 'x\n');
     const tip = git(dir, ['rev-parse', 'HEAD']);
     const result = land('task-one', options());
     expect(result).toMatchObject({ reverified: false, head: tip });
+    expect(fs.existsSync(path.join(primary, 'work.txt'))).toBe(true);
+    expect(fs.readFileSync(seen, 'utf8').trim().split('\n')).toEqual(['work.txt']); // ένα πέρασμα: το commit
+  });
+
+  it('🔴 §18 χειροκίνητο rebase πάνω στο main: το merge-base ισούται, αλλά το δέντρο δεν το είδε ποτέ hook ⇒ ξανακρίνεται', () => {
+    const { seen } = installStampingHook({ sandbox, primary });
+    const { dir } = open('task-one');
+    commitIn(dir, 'a.txt', 'a\n', 'πρώτο');
+    commitIn(dir, 'b.txt', 'b\n', 'δεύτερο');
+    commitIn(primary, 'other.txt', 'o\n');
+    git(dir, ['rebase', 'main']); // ξαναγράφει τα δύο commits ΧΩΡΙΣ pre-commit (περιστατικό 80226268)
+    fs.writeFileSync(seen, '');
+    const result = land('task-one', options());
+    expect(result.reverified).toBe(true);
+    expect(fs.readFileSync(seen, 'utf8')).toMatch(/a\.txt[\s\S]*b\.txt/); // το hook είδε ΟΛΗ την αλλαγή
+    expect(git(primary, ['log', '-1', '--format=%B'])).toMatch(/^πρώτο[\s\S]*δεύτερο/);
+    expect(git(primary, ['rev-list', '--count', 'HEAD'])).toBe('3'); // .gitignore · other · ΕΝΑ commit
+  });
+
+  it('🔴 §18 χωρίς καταγραφή (κανένα hook δεν ενέκρινε) ⇒ ξανακρίνεται, ακόμη κι αν το main δεν κινήθηκε', () => {
+    const { dir } = open('task-one');
+    commitIn(dir, 'work.txt', 'x\n'); // το sandbox δεν έχει hooks
+    expect(land('task-one', options()).reverified).toBe(true);
     expect(fs.existsSync(path.join(primary, 'work.txt'))).toBe(true);
   });
 

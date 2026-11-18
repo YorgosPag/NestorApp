@@ -5,7 +5,7 @@
 | **Status** | ✅ **ΥΛΟΠΟΙΗΘΗΚΕ (2026-10-31)** · εντολές `wt:*` + CHECK 3.109 · η επιβολή (`enforce`) ενεργοποιείται στο καθαρό σημείο (§10) |
 | **Date** | 2026-10-30 |
 | **Category** | Tooling / Multi-agent workflow |
-| **Canonical Location** | `scripts/lib/agent-worktree/` (συλλογή handoffs: `handoffs.js`, §16 · ορφανοί φάκελοι: `prune.js`, §17) · `scripts/lib/fs/atomic-write.js` · `scripts/agent-worktree.js` · `scripts/check-agent-worktree-policy.js` · `.agent-worktree-policy.json` · `.claude/settings.json` (`worktree.baseRef`) |
+| **Canonical Location** | `scripts/lib/agent-worktree/` (συλλογή handoffs: `handoffs.js`, §16 · ορφανοί φάκελοι: `prune.js`, §17 · εγκεκριμένα δέντρα: `verified-trees.js`, §18) · `scripts/lib/fs/atomic-write.js` · `scripts/agent-worktree.js` · `scripts/check-agent-worktree-policy.js` · `.agent-worktree-policy.json` · `.claude/settings.json` (`worktree.baseRef`) |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 | **Σχετικά** | ADR-924 (οι πύλες κρίνουν το commit — η **άμυνα**, αυτό εδώ η **θεραπεία**) · `.claude-rules/fleet/` (κλειδώματα αρχείων/λωρίδων) · `heavy-mutex` (ένα βαρύ έργο τη φορά) · ADR-800 (μία έκδοση πακέτου) |
 
@@ -111,6 +111,7 @@
 
 | ημερομηνία | αλλαγή |
 |---|---|
+| 2026-11-18 | §18: το `wt:land` ξανακρίνει και όταν το `main` **δεν** κινήθηκε, αν κάποιο commit του κλαδιού έχει δέντρο που το hook δεν ενέκρινε. Αιτία: χειροκίνητο `git rebase main` έφερε το `80226268` (κλήσεις σε διαγραμμένο `namedError`) στο `main` χωρίς πύλες· το CHECK 3.70 το είδε μόνο στο CI. Νέο `verified-trees.js` (καταγραφή `write-tree` στο τέλος του pre-commit, ανάγνωση στο `land.js`)· tests: χειροκίνητο rebase ⇒ ξανακρίνεται, χωρίς καταγραφή ⇒ ξανακρίνεται, εγκεκριμένο δέντρο ⇒ fast-forward. |
 | 2026-11-16 | §17: νέα εντολή `wt:prune` (`prune.js`). Ορφανοί φάκελοι worktree (`.claude/worktrees/agent-*` του harness ~1,2 GB · υπολείμματα EPERM του `wt:remove`) έριξαν τον δίσκο στο 1,2 GB και το `wt:new` αρνιόταν. Ξερή εκτέλεση εξ ορισμού, σβήσιμο με `--yes`· πρώτα `git worktree prune`· σβήνεται μόνο άμεσο παιδί των δύο ριζών που το git δεν γνωρίζει, με φράχτες (junction · ανεξάρτητο repo · worktree άλλου repo · cwd · handoffs που δεν υπάρχουν στο κύριο αντίγραφο) και νέο έλεγχο του git πριν από κάθε φάκελο. Επαναχρησιμοποιεί `clearResidue` / `freeBytes` / `isInside` του `lifecycle.js`· νέο `gitReport` στο `git.js` (το `--verbose` γράφει στο stderr). Το μήνυμα του `wt:new` για λίγο δίσκο προτείνει `wt:prune`. Το `deny: Bash(rm -rf:*)` μένει. |
 | 2026-11-16 | §15.4: ο τίτλος του ενιαίου commit του `wt:land` γίνεται το **παλαιότερο** μη-handoff μήνυμα του κλαδιού (GitHub «Squash and merge»), όχι το νεότερο. Αιτία: το `fde89989` μπήκε με τίτλο `chore(native-tooltip)…` (διόρθωση baseline για την πύλη) ενώ περιείχε όλο το `feat(adr-929): §6.25`. `findIndex` → `findLastIndex` στο `composeLandMessage`· tests: καθαρή συνάρτηση `chore` πάνω από `feat` και ένταξη `feat → chore` πάνω σε κινημένο `main`. |
 | 2026-11-12 | Το `wt:land` κληρονομεί την **εμβέλεια εισόδων** του hook (ADR-924 §9), επειδή το `recommitThroughGates` ξαναδεσμεύει μέσα από τον ίδιο hook με το ίδιο ευρετήριο. Κλαδί μόνο με handoff (`HANDOFFS/*.md` · `docs/handoffs/*.md`): τρέχουν μόνο η σάρωση μυστικών (10) και η 3.109, άρα ~9–11 s αντί για 64–76 s, σε κάθε πέρασμα (commit **και** land). Η merge queue δεν αλλάζει. |
@@ -430,3 +431,34 @@ Commit στο worktree `accounting-competitive-parity`. Μετά το pre-commit
 - Δεν καθαρίζει άλλα μεγάλα υπόλοιπα: `.next`, `node_modules\.cache`, `%TEMP%`.
 - Δεν σβήνει κλαδιά. Τα κλαδιά των worktrees του harness μένουν· θέλουν την κρίση της §13.2.
 - Tests: `scripts/__tests__/agent-worktree-prune.test.js`, με το κοινό `agent-worktree-fixture.js`.
+
+## 18. Η ένταξη κρίνει το δέντρο, όχι το merge-base (2026-11-18)
+
+### 18.1 Το περιστατικό (από το reflog)
+
+- 17/11 15:39: το `3077a33a` (ADR-916 Σ4α) σβήνει τον `namedError` πάνω σε `main` χωρίς τα ADR-943· το hook περνά, σωστά.
+- 17:16: το `main` προχωρά στο `e07a9343`, με δύο νέες κλήσεις `namedError(...)` (`948d1dc0` · `0b326f5d`).
+- 17:19–17:28: **χειροκίνητο** `git rebase main` μέσα στο worktree. Το commit ξαναγράφεται ως `80226268` (`rebase (pick)`, χωρίς σύγκρουση) με δύο κλήσεις σε όνομα που δεν υπάρχει. Το rebase **δεν τρέχει** pre-commit.
+- 17:32: `wt:land`. Το merge-base ισούται πλέον με το `main` ⇒ «δεν κινήθηκε» ⇒ fast-forward ~17 commits που δεν είδε ποτέ hook. Το CHECK 3.70 το έπιασε μόνο στο CI (διόρθωση `c17c0101`). Το σύμπτωμα: τα commits μπήκαν **ξεχωριστά**, ενώ το πέρασμα από τις πύλες τα ενώνει σε ένα.
+
+### 18.2 Απόφαση
+
+Το ερώτημα της merge queue (GitHub merge queue, Bors): **ελέγχθηκε ΑΥΤΟΣ ο κώδικας;**
+
+| Σημείο | Κανόνας |
+|---|---|
+| pre-commit, στην επιτυχία | `node scripts/lib/agent-worktree/verified-trees.js`: καταγράφει το `git write-tree` (το δέντρο του commit που γίνεται) στο `nestor-verified-trees` του git-dir **του worktree**. Κρατά το περιβάλλον του hook (`GIT_INDEX_FILE`). Ποτέ δεν μπλοκάρει· τελευταία 500 |
+| `wt:land` | Ξανακρίνει (`recommitThroughGates`) όταν κινήθηκε το `main` **ή** όταν κάποιο commit του `main..HEAD` έχει δέντρο χωρίς καταγραφή (`unverifiedCommits`) |
+| Fail-closed | Χωρίς καταγραφή (rebase · merge · cherry-pick · αρχείο που λείπει) ⇒ ξανακρίνεται, ποτέ σιωπηλό πέρασμα |
+
+### 18.3 Απορριφθείσες εναλλακτικές
+
+- **Πάντα πέρασμα από τις πύλες**: σωστό, αλλά κάθε land θα ξανάτρεχε όλο το hook αμέσως μετά το commit που μόλις το πέρασε (~64–76 s, §9 2026-11-12).
+- **Ανίχνευση rebase από το reflog**: κρίνει το πώς, όχι το τι· δεν πιάνει cherry-pick, merge ή `commit --no-verify`.
+- **Απαγόρευση χειροκίνητου rebase**: κανόνας προς ανάγνωση, όχι εγγύηση.
+
+### 18.4 Όρια
+
+- Η καταγραφή λέει «το hook ενέκρινε τη μετάβαση γονέας → δέντρο»· μετά από handoff-only commit (ADR-924 §9) καταγράφεται με την ίδια εμβέλεια.
+- Δεν ξέρω αν τα χειροκίνητα rebase της 18/11 (11:45 · 12:49 · 15:36 στο reflog του `adr-915-f6c-review-fixes`) μπήκαν επίσης χωρίς πύλες· δεν διερευνήθηκε. Το CI έτρεξε πάνω τους.
+- Tests: `scripts/__tests__/agent-worktree.test.js` («ένταξη», §18), με `installStampingHook` στο `agent-worktree-fixture.js`.

@@ -1131,4 +1131,7 @@ else
 fi
 
 echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
+# ADR-925 §18 — το δέντρο που ΜΟΛΙΣ εγκρίθηκε. Το `wt:land` ξανακρίνει κάθε commit του κλαδιού
+# που το δέντρο του δεν καταγράφηκε εδώ (χειροκίνητο rebase · merge · cherry-pick). Ποτέ δεν μπλοκάρει.
+node scripts/lib/agent-worktree/verified-trees.js || true
 exit 0
