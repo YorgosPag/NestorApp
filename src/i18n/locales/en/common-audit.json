@@ -786,7 +786,23 @@
       "electricalInstallationIssuanceQuoteTotal": "Electrical installation issuance — approved total (€)",
       "electricalInstallationIssuanceAdvanceAmount": "Electrical installation issuance — advance payment (€)",
       "electricalInstallationIssuanceAdvanceState": "Electrical installation issuance — advance payment status",
-      "electricalInstallationIssuanceWithdrawalWaiver": "Electrical installation issuance — express request to start within the withdrawal period"
+      "electricalInstallationIssuanceWithdrawalWaiver": "Electrical installation issuance — express request to start within the withdrawal period",
+      "ownerLawyerDossierInvitation": "Lawyer — invitation",
+      "ownerLawyerDossierAccess": "Lawyer — access",
+      "ownerLawyerDossierAccessUntil": "Lawyer — access until",
+      "ownerLawyerDossierReachTab": "Lawyer — tab they can see",
+      "ownerLawyerDossierExcludedFile": "Lawyer — file they cannot see",
+      "ownerLawyerDossierCredential": "Lawyer — declared credential",
+      "ownerLawyerDossierDocumentView": "The lawyer opened a document",
+      "ownerLawyerDossierDocumentDownload": "The lawyer downloaded a document",
+      "notaryDossierInvitation": "Notary — invitation",
+      "notaryDossierAccess": "Notary — access",
+      "notaryDossierAccessUntil": "Notary — access until",
+      "notaryDossierReachTab": "Notary — tab they can see",
+      "notaryDossierExcludedFile": "Notary — file they cannot see",
+      "notaryDossierCredential": "Notary — declared credential",
+      "notaryDossierDocumentView": "The notary opened a document",
+      "notaryDossierDocumentDownload": "The notary downloaded a document"
     },
     "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }

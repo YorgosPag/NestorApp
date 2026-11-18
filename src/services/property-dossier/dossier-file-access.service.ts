@@ -10,8 +10,10 @@ import 'server-only';
  * 2. ο φάκελος: ενεργός και ακόμη του κατόχου που κάλεσε (αλλαγή χεριών ⇒ `not-found`)
  * 3. το αρχείο: ανάμεσα στα **έτοιμα** του φακέλου, στο βιβλίο του κατόχου, και **φτάνει** στο εύρος (καρτέλα · όχι
  *    εξαιρεμένο) — η **ίδια** κρίση με τη λίστα της όψης (`dossierFileReach`). Αλλιώς `not-found`, ίδιο με ανύπαρκτο.
- * 4. ίχνος στο **προσωπικό** βιβλίο αρχείων του κατόχου (`recordFileAudit` με `userId` = κάτοχος, `performedBy` = ο
- *    επαγγελματίας) — `null` ⇒ **ρίχνει** ⇒ `failed`: **κανένας** σύνδεσμος χωρίς ίχνος.
+ * 4. ίχνος στο **Ιστορικό του φακέλου** (προσωπικό βιβλίο του κατόχου, `performedBy` = ο επαγγελματίας): «Ο δικηγόρος
+ *    άνοιξε / κατέβασε έγγραφο — όνομα» — όπως η μεταβίβαση γράφει στην υπόθεση και η έκδοση στο ακίνητο (ADR-916 §10,
+ *    2026-11-18· ως τότε έπεφτε **μόνο** στο βιβλίο του αρχείου και ο κάτοχος δεν το έβλεπε). Δεν γράφτηκε ⇒ **ρίχνει** ⇒
+ *    `failed`: **κανένας** σύνδεσμος χωρίς ίχνος.
  *
  * ⛔ Η διαδρομή έρχεται **από το έγγραφο**, ποτέ από το σύρμα· `files_personal` και `storage.rules` **δεν** ανοίγουν σε
  *    τρίτον — η πρόσβαση γίνεται **μόνο** εδώ, με σύνδεσμο 15′.
@@ -28,9 +30,9 @@ import {
   type EngagedFileOpening,
   type EngagedFileRequest,
 } from '@/server/engagement-files/engaged-file-opening.server';
-import { recordFileAudit } from '@/services/file-audit-admin.service';
 import type { DossierEngagement } from '@/types/engagement';
 import type { PropertyDossier } from '@/types/property-dossier';
+import { recordDossierDocumentOpened } from './dossier-access-audit';
 import { hostedDossierOf, judgeDossierEngagement } from './dossier-engagement-host-adapter';
 import { readDossierReadyFiles, type DossierReadyFile } from './dossier-media.reader';
 import { dossierFileReach } from './dossier-share-reach';
@@ -39,18 +41,6 @@ import { dossierFileReach } from './dossier-share-reach';
 async function reachedFile(db: Firestore, dossier: PropertyDossier, engagement: DossierEngagement, fileId: string): Promise<DossierReadyFile | null> {
   const file = (await readDossierReadyFiles(db, dossier)).find((candidate) => candidate.id === fileId);
   return file !== undefined && dossierFileReach(dossier, file, engagement.reach) !== null ? file : null;
-}
-
-/** Ένα άνοιγμα, μία γραμμή στο **προσωπικό** βιβλίο του κατόχου. Αποτυχία ⇒ σφάλμα ⇒ `failed`, κανένας σύνδεσμος. */
-async function recordDossierFileAccess(owner: string, engagement: DossierEngagement, request: EngagedFileRequest): Promise<void> {
-  const auditId = await recordFileAudit({
-    userId: owner,
-    fileId: request.fileId,
-    action: request.mode,
-    performedBy: request.uid,
-    metadata: { engagementId: engagement.id, role: engagement.role },
-  });
-  if (auditId === null) throw new Error(`dossier file access audit not written for ${request.fileId}`);
 }
 
 /** Ο επαγγελματίας ανοίγει/κατεβάζει ένα αρχείο του φακέλου που του δόθηκε. */
@@ -63,7 +53,9 @@ export async function openDossierFile(db: Firestore, engagement: DossierEngageme
   return signAndRecordOpening({
     file: file === null ? null : openableFileOf(file, request.fileId),
     mode: request.mode,
-    record: () => recordDossierFileAccess(dossier.userId, engagement, request),
+    record: (opened) => recordDossierDocumentOpened(dossier, request, {
+      role: engagement.role, mode: request.mode, fileId: request.fileId, fileName: opened.fileName,
+    }),
     logData: { dossierId: dossier.id, fileId: request.fileId },
   });
 }

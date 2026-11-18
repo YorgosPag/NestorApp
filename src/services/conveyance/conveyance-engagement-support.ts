@@ -16,7 +16,6 @@ import { engagementsCollection, engagementsForSubjectQuery } from '@/lib/auth/en
 import { parseEngagement } from '@/lib/auth/engagement-schema';
 import { workspaceHostRecipients } from '@/lib/workspace/workspace-host-recipients';
 import { EntityAuditService } from '@/services/entity-audit.service';
-import type { AuditLedgerScope } from '@/lib/audit/audit-ledger';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import type { CaseEngagementSummary, ConveyanceCase } from '@/types/conveyance-case';
 import {
@@ -24,7 +23,6 @@ import {
   SCOPE_OF_SUBJECT,
   type ConveyanceEngagement,
   type ConveyanceEngagementSubject,
-  type DossierEngagement,
   type Engagement,
   type EngagementKey,
   type ProjectEngagement,
@@ -103,23 +101,14 @@ export function toEngagementSummary(engagement: ConveyanceEngagement): CaseEngag
 }
 
 /**
- * **Σε ποιο βιβλίο** γράφεται το ίχνος μιας συμμετοχής: έργο γραφείου ⇒ το εταιρικό βιβλίο του οικοδεσπότη· φάκελος
- * ιδιώτη (ADR-916 Φ-Ε1) ⇒ το **προσωπικό** βιβλίο του κατόχου, που δεν είναι πεδίο της συμμετοχής (είναι ο γονέας της)
- * ⇒ τον δίνει ρητά ο καλών. Η ένωση κάνει αδύνατο το «φάκελος χωρίς κάτοχο» ή «έργο με προσωπικό βιβλίο».
- */
-type EngagementAuditLedger =
-  | { readonly engagement: ProjectEngagement }
-  | { readonly engagement: DossierEngagement; readonly ownerUid: string };
-
-function ledgerOf(target: EngagementAuditLedger): AuditLedgerScope {
-  return 'ownerUid' in target ? { userId: target.ownerUid } : { companyId: target.engagement.hostCompanyId };
-}
-
-/**
- * Ίχνος στο βιβλίο του **οικοδεσπότη** (ADR-195 · ADR-862 §5.7): ποιος μπήκε, ποιος αποδέχτηκε, ποιος
+ * Ίχνος στο **εταιρικό** βιβλίο του οικοδεσπότη (ADR-195 · ADR-862 §5.7): ποιος μπήκε, ποιος αποδέχτηκε, ποιος
  * ανακλήθηκε — με τον **δρώντα** (οικοδεσπότης ή επαγγελματίας) ως `performedBy`.
+ * ⚠️ **Μόνο έργα γραφείου.** Ο φάκελος ιδιώτη (ADR-916 Φ-Ε1) **δεν** περνά από εδώ: γράφει στο Ιστορικό του **ίδιου του
+ *    φακέλου** (`services/property-dossier/dossier-access-audit.ts`) — ως 2026-11-18 έγραφε εδώ, σε οντότητα `engagement`
+ *    που καμία οθόνη του κατόχου δεν διάβαζε.
  */
-export async function recordEngagementAudit(params: EngagementAuditLedger & {
+export async function recordEngagementAudit(params: {
+  readonly engagement: ProjectEngagement;
   readonly action: AuditAction;
   readonly changes: readonly AuditFieldChange[];
   readonly performedBy: string;
@@ -134,7 +123,7 @@ export async function recordEngagementAudit(params: EngagementAuditLedger & {
     changes: [...params.changes],
     performedBy: params.performedBy,
     performedByName: params.performedByName,
-    ...ledgerOf(params),
+    companyId: params.engagement.hostCompanyId,
   });
 }
 

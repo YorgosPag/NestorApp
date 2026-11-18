@@ -157,6 +157,17 @@ export const AUDIT_VALUE_CATALOGS: Readonly<Record<string, AuditCatalogRef>> = {
   // `PROPERTY_HANDOVER_TRACKED_FIELDS.lifecycle.enumCatalog` (μόνο camelCase — ο resolver κανονικοποιεί).
   propertyHandoverLifecycle: { ns: 'properties-enums', path: 'handoverLifecycle' },
 
+  // ── ADR-916 Φ-Ε1 (2026-11-18) — η πρόσβαση στον φάκελο ιδιώτη, ένα πεδίο ανά ρόλο (`DOSSIER_ACCESS_AUDIT_FIELDS`).
+  //    Πρόσκληση: `invited:<email>` ⇒ «προσκλήθηκε · <email>» (ταυτότητα με είδος, ίδια μορφή με την έκδοση).
+  //    Κατάσταση: ο ΕΝΑΣ κατάλογος καταστάσεων συμμετοχής. Καρτέλα: οι ΙΔΙΕΣ λέξεις με τη σελίδα του επαγγελματία
+  //    (ισοτιμία με τη σελίδα του κατόχου: `dossier-tab-vocabulary-parity.test.ts`).
+  ownerLawyerDossierInvitation: { ns: 'property-market', path: 'dossier.access.audit.invitation' },
+  notaryDossierInvitation: { ns: 'property-market', path: 'dossier.access.audit.invitation' },
+  ownerLawyerDossierAccess: { ns: 'conveyance', path: 'engagement.states' },
+  notaryDossierAccess: { ns: 'conveyance', path: 'engagement.states' },
+  ownerLawyerDossierReachTab: { ns: 'conveyance', path: 'engagement.dossier.tabs' },
+  notaryDossierReachTab: { ns: 'conveyance', path: 'engagement.dossier.tabs' },
+
   // ── Property: ADR-915 §27 — στάδιο ανάθεσης έκδοσης (ένα πεδίο ανά είδος, ίδιος κατάλογος σταδίων)
   energyCertificateIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },
   buildingIdentityIssuanceStage: { ns: 'document-registry', path: 'issuance.stage' },

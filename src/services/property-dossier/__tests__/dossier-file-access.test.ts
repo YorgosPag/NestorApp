@@ -13,6 +13,7 @@
  * | ο φάκελος άλλαξε χέρια / αρχειοθετήθηκε και ανοίγει ακόμη | Ο3 |
  * | αρχείο εκτός εύρους (καρτέλα · εξαίρεση) ανοίγει | Ο4 |
  * | το ίχνος γράφεται σε βιβλίο άλλου από τον κάτοχο / χωρίς τον επαγγελματία | Ο5 |
+ * | το ίχνος πάει **εκτός** Ιστορικού του φακέλου (βιβλίο αρχείου · οντότητα `engagement`) · χωρίς όνομα αρχείου · λάθος τρόπος | Ο5 |
  */
 
 jest.mock('server-only', () => ({}));
@@ -28,7 +29,9 @@ const mockSign = jest.fn();
 jest.mock('@/lib/storage/signed-download-url', () => ({ signedDownloadUrl: (...args: unknown[]) => mockSign(...args) }));
 jest.mock('@/server/files/file-record-bucket', () => ({ fileRecordBucket: () => ({ name: 'bucket' }) }));
 const mockAudit = jest.fn();
-jest.mock('@/services/file-audit-admin.service', () => ({ recordFileAudit: (...args: unknown[]) => mockAudit(...args) }));
+jest.mock('@/services/entity-audit.service', () => ({
+  EntityAuditService: { recordChange: (...args: unknown[]) => mockAudit(...args) },
+}));
 
 import type { Firestore } from 'firebase-admin/firestore';
 
@@ -126,11 +129,17 @@ describe('ADR-916 Φ-Ε1 — `openDossierFile`', () => {
     expect(mockSign).not.toHaveBeenCalled();
   });
 
-  it('Ο5 — το ίχνος γράφεται στο ΠΡΟΣΩΠΙΚΟ βιβλίο του κατόχου, με τον επαγγελματία ως εκτελεστή', async () => {
+  it('Ο5 — το ίχνος γράφεται στο ΙΣΤΟΡΙΚΟ ΤΟΥ ΦΑΚΕΛΟΥ (προσωπικό βιβλίο του κατόχου), με τον επαγγελματία ως δράστη', async () => {
     await openDossierFile(db, engagement({ id: 'eng_1' }), { ...request, mode: 'download' });
-    expect(mockAudit).toHaveBeenCalledWith(expect.objectContaining({
-      userId: 'u_owner', fileId: 'file_deed', action: 'download', performedBy: 'u_lawyer',
-      metadata: { engagementId: 'eng_1', role: 'owner_lawyer' },
-    }));
+    expect(mockAudit).toHaveBeenCalledWith({
+      entityType: 'property_dossier', entityId: 'pdos_1', entityName: 'Σπίτι', userId: 'u_owner',
+      action: 'document_accessed', performedBy: 'u_lawyer', performedByName: 'l@example.gr',
+      changes: [{ field: 'ownerLawyerDossierDocumentDownload', oldValue: null, newValue: 'file_deed', newValueLabel: 'Τίτλος.pdf' }],
+    });
+  });
+
+  it('Ο5 — προβολή ⇒ το πεδίο της προβολής (όχι της λήψης)', async () => {
+    await openDossierFile(db, engagement({ id: 'eng_1' }), request);
+    expect(mockAudit.mock.calls[0][0].changes[0].field).toBe('ownerLawyerDossierDocumentView');
   });
 });

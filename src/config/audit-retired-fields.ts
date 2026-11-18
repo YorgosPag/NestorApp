@@ -16,6 +16,7 @@
 
 import type { TrackedFieldDef } from '@/lib/audit/tracked-field-def';
 import { AUDIT_ENERGY_CERTIFICATE_KEY_CATALOG } from '@/config/audit-value-vocabularies';
+import { AUDIT_VALUE_CATALOGS } from '@/config/audit-value-catalogs';
 
 export interface RetiredTrackedField {
   /** Ο περιγραφέας ανάγνωσης: ετικέτα + λεξιλόγια, όπως ίσχυαν όταν γράφτηκαν οι γραμμές. */
@@ -50,9 +51,26 @@ const PROPERTY_RETIRED_FIELDS: Readonly<Record<string, RetiredTrackedField>> = {
   issuanceSpaceInvitation: SPACE_INVITATION_FOR_ALL_KINDS,
 };
 
+/**
+ * Η πρόσκληση του φακέλου ως `invitation.<ρόλος>` (ADR-916 Φ-Ε1, ως 2026-11-18): τιμές `invited:<email>` · `resent` ·
+ * `pending` · `revoked`. Ετικέτα **και** λέξεις από το **νέο** πεδίο του ρόλου — η παλιά γραμμή διαβάζεται ίδια με τη νέα.
+ */
+function dossierInvitationOfRole(field: 'ownerLawyerDossierInvitation' | 'notaryDossierInvitation'): RetiredTrackedField {
+  return {
+    retiredBy: 'ADR-916 §10 (2026-11-18) — αντικαταστάθηκε από ένα πεδίο ανά ρόλο (`DOSSIER_ACCESS_AUDIT_FIELDS[ρόλος].invitation`)',
+    def: { kind: 'scalar', label: field, labelKey: `audit.fields.${field}`, enumCatalog: AUDIT_VALUE_CATALOGS[field] },
+  };
+}
+
+const PROPERTY_DOSSIER_RETIRED_FIELDS: Readonly<Record<string, RetiredTrackedField>> = {
+  'invitation.owner_lawyer': dossierInvitationOfRole('ownerLawyerDossierInvitation'),
+  'invitation.notary': dossierInvitationOfRole('notaryDossierInvitation'),
+};
+
 const RETIRED_TRACKED_FIELDS: Readonly<Record<string, Readonly<Record<string, RetiredTrackedField>>>> = {
   property: PROPERTY_RETIRED_FIELDS,
   owner_property: PROPERTY_RETIRED_FIELDS,
+  property_dossier: PROPERTY_DOSSIER_RETIRED_FIELDS,
 };
 
 /** Τα αποσυρμένα πεδία ενός τύπου οντότητας (κενό αν δεν έχει) — μόνο own-property, ποτέ `constructor`. */

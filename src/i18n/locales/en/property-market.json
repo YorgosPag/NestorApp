@@ -2549,6 +2549,14 @@
         "SLOT_OCCUPIED": "This role already has access — renew or revoke it first.",
         "NOT_ALLOWED": "That access has already ended — send a new invitation.",
         "generic": "That didn't work. Try again."
+      },
+      "audit": {
+        "invitation": {
+          "invited": "invited",
+          "resent": "invitation resent",
+          "pending": "pending invitation",
+          "revoked": "invitation cancelled"
+        }
       }
     }
   },

@@ -11,7 +11,8 @@ import 'server-only';
  * 🔑 **Καμία δεύτερη μηχανή**: έκδοση = `issueEngagementInvitation`, ακύρωση = `revokeDossierInvitation`, πράξεις =
  *    `transitionEngagement` (`end` · `renew` · `reach`). Εδώ ζει **μόνο** η κρίση κατοχής και το ίχνος του κατόχου.
  * 🔴 **Ο κάτοχος = ο αιτών, ποτέ το σώμα**. Ξένος ≡ ανύπαρκτος (ίδιο 404) — ποτέ «υπάρχει, αλλά όχι δικός σου».
- * 🔴 **Ίχνος στο ΠΡΟΣΩΠΙΚΟ βιβλίο του κατόχου** (ADR-195): η πρόσκληση στον φάκελο (Ιστορικό), οι πράξεις στη συμμετοχή.
+ * 🔴 **Ίχνος στο Ιστορικό του ΦΑΚΕΛΟΥ** (προσωπικό βιβλίο του κατόχου, ADR-195): πρόσκληση **και** πράξεις, με λέξεις
+ *    (`dossier-access-audit.ts` — ο ΕΝΑΣ γραφέας της πρόσβασης).
  *
  * ⚠️ **Δηλωμένα όρια (όχι παραλείψεις)**:
  * - Η αλλαγή ισχύει στο **επόμενο** άνοιγμα (ο κριτής κρίνει σε κάθε ανάγνωση)· ο επαγγελματίας τη μαθαίνει με
@@ -37,8 +38,6 @@ import {
 } from '@/server/engagement-invitations/engagement-invitation-issue';
 import { notifyEngagementInvitation } from '@/server/engagement-invitations/engagement-invitation-notice';
 import type { InvitationNoticeOutcome } from '@/server/invitations/invitation-notice';
-import { recordEngagementAudit } from '@/services/conveyance/conveyance-engagement-support';
-import { EntityAuditService } from '@/services/entity-audit.service';
 import type { DossierAccessResponse, DossierAccessSlot, DossierEngagementSummary } from '@/types/dossier-access';
 import {
   DOSSIER_ENGAGEMENT_ROLES,
@@ -49,6 +48,12 @@ import {
   type Engagement,
 } from '@/types/engagement';
 import type { PropertyDossier } from '@/types/property-dossier';
+import {
+  dossierAccessChanges,
+  recordDossierAccessChanged,
+  recordDossierInvitationAudit,
+  touchedExclusions,
+} from './dossier-access-audit';
 import { NO_LIVE_VIEW, dossierFilesWithin, judgeDossierEngagement } from './dossier-engagement-host-adapter';
 import { announceDossierAccessChanged, type DossierOwnerChange } from './dossier-engagement-notifier';
 import { FULL_DOSSIER_REACH } from './dossier-share-reach';
@@ -141,24 +146,6 @@ export async function readDossierAccessView(db: Firestore, dossier: PropertyDoss
 // ΠΡΟΣΚΛΗΣΗ · ΑΚΥΡΩΣΗ ΠΡΟΣΚΛΗΣΗΣ
 // =============================================================================
 
-/** Το ίχνος μιας πράξης πρόσκλησης στο **Ιστορικό του φακέλου** (προσωπικό βιβλίο του κατόχου). ⛔ Ποτέ το token. */
-async function recordDossierInvitationAudit(
-  dossier: PropertyDossier,
-  actor: DossierOwnerActor,
-  change: { readonly role: DossierEngagementRole; readonly oldValue: string | null; readonly newValue: string },
-): Promise<void> {
-  await EntityAuditService.recordChange({
-    entityType: 'property_dossier',
-    entityId: dossier.id,
-    entityName: dossier.label,
-    action: 'updated',
-    changes: [{ field: `invitation.${change.role}`, oldValue: change.oldValue, newValue: change.newValue }],
-    performedBy: actor.uid,
-    performedByName: actor.email,
-    userId: dossier.userId,
-  });
-}
-
 export type DossierInvitationRejection = 'dossier-archived' | 'slot-occupied';
 
 export type DossierInvitationOutcome =
@@ -193,10 +180,10 @@ export async function inviteToDossier(
     role: request.role, reach: request.reach, shareDays: request.shareDays,
     email: request.email, actorUid: actor.uid, nowMs,
   });
-  await recordDossierInvitationAudit(dossier, actor, {
-    role: request.role,
-    oldValue: issued.supersededCount > 0 ? 'resent' : null,
-    newValue: `invited:${issued.invitation.inviteeEmail}`,
+  // ⛔ Ποτέ το token στο ίχνος — μόνο το είδος της πράξης και το email που έγραψε ο ίδιος ο κάτοχος.
+  await recordDossierInvitationAudit(dossier, actor, request.role, {
+    kind: issued.supersededCount > 0 ? 'resent' : 'invited',
+    email: issued.invitation.inviteeEmail,
   });
   const invited = await notifyEngagementInvitation(db, issued);
   return { ok: true, invited, slots: await listDossierAccessSlots(db, dossier, nowMs) };
@@ -215,7 +202,7 @@ export async function cancelDossierInvitation(
   });
   if (outcome.kind === 'absent') return { found: false, slots: [] };
   if (outcome.kind === 'revoked') {
-    await recordDossierInvitationAudit(dossier, actor, { role: outcome.role, oldValue: 'pending', newValue: 'revoked' });
+    await recordDossierInvitationAudit(dossier, actor, outcome.role, { kind: 'revoked' });
   }
   return { found: true, slots: await listDossierAccessSlots(db, dossier, nowMs) };
 }
@@ -247,15 +234,14 @@ const OWNER_CHANGE_OF: Readonly<Record<DossierEngagementChangeRequest['action'],
   reach: 'reach',
 };
 
-/** Οι αλλαγές μιας πράξης κατόχου ως πεδία ίχνους — μόνο ό,τι άλλαξε πραγματικά. */
-function changedFields(before: DossierEngagement, after: DossierEngagement) {
-  const fields = [
-    { field: 'state', oldValue: before.state, newValue: after.state },
-    { field: 'expiresAt', oldValue: before.expiresAt, newValue: after.expiresAt },
-    { field: 'reach.tabs', oldValue: before.reach.tabs.join(','), newValue: after.reach.tabs.join(',') },
-    { field: 'reach.excludedFileIds', oldValue: before.reach.excludedFileIds.join(','), newValue: after.reach.excludedFileIds.join(',') },
-  ];
-  return fields.filter((change) => change.oldValue !== change.newValue);
+/**
+ * Τα ονόματα των αρχείων που μπήκαν ή βγήκαν από τις εξαιρέσεις — **μόνο** τότε διαβάζεται ο φάκελος (ανανέωση και
+ * ανάκληση δεν πληρώνουν ανάγνωση). Αρχείο που δεν είναι πια έτοιμο μένει χωρίς όνομα: η γραμμή κρατά το id του.
+ */
+async function exclusionNames(db: Firestore, dossier: PropertyDossier, before: DossierEngagement, after: DossierEngagement): Promise<ReadonlyMap<string, string>> {
+  if (touchedExclusions(before, after).length === 0) return new Map();
+  const files = await dossierFilesWithin(db, dossier, FULL_DOSSIER_REACH);
+  return new Map(files.map((file) => [file.fileId, file.fileName]));
 }
 
 /**
@@ -273,12 +259,12 @@ export async function changeDossierEngagement(
   if (outcome.outcome === 'not-found') return { ok: false, rejection: 'not-found' };
   if (outcome.outcome === 'not-allowed') return { ok: false, rejection: 'not-allowed' };
   if (outcome.outcome === 'changed' && isDossierEngagement(outcome.before) && isDossierEngagement(outcome.after)) {
-    await recordEngagementAudit({
-      engagement: outcome.after, ownerUid: dossier.userId,
-      action: input.change.action === 'revoke' ? 'status_changed' : 'updated',
-      changes: changedFields(outcome.before, outcome.after),
-      performedBy: actor.uid, performedByName: actor.email, entityName: dossier.label,
-    });
+    const names = await exclusionNames(db, dossier, outcome.before, outcome.after);
+    await recordDossierAccessChanged(
+      dossier, actor,
+      input.change.action === 'revoke' ? 'status_changed' : 'updated',
+      dossierAccessChanges(outcome.before, outcome.after, names),
+    );
     await announceDossierAccessChanged(outcome.after, OWNER_CHANGE_OF[input.change.action], dossier);
   }
   return { ok: true, slots: await listDossierAccessSlots(db, dossier, input.nowMs) };

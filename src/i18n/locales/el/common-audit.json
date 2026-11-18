@@ -786,7 +786,23 @@
       "electricalInstallationIssuanceQuoteTotal": "Ανάθεση ΥΔΕ — εγκεκριμένο σύνολο (€)",
       "electricalInstallationIssuanceAdvanceAmount": "Ανάθεση ΥΔΕ — προκαταβολή (€)",
       "electricalInstallationIssuanceAdvanceState": "Ανάθεση ΥΔΕ — κατάσταση προκαταβολής",
-      "electricalInstallationIssuanceWithdrawalWaiver": "Ανάθεση ΥΔΕ — ρητό αίτημα έναρξης μέσα στην προθεσμία υπαναχώρησης"
+      "electricalInstallationIssuanceWithdrawalWaiver": "Ανάθεση ΥΔΕ — ρητό αίτημα έναρξης μέσα στην προθεσμία υπαναχώρησης",
+      "ownerLawyerDossierInvitation": "Δικηγόρος — πρόσκληση",
+      "ownerLawyerDossierAccess": "Δικηγόρος — πρόσβαση",
+      "ownerLawyerDossierAccessUntil": "Δικηγόρος — πρόσβαση έως",
+      "ownerLawyerDossierReachTab": "Δικηγόρος — καρτέλα που βλέπει",
+      "ownerLawyerDossierExcludedFile": "Δικηγόρος — αρχείο που δεν βλέπει",
+      "ownerLawyerDossierCredential": "Δικηγόρος — δηλωμένη ιδιότητα",
+      "ownerLawyerDossierDocumentView": "Ο δικηγόρος άνοιξε έγγραφο",
+      "ownerLawyerDossierDocumentDownload": "Ο δικηγόρος κατέβασε έγγραφο",
+      "notaryDossierInvitation": "Συμβολαιογράφος — πρόσκληση",
+      "notaryDossierAccess": "Συμβολαιογράφος — πρόσβαση",
+      "notaryDossierAccessUntil": "Συμβολαιογράφος — πρόσβαση έως",
+      "notaryDossierReachTab": "Συμβολαιογράφος — καρτέλα που βλέπει",
+      "notaryDossierExcludedFile": "Συμβολαιογράφος — αρχείο που δεν βλέπει",
+      "notaryDossierCredential": "Συμβολαιογράφος — δηλωμένη ιδιότητα",
+      "notaryDossierDocumentView": "Ο συμβολαιογράφος άνοιξε έγγραφο",
+      "notaryDossierDocumentDownload": "Ο συμβολαιογράφος κατέβασε έγγραφο"
     },
     "retiredFieldNotice": "Το πεδίο δεν υπάρχει πλέον στο μητρώο — εμφανίζεται το όνομα που είχε καταγραφεί τη στιγμή της αλλαγής."
   }

@@ -19,6 +19,7 @@
 
 import { ISSUANCE_AUDIT_FIELDS } from '@/lib/document-validity/issuance-audit-fields';
 import { UPKEEP_AUDIT_FIELDS } from '@/lib/document-validity/upkeep-audit-fields';
+import { DOSSIER_ACCESS_AUDIT_FIELDS } from '@/lib/property-dossier/dossier-audit-fields';
 
 /** Τα ονόματα πεδίων μιας δήλωσης «πεδία ιστορικού ανά είδος» (`null` = το είδος δεν γράφει). */
 function fieldNamesOf<F extends Readonly<Record<keyof F, string>>>(perKind: Readonly<Record<string, F | null>>): string[] {
@@ -31,9 +32,13 @@ function fieldNamesOf<F extends Readonly<Record<keyof F, string>>>(perKind: Read
  */
 const PROPERTY_DIRECT_FIELDS: readonly string[] = [...fieldNamesOf(ISSUANCE_AUDIT_FIELDS), ...fieldNamesOf(UPKEEP_AUDIT_FIELDS)];
 
+/** ADR-916 Φ-Ε1 — η πρόσβαση στον φάκελο (`dossier-access-audit.ts`): πρόσκληση · κατάσταση · εύρος · ανοίγματα. */
+const PROPERTY_DOSSIER_DIRECT_FIELDS: readonly string[] = fieldNamesOf(DOSSIER_ACCESS_AUDIT_FIELDS);
+
 const DIRECT_WRITTEN_FIELDS: Readonly<Record<string, readonly string[]>> = {
   property: PROPERTY_DIRECT_FIELDS,
   owner_property: PROPERTY_DIRECT_FIELDS,
+  property_dossier: PROPERTY_DOSSIER_DIRECT_FIELDS,
 };
 
 /** Τα απευθείας γραμμένα πεδία ενός τύπου οντότητας (κενό αν δεν έχει) — μόνο own-property, ποτέ `constructor`. */

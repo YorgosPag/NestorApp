@@ -43,7 +43,6 @@ import type {
 import type { ActingViews } from '@/services/conveyance/conveyance-acting-workspace.server';
 import { placementRejectionOf, shownCardsPerSubject, type CasesViewer } from '@/services/conveyance/conveyance-engagement-access.service';
 import { resolveUserDisplayName } from '@/services/entity-audit.service';
-import { answerChanges, recordEngagementAudit } from '@/services/conveyance/conveyance-engagement-support';
 import {
   DOSSIER_ROLE_REGISTRY_AUTHORITY,
   SCOPE_OF_SUBJECT,
@@ -58,6 +57,7 @@ import type {
 } from '@/types/engagement-invitation';
 import type { EngagedDossierFile, MyDossierCard } from '@/types/my-engagements';
 import type { PropertyDossier } from '@/types/property-dossier';
+import { recordDossierAccessAccepted } from './dossier-access-audit';
 import { readDossierReadyFiles, readPropertyDossier } from './dossier-media.reader';
 import { announceDossierInvitationAnswered, announceDossierInvitationUnanswered } from './dossier-engagement-notifier';
 import { dossierFileReach } from './dossier-share-reach';
@@ -124,7 +124,8 @@ export async function describeDossierInvitation(db: Firestore, invitation: Dossi
 }
 
 /**
- * Μετά την απάντηση: ίχνος της αποδοχής στο **προσωπικό** βιβλίο του κατόχου (await — ποτέ σε βιβλίο γραφείου), και
+ * Μετά την απάντηση: ίχνος της αποδοχής στο **Ιστορικό του φακέλου** (προσωπικό βιβλίο του κατόχου, await — ποτέ σε
+ * βιβλίο γραφείου· `dossier-access-audit.ts`), και
  * ειδοποίηση του κατόχου για αποδοχή **ή** άρνηση (ποτέ δεν πετά).
  */
 async function afterAnswer(db: Firestore, invitation: DossierEngagementInvitation, answer: InvitationAnswer, answerer: InvitationAnswerer): Promise<void> {
@@ -132,10 +133,8 @@ async function afterAnswer(db: Firestore, invitation: DossierEngagementInvitatio
   if (answer.kind === 'accepted') {
     const engagement = answer.engagement;
     if (!isDossierEngagement(engagement)) throw new Error(`Engagement ${engagement.id} is not a property-dossier engagement`);
-    await recordEngagementAudit({
-      engagement, ownerUid: invitation.invitedByUid, action: 'created', changes: answerChanges(null, engagement),
-      performedBy: answerer.uid, performedByName: answerer.email, entityName: dossier?.label ?? null,
-    });
+    const target = { id: invitation.subject.dossierId, userId: invitation.invitedByUid, label: dossier?.label ?? null };
+    await recordDossierAccessAccepted(target, answerer, engagement);
   }
   await announceDossierInvitationAnswered(invitation, answer.kind, dossier?.label ?? null, answerer.uid);
 }
