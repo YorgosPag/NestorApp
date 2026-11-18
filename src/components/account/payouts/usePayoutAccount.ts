@@ -34,7 +34,7 @@ export type PayoutLoad =
 /** Πώς τελείωσε μια αλλαγή στοιχείων — ο καλών ανοίγει επιβεβαίωση ταυτότητας στο `reauthentication-required`. */
 export type PayoutUpdateResult = 'updated' | 'reauthentication-required' | 'failed';
 
-const DETAIL_KEYS = ['legalName', 'tradeName', 'address', 'taxNumber', 'ibanLast4', 'ibanBeneficiary', 'bankName'] as const;
+const DETAIL_KEYS = ['legalName', 'tradeName', 'address', 'taxNumberTail', 'ibanLast4', 'ibanBeneficiary', 'bankName'] as const;
 
 function textOrNull(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
@@ -43,8 +43,8 @@ function textOrNull(value: unknown): string | null {
 function detailsOf(raw: unknown): PayoutAccountDetails | null {
   const record = plainRecordOrNull(raw);
   if (record === null) return null;
-  const [legalName, tradeName, address, taxNumber, ibanLast4, ibanBeneficiary, bankName] = DETAIL_KEYS.map((key) => textOrNull(record[key]));
-  return { legalName, tradeName, address, taxNumber, ibanLast4, ibanBeneficiary, bankName };
+  const [legalName, tradeName, address, taxNumberTail, ibanLast4, ibanBeneficiary, bankName] = DETAIL_KEYS.map((key) => textOrNull(record[key]));
+  return { legalName, tradeName, address, taxNumberTail, ibanLast4, ibanBeneficiary, bankName };
 }
 
 function accountOf(payload: unknown): PayoutAccountView | null {

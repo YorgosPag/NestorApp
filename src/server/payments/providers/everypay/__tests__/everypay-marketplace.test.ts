@@ -213,18 +213,19 @@ describe('ADR-943 §5.14 — στοιχεία πωλητή · δικαιολογ
     ],
   };
 
-  it('στοιχεία από τον πάροχο: ο ΠΡΟΕΠΙΛΕΓΜΕΝΟΣ λογαριασμός, το IBAN ΜΟΝΟ ως 4 τελευταία ψηφία', () => {
+  it('στοιχεία από τον πάροχο: ο ΠΡΟΕΠΙΛΕΓΜΕΝΟΣ λογαριασμός, το IBAN ΜΟΝΟ ως 4 τελευταία ψηφία, ο ΑΦΜ ΜΟΝΟ ως ουρά', () => {
     const account = payeeAccountOf(SELLER);
     expect(account?.details).toEqual({
-      legalName: 'Acme Α.Ε.', tradeName: 'Acme', address: 'Οδός 23', taxNumber: '999000999',
+      legalName: 'Acme Α.Ε.', tradeName: 'Acme', address: 'Οδός 23', taxNumberTail: '999',
       ibanLast4: '0695', ibanBeneficiary: 'John Doe', bankName: 'NATIONAL BANK OF GREECE S.A.',
     });
     expect(JSON.stringify(account)).not.toContain('GR1601101250000000012300695');
+    expect(JSON.stringify(account)).not.toContain('999000999');
   });
 
   it('και η επίπεδη μορφή της τεκμηρίωσης (`business_name` …) διαβάζεται', () => {
-    expect(payeeAccountOf({ token: 'sel_1', business_name: 'Β', business_tax_number: '111' })?.details)
-      .toMatchObject({ legalName: 'Β', taxNumber: '111', ibanLast4: null });
+    expect(payeeAccountOf({ token: 'sel_1', business_name: 'Β', business_tax_number: '123456783' })?.details)
+      .toMatchObject({ legalName: 'Β', taxNumberTail: '783', ibanLast4: null });
   });
 
   it('δικαιολογητικά: null ⇒ δεν εφαρμόζεται· άγνωστη κατάσταση ⇒ unknown, ΠΟΤΕ approved· άγνωστη κατηγορία ⇒ αγνοείται', () => {

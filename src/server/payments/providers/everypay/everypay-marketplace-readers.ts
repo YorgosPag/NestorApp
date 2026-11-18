@@ -15,6 +15,7 @@ import {
   type PayeeRequirementState,
 } from '@/lib/payments/payee-kyc';
 import { isNonEmptyTrimmedString, plainRecordOrNull } from '@/lib/type-guards';
+import { vatTail } from '@/lib/validation/greek-vat-number';
 import { cleanIBAN } from '@/types/contacts/banking';
 
 import type { PayeeAccount, PayeeDetails, PayeeStatus, PayeeTransfer } from '../../payment-marketplace';
@@ -100,15 +101,20 @@ function defaultBankAccountOf(seller: Record<string, unknown> | null): Record<st
   return usable.find((account) => account.is_default === true) ?? (usable.length === 1 ? usable[0] : null);
 }
 
-/** Τα δηλωμένα στοιχεία· το IBAN φεύγει **μόνο** ως τελευταία 4 ψηφία (ελαχιστοποίηση — ADR-943 §6.4). */
+/**
+ * Τα δηλωμένα στοιχεία· το IBAN φεύγει **μόνο** ως τελευταία 4 ψηφία και ο ΑΦΜ **μόνο** ως ουρά (ελαχιστοποίηση —
+ * ADR-943 §6.4 · Λ-4 · Λ-9). Η μάσκα μπαίνει **εδώ**, στο σύνορο του παρόχου, ώστε κανένας πλήρης αριθμός να μη
+ * φτάνει ούτε στην απάντηση του API.
+ */
 function payeeDetailsOf(seller: Record<string, unknown> | null): PayeeDetails | null {
   const bank = defaultBankAccountOf(seller);
   const iban = textField(bank, 'iban');
+  const taxNumber = businessField(seller, 'tax_number');
   const details: PayeeDetails = {
     legalName: businessField(seller, 'name'),
     tradeName: businessField(seller, 'title'),
     address: businessField(seller, 'address'),
-    taxNumber: businessField(seller, 'tax_number'),
+    taxNumberTail: taxNumber === null ? null : vatTail(taxNumber),
     ibanLast4: iban === null ? null : cleanIBAN(iban).slice(-4),
     ibanBeneficiary: textField(bank, 'beneficiary_name') ?? textField(seller, 'bank_account_beneficiary'),
     bankName: textField(bank, 'bank_name'),

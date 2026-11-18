@@ -44,6 +44,18 @@ export function normalizeVat(vat: string): string {
   return vat.replace(/\s/g, '').trim();
 }
 
+/** Πόσα τελευταία ψηφία αφήνει ορατά η μάσκα του ΑΦΜ — η ΜΙΑ τιμή για κάθε επιφάνεια (ADR-943 Λ-9). */
+export const VAT_MASK_VISIBLE_DIGITS = 3;
+
+/**
+ * Η «ουρά» του ΑΦΜ για εμφάνιση με μάσκα: **μόνο** τα τελευταία {@link VAT_MASK_VISIBLE_DIGITS} ψηφία.
+ * Ο πλήρης αριθμός δεν βγαίνει ποτέ από όποιον την καλεί (ιδιωτικότητα εκ σχεδιασμού — το Stripe επιστρέφει
+ * μόνο `tax_id_provided`, ποτέ την τιμή).
+ */
+export function vatTail(vat: string): string {
+  return normalizeVat(vat).slice(-VAT_MASK_VISIBLE_DIGITS);
+}
+
 /**
  * Validate a Greek VAT number: format (9 digits) + check digit algorithm.
  * Strips spaces before testing.

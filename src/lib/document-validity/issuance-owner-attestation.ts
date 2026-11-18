@@ -14,7 +14,7 @@
  * **Layering**: leaf, καθαρή — πελάτης και διακομιστής.
  */
 
-import { isValidGreekVat, normalizeVat } from '@/lib/validation/greek-vat-number';
+import { isValidGreekVat, normalizeVat, vatTail } from '@/lib/validation/greek-vat-number';
 
 export const OWNER_VERDICTS = ['confirmed', 'corrected'] as const;
 export type OwnerVerdict = (typeof OWNER_VERDICTS)[number];
@@ -24,8 +24,6 @@ export const OWNER_ATTESTATION_POLICY = {
   maxOwners: 50,
   /** «Λείπει κάποιος;» — ελεύθερη σημείωση του ιδιοκτήτη προς το γραφείο. */
   missingNoteMax: 500,
-  /** Πόσα τελευταία ψηφία δείχνει η μάσκα στο ΑΦΜ τρίτου. */
-  maskVisibleDigits: 3,
 } as const;
 
 /** Η κρίση του ιδιοκτήτη για ένα πρόσωπο, όπως φεύγει από τη σελίδα. `vatNumber` μόνο για `corrected`. */
@@ -116,5 +114,5 @@ export function pendingVatCorrectionsOf(
 
 /** Το ΑΦΜ τρίτου στη σελίδα του ιδιοκτήτη: μόνο τα τελευταία ψηφία (ιδιωτικότητα εκ σχεδιασμού). */
 export function maskedVatTail(vatNumber: string): string {
-  return normalizeVat(vatNumber).slice(-OWNER_ATTESTATION_POLICY.maskVisibleDigits);
+  return vatTail(vatNumber);
 }

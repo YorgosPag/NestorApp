@@ -61,6 +61,7 @@ export const DETAIL_KEYS = {
   title: `${K}.details.title`,
   iban: `${K}.details.iban`,
   ibanMasked: `${K}.details.ibanMasked`,
+  taxNumberMasked: `${K}.details.taxNumberMasked`,
   taxNumberLocked: `${K}.details.taxNumberLocked`,
 } as const;
 

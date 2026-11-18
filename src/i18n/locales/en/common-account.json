@@ -370,6 +370,7 @@
         "title": "Details with the provider",
         "iban": "Payout account",
         "ibanMasked": "•••• {last4}",
+        "taxNumberMasked": "•••••• {tail}",
         "taxNumberLocked": "The tax number cannot be changed. A different tax number needs a new registration — contact us."
       },
       "edit": {

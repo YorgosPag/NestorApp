@@ -66,13 +66,14 @@ function DetailRow({ label, value }: { readonly label: string; readonly value: s
 function ProviderDetails({ details }: { readonly details: PayoutAccountDetails }) {
   const { t } = useTranslation([PAYOUT_NS]);
   const iban = details.ibanLast4 === null ? null : t(DETAIL_KEYS.ibanMasked, { last4: details.ibanLast4 });
+  const taxNumber = details.taxNumberTail === null ? null : t(DETAIL_KEYS.taxNumberMasked, { tail: details.taxNumberTail });
   return (
     <section className="flex flex-col gap-1" aria-label={t(DETAIL_KEYS.title)}>
       <p className="m-0 text-sm font-medium text-card-foreground">{t(DETAIL_KEYS.title)}</p>
       <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
         <DetailRow label={t(FIELD_KEYS.legalName)} value={details.legalName} />
         <DetailRow label={t(FIELD_KEYS.tradeName)} value={details.tradeName} />
-        <DetailRow label={t(FIELD_KEYS.taxNumber)} value={details.taxNumber} />
+        <DetailRow label={t(FIELD_KEYS.taxNumber)} value={taxNumber} />
         <DetailRow label={t(FIELD_KEYS.address)} value={details.address} />
         <DetailRow label={t(DETAIL_KEYS.iban)} value={iban === null ? null : [iban, details.bankName].filter(Boolean).join(' · ')} />
         <DetailRow label={t(FIELD_KEYS.ibanBeneficiary)} value={details.ibanBeneficiary} />

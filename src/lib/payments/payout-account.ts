@@ -31,12 +31,15 @@ export const PAYOUT_ACCOUNT_STATES = [
 ] as const;
 export type PayoutAccountState = (typeof PAYOUT_ACCOUNT_STATES)[number];
 
-/** Τα δηλωμένα στοιχεία στον πάροχο, για ανάγνωση. Το IBAN **μόνο** ως τελευταία 4 ψηφία. */
+/**
+ * Τα δηλωμένα στοιχεία στον πάροχο, για ανάγνωση. Το IBAN **μόνο** ως τελευταία 4 ψηφία, ο ΑΦΜ **μόνο** ως ουρά
+ * (`vatTail`, ADR-943 Λ-9) — κανένας πλήρης αριθμός δεν φτάνει στον browser.
+ */
 export interface PayoutAccountDetails {
   readonly legalName: string | null;
   readonly tradeName: string | null;
   readonly address: string | null;
-  readonly taxNumber: string | null;
+  readonly taxNumberTail: string | null;
   readonly ibanLast4: string | null;
   readonly ibanBeneficiary: string | null;
   readonly bankName: string | null;
