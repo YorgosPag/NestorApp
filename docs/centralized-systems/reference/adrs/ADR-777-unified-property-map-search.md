@@ -18674,4 +18674,8 @@ baseline του φρουρού `property-display-area` (4 στο `useSalesProper
 **μόνο** η προβολή (το μπλοκ μένει).
 
 **Άγκυρες:** `lib/energy-certificate/__tests__/energy-projection.test.ts` (Π1–Π4) · `lib/listings/__tests__/public-listing-schema.test.ts` (Κ21).
-⚠️ **Δεν εκτελέστηκαν** από τον πράκτορα (κανόνας N.(-2): tests μόνο με έγκριση).
+✅ Εκτελέστηκαν 2026-11-18 με έγκριση Giorgio: 10 σουίτες — 293/293 (`08a14929`).
+
+**Διόρθωση live (2026-11-18):** η σελίδα **κάθε** ακινήτου **χωρίς έργο** έπεφτε (`Cannot read properties of undefined (reading 'trim')`,
+μετρημένο στο `prop_a0000002-…`): το `Property.project` φτάνει `undefined` παρότι ο τύπος λέει `string`, και το
+`useEnergyConstructionContext` έλεγχε μόνο `null`. Πλέον δέχεται `string | null | undefined` και ελέγχει με `typeof`.

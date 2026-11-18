@@ -56,14 +56,16 @@ export function useProjectEnergyStudies(projectId: string | null, enabled: boole
  * **Το πλαίσιο κατασκευής της φόρμας του γραφείου** — η υπενθύμιση του κύκλου ζωής και οι ΜΕΑ του έργου. Οι μελέτες
  * ζητούνται μόνο όταν η απάντηση είναι «υπό κατασκευή»: καμία ανάγνωση για τις μονάδες που δεν τις χρειάζονται.
  *
- * @param projectId το έργο της μονάδας (`Property.project`, που ο mapper γεμίζει και από το `projectId`) — `''`/`null` = χωρίς έργο
+ * @param projectId το έργο της μονάδας (`Property.project`, που ο mapper γεμίζει και από το `projectId`) — `''`/`null`/
+ *   `undefined` = χωρίς έργο. ⚠️ Ο τύπος λέει `string`, αλλά μονάδα χωρίς έργο φτάνει εδώ **`undefined`** (μετρημένο live
+ *   2026-11-18: `.trim()` πάνω σε `undefined` έριξε όλη τη σελίδα του ακινήτου) — γι' αυτό ο έλεγχος είναι `typeof`.
  */
 export function useEnergyConstructionContext(
-  projectId: string | null,
+  projectId: string | null | undefined,
   operationalStatus: unknown,
   certificate: Pick<EnergyCertificate, 'class' | 'absence'>,
 ): { readonly context: EnergyConstructionContext; readonly notice: EnergyConstructionNotice | null } {
-  const project = projectId !== null && projectId.trim() !== '' ? projectId : null;
+  const project = typeof projectId === 'string' && projectId.trim() !== '' ? projectId : null;
   const studies = useProjectEnergyStudies(project, certificate.absence === 'under-construction');
   const notice = energyConstructionNoticeOf(operationalStatus, certificate);
   const context = useMemo(() => ({ studies }), [studies]);

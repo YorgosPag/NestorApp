@@ -64,7 +64,8 @@ export function PropertyFieldsDetailCards(props: DetailCardsProps) {
   const energyLocked = !isEditing || isFinalContractSigned(property.commercial?.legalPhase);
   const energyCertificate = energyOfForm(formData);
   // ADR-777 §8.102 — μονάδα που χτίζεται: «υπό κατασκευή» + εκτίμηση της ΜΕΑ από τα έγγραφα του έργου.
-  const energyConstruction = useEnergyConstructionContext(property.project, formData.operationalStatus, energyCertificate);  const applyEnergyPatch = (patch: EnergyCertificatePatch) =>
+  const energyConstruction = useEnergyConstructionContext(property.project, formData.operationalStatus, energyCertificate);
+  const applyEnergyPatch = (patch: EnergyCertificatePatch) =>
     setFormData(prev => ({ ...prev, ...patchedEnergyFormSlice(prev, patch) }));
   // Η φόρμα κρατά `string[]`· η πυξίδα και η πρόταση μιλούν το λεξιλόγιο — φιλτράρισμα μέσα από τη ρίζα, όχι cast.
   const orientationSource: readonly string[] = isMultiLevel && activeLevelId
