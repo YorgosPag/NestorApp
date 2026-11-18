@@ -678,7 +678,8 @@
         "finalEnergy": "Final energy by source",
         "scope": "What the certificate covers (unit or building)",
         "sourceFileId": "Certificate document the details came from",
-        "absence": "Reason for no certificate"
+        "absence": "Reason for no certificate",
+        "projection": "Projected energy class from the energy performance study"
       },
       "objectiveValueDeclarations": {
         "display": "Objective value display",
@@ -739,6 +740,8 @@
         "floor": "Floor",
         "floorKind": "Floor kind",
         "area": "Area",
+        "drawnArea": "Area from floor plan",
+        "areaSource": "Area source",
         "code": "Code",
         "projectId": "Project",
         "description": "Description",

@@ -2537,6 +2537,7 @@
         "option": "{count, plural, one {# day} other {# days}} — until {date}",
         "preview": "Expiry: {current} → {next}",
         "shortens": "Access will end {count, plural, one {# day} other {# days}} earlier than its current expiry.",
+        "nonBusinessDay": "The new expiry falls on {day}, a non-working day.",
         "confirmShorten": "Shorten",
         "confirm": "Renew",
         "confirming": "Renewing…"

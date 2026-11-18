@@ -752,7 +752,7 @@
       "triage_status_changed": "Triage status changed",
       "triage_assigned": "Triage assigned",
       "internal_note_added": "Internal note",
-      "document_accessed": "Document opened",
+      "document_accessed": "Document accessed",
       "evidence_retention_scheduled": "Evidence retention locked",
       "evidence_disposed": "Evidence disposed after retention period",
       "document_requested": "Document requested",

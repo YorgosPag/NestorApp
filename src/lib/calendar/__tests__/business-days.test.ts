@@ -1,4 +1,4 @@
-import { addBusinessDays, isBusinessDay, shiftToBusinessDay } from '../business-days';
+import { addBusinessDays, isBusinessDay, nonBusinessDayReason, shiftToBusinessDay } from '../business-days';
 
 describe('addBusinessDays (ADR-915 §45 Φ2)', () => {
   it.each([
@@ -33,6 +33,19 @@ describe('isBusinessDay', () => {
     ['not-a-day', false],
   ])('%s → %s', (day, expected) => {
     expect(isBusinessDay(day)).toBe(expected);
+  });
+});
+
+describe('nonBusinessDayReason — ΓΙΑΤΙ δεν είναι εργάσιμη (ADR-916 Φ-Ε1 λήξη πρόσβασης)', () => {
+  it.each([
+    ['2027-02-16', null],                                        // Τρίτη — η λήξη του φακέλου δοκιμής
+    ['2027-03-06', { kind: 'weekend', weekday: 6 }],             // Σάββατο
+    ['2027-03-07', { kind: 'weekend', weekday: 7 }],             // Κυριακή
+    ['2027-03-15', { kind: 'holiday', holiday: 'clean-monday' }], // Καθαρά Δευτέρα 2027
+    ['2026-08-15', { kind: 'holiday', holiday: 'assumption' }],   // Σάββατο ΚΑΙ αργία ⇒ το όνομα της αργίας
+    ['not-a-day', null],
+  ])('%s → %j', (day, expected) => {
+    expect(nonBusinessDayReason(day)).toEqual(expected);
   });
 });
 

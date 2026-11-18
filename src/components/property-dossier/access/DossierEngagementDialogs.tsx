@@ -15,8 +15,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
 import { dossierRenewalShortensByDays, dossierShareExpiresAt, type DossierShareDays } from '@/config/engagement-policy';
+import { PROFILE_HOLIDAY_KEYS } from '@/components/mandate/agency-directory-labels';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatDate } from '@/lib/intl-utils';
+import { nonBusinessDayReason } from '@/lib/calendar/business-days';
+import { athensClockAt } from '@/lib/calendar/weekly-hours';
+import { formatCalendarDay, formatIsoWeekday } from '@/lib/intl-formatting';
 import type { FloorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
 import type { DossierEngagementSummary } from '@/types/dossier-access';
 import type { DossierShareReach } from '@/types/engagement';
@@ -91,6 +94,28 @@ interface RenewDialogProps {
   readonly onRenew: (engagement: DossierEngagementSummary, shareDays: DossierShareDays) => void;
 }
 
+/** Η ημέρα της λήξης **στην ώρα Ελλάδας** — η ίδια σύμβαση με το ημερολόγιο αργιών (`greekPublicHolidayOn`). */
+function expiryDayKey(expiresAt: string): string {
+  return athensClockAt(new Date(expiresAt)).dateKey;
+}
+
+/** «Τρι 16 Φεβ 2027» — με ημέρα εβδομάδας, ώστε ο κάτοχος να ξέρει τι μέρα κλείνει η πρόσβαση χωρίς ημερολόγιο. */
+function formatExpiryDay(expiresAt: string): string {
+  return formatCalendarDay(expiryDayKey(expiresAt), true);
+}
+
+/**
+ * Μία γραμμή **μόνο** όταν η νέα λήξη πέφτει σε μη εργάσιμη («λήγει Κυριακή» · «λήγει Καθαρά Δευτέρα»). Ενημέρωση, όχι
+ * προειδοποίηση: η πρόσβαση μετρά ημερολογιακές ημέρες και ανοίγει και στις αργίες (Drive · Box · Datasite).
+ */
+function ExpiryDayNotice({ expiresAt }: { readonly expiresAt: string }) {
+  const { t } = useTranslation(['property-market']);
+  const reason = nonBusinessDayReason(expiryDayKey(expiresAt));
+  if (reason === null) return null;
+  const day = reason.kind === 'holiday' ? t(PROFILE_HOLIDAY_KEYS[reason.holiday]) : formatIsoWeekday(reason.weekday);
+  return <p className="text-sm text-muted-foreground">{t(`${K}.renewDialog.nonBusinessDay`, { day })}</p>;
+}
+
 /** «Τρέχουσα λήξη → νέα» και, αν η νέα είναι νωρίτερα, ρητή προειδοποίηση — η συντόμευση δεν γίνεται ποτέ σιωπηλά. */
 function RenewPreview({ currentExpiresAt, nextExpiresAt, shortensBy }: {
   readonly currentExpiresAt: string;
@@ -101,8 +126,9 @@ function RenewPreview({ currentExpiresAt, nextExpiresAt, shortensBy }: {
   return (
     <section className="space-y-2" aria-live="polite">
       <p className="text-sm">
-        {t(`${K}.renewDialog.preview`, { current: formatDate(currentExpiresAt), next: formatDate(nextExpiresAt) })}
+        {t(`${K}.renewDialog.preview`, { current: formatExpiryDay(currentExpiresAt), next: formatExpiryDay(nextExpiresAt) })}
       </p>
+      <ExpiryDayNotice expiresAt={nextExpiresAt} />
       {shortensBy > 0 && (
         <Alert variant="destructive" withIcon>
           <AlertDescription>{t(`${K}.renewDialog.shortens`, { count: shortensBy })}</AlertDescription>
@@ -118,7 +144,7 @@ function RenewForm({ engagement, busy, onCancel, onRenew }: RenewDialogProps & {
   /** Η στιγμή που άνοιξε ο διάλογος — σταθερή, ώστε η ημερομηνία που διαβάζει ο κάτοχος να μη «τρέχει» όσο διαλέγει. */
   const [nowMs] = useState(() => Date.now());
   const untilLabel = (days: DossierShareDays) =>
-    t(`${K}.renewDialog.option`, { count: days, date: formatDate(dossierShareExpiresAt(days, nowMs)) });
+    t(`${K}.renewDialog.option`, { count: days, date: formatExpiryDay(dossierShareExpiresAt(days, nowMs)) });
   const shortensBy = dossierRenewalShortensByDays(engagement.expiresAt, shareDays, nowMs);
   return (
     <>

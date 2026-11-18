@@ -8,8 +8,26 @@
  * 🔑 Κλειδί ημέρας `YYYY-MM-DD` **στην ώρα Ελλάδας** (ίδια σύμβαση με το `greekPublicHolidayOn`).
  */
 
+import type { IsoWeekday } from './weekly-hours';
 import { addDaysToDateKey, isoWeekdayOfDateKey } from './date-key';
-import { greekPublicHolidayOn } from './greek-public-holidays';
+import { greekPublicHolidayOn, type GreekPublicHolidayId } from './greek-public-holidays';
+
+/**
+ * **Γιατί** μια ημέρα δεν είναι εργάσιμη — ώστε η οθόνη να το πει με όνομα («λήγει Κυριακή» · «λήγει Καθαρά Δευτέρα»),
+ * όχι μόνο ναι/όχι. Η αργία προηγείται: αργία που πέφτει Κυριακή λέγεται με το όνομά της.
+ */
+export type NonBusinessDayReason =
+  | { readonly kind: 'holiday'; readonly holiday: GreekPublicHolidayId }
+  | { readonly kind: 'weekend'; readonly weekday: Extract<IsoWeekday, 6 | 7> };
+
+/** `null` ⇒ εργάσιμη **ή** άκυρο κλειδί (ο καλών που χρειάζεται τη διάκριση ρωτά το {@link isBusinessDay}). */
+export function nonBusinessDayReason(dateKey: string): NonBusinessDayReason | null {
+  const weekday = isoWeekdayOfDateKey(dateKey);
+  if (weekday === null) return null;
+  const holiday = greekPublicHolidayOn(dateKey);
+  if (holiday !== null) return { kind: 'holiday', holiday };
+  return weekday === 6 || weekday === 7 ? { kind: 'weekend', weekday } : null;
+}
 
 /** Πού πάει μια ημερομηνία που πέφτει σε μη εργάσιμη (ίδιο λεξιλόγιο με το `HolidayShift` του σχεδίου πληρωμών). */
 export type BusinessDayShift = 'previous_business_day' | 'next_business_day' | 'none';
@@ -22,9 +40,7 @@ const MAX_SHIFT_DAYS = 14;
 
 /** Εργάσιμη; `false` και για άκυρο κλειδί (fail-closed: άγνωστη ημέρα δεν είναι εργάσιμη). */
 export function isBusinessDay(dateKey: string): boolean {
-  const weekday = isoWeekdayOfDateKey(dateKey);
-  if (weekday === null || weekday >= 6) return false;
-  return greekPublicHolidayOn(dateKey) === null;
+  return isoWeekdayOfDateKey(dateKey) !== null && nonBusinessDayReason(dateKey) === null;
 }
 
 /** Φρένο ασφαλείας του {@link addBusinessDays} — όχι κανόνας: καμία προθεσμία της εφαρμογής δεν ζητά περισσότερες. */
