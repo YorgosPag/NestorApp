@@ -18,7 +18,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { issuanceStateOf, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
+import { decisionOwnerContactIdOf, issuanceStateOf, type IssuanceAssignmentRecord } from '@/lib/document-validity/issuance-assignment';
 import { advanceStateOf, isAdvancePageLive, type AdvanceState } from '@/lib/document-validity/issuance-advance';
 import { readLiveOrRedeemedInvitationByToken } from '@/server/invitations/invitation-redeem';
 import { readHostedIssuanceContext, type HostedIssuanceContext } from '@/services/document-registry/issuance-advance-payment.server';
@@ -62,7 +62,8 @@ function ownsCurrentDecision(record: IssuanceAssignmentRecord, latestIssuedOn: s
   const state = issuanceStateOf(record, latestIssuedOn);
   if (state.kind !== 'open' || state.stage !== 'accepted' || decision === null || decision.outcome !== 'approved') return false;
   if (isAdvanceLink(invitation)) {
-    return invitation.purpose.decidedAt === decision.at && invitation.contactId === decision.ownerContactId;
+    const ownerContactId = decisionOwnerContactIdOf(decision);
+    return ownerContactId !== null && invitation.purpose.decidedAt === decision.at && invitation.contactId === ownerContactId;
   }
   return decision.basis === 'owner-link-approval' && decision.invitationId === invitation.id;
 }

@@ -34,6 +34,7 @@ import { readDocumentRegistry } from './document-registry.service';
 import type { DocumentRegistryResponse, RegistryPropertyLabel } from './document-registry.types';
 import { issuanceRecordOf, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
 import { stageIssuanceAction, type IssuanceWriteOutcome } from './issuance-assignments.server';
+import { officeLedger } from './issuance-ledger';
 import { readHostedIssuanceAssignment } from './issuance-engagement-host-adapter';
 
 const logger = createModuleLogger('IssuanceAdvancePayment');
@@ -74,7 +75,7 @@ export async function writeAdvanceEvent(
   const { assignment, label } = context;
   const staged = await db.runTransaction(async (tx) => {
     const next = await stageIssuanceAction(tx, db, {
-      companyId: assignment.companyId,
+      ledger: officeLedger(assignment.companyId),
       writer: { kind: 'system', source: 'payments', provider, name: null },
       property: { id: assignment.propertyId, scope: label.scope, name: label.name },
       documentKind: assignment.documentKind,

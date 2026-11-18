@@ -11,6 +11,7 @@ import 'server-only';
  * 🔒 Ε-9′: προς τον μηχανικό **κανένα** στοιχείο επικοινωνίας του γραφείου — μόνο ημερομηνία και αιτιολογία.
  */
 
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { getCurrentEnvironment, NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES } from '@/config/notification-events';
@@ -79,7 +80,7 @@ function titleParamsOf(subject: DeliveryChangeSubject) {
 async function announceRequested(subject: DeliveryChangeSubject, request: Extract<DeliveryChangeTransition, { kind: 'requested' }>['request']): Promise<void> {
   const { record, registry } = subject;
   const titleParams = titleParamsOf(subject);
-  const name = registry.people[record.professionalContactId]?.name ?? null;
+  const name = registry.people[professionalReferenceOf(record.professional)]?.name ?? null;
   // Η ημέρα μένει ΑΚΑΤΕΡΓΑΣΤΗ στις παραμέτρους: τη μορφοποιεί ο αποδότης στη γλώσσα του αναγνώστη (notification-display-title).
   const date = request.dueOn;
   const bodyKey = name === null ? 'documentIssuanceDelivery.changeRequestedBodyUnnamed' : 'documentIssuanceDelivery.changeRequestedBody';

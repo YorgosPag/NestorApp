@@ -20,6 +20,7 @@ import type { LinkVerification } from '@/lib/document-validity/issuance-assignme
 import { advanceStateOf, canObjectToStart } from '@/lib/document-validity/issuance-advance';
 import type { IssuanceAdvanceObjectionBody } from '@/lib/document-validity/issuance-request';
 import { stageIssuanceAction, type StagedIssuanceWrite } from '@/services/document-registry/issuance-assignments.server';
+import { officeLedger } from '@/services/document-registry/issuance-ledger';
 import type { IssuanceAdvanceObjectionResult } from '@/types/issuance-invitation';
 
 import { advanceViewOf } from './issuance-advance-checkout';
@@ -39,7 +40,7 @@ function stageObjection(db: Firestore, payer: AdvancePayer, reason: string, veri
   const { invitation, context } = payer;
   return db.runTransaction(async (tx) => {
     const next = await stageIssuanceAction(tx, db, {
-      companyId: invitation.companyId,
+      ledger: officeLedger(invitation.companyId),
       writer: { kind: 'link', invitationId: invitation.id, name: context.registry.people[invitation.contactId]?.name ?? null, verifiedBy },
       property: { id: context.assignment.propertyId, scope: context.label.scope, name: context.label.name },
       documentKind: context.assignment.documentKind,

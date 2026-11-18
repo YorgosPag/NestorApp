@@ -39,7 +39,7 @@ function subject(due: string | null, noticeByUid: string | null) {
     assignment: { id: 'diss_1', companyId: 'comp_1', propertyId: 'prop_1', documentKind: 'energy-certificate' } as unknown as DocumentIssuanceAssignment,
     registry: { properties: { prop_1: { name: 'Διαμέρισμα Α1' } }, people: { cont_pro: { name: 'Επιθεωρητής' } } } as unknown as DocumentRegistryResponse,
     record: {
-      due, professionalContactId: 'cont_pro', proposedByUid: 'uid_proposer',
+      due, professional: { kind: 'contact', contactId: 'cont_pro' }, proposedByUid: 'uid_proposer',
       notice: noticeByUid === null ? null : { byUid: noticeByUid },
     } as unknown as IssuanceAssignmentRecord,
     now: NOW,

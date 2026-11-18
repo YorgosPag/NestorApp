@@ -315,7 +315,8 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
   switch (request.action) {
     case 'propose': return {
       kind: 'propose',
-      professionalContactId: request.professionalContactId,
+      // Το γραφείο διαλέγει **επαφή** του βιβλίου του (ADR-945 Δ4: η ένωση, ποτέ σκέτο id).
+      professional: { kind: 'contact', contactId: request.professionalContactId },
       credential: { qualification: request.qualification, registryNumber: request.registryNumber },
     };
     case 'decide': return {
@@ -339,6 +340,7 @@ export function issuanceActionOf(request: IssuanceAssignmentBody): IssuanceActio
     case 'resolve-advance-dispute': return { kind: 'resolve-advance-dispute', releaseMinor: request.releaseMinor, reason: request.reason };
     case 'record-advance-receipt': return { kind: 'record-advance-receipt', mark: request.mark, issuedOn: request.issuedOn, totalMinor: request.totalMinor };
     case 'object-start': return { kind: 'object-start', reason: request.reason };
-    case 'cancel': return { kind: 'cancel' };
+    // Η ακύρωση του γραφείου είναι πάντα «ακυρώθηκε»· το «δεν επιλέχθηκε» το γράφει μόνο η ανάθεση αιτήματος (ADR-945 §7.2).
+    case 'cancel': return { kind: 'cancel', reason: 'cancelled' };
   }
 }

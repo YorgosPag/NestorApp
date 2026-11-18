@@ -642,7 +642,7 @@ describe('ADR-915 §45 Φ1 — η ανάθεση στη γραμμή: κουμπ
   const ROW = 'missing:p6:energy-certificate';
   const PROPOSED_AT = '2026-11-03T09:00:00.000Z';
   const PROPOSE: IssuanceAction = {
-    kind: 'propose', professionalContactId: 'cont_alpha',
+    kind: 'propose', professional: { kind: 'contact', contactId: 'cont_alpha' },
     credential: { qualification: 'energy-inspector-registered', registryNumber: null },
   };
   const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };

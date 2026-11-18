@@ -41,6 +41,7 @@ import { DeliveryCellLine } from '@/components/document-registry/RegistryIssuanc
 import { DeliveryReminderButton } from '@/components/document-registry/RegistryDeliveryReminder';
 import { ISSUANCE_ROW_ACTION_KEYS, ISSUANCE_STAGE_KEYS } from '@/components/document-registry/issuance-labels';
 import { LAYOUT_KEYS } from '@/components/document-registry/registry-layout-labels';
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import {
   CONVEYANCE_NS,
   FACTS_DECLARATION_KEYS,
@@ -102,7 +103,7 @@ function IssuanceRowAction({ issuance, state, rowId, registry, onOpen }: {
         : <span className="text-foreground">{t(ISSUANCE_STAGE_KEYS[state.stage])}</span>}
       {remindsInRow(delivery) ? <DeliveryReminderButton target={issuance} /> : null}
       <span className="text-xs text-muted-foreground">
-        <ObligorPerson person={registryPersonOf(state.record.professionalContactId, registry)} />{' '}
+        <ObligorPerson person={registryPersonOf(professionalReferenceOf(state.record.professional), registry)} />{' '}
         <span>{t(LAYOUT_KEYS.nextSince, { date: formatDate(issuanceStageSinceOf(state.record)) })}</span>
         {delivery === null ? null : <>{' '}<DeliveryCellLine status={delivery} signingDay={signingDay} /></>}
       </span>

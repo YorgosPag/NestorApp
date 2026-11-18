@@ -19,7 +19,7 @@ const OFFICE: IssuanceActor = { kind: 'office', uid: 'uid_agent', nowIso: NOW };
 const link = (invitationId: string): IssuanceActor => ({ kind: 'link', invitationId, verifiedBy: 'link', nowIso: NOW });
 
 const PROPOSE: IssuanceAction = {
-  kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: null },
+  kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: { qualification: 'energy-inspector-registered', registryNumber: null },
 };
 const REQUEST = (invitationId: string): IssuanceAction => ({ kind: 'request-approval', invitationId, ownerContactId: 'cont_lead', note: 'σημείωση', verification: 'link' });
 const LINK_APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: null, note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null };
@@ -72,14 +72,14 @@ describe('ADR-915 §28 — αίτημα έγκρισης με σύνδεσμο',
   });
 
   it('🔴 νέα πρόταση (μετά την άρνηση του επαγγελματία) ⇒ το αίτημα σβήνει μαζί της, και ο σύνδεσμος δεν αποφασίζει πια', () => {
-    const other: IssuanceAction = { ...PROPOSE, professionalContactId: 'cont_other' } as IssuanceAction;
+    const other: IssuanceAction = { ...PROPOSE, professional: { kind: 'contact', contactId: 'cont_other' } } as IssuanceAction;
     const replaced = run([...QUOTED, [REQUEST('diin_1')], [LINK_DECLINE], [other]]);
     expect(replaced.approvalRequest).toBeNull();
     expect(step(replaced, LINK_APPROVE, link('diin_1'))).toEqual({ ok: false, refusal: 'transition-refused' });
   });
 
   it('🔴 ενώ ο υπεύθυνος κρίνει την προσφορά, νέα πρόταση ΑΡΝΕΙΤΑΙ (τίποτα δεν αντικαθίσταται σιωπηλά)', () => {
-    const other: IssuanceAction = { ...PROPOSE, professionalContactId: 'cont_other' } as IssuanceAction;
+    const other: IssuanceAction = { ...PROPOSE, professional: { kind: 'contact', contactId: 'cont_other' } } as IssuanceAction;
     expect(step(run([...QUOTED, [REQUEST('diin_1')]]), other)).toEqual({ ok: false, refusal: 'transition-refused' });
   });
 
@@ -103,7 +103,7 @@ describe('ADR-915 §28 — αίτημα έγκρισης με σύνδεσμο',
 
   it('🔴 ο σύνδεσμος ΔΕΝ προτείνει, δεν ενημερώνει, δεν ακυρώνει, δεν ζητά έγκριση — αυτά είναι του γραφείου', () => {
     const requested = run([...QUOTED, [REQUEST('diin_1')]]);
-    for (const action of [PROPOSE, SEND('diin_9'), { kind: 'cancel' }, REQUEST('diin_9')] as IssuanceAction[]) {
+    for (const action of [PROPOSE, SEND('diin_9'), { kind: 'cancel', reason: 'cancelled' }, REQUEST('diin_9')] as IssuanceAction[]) {
       expect(step(requested, action, link('diin_1'))).toEqual({ ok: false, refusal: 'actor-refused' });
     }
   });

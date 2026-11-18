@@ -328,7 +328,7 @@ export function InvoiceForm({ onSuccess, onCancel, editMode, initialData }: Invo
             </fieldset>
 
             <fieldset>
-              <Label htmlFor={INVOICE_FORM_FIELD_IDS.paymentMethod}>{t('invoices.paymentStatus')}</Label>
+              <Label htmlFor={INVOICE_FORM_FIELD_IDS.paymentMethod}>{t('invoices.paymentMethod')}</Label>
               <PaymentMethodSelector
                 id={INVOICE_FORM_FIELD_IDS.paymentMethod}
                 value={form.paymentMethod}

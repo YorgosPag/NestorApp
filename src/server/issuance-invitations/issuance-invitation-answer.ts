@@ -17,6 +17,7 @@ import 'server-only';
  * 🔑 **§30 — απόδειξη**: κάθε απάντηση φέρνει email στη διεύθυνση του συνδέσμου (`issuance-answer-receipt.ts`).
  */
 
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import {
@@ -44,6 +45,7 @@ import { readInvitationByToken } from '@/server/invitations/invitation-redeem';
 import { readDocumentRegistry } from '@/services/document-registry/document-registry.service';
 import type { DocumentRegistryResponse, RegistryPropertyLabel } from '@/services/document-registry/document-registry.types';
 import { stageIssuanceAction, type StagedIssuanceWrite } from '@/services/document-registry/issuance-assignments.server';
+import { officeLedger } from '@/services/document-registry/issuance-ledger';
 import type { IssuanceEmailFacts, IssuanceSpaceLink } from '@/services/email-templates/issuance-invitation-email';
 import type { InvitationCoreRefusal, InvitationDocumentCore } from '@/types/invitation-core';
 import type {
@@ -164,7 +166,7 @@ async function viewOf(db: Firestore, link: ResolvedLink): Promise<IssuanceLinkVi
     propertyLabel: link.label.name,
     documentKind: invitation.documentKind,
     professional: invitation.audience === 'owner'
-      ? { name: registry.people[record.professionalContactId]?.name ?? null, ...record.credential }
+      ? { name: registry.people[professionalReferenceOf(record.professional)]?.name ?? null, ...record.credential }
       : null,
     note: request?.note ?? null,
     expiresAt: invitation.expiresAt,
@@ -213,7 +215,7 @@ export async function issuanceEmailFactsOf(link: ResolvedLink, note: string | nu
   const { invitation, registry, record } = link;
   return {
     officeName: await officeNameOf(link), propertyLabel: link.label.name, documentKind: invitation.documentKind,
-    professionalName: registry.people[record.professionalContactId]?.name ?? null, credential: record.credential, note,
+    professionalName: registry.people[professionalReferenceOf(record.professional)]?.name ?? null, credential: record.credential, note,
   };
 }
 
@@ -320,7 +322,7 @@ function linkKind(
       // §29 — δεύτερος φραγμός, μέσα στη συναλλαγή: κλείδωμα ανάμεσα στον έλεγχο και τη σφράγιση ⇒ καμία απάντηση.
       if (isIssuanceLinkLocked(invitation)) return { kind: 'refused', reason: 'code-locked' };
       const staged = await stageIssuanceAction(tx, db, {
-        companyId: invitation.companyId,
+        ledger: officeLedger(invitation.companyId),
         writer: { kind: 'link', invitationId: invitation.id, name: link.registry.people[invitation.contactId]?.name ?? null, verifiedBy },
         property: { id: invitation.propertyId, scope: link.label.scope, name: link.label.name },
         documentKind: invitation.documentKind,

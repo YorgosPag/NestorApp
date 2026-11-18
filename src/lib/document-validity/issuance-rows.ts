@@ -19,6 +19,7 @@ import {
   registryRowKindOf,
   registryRowPartyOf,
   registryRowPropertyIdOf,
+  type RegistryDocument,
   type RegistryRow,
 } from './document-registry';
 import {
@@ -32,6 +33,7 @@ import {
   type IssuanceRosterEntry,
 } from './issuance-candidates';
 import { currentInspectionContactOf } from './issuance-inspection-contact';
+import { professionalContactIdOf } from './issuance-professional';
 import type { IssuanceOwnerAttestation } from './issuance-owner-attestation';
 
 /** Η ανάθεση μιας γραμμής «Ανάθεσης» — τα **γεγονότα** ωμά· η οθόνη κρίνει με τον ίδιο πυρήνα (`issuanceStateOf`). */
@@ -56,16 +58,24 @@ export function assignableTargets(rows: readonly RegistryRow[]): ReadonlyMap<str
   return targets;
 }
 
-/** Το νεότερο `issuedOn` ανά (ακίνητο, είδος) — από **κάθε** γραμμή εγγράφου ακινήτου, και τις αντικατεστημένες. */
-export function latestIssuedOnByKey(rows: readonly RegistryRow[]): ReadonlyMap<string, string> {
+/**
+ * Το νεότερο `issuedOn` ανά (ακίνητο, είδος) — από **κάθε** έγγραφο ακινήτου (όχι προσώπου), και τα αντικατεστημένα.
+ * ADR-945 §7.5 — ο ΕΝΑΣ κανόνας, πάνω σε **έγγραφα**: τον ρωτούν οι γραμμές του μητρώου γραφείου **και** τα έγγραφα του
+ * ακινήτου ιδιώτη, που δεν περνούν από μητρώο γραμμών.
+ */
+export function latestIssuedOnOfDocuments(documents: readonly RegistryDocument[]): ReadonlyMap<string, string> {
   const latest = new Map<string, string>();
-  for (const row of rows) {
-    if (row.kind !== 'document' || row.document.propertyId === null || row.document.party !== null) continue;
-    const issuedOn = row.document.issuedOn;
-    const key = issuanceKeyOf(row.document.propertyId, row.document.kind);
-    if (issuedOn !== null && issuedOn > (latest.get(key) ?? '')) latest.set(key, issuedOn);
+  for (const document of documents) {
+    if (document.propertyId === null || document.party !== null) continue;
+    const key = issuanceKeyOf(document.propertyId, document.kind);
+    if (document.issuedOn !== null && document.issuedOn > (latest.get(key) ?? '')) latest.set(key, document.issuedOn);
   }
   return latest;
+}
+
+/** Το νεότερο `issuedOn` ανά (ακίνητο, είδος) — από **κάθε** γραμμή εγγράφου ακινήτου, και τις αντικατεστημένες. */
+export function latestIssuedOnByKey(rows: readonly RegistryRow[]): ReadonlyMap<string, string> {
+  return latestIssuedOnOfDocuments(rows.flatMap((row) => (row.kind === 'document' ? [row.document] : [])));
 }
 
 /** §45.15 (1β-γ-2) — οι επαφές των οποίων ο ιδιοκτήτης **διόρθωσε** ΑΦΜ στο τεκμήριο της έγκρισης. */
@@ -94,10 +104,11 @@ export function issuanceOfRows(
     const record = current.get(key) ?? null;
     const latestIssuedOn = latest.get(key) ?? null;
     const state = issuanceStateOf(record, latestIssuedOn);
-    const declined = state.kind === 'open' && state.stage === 'declined' ? state.record.professionalContactId : null;
+    const declined = state.kind === 'open' && state.stage === 'declined' ? professionalContactIdOf(state.record.professional) : null;
     const candidates = rankIssuanceCandidates(roster, { kind, propertyId, excludeContactId: declined });
     issuance[key] = { record, latestIssuedOn, candidates };
-    if (record !== null) contactIds.add(record.professionalContactId);
+    const professionalContactId = record === null ? null : professionalContactIdOf(record.professional);
+    if (professionalContactId !== null) contactIds.add(professionalContactId);
     // §45.15 — ο υπεύθυνος αυτοψίας μπορεί να μην είναι ιδιοκτήτης (ενοικιαστής · διαχειριστής): ονομάζεται κι αυτός.
     const inspection = record === null ? null : currentInspectionContactOf(record);
     if (inspection !== null) contactIds.add(inspection.contactId);

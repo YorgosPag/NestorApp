@@ -306,6 +306,10 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicDocumentIssuanceAssignmentId',
       // ADR-915 §35 — ΜΙΑ απόφαση μόνιμης υποχρέωσης ανά (γραφείο, ακίνητο, είδος): τυχαίο id = δεύτερη υποχρέωση.
       'generateDeterministicPropertyUpkeepDeclarationId',
+      // ADR-945 §7.2 — ΕΝΑ αίτημα ανά (κάτοχος, ακίνητο, είδος), ΜΙΑ προσφορά ανά (αίτημα, κύκλος, επαγγελματίας): τυχαίο
+      // id = δεύτερο αίτημα στο διπλό «Ζήτα προσφορές», ή δεύτερη προσφορά στον ίδιο επαγγελματία — και το όριο 3 σπάει.
+      'generateDeterministicDocumentIssuanceRequestId',
+      'generateDeterministicDocumentIssuanceBidId',
       // ADR-917 Ζ8 — ΜΙΑ γραμμή προϋπολογισμού ανά (εταιρεία, έργο, κωδικό): τυχαίο id = δεύτερη γραμμή στον ίδιο κωδικό =
       // διπλός προϋπολογισμός, και το CAS του γραφέα θα φύλαγε μόνο τη μία.
       'generateDeterministicProjectBudgetLineId',
@@ -464,6 +468,9 @@ describe('EnterpriseIdService', () => {
       generateDeterministicDocumentObligorDesignationId: 'dobd_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicDocumentIssuanceAssignmentId: 'dias_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicPropertyUpkeepDeclarationId: 'pupk_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      // ADR-945 §7.2 — ένας σπόρος, η ίδια μηχανή: ίδιο uuid με το `dias_`/`pupk_`, μόνο το πρόθεμα διαφέρει.
+      generateDeterministicDocumentIssuanceRequestId: 'disr_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicDocumentIssuanceBidId: 'dibd_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       // ADR-917 Φ3β — ίδιο uuid με το `pupk_`: ίδιος σπόρος, ίδια μηχανή· μόνο το πρόθεμα διαφέρει.
       generateDeterministicProjectBudgetLineId: 'pbl_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
       generateDeterministicPropertyHandoverId: 'phov_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',

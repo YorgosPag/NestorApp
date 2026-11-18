@@ -158,6 +158,10 @@ export const generateDeterministicDocumentIssuanceAssignmentId = (seed: string) 
   enterpriseIdService.generateDeterministicDocumentIssuanceAssignmentId(seed);
 export const generateDeterministicPropertyUpkeepDeclarationId = (seed: string) =>
   enterpriseIdService.generateDeterministicPropertyUpkeepDeclarationId(seed);
+export const generateDeterministicDocumentIssuanceRequestId = (seed: string) =>
+  enterpriseIdService.generateDeterministicDocumentIssuanceRequestId(seed);
+export const generateDeterministicDocumentIssuanceBidId = (seed: string) =>
+  enterpriseIdService.generateDeterministicDocumentIssuanceBidId(seed);
 export const generateDeterministicProjectBudgetLineId = (seed: string) =>
   enterpriseIdService.generateDeterministicProjectBudgetLineId(seed);
 export const generateDeterministicExpenseJournalEntryId = (seed: string) =>

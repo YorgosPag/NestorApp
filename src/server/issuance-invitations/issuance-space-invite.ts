@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { primaryEmailOf } from '@/lib/contacts/primary-email';
 import { issuanceStageOf } from '@/lib/document-validity/issuance-assignment';
 import { ISSUANCE_AUDIT_FIELDS } from '@/lib/document-validity/issuance-audit-fields';
+import { professionalContactIdOf } from '@/lib/document-validity/issuance-professional';
 import { issuanceSpaceStatusOf, canResendSpaceInvitation } from '@/lib/document-validity/issuance-space';
 import { issueEngagementInvitation, latestIssuanceSpaceInvitations } from '@/server/engagement-invitations/engagement-invitation-issue';
 import { notifyEngagementInvitation } from '@/server/engagement-invitations/engagement-invitation-notice';
@@ -80,7 +81,9 @@ export async function inviteeEmailOf(db: Firestore, assignment: DocumentIssuance
     const link = parseIssuanceInvitation((await issuanceInvitationsCollection(db).doc(linkId).get()).data(), linkId);
     if (link && link.companyId === assignment.companyId) return link.inviteeEmail;
   }
-  const contact = (await readOwnedContactDocs(db, assignment.companyId, [assignment.professionalContactId])).get(assignment.professionalContactId);
+  const contactId = professionalContactIdOf(assignment.professional);
+  if (contactId === null) return null; // ADR-945 Δ4 — βιτρίνα: η διεύθυνσή της δεν ζει σε βιβλίο επαφών (Φ3).
+  const contact = (await readOwnedContactDocs(db, assignment.companyId, [contactId])).get(contactId);
   return contact ? primaryEmailOf(Array.isArray(contact.emails) ? contact.emails : undefined) : null;
 }
 
@@ -143,10 +146,11 @@ export async function inviteIssuanceProfessionalToSpace(
   if (allowed === null) return { ok: false, refusal: 'unknown' };
   if (!allowed) return { ok: false, refusal: 'entered' };
   const email = await inviteeEmailOf(db, assignment);
-  if (email === null) return { ok: false, refusal: 'no-email' };
+  const contactId = professionalContactIdOf(assignment.professional);
+  if (email === null || contactId === null) return { ok: false, refusal: 'no-email' };
   const plan = await planIssuanceSpace(db, {
     companyId: assignment.companyId, propertyId: assignment.propertyId, assignmentId: assignment.id,
-    documentKind: assignment.documentKind, contactId: assignment.professionalContactId, inviteeEmail: email,
+    documentKind: assignment.documentKind, contactId, inviteeEmail: email,
     qualification: assignment.credential.qualification, registryNumber: assignment.credential.registryNumber,
     actorUid: sender.uid,
   }, now.getTime());

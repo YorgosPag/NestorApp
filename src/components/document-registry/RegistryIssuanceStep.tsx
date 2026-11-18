@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { qualificationLookupUrl } from '@/config/document-validity/document-issuers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDate } from '@/lib/intl-formatting';
-import { canProposeIssuance } from '@/lib/document-validity/issuance-assignment';
+import { canProposeIssuance, decisionOwnerContactIdOf } from '@/lib/document-validity/issuance-assignment';
 import type {
   IssuanceApprovalRequest,
   IssuanceAssignmentRecord,
@@ -61,6 +61,7 @@ import { quoteLines } from '@/components/document-registry/registry-issuance-quo
 import { canReviseQuote, quoteTotalsOf } from '@/lib/document-validity/issuance-quote';
 import { isLegacyIssuance } from '@/lib/document-validity/issuance-stage';
 import { ISSUER_KEYS, NEXT_STEP_KEYS, PROPERTY_MARKET_NS, qualificationText, REGISTRY_NS } from '@/components/document-registry/document-registry-labels';
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import {
   BALL_IN_COURT_KEYS,
   CHANNEL_KEYS,
@@ -82,6 +83,15 @@ function nameOf(t: Translate, contactId: string, registry: Names): string {
   const person = registryPersonOf(contactId, registry);
   if (!person.reachable) return t(ISSUER_KEYS.obligorUnavailable);
   return person.name ?? t(ISSUER_KEYS.obligorUnnamed);
+}
+
+/**
+ * Ο ιδιοκτήτης που αποφάσισε. ADR-945 Δ3 — απόφαση ιδιώτη (`owner-self`) δεν φτάνει ποτέ σε όψη γραφείου
+ * (`parseIssuanceAssignment` ⇒ `null`)· αν φτάσει, λέγεται «μη διαθέσιμος», ποτέ μαντεμένο όνομα.
+ */
+function deciderNameOf(t: Translate, decision: IssuanceDecision, registry: Names): string {
+  const contactId = decisionOwnerContactIdOf(decision);
+  return contactId === null ? t(ISSUER_KEYS.obligorUnavailable) : nameOf(t, contactId, registry);
 }
 
 /** Τα ονόματα των υποψηφίων — **μόνο** όσοι είναι ακόμη επαφές του μισθωτή (ξένη ≡ ανύπαρκτη). */
@@ -139,7 +149,7 @@ function CredentialLine({ record, space }: { readonly record: IssuanceAssignment
 function BallInCourtLine({ state, view, registry }: { readonly state: OpenState; readonly view: RegistryIssuanceView; readonly registry: Names }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const leadId = view.lead?.kind === 'designated' ? view.lead.contactId : null;
-  const who = state.ballInCourt === 'professional' ? state.record.professionalContactId : state.ballInCourt === 'owner' ? leadId : null;
+  const who = state.ballInCourt === 'professional' ? professionalReferenceOf(state.record.professional) : state.ballInCourt === 'owner' ? leadId : null;
   return (
     <p className="m-0 flex flex-wrap items-baseline gap-x-2 text-sm text-foreground">
       <span>{t(ISSUANCE_KEYS.ballInCourt, { party: t(BALL_IN_COURT_KEYS[state.ballInCourt]) })}</span>
@@ -192,6 +202,8 @@ function requestLines(t: Translate, request: IssuanceApprovalRequest, registry: 
 }
 
 function decisionLines(t: Translate, decision: IssuanceDecision, registry: Names): React.ReactNode[] {
+  // ADR-945 Δ3 — η απόφαση ιδιώτη δεν ζει σε βιβλίο γραφείου (βλ. `deciderNameOf`): καμία γραμμή εδώ.
+  if (decision.basis === 'owner-self') return [];
   const name = nameOf(t, decision.ownerContactId, registry);
   if (decision.basis !== 'owner-link-approval') {
     return [<li key="decision">{t(ISSUANCE_KEYS.decided, { name, channel: t(CHANNEL_KEYS[decision.channel]), date: formatDate(decision.at) })}</li>];
@@ -253,7 +265,7 @@ interface ActionsProps {
 function RequestActions({ view, stage, record, registry }: ActionsProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
-  const professionalName = nameOf(t, record.professionalContactId, registry);
+  const professionalName = nameOf(t, professionalReferenceOf(record.professional), registry);
   const legacy = isLegacyIssuance(record);
   const respond = (outcome: 'accepted' | 'declined') => actions?.act({ action: 'respond', ...issuanceTargetOf(view), outcome });
   const awaitingNotice = stage === 'proposed' || stage === 'ownerApproved';
@@ -280,7 +292,7 @@ function QuoteActions({ view, stage, record, registry }: ActionsProps): React.Re
   const actions = useIssuanceAssignmentActions();
   const { quote } = record;
   if (quote === null || isLegacyIssuance(record)) return null;
-  const professionalName = nameOf(t, record.professionalContactId, registry);
+  const professionalName = nameOf(t, professionalReferenceOf(record.professional), registry);
   const lead = view.lead?.kind === 'designated' ? { contactId: view.lead.contactId, name: nameOf(t, view.lead.contactId, registry) } : null;
   const unreceipted = stage === 'accepted' && record.receipt === null;
   return (
@@ -325,17 +337,17 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
       <p className="m-0 text-sm font-medium text-foreground">{t(ISSUANCE_STAGE_KEYS[state.stage])}</p>
       <p className="m-0 flex flex-wrap items-baseline gap-x-2 text-sm text-foreground">
         <span className="text-muted-foreground">{t(ISSUANCE_KEYS.professional)}</span>
-        <ObligorPerson person={registryPersonOf(state.record.professionalContactId, registry)} />
+        <ObligorPerson person={registryPersonOf(professionalReferenceOf(state.record.professional), registry)} />
       </p>
       <CredentialLine record={state.record} space={view.space} />
       {/* §40.7 Φ3 — καλύπτει η τάξη του αυτό το ακίνητο; (προειδοποίηση, ποτέ μπλοκ) */}
-      <InspectorFitLine kind={view.kind} fit={view.inspectorFit?.[state.record.professionalContactId]} />
+      <InspectorFitLine kind={view.kind} fit={view.inspectorFit?.[professionalReferenceOf(state.record.professional)]} />
       <BallInCourtLine state={state} view={view} registry={registry} />
       {/* §39 — μετά το «Αναλαμβάνω»: μπήκε ο επαγγελματίας στον χώρο της ανάθεσης; */}
       {state.stage === 'accepted' ? <RegistryIssuanceSpaceLine view={view} /> : null}
       {/* ADR-943 Φ5β2 — πού είναι η προκαταβολή · αίτημα πληρωμής / νέος σύνδεσμος στον ιδιοκτήτη. */}
       {state.stage === 'accepted' && state.record.decision !== null ? (
-        <RegistryIssuanceAdvanceLine view={view} record={state.record} ownerName={nameOf(t, state.record.decision.ownerContactId, registry)} />
+        <RegistryIssuanceAdvanceLine view={view} record={state.record} ownerName={deciderNameOf(t, state.record.decision, registry)} />
       ) : null}
       {/* ADR-942 Φ1 — τι ζήτησε ο μηχανικός· ανέβασμα κατευθείαν στον φάκελο του ακινήτου (θεματοφυλακή του κατόχου). */}
       {state.stage === 'accepted' ? <RegistryIssuanceDocumentRequests view={view} canAct={(actions?.canAct ?? false) && !saving} /> : null}
@@ -343,7 +355,7 @@ function OpenAssignment({ view, state, registry }: { readonly view: RegistryIssu
       {view.delivery === null ? null : (
         <RegistryIssuanceDelivery
           view={view} status={view.delivery} record={state.record}
-          professionalName={nameOf(t, state.record.professionalContactId, registry)} canAct={(actions?.canAct ?? false) && !saving}
+          professionalName={nameOf(t, professionalReferenceOf(state.record.professional), registry)} canAct={(actions?.canAct ?? false) && !saving}
         />
       )}
       {/* §45.15 — με ποιον κλείνει ο μηχανικός την αυτοψία (ό,τι θα δει στον χώρο του μετά την ανάληψη). */}
@@ -364,14 +376,14 @@ function NoAssignment({ view, registry }: { readonly view: RegistryIssuanceView;
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
   const last = view.state.kind === 'none' ? view.state : null;
-  const lastName = last?.last === null || last === null ? null : nameOf(t, last.last.professionalContactId, registry);
+  const lastName = last?.last === null || last === null ? null : nameOf(t, professionalReferenceOf(last.last.professional), registry);
   // ADR-943 Φ5γ — ζουν ακόμη χρήματα στην ακυρωμένη ανάθεση: η γραμμή προκαταβολής μένει, η νέα πρόταση περιμένει.
   const moneyRecord = last?.last != null && !canProposeIssuance(view.state) ? last.last : null;
   return (
     <>
       {actions?.canAct && moneyRecord === null ? <IssuanceProposeDialog view={view} names={candidateNames(t, view, registry)} trigger="assign" /> : null}
       {moneyRecord?.decision != null ? (
-        <RegistryIssuanceAdvanceLine view={view} record={moneyRecord} ownerName={nameOf(t, moneyRecord.decision.ownerContactId, registry)} />
+        <RegistryIssuanceAdvanceLine view={view} record={moneyRecord} ownerName={deciderNameOf(t, moneyRecord.decision, registry)} />
       ) : null}
       <p className="m-0 text-xs text-muted-foreground">{t(ISSUANCE_KEYS.assignHint)}</p>
       {lastName === null ? null : (

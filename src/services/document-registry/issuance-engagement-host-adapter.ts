@@ -23,7 +23,7 @@ import { decideEngagement, isEngaged } from '@/lib/auth/engagement-judge';
 import { listEngagementsOfUser } from '@/lib/auth/engagement-read';
 import type { EngagementRosterSignal } from '@/lib/auth/engagement-write';
 import { advanceGlanceOf, advanceTimelineOf } from '@/lib/document-validity/issuance-advance';
-import { ballInCourtOf, issuanceStageOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import { ballInCourtOf, decisionOwnerContactIdOf, issuanceStageOf, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
 import { deliveryChangeGlanceOf } from '@/lib/document-validity/issuance-delivery-change';
 import { issuanceDeliveryOf, issuanceDeliveryStatusOf, issuanceLatenessOf } from '@/lib/document-validity/issuance-delivery-due';
 import { agreedQuoteOf, quoteTotalsOf } from '@/lib/document-validity/issuance-quote';
@@ -245,9 +245,11 @@ async function agreementOf(
   if (stage !== SPACE_OPEN_STAGE || assignment.decision === null) return null;
   const record = issuanceRecordOf(assignment);
   const quote = agreedQuoteOf(record);
+  const ownerContactId = decisionOwnerContactIdOf(assignment.decision);
   const [siteAddress, ownerName, parties] = await Promise.all([
     readPropertySiteAddress(db, assignment.companyId, assignment.propertyId),
-    contactNameOf(db, assignment.companyId, assignment.decision.ownerContactId),
+    // ADR-945 Δ3 — ο ιδιώτης δεν είναι επαφή· το όνομά του (`resolveUserDisplayName`) το φέρνει η Φ3.
+    ownerContactId === null ? Promise.resolve(null) : contactNameOf(db, assignment.companyId, ownerContactId),
     readIssuanceAgreementParties(db, assignment, now),
   ]);
   const dueOn = issuanceDeliveryOf(record)?.dueOn ?? null;

@@ -21,7 +21,7 @@ const EXPIRES = '2026-10-24T09:00:00.000Z';
 
 function record(recipient: IssuanceDeliveryOutcome | null): IssuanceAssignmentRecord {
   return {
-    professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: null },
+    professional: { kind: 'contact', contactId: 'cont_pro' }, credential: { qualification: 'energy-inspector-registered', registryNumber: null },
     proposedAt: AT, proposedByUid: 'user_1',
     approvalRequest: {
       invitationId: 'diin_1', ownerContactId: 'cont_a', note: null, at: AT, byUid: 'user_1', verification: 'access-code',

@@ -17,13 +17,13 @@ const TERMS: QuoteTerms = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false,
   validUntil: '2026-12-31', scope: ['issuance', 'registration'], note: null, deliveryBusinessDays: 5, advance: null,
 };
-const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_pro', credential: INSPECTOR };
+const PROPOSE: IssuanceAction = { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: INSPECTOR };
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };
 const QUOTE: IssuanceAction = { kind: 'quote', terms: TERMS };
 const decide = (outcome: 'approved' | 'rejected', quoteRevision: number): IssuanceAction =>
   ({ kind: 'decide', outcome, channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision, ownerAttestation: null });
 const DECLINE: IssuanceAction = { kind: 'respond', outcome: 'declined', note: null };
-const CANCEL: IssuanceAction = { kind: 'cancel' };
+const CANCEL: IssuanceAction = { kind: 'cancel', reason: 'cancelled' };
 
 /** Η ώρα του βήματος `i` — μία διαφορετική ημέρα ανά βήμα. */
 const at = (i: number): string => `2026-11-0${i + 1}T09:00:00.000Z`;
@@ -55,7 +55,7 @@ describe('ADR-915 §45 Φ1 — issuanceStageSinceOf (νέα ροή §42)', () =>
   });
 
   it('η πρόταση ξανά (μετά από άρνηση) ⇒ «από» τη ΝΕΑ πρόταση, όχι την παλιά', () => {
-    const record = run([PROPOSE, NOTIFY, DECLINE, { kind: 'propose', professionalContactId: 'cont_other', credential: INSPECTOR }]);
+    const record = run([PROPOSE, NOTIFY, DECLINE, { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_other' }, credential: INSPECTOR }]);
     expect(issuanceStageOf(record)).toBe('proposed');
     expect(issuanceStageSinceOf(record)).toBe(at(3));
   });

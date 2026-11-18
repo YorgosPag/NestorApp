@@ -18,8 +18,11 @@ import { ISSUANCE_AUDIT_FIELDS, type IssuanceAuditFields } from '@/lib/document-
 import { lastAnsweredDeliveryChangeOf, pendingDeliveryChangeOf } from '@/lib/document-validity/issuance-delivery-change';
 import { issuanceDeliveryOf } from '@/lib/document-validity/issuance-delivery-due';
 import { currentInspectionContactOf } from '@/lib/document-validity/issuance-inspection-contact';
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
+import { custodyOnly } from '@/lib/workspace/custody-scope';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { IssuanceWrite, IssuanceWriter } from './issuance-assignments.server';
+import { ledgerOwnerOf } from './issuance-ledger';
 
 export interface IssuanceTransition {
   readonly previous: IssuanceAssignmentRecord | null;
@@ -44,8 +47,8 @@ function contactChange(field: string, before: string | null, after: string, name
 function auditChangesOf(fields: IssuanceAuditFields, t: IssuanceTransition, names: IssuanceWrite['names']): AuditChange[] {
   // Το στάδιο γράφεται **μόνο** όταν άλλαξε: ένα αίτημα έγκρισης αφήνει το `proposed` ίδιο — «proposed → proposed» είναι θόρυβος.
   const changes: AuditChange[] = t.previousStage === t.nextStage ? [] : [{ field: fields.stage, oldValue: t.previousStage, newValue: t.nextStage }];
-  const before = t.previous?.professionalContactId ?? null;
-  const after = t.next.professionalContactId;
+  const before = t.previous === null ? null : professionalReferenceOf(t.previous.professional);
+  const after = professionalReferenceOf(t.next.professional);
   if (before !== after) changes.push(contactChange(fields.professional, before, after, names));
   const request = t.next.approvalRequest;
   if (request !== null && request.invitationId !== t.previous?.approvalRequest?.invitationId) {
@@ -122,13 +125,13 @@ function inspectionAuditChangesOf(fields: IssuanceAuditFields, t: IssuanceTransi
   return changes;
 }
 
-/** Ποιος φαίνεται στο ιστορικό — ο άνθρωπος (γραφείου ή μηχανικός με συμμετοχή), ή ο σύνδεσμος (με το όνομα του αποδέκτη του). */
+/** Ποιος φαίνεται στο ιστορικό — ο άνθρωπος (γραφείου, μηχανικός με συμμετοχή, ιδιώτης), ή ο σύνδεσμος (με το όνομα του αποδέκτη του). */
 function performerOf(writer: IssuanceWriter): string {
   switch (writer.kind) {
     case 'link': return `issuance-link:${writer.invitationId}`;
     // ADR-943 §5.9 — ο δράστης ενός γεγονότος χρημάτων είναι ο πάροχος (`provider:everypay`), όπως στο τιμολόγιο.
     case 'system': return `provider:${writer.provider}`;
-    case 'office': case 'engagement': return writer.uid;
+    case 'office': case 'engagement': case 'owner': return writer.uid;
   }
 }
 
@@ -145,6 +148,7 @@ export async function recordIssuanceAudit(write: IssuanceWrite, transition: Issu
     changes,
     performedBy: performerOf(write.writer),
     performedByName: write.writer.name,
-    companyId: write.companyId,
+    // ADR-945 Δ1 — το ιστορικό ζει στο ΙΔΙΟ βιβλίο με την ανάθεση (γραφείο ή ιδιώτης), όπως οι δηλώσεις §37.
+    ...custodyOnly(ledgerOwnerOf(write.ledger)),
   });
 }

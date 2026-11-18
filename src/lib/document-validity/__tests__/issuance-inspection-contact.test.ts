@@ -17,11 +17,11 @@ import {
 import { issuanceAssignmentBody, issuanceActionOf } from '@/lib/document-validity/issuance-request';
 
 const INSPECTOR = { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-123' } as const;
-const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_pro', credential: INSPECTOR };
-const REPROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_pro_2', credential: INSPECTOR };
+const PROPOSE: IssuanceAction = { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: INSPECTOR };
+const REPROPOSE: IssuanceAction = { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro_2' }, credential: INSPECTOR };
 const DECLINE: IssuanceAction = { kind: 'respond', outcome: 'declined', note: null };
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };
-const CANCEL: IssuanceAction = { kind: 'cancel' };
+const CANCEL: IssuanceAction = { kind: 'cancel', reason: 'cancelled' };
 const contact = (contactId: string, role: 'owner' | 'tenant' | 'other' = 'owner', roleOther: string | null = null): IssuanceAction =>
   ({ kind: 'set-inspection-contact', contactId, role, roleOther });
 
@@ -99,7 +99,7 @@ describe('set-inspection-contact — ο ορισμός', () => {
 describe('set-inspection-contact — ο κύκλος', () => {
   it('νέα πρόταση μετά από άρνηση: ο υπεύθυνος αυτοψίας μένει (γεγονός του ακινήτου)', () => {
     const record = run([PROPOSE, contact('cont_owner'), NOTIFY, DECLINE, REPROPOSE]);
-    expect(record.professionalContactId).toBe('cont_pro_2');
+    expect(record.professional).toEqual({ kind: 'contact', contactId: 'cont_pro_2' });
     expect(currentInspectionContactOf(record)?.contactId).toBe('cont_owner');
   });
 

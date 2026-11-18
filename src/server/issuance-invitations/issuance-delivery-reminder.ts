@@ -20,6 +20,7 @@ import 'server-only';
  * 🔒 Ποτέ τηλέφωνο/email του γραφείου, ποτέ η ημέρα της υπογραφής του ιδιοκτήτη.
  */
 
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
@@ -106,7 +107,7 @@ async function deliverDeliveryReminder(db: Firestore, subject: ReminderSubject):
   const dueOn = issuanceDeliveryOf(record)?.dueOn ?? null;
   const facts = {
     officeName, propertyLabel: registry.properties[assignment.propertyId]?.name ?? null, documentKind: assignment.documentKind,
-    professionalName: registry.people[record.professionalContactId]?.name ?? null, credential: record.credential, note: null,
+    professionalName: registry.people[professionalReferenceOf(record.professional)]?.name ?? null, credential: record.credential, note: null,
   };
   return deliverInvitationEmail({
     // Για τα ίχνη μόνο: η υπενθύμιση δεν έχει πρόσκληση — ταυτότητα είναι η ανάθεση.

@@ -36,6 +36,7 @@ import {
 } from '@/lib/document-validity/inspector-coverage';
 import type { IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
 import type { ObligorLead } from '@/lib/document-validity/obligor-lead';
+import { professionalContactIdOf } from '@/lib/document-validity/issuance-professional';
 import { issuanceActionOf, type IssuanceAssignmentBody } from '@/lib/document-validity/issuance-request';
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 
@@ -112,7 +113,8 @@ export function registryIssuanceOf(row: RegistryRow, registry: DocumentRegistryR
     // Διαβάστηκε και δεν υπάρχει πρόσκληση ⇒ «κανένας χώρος»· δεν διαβάστηκε ⇒ `null` (η κάρτα σωπαίνει).
     space: registry.issuanceSpaces === null ? null : registry.issuanceSpaces[key] ?? { kind: 'none' },
     inspectorFit: inspectorFitsOf({ kind, propertyId }, [
-      ...(issuance.record === null ? [] : [issuance.record.professionalContactId]),
+      // ADR-945 Δ4 — η καταλληλότητα κρίνεται πάνω σε **επαφή**· βιτρίνα δεν έχει δηλωμένη άδεια στο βιβλίο.
+      ...(issuance.record === null ? [] : [professionalContactIdOf(issuance.record.professional)].filter((id): id is string => id !== null)),
       ...issuance.candidates.map((candidate) => candidate.contactId),
     ], registry),
   };

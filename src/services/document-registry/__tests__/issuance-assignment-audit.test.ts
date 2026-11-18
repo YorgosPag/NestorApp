@@ -16,6 +16,7 @@ import {
 import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
 import { recordIssuanceAudit, type IssuanceTransition } from '@/services/document-registry/issuance-assignment-audit.server';
 import type { IssuanceWrite } from '@/services/document-registry/issuance-assignments.server';
+import { officeLedger } from '@/services/document-registry/issuance-ledger';
 
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: jest.fn(async () => 'eaud_1') },
@@ -28,7 +29,7 @@ const TERMS: QuoteTerms = {
   validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: null,
 };
 const SETUP: readonly IssuanceAction[] = [
-  { kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-1' } },
+  { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-1' } },
   { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null },
   { kind: 'quote', terms: TERMS },
   { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null },
@@ -54,7 +55,7 @@ const STAGE: IssuanceStage = 'accepted';
 
 function write(action: IssuanceAction): IssuanceWrite {
   return {
-    companyId: 'comp_alfa',
+    ledger: officeLedger('comp_alfa'),
     writer: { kind: 'office', uid: 'uid_agent', name: 'Γραφείο', expectedStage: STAGE },
     property: { id: 'prop_1', scope: 'property', name: 'ΔΟΚΙΜΗ' },
     documentKind: 'energy-certificate',

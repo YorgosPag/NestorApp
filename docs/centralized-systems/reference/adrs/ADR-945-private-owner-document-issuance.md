@@ -1,0 +1,228 @@
+# ADR-945 — Ο ιδιώτης ιδιοκτήτης αναθέτει μόνος του την έκδοση εγγράφου (ΠΕΑ κ.ά.) από τον προσωπικό χώρο
+
+**Κατάσταση:** ✅ ΕΓΚΡΙΘΗΚΕ ο σχεδιασμός (2026-11-18, §6) · Φ1 σχέδιο ✅ (§7) · Φ1α κώδικας ✅ (tsc/jest ⏳) · Φ1β ⏳
+**Σχετικά:** ADR-915 §27 · §37 · §39 · §40 · §42 · ADR-942 §7.2 · ADR-943 · ADR-862 §5.3.11 · ADR-916 Φ-Ε1 · ADR-787 Ε-3 §3 · ADR-817
+
+## 1. Πρόβλημα (εύρημα E2E 2026-11-18, επαληθευμένο στον κώδικα)
+
+Ο ιδιώτης στο `/me` (ακίνητο στο `owner_properties`, `authorCompanyId = null`) **δεν μπορεί** να βρει και να αναθέσει
+επαγγελματία για έκδοση εγγράφου:
+
+- Οι ενέργειες «Βρες επαγγελματία» / «Ανάθεση» (`RegistryNextStep`, `RegistryIssuanceStep`) ζουν **μόνο** στο
+  `/o/[workspace]/document-expiry`. Η σελίδα ακινήτου του ιδιώτη έχει μόνο τις δηλώσεις (`PropertyUpkeepSection`).
+- `PUT /api/document-registry/issuance-assignments` = `withAuth` + `ctx.companyId` + `properties:properties:update`.
+- Η ανάθεση είναι δεμένη σε εταιρεία: `IssuanceRequester.companyId`, `readDocumentRegistry(companyId)`,
+  id `hash(companyId:property:kind)`, επαφές από βιβλίο εταιρείας, γέφυρα χώρου μέσω `loadConveyanceSubject`
+  (μόνο `properties`) ⇒ `no-project`. Το ADR-942 §7.2 το λέει ήδη: «ξεκλειδώθηκε, δεν υλοποιήθηκε».
+
+## 2. Τι κάνουν οι μεγάλοι (έρευνα 2026-11-18)
+
+| Μοτίβο | Ποιος | Απόφαση για εμάς |
+|---|---|---|
+| Ο πελάτης ξεκινά από **το δικό του αίτημα**, όχι από βιβλίο επαφών | Thumbtack · Angi · Checkatrade · Airtasker | ✅ Ο ιδιώτης διαλέγει από τον κατάλογο `/pro`, όχι από επαφές |
+| Αίτημα σε **λίγους** (2–3), όχι broadcast | Thumbtack · MyBuilder (Bark = αρνητικό παράδειγμα) | ✅ Φ5 (πυρήνας): έως 3 προσφορές, σύγκριση δίπλα-δίπλα |
+| Άμεση ανάθεση σε έναν | TaskRabbit | ✅ Φ1: η πρώτη διαδρομή (υπάρχουσα μηχανή σταδίων) |
+| Escrow + «αίτημα αποδέσμευσης» + 48ω | Airtasker Pay [επαληθευμένο] | ✅ ήδη ADR-943 |
+| Διαφορά τη λύνει **η πλατφόρμα** | Airtasker · Upwork | ✅ απόφαση 1 — στον ιδιώτη δεν υπάρχει γραφείο να κρίνει |
+| Επικοινωνία κρυφή ως την ανάθεση | Bark · Thumbtack | ✅ ήδη Ε-9′ |
+| Κριτικές μόνο από ολοκληρωμένες δουλειές | Checkatrade · MyBuilder | ⏭️ εκτός (χωριστό ADR) |
+| Πύλες ακινήτων (Rightmove · Spitogatos) **δεν** παραγγέλνουν ΠΕΑ | — | 🟢 κενό αγοράς: εδώ τους ξεπερνάμε |
+
+Ελλάδα: μητρώο επιθεωρητών ΥΠΕΝ (buildingcert.gr, TaxisNet) — **δεν βρέθηκε δημόσιο API** ⇒ ο αριθμός μητρώου μένει
+«δηλωμένος» (όπως §39.7). Ενδεικτικά: διαμέρισμα ~2 €/τ.μ., ελάχιστο 150 € · παράδοση 1–2 εργάσιμες μετά την
+αυτοψία (πηγές χωρίς ημερομηνία — προς επιβεβαίωση).
+
+## 3. Αποφάσεις (προτεινόμενες)
+
+**Δ1 — Μία ανάθεση, δύο βιβλία (όχι νέα συλλογή).** Ίδια `document_issuance_assignments`, ίδια μηχανή σταδίων
+(`issuanceStageOf` · `reduceIssuance` · `ballInCourtOf`), ίδιος γραφέας. Το έγγραφο αποκτά `owner: CustodyScope`
+(`{companyId} | {userId}`)· id seed γραφείου **αμετάβλητο**, ιδιώτη `user:<uid>:<property>:<kind>` — ακριβώς το
+πρότυπο ADR-915 §37 Δ3/Δ4 ⇒ **καμία μετανάστευση**. Ο κριτής υποκειμένου = γενίκευση του `readUpkeepSubject`
+(`custodyOf` → `mayAdminister` → βιβλίο από τον κριτή, ποτέ από τον καλούντα). Ξένο ακίνητο ≡ 404.
+
+**Δ2 — Πύλη.** `withPersonalOrOrgAuth` + `mayDecide` (πρότυπο `upkeep-declarations/route.ts`): οργανισμός ⇒
+`checkPermission` όπως σήμερα· ιδιώτης ⇒ μόνο για ακίνητο που διαχειρίζεται. Δήλωση με λόγο στο
+`personal-scope-consumers.test.ts`.
+
+**Δ3 — Ο ιδιώτης είναι ταυτόχρονα «γραφείο» και «ιδιοκτήτης».** Η πρόταση του ιδιώτη **είναι** η έγκριση του ιδιοκτήτη:
+γεγονός `self-approved` στην ίδια πράξη ⇒ `proposed → sent` χωρίς βήμα έγκρισης· κανένας «υπεύθυνος»
+(`obligorLead`) — ο υπεύθυνος είναι ο ίδιος. Η «μπάλα» `office` λύνεται σε `owner` στην όψη.
+
+**Δ4 — Επαγγελματίας χωρίς βιβλίο επαφών.** `professional: {kind:'contact', contactId} | {kind:'account', uid}`
+(διακριτή ένωση). Ο ιδιώτης διαλέγει από το `/pro` (λογαριασμός επαγγελματία, ADR-915 §40)· κάρτα επαγγελματία
+⇒ «Ζήτησε προσφορά για: {ακίνητο} · {έγγραφο}» όταν ο κατάλογος ανοίχτηκε από το ακίνητο (`documentIssuerSearchHref`
++ πλαίσιο επιστροφής). Ο ιδιοκτήτης στον φάκελο της ανάθεσης = ο χρήστης (`resolveUserDisplayName`), όχι επαφή.
+
+**Δ5 — Χώρος συνεργασίας χωρίς έργο.** Ο οικοδεσπότης `document_issuance` γίνεται custody-aware (`host: WorkspaceRef`,
+`actingFor` ADR-862), με πρότυπο τον `DOSSIER_ENGAGEMENT_HOST` (ιδιώτης οικοδεσπότης, ήδη ζωντανός). Ο ιδιώτης δεν
+χρειάζεται έργο ⇒ το `no-project` μένει **μόνο** για ακίνητο γραφείου εκτός έργου (απόφαση 13/11 αμετάβλητη).
+⚠️ Η θέση αποθήκευσης των engagements για ιδιώτη θέλει ανάγνωση του `engagement-hosts.ts` στη Φ3 — ανοιχτό.
+
+**Δ6 — Κείμενα.** Όπου σήμερα «το γραφείο {office}» (emails `issuance-invitation-email.ts`, `document-request.json`
+~20 σημεία) ⇒ ICU `select` πάνω σε `hostKind` (`office` · `owner`) — ένα κλειδί, δύο μορφές, el+en.
+
+**Δ7 — Πληρωμή.** Πληρωτής = ο ίδιος ο ιδιώτης (email λογαριασμού ⇒ Google Pay χωρίς ερώτηση, ADR-ACC-030 §5.11).
+Δικαιούχος ανά μηχανικό (ADR-943 §4 #13) — δουλεύει ήδη. Η διαφορά ιδιώτη ⇒ η πλατφόρμα (§6.1).
+
+## 4. Πέρα από τους μεγάλους (Nestor)
+
+1. **Αίτημα που γράφεται μόνο του** — τ.μ., όροφος, έτος, διεύθυνση από το `OwnerProperty`· ενδεικτικό εύρος τιμής
+   (Φ5, μόνο όταν υπάρχουν πραγματικές προσφορές της πλατφόρμας — ποτέ επινοημένος πίνακας).
+2. **Έλεγχος πληρότητας πριν από την αυτοψία** — κάτοψη · άδεια · λογαριασμός ρεύματος από τα `files_personal` του
+   ακινήτου, δοσμένα στον επιθεωρητή με τον υπάρχοντα διαμοιρασμό φακέλου (ADR-942).
+3. **Το παραδομένο ΠΕΑ δουλεύει μόνο του** — γεγονότα εγγράφου ⇒ `energy` του ακινήτου (`resolvedDocumentExpiry`,
+   ADR-915 Φ3β-2, υπάρχει) ⇒ ενεργειακή κλάση στην αγγελία ⇒ υπενθύμιση λήξης από το μητρώο (υπάρχει).
+4. **Προτάσεις βελτίωσης ΠΕΑ ⇒ αίτημα προσφοράς ανακαίνισης** — ⏭️ μελλοντικό, μόνο ως ιδέα.
+
+## 5. Φάσεις
+
+| Φάση | Περιεχόμενο | Τομείς |
+|---|---|---|
+| Φ1 | Δ1 + Δ2 + Δ3 + Δ4 (διακομιστής): βιβλίο, id, κριτής, πύλη, `self-approved`, επαγγελματίας-λογαριασμός | document-registry · auth |
+| Φ2 | UI `/me`: «Βρες επιθεωρητή» στη σελίδα ακινήτου → `/pro` με πλαίσιο → «Ζήτησε προσφορά» · χρονολόγιο σταδίων (επαναχρήση όψεων `EngagedIssuance*`) | owner-property · pro directory |
+| Φ3 | Δ5 + Δ6: χώρος συνεργασίας, πρόσκληση, όνομα οικοδεσπότη, emails/i18n | engagements · email |
+| Φ4 | Δ7: προκαταβολή/escrow για ιδιώτη + ουρά διαφορών πλατφόρμας (§6.1) | payments (ADR-943) |
+| Φ5 | Έως 3 προσφορές + σύγκριση (απόφαση 2 — πριν από την E2E) | document-registry · UI |
+| E2E | «ιδιώτης `/me` → `+arch1`» μετά τη Φ5 (σενάριο 3 Google Pay ADR-ACC-030 §5.11) | — |
+
+Εκτίμηση: ~30–45 αρχεία σε 5–6 τομείς ⇒ κατά N.8 απόφαση Giorgio για orchestrator ή Plan Mode ανά φάση.
+
+## 6. Αποφάσεις Giorgio (2026-11-18) — «ό,τι κάνουν οι μεγάλοι, χωρίς εκπτώσεις»
+
+1. **Τη διαφορά την κρίνει η πλατφόρμα** όταν ο ιδιοκτήτης είναι ιδιώτης (Airtasker · Upwork): ουρά διαφορών Nestor (super_admin) με τα ίδια τεκμήρια (χρονολόγιο, μηνύματα, αρχεία), ίδιο κράτημα χρημάτων, ίδια απόφαση «αποδέσμευση / επιστροφή / μερική». Στο γραφείο η διαφορά μένει όπως σήμερα (ADR-943).
+2. **Οι πολλαπλές προσφορές (έως 3) είναι μέρος του πυρήνα**, όχι παρακολούθημα: στο Thumbtack και στο Airtasker το αίτημα σε λίγους **είναι** το προϊόν. Η Φ5 μπαίνει **πριν** από την E2E· η απευθείας ανάθεση σε έναν μένει ως δεύτερη διαδρομή (TaskRabbit). Το id της ανάθεσης δεν μπορεί πλέον να είναι ένα ανά (κάτοχος, ακίνητο, έγγραφο) ⇒ μοντέλο **αίτημα → έως 3 προσφορές → μία νικήτρια**, οι άλλες κλείνουν αυτόματα με ειδοποίηση (σχεδιασμός στη Φ1, ώστε η Φ5 να μη ξαναγράψει το σχήμα).
+3. **Πρόσκληση επαγγελματία εκτός Nestor με email: ναι**, κάτω από τον κατάλογο. Οι αγορές leads (Thumbtack · Angi) δεν το δείχνουν δημόσια — η αναζήτηση 2026-11-18 δεν βρήκε πολιτική· το πρότυπο είναι το **Upwork Direct Contracts** (φέρνεις τον δικό σου συνεργάτη και παίρνεις την προστασία πληρωμής της πλατφόρμας — από γνώση, όχι επαληθευμένο στο web). Η αξία του Nestor είναι η ροή (στάδια, escrow, παράδοση), όχι το lead.
+
+Επόμενο βήμα: απόφαση N.8 (orchestrator ή Plan Mode ανά φάση) και Φ1 σε νέα συνεδρία.
+
+## 7. Φ1 — σχέδιο (εγκρίθηκε 2026-11-18) και διορθώσεις του §3 από τον κώδικα
+
+### 7.1 Διορθώσεις (ο κώδικας κερδίζει, N.0.1)
+
+- **Δ4 — ο επαγγελματίας του `/pro` ΔΕΝ είναι λογαριασμός (uid).** Ο κατάλογος δείχνει **βιτρίνες χώρων εταιρείας**
+  (`agency_profiles/{companyId}`, `agency-profile.service.ts`), μαζί με τις άδειες που δήλωσε ο ίδιος (`ShowcaseLicence`).
+  Πρότυπο **Upwork Agency Contracts** (επαληθευμένο 2026-11-18): το συμβόλαιο γίνεται με τον **οργανισμό**, και το **μέλος**
+  που δουλεύει ορίζεται μετά. ⇒ `professional: {kind:'contact', contactId} | {kind:'workspace', companyId}`
+  (`lib/document-validity/issuance-professional.ts`). Το μέλος που υπογράφει δένεται στη Φ3, ως προσθήκη `.default(null)`.
+  **Πέρα από το Upwork**: το ΠΕΑ το υπογράφει **πρόσωπο με άδεια**, άρα το προσόν της προσφοράς βγαίνει από τη **δηλωμένη
+  άδεια της βιτρίνας**, στον διακομιστή.
+- **Δ3 — δεν υπάρχει έγκριση πριν από το `sent`** στη ροή §42. Ο ιδιοκτήτης εγκρίνει την **προσφορά** (`decide` στο `quoted`).
+  Το «self-approved» = βάση απόφασης **`owner-self {uid}`** (Φ1β), χωρίς `ownerContactId` και χωρίς υπεύθυνο.
+
+### 7.2 Μοντέλο «αίτημα → έως 3 προσφορές → μία νικήτρια» (RFQ → bids → award)
+
+Πρότυπα: Fairmarkit · Oracle PeopleSoft Sourcing · Coupa (κατάσταση ανάθεσης σε **δύο επίπεδα**, γεγονός και προσφορά·
+«Lost» ≠ «Declined»), Thumbtack (αίτημα σε λίγους).
+
+- **Αίτημα**: νέα συλλογή `document_issuance_requests` (deny-all), ένα ανά (κάτοχος, ακίνητο, είδος), id με seed κατόχου
+  (`<companyId>:…` / `user:<uid>:…`), `cycle`, `bids` ≤ 3, `award`, `closure`.
+- **Προσφορά = ένα κανονικό `document_issuance_assignments`**, με την ίδια μηχανή σταδίων, τους ίδιους συνδέσμους και τα ίδια
+  χρήματα ανά επαγγελματία. Id `hash(<requestId>:<cycle>:<professionalKey>)`. Η απευθείας ανάθεση γραφείου κρατά το
+  **αμετάβλητο** id `hash(companyId:property:kind)`.
+- **Ατομική ανάθεση**: `decide approved` στη νικήτρια + `award` + κλείσιμο των άλλων με λόγο «δεν επιλέχθηκε», σε **μία**
+  συναλλαγή. Δεν υπάρχει ποτέ στιγμή με δύο «ανατέθηκε».
+
+### 7.3 Φ1α — βιβλίο κατόχου + ένωση επαγγελματία (καμία αλλαγή συμπεριφοράς)
+
+- `issuance-professional.ts` (νέο, leaf): `IssuanceProfessional`, `professionalContactIdOf`, `professionalKeyOf`,
+  `professionalReferenceOf` (το σκέτο `contactId` για επαφή, αμετάβλητο από το §27, ώστε το γραμμένο ιστορικό και οι πίνακες
+  ονομάτων να διαβάζονται ίδια) και `sameProfessional`.
+- `IssuanceAssignmentRecord.professionalContactId` ⇒ **`professional`** (μία πηγή, ποτέ δύο πεδία). Το σύνορο του δίσκου
+  διαβάζει το παλιό `professionalContactId` ως `{kind:'contact'}`. Αν υπάρχουν και τα δύο και διαφωνούν ⇒ `null` (fail-closed).
+  Τα νέα έγγραφα γράφουν μόνο `professional`. Το σώμα του `propose` του γραφείου στο σύρμα **μένει** `professionalContactId`
+  (`issuanceActionOf` ⇒ ένωση).
+- Κάτοχος: `companyId` | `userId` στον δίσκο (`custodyOnly`). Δύο όψεις πάνω στο **ίδιο** σχήμα:
+  `parseOwnedIssuanceAssignment` (`owner: CustodyScope`) και `parseIssuanceAssignment` (όψη γραφείου: ανάθεση ιδιώτη ⇒
+  `null`, άρα οι ~59 αναγνώστες `assignment.companyId` μένουν δομικά τυφλοί στο προσωπικό βιβλίο, ADR-787 Ε-3 §3).
+- Γραφέας: `IssuanceWrite.companyId` ⇒ **`ledger: IssuanceLedger`** (`issuance-ledger.ts`: `office` = seed §27 · `owned` = id
+  ρητά από τον καλούντα). Η ανάγνωση στη συναλλαγή γίνεται με `isOwnedByCustody`. Το ιστορικό γράφεται στο ίδιο βιβλίο
+  (`custodyOnly`, όπως οι δηλώσεις §37).
+- Καλούντες: 6 γραφές με `officeLedger(companyId)`· 7 αναζητήσεις ονόματος με `professionalReferenceOf`· πρόχειρο μηνύματος
+  και πρόσκληση χώρου: βιτρίνα ⇒ `no-email` (η πρόσκλησή της έρχεται στη Φ3)· υποψήφιοι / καταλληλότητα μόνο για επαφές.
+- ⚠️ Οι στόχοι τηλεμετρίας μηνυμάτων (`IssuanceAssignmentTarget`) **μένουν** εταιρικοί: τους γενικεύει η Φ3, μαζί με τις
+  προσκλήσεις. Αυτό είναι απόκλιση από το σχέδιο, δηλωμένη εδώ.
+- Άγκυρα: `__tests__/issuance-assignment-schema.test.ts` (Σ1–Σ4 επαγγελματίας · Κ1–Κ3 κάτοχος · Τ1 id γραφείου byte προς
+  byte). Fixtures 20 αρχείων tests στην ένωση· τα σπαρμένα παλιά έγγραφα μένουν όπως είναι, ως κάλυψη της ανάγνωσης παλιών.
+
+### 7.4 Φ1β (μέρος 1) — ταυτότητες · πεδία προσφοράς · πυρήνας αιτήματος · βάση `owner-self`
+
+- **Ταυτότητες (N.6)**: `disr` = αίτημα (`generateDeterministicDocumentIssuanceRequestId`, seed `<companyId>:…` / `user:<uid>:…`)·
+  `dibd` = προσφορά (`generateDeterministicDocumentIssuanceBidId`, seed `<requestId>:<cycle>:<professionalKey>`). Η προσφορά
+  ζει στο `document_issuance_assignments`, αλλά με **δικό της πρόθεμα** ⇒ δεν συμπίπτει ποτέ με το id απευθείας ανάθεσης
+  (`dias`, αμετάβλητο). Συναρτήσεις: `issuanceRequestIdOf` · `bidIdOf` (`services/document-registry/issuance-request-schema.ts`).
+- **Συλλογή** `COLLECTIONS.DOCUMENT_ISSUANCE_REQUESTS` (`document_issuance_requests`)· μπλοκ deny-all στο `firestore.rules`·
+  γραμμή στο `coverage-manifest.ts`· σουίτα `document-issuance-requests.rules.test.ts` με σπαρμένο αίτημα **γραφείου και ιδιώτη**.
+- **Διόρθωση του σχεδίου (ο κώδικας κερδίζει)**: το `tenant-config.ts` **δεν** παίρνει γραμμή. Περιγράφει τα ερωτήματα του
+  πελάτη (`firestoreQueryService`)· οι deny-all συλλογές μόνο-διακομιστή (`property_upkeep_declarations` ·
+  `document_issuance_assignments`) δεν είναι εκεί — το «πρότυπο `PROPERTY_UPKEEP_DECLARATIONS`» του σχεδίου δεν υπάρχει.
+- **Πεδία προσφοράς** (όλα με προεπιλογή, καμία μετανάστευση): `requestId` · `cycle` στην ταυτότητα (και τα δύο ή κανένα —
+  αλλιώς fail-closed)· `cancellation.reason: 'cancelled' | 'not-awarded'` (λεξιλόγιο `ISSUANCE_CANCELLATION_REASONS` στο
+  `issuance-stage.ts`). Η πράξη `cancel` φέρει πλέον `reason`. Το βιβλίο `owned` φέρει `requestId` + `cycle`
+  (`ledgerRequestOf`), και ο γραφέας τα αποθηκεύει.
+- **Καθαρός πυρήνας** `lib/document-validity/issuance-bidding.ts`: `reduceIssuanceRequest` (invite · award · cancel) +
+  `inviteCycleOf`. Όριο 3 · ίδιος επαγγελματίας ⇒ ιδεμποτές · η ανάθεση επιστρέφει **ποιες** προσφορές κλείνουν με
+  «δεν επιλέχθηκε» (ο διακομιστής τις κλείνει στην ίδια συναλλαγή) · με ανοιχτή νικήτρια καμία νέα πρόσκληση και καμία ακύρωση
+  αιτήματος (ακυρώνεται η ίδια η ανάθεση) · νέος κύκλος μόνο όταν ο προηγούμενος τελείωσε. Η ολοκλήρωση **δεν** γράφεται στο
+  αίτημα: παράγεται από το μητρώο (`awardedBidOpen` από τον διακομιστή).
+- **Βάση `owner-self` (Δ3)**: νέος actor `owner` (ο ιδιώτης στο δικό του βιβλίο) — μόνο πρόταση, απόφαση, ακύρωση. Το
+  `ownerContactId` μετακόμισε **μέσα** στις δύο βάσεις γραφείου (ίδιο σχήμα δίσκου)· ρωτιέται με `decisionOwnerContactIdOf`.
+  Οι 5 αναγνώστες στενεύτηκαν (`RegistryIssuanceStep.tsx` · `issuance-advance-link.ts` · `issuance-advance-payer.ts` ·
+  `issuance-agreement-parties.server.ts` · `issuance-engagement-host-adapter.ts`)· σε διαδρομή γραφείου η απόφαση ιδιώτη δεν
+  φτάνει ποτέ (`parseIssuanceAssignment` ⇒ `null`). Η πολιτική «ποιος κάνει ποια πράξη» (`actorMayAct`) μετακόμισε στο
+  `issuance-actor.ts` (N.7.1: ο μειωτής 504 ⇒ 486 γραμμές).
+- **Μένουν για τη Φ1β (μέρος 2)**: writer/actor `owner` στον γραφέα · κοινός κριτής υποκειμένου (γενίκευση `readUpkeepSubject`,
+  `latestIssuedOn` ιδιώτη) · βιτρίνα επαγγελματία (`agency_profiles` + `qualifiesFor`) · `issuance-request.service.ts` + route +
+  `personal-scope-consumers` + πύλες 3.78/3.92. ⚠️ Η άγκυρα πλήθους `allow` του `rules-liveness-gate.test.js` (+2 από το νέο
+  μπλοκ) **δεν** ενημερώθηκε: θέλει μέτρηση με την πύλη (ήδη αποκλίνουσα, βλ. σχόλιο της άγκυρας).
+
+### 7.5 Φ1β (μέρος 2) — διακομιστής του αιτήματος προσφορών
+
+- **Writer `owner`** στον ΕΝΑ γραφέα (`IssuanceWriter` · `actorOf` · CAS με `expectedStage` όπως το γραφείο) · `performerOf` ⇒ `uid`.
+- **Κριτής υποκειμένου**: το `readUpkeepSubject` (§36/§37) χρησιμοποιείται **όπως είναι**: δίνει ήδη ακίνητο + βιβλίο από
+  `mayAdminister(custodyOf(…))` (ξένο ⇒ `absent`/404 · αποσυρμένο ⇒ `retired`/409). Η «γενίκευση» του σχεδίου δεν χρειάστηκε
+  δεύτερη συνάρτηση (ο κώδικας κερδίζει). **Φ1: μόνο βιβλίο ιδιώτη** — θεματοφυλακή γραφείου ⇒ `office-ledger` (το γραφείο έχει
+  την απευθείας ανάθεση §27· αίτημα γραφείου θέλει κριτή υπευθύνου §26, εκτός Φ1).
+- **`latestIssuedOn` ιδιώτη — ΕΝΑΣ κανόνας, καμία δεύτερη μετάφραση.** Αναγνώστης `files_personal` ανά ακίνητο **δεν υπήρχε**.
+  Επαληθεύτηκε ότι ο ΕΝΑΣ γραφέας γράφει `documentFacts` και σε `files_personal` (εισαγωγή ΠΕΑ ιδιώτη · μεταβίβαση), άρα ο
+  φάκελος είναι πραγματική πηγή. Χτίστηκε από υπάρχοντα κομμάτια:
+  - `readDossierReadyFileDocs` — το **ΕΝΑ** ερώτημα του φακέλου (ίδιος δείκτης)· το `readDossierReadyFiles` γίνεται προβολή του.
+  - `dossierRegistryFileOf` — οι **ΙΔΙΟΙ** κριτές (α)/(γ) του μητρώου, με ρητή απόδοση στο ακίνητο του φακέλου.
+  - `owner-property-documents.server.ts` — δήλωση `energy` + αρχεία φακέλου μέσω του **ίδιου** `registryDocumentsOf`· ο κάτοχος
+    ρωτιέται δύο φορές (φάκελος του ιδιώτη **και** αρχεία του κατόχου του)· θεματοφυλακή γραφείου ⇒ κανένα `files_personal`
+    (ίδιος κανόνας με το `ownerPeaFileScope`). Πετά σε βλάβη: «κανένα έγγραφο» από άγνοια θα άνοιγε ολοκληρωμένη ανάθεση.
+  - `latestIssuedOnOfDocuments` — ο κανόνας «νεότερο `issuedOn`» πάνω σε **έγγραφα**· το `latestIssuedOnByKey` τον καλεί.
+  - `subjectLatestIssuedOn` (`issuance-latest-issued.server.ts`) — ανά βιβλίο: γραφείο ⇒ το μητρώο του, ιδιώτης ⇒ τα παραπάνω.
+- **Βιτρίνα ⇒ προσόν**: `lookupAgencyProfile` (μη δημόσια ⇒ `professional-unavailable` · βλάβη ⇒ `unavailable`, ποτέ ισοπέδωση) +
+  `showcaseIssuanceCredential` (`lib/document-validity/issuance-showcase-credential.ts`) πάνω στον **ΙΔΙΟ** κριτή με το φίλτρο
+  `document:<είδος>` του `/pro` (`showcaseHasQualification`): ό,τι ο κατάλογος δείχνει «μπορεί να εκδώσει» είναι ακριβώς ό,τι
+  δέχεται η πρόσκληση. Αριθμός μητρώου = της απόδειξης που κάλυψε το προσόν· χωρίς άδεια ⇒ `unqualified`.
+- **Service** `issuance-request.service.ts` + I/O `issuance-requests.server.ts`, **μία συναλλαγή ανά πράξη**:
+  - `invite` — αίτημα + `propose` στην προσφορά (`owned` ledger, `bidIdOf` στον κύκλο του `inviteCycleOf`).
+  - `award` — `decide approved` (`owner-self`, χωρίς κανάλι/επαφή) στη νικήτρια + `cancel{not-awarded}` στις `closing.bidIds` +
+    αίτημα. Προσφορά που ο άνθρωπος είδε ήδη κλειστή (`null`) και είναι κλειστή παραλείπεται· κάθε άλλη άρνηση ακυρώνει **όλη**
+    την πράξη (all-or-nothing).
+  - `cancel` — αίτημα + `cancel{cancelled}` σε όλες τις προσφορές του κύκλου.
+  - CAS σε δύο επίπεδα: `expectedCycle` **και** `expectedStages` για **κάθε** προσφορά του κύκλου (προσφορά που δεν είδε ⇒ `stale`).
+  - `awardedBidOpen` διαβάζεται μέσα στη συναλλαγή (`readLedgerIssuanceInTx`). Ιστορικό ADR-195 **μετά** την επιτυχία.
+  - Για την ανάγνωση εξάγεται ο ΕΝΑΣ κανόνας «ανάθεση αυτού του βιβλίου» (`ownedIssuanceRecordOf`), μέσα και έξω από συναλλαγή.
+- **Σύρμα** `lib/document-validity/issuance-bidding-request.ts`: σώμα (`invite` · `award` · `cancel`) · ερώτημα · ο ΕΝΑΣ πίνακας
+  αρνήσεων `ISSUANCE_REQUEST_ERROR_CODES` (HTTP + κωδικός, κανένα `default`).
+- **Route** `app/api/document-registry/issuance-requests/route.ts`: `withPersonalOrOrgAuth` (ιδεμποτία ADR-872 μέσα στο σύνορο,
+  CHECK 3.92) + `mayDecide` (πρότυπο `upkeep-declarations`) · GET `{request, bids, canAct}` · PUT · `withStandardRateLimit`
+  (κανένα πρόθεμα του πίνακα δεν καλύπτει το `/api/document-registry` ⇒ `declared-over-default`, CHECK 3.78) · δήλωση με λόγο
+  στο `personal-scope-consumers.test.ts`.
+- **Tests** `services/document-registry/__tests__/issuance-request.service.test.ts`: ξένο / υπό γραφείο / ανύπαρκτο ⇒ `absent`
+  χωρίς εγγραφή · `retired` · `office-ledger` · πρόσκληση σε προσωπικό βιβλίο με προσόν από τη βιτρίνα · ιδεμποτία · `stale` ·
+  `bid-limit` · αρνήσεις βιτρίνας · **ατομική ανάθεση** (και all-or-nothing σε `stale`) · ακύρωση · GET. **Δεν έτρεξαν** (εντολή Giorgio).
+- ⏭️ Μένουν: ειδοποίηση επαγγελματία και χώρος συνεργασίας για προσφορά βιτρίνας (Φ3 · Δ5/Δ6) · UI `/me` (Φ2) · άγκυρα
+  πλήθους `allow` του `rules-liveness-gate.test.js` (από το μέρος 1).
+
+## Changelog
+
+| Ημερομηνία | Αλλαγή |
+|---|---|
+| 2026-11-18 | Πρόταση: εύρημα E2E + έρευνα αγοράς + χάρτης κώδικα (11 δεσμευτικές υποθέσεις εταιρείας). |
+| 2026-11-18 | §6 αποφάσεις Giorgio: διαφορά ιδιώτη ⇒ πλατφόρμα · πολλαπλές προσφορές στον πυρήνα (Φ5 πριν από την E2E) · πρόσκληση εκτός Nestor με email. |
+| 2026-11-18 | §7 σχέδιο Φ1 εγκρίθηκε· διορθώσεις Δ3/Δ4 από τον κώδικα· μοντέλο RFQ → bids → award. **Φ1α κώδικας**: `professional` (ένωση) στη θέση του `professionalContactId`, κάτοχος `CustodyScope` με δύο όψεις, `IssuanceLedger` στον γραφέα, άγκυρα σχήματος. tsc/jest **αναμένουν** τον Giorgio. |
+| 2026-11-18 | §7.4 **Φ1β μέρος 1**: ταυτότητες `disr`/`dibd` + συλλογή `document_issuance_requests` (deny-all, σουίτα κανόνων) · `requestId`/`cycle`/`cancellation.reason` · καθαρός πυρήνας `issuance-bidding.ts` · actor `owner` + βάση `owner-self` (`ownerContactId` μόνο στις βάσεις γραφείου). Διόρθωση σχεδίου: καμία γραμμή tenant-config. tsc/jest **αναμένουν** τον Giorgio. |
+| 2026-11-18 | §7.5 **Φ1β μέρος 2**: writer `owner` · κριτής υποκειμένου = `readUpkeepSubject` όπως είναι (Φ1 μόνο βιβλίο ιδιώτη, `office-ledger`) · `latestIssuedOn` ιδιώτη από δήλωση + φάκελο (`files_personal`) με τους ΙΔΙΟΥΣ κριτές του μητρώου · προσόν από τη βιτρίνα (ίδιος κριτής με το `/pro`) · `issuance-request.service.ts` (invite · award ατομικό · cancel) · route `issuance-requests` · tests. tsc/jest/πύλες **αναμένουν** τον Giorgio. |

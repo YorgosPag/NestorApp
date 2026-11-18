@@ -118,7 +118,7 @@ describe('ADR-915 §45.15 — ο μειωτής κρατά το τεκμήριο
   const LINK: IssuanceActor = { kind: 'link', invitationId: 'diin_1', verifiedBy: 'link', nowIso: NOW };
   const ATTESTED: IssuanceOwnerAttestation = { owners: [{ contactId: 'cont_lead', verdict: 'corrected', vatNumber: VAT_B }], missingNote: null };
   const STEPS: readonly IssuanceAction[] = [
-    { kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: null } },
+    { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: { qualification: 'energy-inspector-registered', registryNumber: null } },
     { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null },
     {
       kind: 'quote',

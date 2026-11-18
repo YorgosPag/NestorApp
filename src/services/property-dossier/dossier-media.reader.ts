@@ -43,6 +43,24 @@ export async function readDossierReadyFiles(
   adminDb: AdminFirestore,
   dossier: Pick<PropertyDossier, 'id' | 'userId'>,
 ): Promise<readonly DossierReadyFile[]> {
+  const files = await readDossierReadyFileDocs(adminDb, dossier);
+  return files.map((file) => ({ ...(file.data as DossierReadyFile), id: file.id }));
+}
+
+/** Ένα έτοιμο αρχείο του φακέλου **ωμό** — για όποιον κρίνει μόνος του το έγγραφο (π.χ. τα γεγονότα εγγράφου, ADR-945). */
+export interface DossierFileDoc {
+  readonly id: string;
+  readonly data: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * **Το ΕΝΑ ερώτημα** των έτοιμων αρχείων του φακέλου — ο ίδιος δείκτης με τη σελίδα του φακέλου. Το μοιράζονται η
+ * προβολή της βιτρίνας ({@link readDossierReadyFiles}) και τα έγγραφα του ακινήτου ιδιώτη (ADR-945 §7.5).
+ */
+export async function readDossierReadyFileDocs(
+  adminDb: AdminFirestore,
+  dossier: Pick<PropertyDossier, 'id' | 'userId'>,
+): Promise<readonly DossierFileDoc[]> {
   const files = await adminDb
     .collection(COLLECTIONS.FILES_PERSONAL)
     .where('userId', '==', dossier.userId)
@@ -50,7 +68,7 @@ export async function readDossierReadyFiles(
     .where('entityId', '==', dossier.id)
     .where('status', '==', FILE_STATUS.READY)
     .get();
-  return files.docs.map((doc) => ({ ...(doc.data() as DossierReadyFile), id: doc.id }));
+  return files.docs.map((doc) => ({ id: doc.id, data: doc.data() }));
 }
 
 /**

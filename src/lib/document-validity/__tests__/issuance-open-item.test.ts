@@ -18,7 +18,7 @@ import { FIXTURE_AS_OF, fixtureResponse } from './registry-fixture';
 
 const ACTOR: IssuanceActor = { kind: 'office', uid: 'uid_agent', nowIso: '2026-10-10T09:00:00.000Z' };
 const PROPOSE: IssuanceAction = {
-  kind: 'propose', professionalContactId: 'cont_client', credential: { qualification: 'energy-inspector-registered', registryNumber: null },
+  kind: 'propose', professional: { kind: 'contact', contactId: 'cont_client' }, credential: { qualification: 'energy-inspector-registered', registryNumber: null },
 };
 const QUOTED: readonly IssuanceAction[] = [
   PROPOSE,
@@ -70,7 +70,7 @@ describe('ADR-915 §45 Φ4 — issuanceOpenItemsOf', () => {
   });
 
   it('ακυρωμένη ανάθεση ⇒ ΚΑΜΙΑ εκκρεμότητα («κλείνει» μόνη της — απλώς παύει να παράγεται)', () => {
-    expect(itemsWith([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE, { kind: 'cancel' }]) }])).toEqual([]);
+    expect(itemsWith([{ propertyId: 'p6', documentKind: 'energy-certificate', record: recordOf([PROPOSE, { kind: 'cancel', reason: 'cancelled' }]) }])).toEqual([]);
   });
 });
 

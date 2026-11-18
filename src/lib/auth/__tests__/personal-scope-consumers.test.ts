@@ -440,6 +440,15 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
       + 'userId === uid, ποτέ ακίνητο εταιρείας ή γραφείου. Ο οργανισμός κρατά το properties:properties:update '
       + 'μέσω του ΕΝΟΣ PDP (checkPermission). Η απόφαση γράφεται στο βιβλίο του χώρου (CustodyScope), ποτέ σε άλλο.',
   },
+  {
+    route: 'src/app/api/document-registry/issuance-requests/route.ts',
+    why:
+      'ADR-945 §7.5 — Ο ΙΔΙΩΤΗΣ ΖΗΤΑ ΜΟΝΟΣ ΤΟΥ ΠΡΟΣΦΟΡΕΣ ΓΙΑ ΤΗΝ ΕΚΔΟΣΗ ΕΓΓΡΑΦΟΥ (ΠΕΑ κ.ά.) ΤΟΥ ΑΚΙΝΗΤΟΥ ΤΟΥ: έως 3 '
+      + 'βιτρίνες του /pro, μία νικήτρια. Ο κριτής είναι ο ΙΔΙΟΣ με τη μόνιμη υποχρέωση (readUpkeepSubject → '
+      + 'mayAdminister(custodyOf(...)), CHECK 3.56): ο ιδιώτης αγγίζει ΜΟΝΟ ακίνητο προσωπικής θεματοφυλακής με '
+      + 'userId === uid· ξένο ≡ 404. Το βιβλίο (CustodyScope) έρχεται από τον κριτή, ποτέ από το αίτημα, και η Φ1 '
+      + 'αρνείται βιβλίο γραφείου (office-ledger). Ο οργανισμός κρατά το properties:properties:update μέσω του ΕΝΟΣ PDP.',
+  },
 ];
 
 /**

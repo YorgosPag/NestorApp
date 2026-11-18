@@ -100,7 +100,15 @@ function TotalsList({ view }: { readonly view: InvoicePublicView }): React.React
           <TotalRow key={row.vatRate} label={t('totals.vat', { rate: row.vatRate })} amount={row.vatAmount} />
         ))}
         <TotalRow label={t('totals.gross')} amount={view.totalGrossAmount} />
-        <TotalRow label={t('totals.payable')} amount={view.payableAmount} strong />
+        {view.standing === 'paid' ? (
+          <>
+            {/* Εξοφλημένο: «Πληρώθηκε · Υπόλοιπο 0» (Stripe «Amount paid / Amount remaining»), ποτέ «Πληρωτέο». */}
+            <TotalRow label={t('totals.paid')} amount={view.payableAmount} />
+            <TotalRow label={t('totals.balance')} amount={view.amountDue} strong />
+          </>
+        ) : (
+          <TotalRow label={t('totals.payable')} amount={view.payableAmount} strong />
+        )}
       </dl>
     </section>
   );

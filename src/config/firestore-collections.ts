@@ -1051,6 +1051,9 @@ export const COLLECTIONS = {
   // ADR-915 §27 — η ΑΝΑΘΕΣΗ ΕΚΔΟΣΗΣ (πρόταση γραφείου · απόφαση ιδιοκτήτη · ενημέρωση/απάντηση επαγγελματία): ΜΙΑ ανά
   // (γραφείο, ακίνητο, είδος), ντετερμινιστική ⇒ «ποτέ δύο ΠΕΑ». Deny-all, μόνο server· ιστορικό στην καρτέλα ακινήτου.
   DOCUMENT_ISSUANCE_ASSIGNMENTS: process.env.NEXT_PUBLIC_DOCUMENT_ISSUANCE_ASSIGNMENTS_COLLECTION || 'document_issuance_assignments',
+  // ADR-945 §7.2 — το ΑΙΤΗΜΑ ΠΡΟΣΦΟΡΩΝ (έως 3 προσφορές → μία νικήτρια): ΕΝΑ ανά (κάτοχος, ακίνητο, είδος), ντετερμινιστικό,
+  // με κάτοχο γραφείο ή ιδιώτη. Κάθε προσφορά είναι κανονικό έγγραφο του `document_issuance_assignments`. Deny-all, μόνο server.
+  DOCUMENT_ISSUANCE_REQUESTS: process.env.NEXT_PUBLIC_DOCUMENT_ISSUANCE_REQUESTS_COLLECTION || 'document_issuance_requests',
   // ADR-915 §28 — οι ΣΥΝΔΕΣΜΟΙ ΧΩΡΙΣ ΛΟΓΑΡΙΑΣΜΟ της ανάθεσης (έγκριση υπευθύνου · απάντηση επαγγελματία), πάνω στον
   // κοινό πυρήνα προσκλήσεων (ADR-853 §20). Deny-all, μόνο server· στη βάση μόνο το `sha256` του nonce.
   DOCUMENT_ISSUANCE_INVITATIONS: process.env.NEXT_PUBLIC_DOCUMENT_ISSUANCE_INVITATIONS_COLLECTION || 'document_issuance_invitations',

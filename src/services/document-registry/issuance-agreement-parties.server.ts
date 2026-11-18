@@ -14,6 +14,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
+import { decisionOwnerContactIdOf } from '@/lib/document-validity/issuance-assignment';
 import { currentInspectionContactOf } from '@/lib/document-validity/issuance-inspection-contact';
 import { pendingVatCorrectionsOf } from '@/lib/document-validity/issuance-owner-attestation';
 import { trimmedStringOrNull } from '@/lib/type-guards';
@@ -70,13 +71,14 @@ export async function readIssuanceAgreementParties(db: Firestore, assignment: Do
   if (docs === null) return { inspectionContact: entry === null ? null : inspectionViewOf(entry, new Map()), owners: null };
   const vatOf = (id: string) => { const data = docs.get(id); return data ? extractContactVatNumber(data) : null; };
   const pending = new Set(pendingVatCorrectionsOf(record.decision?.ownerAttestation ?? null, vatOf).map((owner) => owner.contactId));
+  const deciderId = record.decision === null ? null : decisionOwnerContactIdOf(record.decision);
   const owners = ownerIds?.map((id) => {
     const data = docs.get(id);
     return {
       name: data ? trimmedStringOrNull(extractContactDisplayName(data)) : null,
       vatNumber: vatOf(id),
       vatPendingOfficeConfirmation: pending.has(id),
-      approvedQuote: id === record.decision?.ownerContactId,
+      approvedQuote: id === deciderId,
     };
   }) ?? null;
   return { inspectionContact: inspectionViewOf(entry, docs), owners };

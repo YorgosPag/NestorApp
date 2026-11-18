@@ -15,11 +15,12 @@ import 'server-only';
  * 🔑 **Πρώτα η εγγραφή, μετά το email** — ποτέ σύνδεσμος που δεν υπάρχει. Ποτέ δεν πετά μετά την εγγραφή.
  */
 
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 import { advanceCollectedMinor, advanceSettledAtOf, advanceStateOf, ADVANCE_POLICY } from '@/lib/document-validity/issuance-advance';
 import { advanceSettlementDueOf } from '@/lib/document-validity/issuance-advance-settlement';
-import type { IssuanceAssignmentRecord, IssuanceDecision } from '@/lib/document-validity/issuance-assignment';
+import { decisionOwnerContactIdOf, type IssuanceAssignmentRecord, type IssuanceDecision } from '@/lib/document-validity/issuance-assignment';
 import { documentRequestLocation } from '@/lib/document-validity/document-request-link';
 import { publicUrl } from '@/lib/http/public-origin';
 import { formatMinorIn, type MinorAmount } from '@/lib/money/money';
@@ -126,7 +127,7 @@ async function factsOf(request: AdvanceLinkRequest): Promise<IssuanceEmailFacts>
   return {
     officeName: await readWorkspaceName(context.assignment.companyId).then(trimmedStringOrNull, () => null),
     propertyLabel: context.label.name, documentKind: context.assignment.documentKind,
-    professionalName: context.registry.people[record.professionalContactId]?.name ?? null, credential: record.credential, note: null,
+    professionalName: context.registry.people[professionalReferenceOf(record.professional)]?.name ?? null, credential: record.credential, note: null,
   };
 }
 
@@ -151,14 +152,17 @@ export async function issueAdvanceLink(db: Firestore, request: AdvanceLinkReques
   const decision = approvedDecisionOf(record);
   if (decision === null || advanceStateOf(record).kind === 'none') return { ok: false, refusal: 'no-advance' };
   if (advanceSettledAtOf(record) !== null) return { ok: false, refusal: 'settled' };
-  const owner = (await readIssuancePeople(db, context.assignment.companyId, [decision.ownerContactId])).get(decision.ownerContactId);
+  // ADR-945 Δ3 — απόφαση ιδιώτη δεν έχει επαφή-παραλήπτη στο βιβλίο του γραφείου· ο σύνδεσμός του έρχεται στη Φ4.
+  const ownerContactId = decisionOwnerContactIdOf(decision);
+  if (ownerContactId === null) return { ok: false, refusal: 'no-email' };
+  const owner = (await readIssuancePeople(db, context.assignment.companyId, [ownerContactId])).get(ownerContactId);
   if (owner === undefined || owner.email === null) return { ok: false, refusal: 'no-email' };
   const { assignment } = context;
   let minted: MintedIssuanceInvitation;
   try {
     minted = await writeAdvanceLink(db, request, {
       companyId: assignment.companyId, propertyId: assignment.propertyId, documentKind: assignment.documentKind, assignmentId: assignment.id,
-      audience: 'owner', contactId: decision.ownerContactId, email: owner.email, actorUid: request.actorUid,
+      audience: 'owner', contactId: ownerContactId, email: owner.email, actorUid: request.actorUid,
       nowValue: request.now.toISOString(), requireAccessCode: request.requireAccessCode,
     }, decision);
   } catch (error) {

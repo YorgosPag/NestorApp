@@ -12,6 +12,7 @@ import 'server-only';
  *    συμμετοχής του (ο ΙΔΙΟΣ προορισμός με τις ειδοποιήσεις συμμετοχής).
  */
 
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { getCurrentEnvironment, NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES } from '@/config/notification-events';
@@ -59,7 +60,7 @@ async function send(input: Parameters<typeof dispatchNotification>[0]): Promise<
 async function announceOverdue(subject: DeliveryMilestoneSubject, dueOn: string, milestone: DeliveryMilestone, days: number): Promise<void> {
   const { assignment, registry, record } = subject;
   const titleParams = { title: registry.properties[assignment.propertyId]?.name ?? assignment.id };
-  const name = registry.people[record.professionalContactId]?.name ?? null;
+  const name = registry.people[professionalReferenceOf(record.professional)]?.name ?? null;
   const bodyKey = name === null ? 'documentIssuanceDelivery.overdueBodyUnnamed' : 'documentIssuanceDelivery.overdueBody';
   const bodyParams = name === null ? { days } : { days, name };
   const destination = viewDestination(documentExpiryHref(undefined, { doc: issuanceKeyOf(assignment.propertyId, assignment.documentKind) }), orgWorkspace(assignment.companyId));

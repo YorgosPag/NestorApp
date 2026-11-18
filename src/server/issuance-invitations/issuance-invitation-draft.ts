@@ -17,6 +17,7 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { issuanceKeyOf, issuanceStateOf, type IssuanceAssignmentRecord, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import { professionalContactIdOf, professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import type { IssuanceSendBody } from '@/lib/document-validity/issuance-request';
 import { primaryEmailOf } from '@/lib/contacts/primary-email';
 import { trimmedStringOrNull } from '@/lib/type-guards';
@@ -89,8 +90,9 @@ function openAssignmentOf(body: IssuanceSendBody, registry: DocumentRegistryResp
 }
 
 /** Ποιος παίρνει το μήνυμα — ο υπεύθυνος (ελεγμένος από τον ΕΝΑ κριτή) ή ο προτεινόμενος επαγγελματίας. */
-function recipientIdOf(body: IssuanceSendBody, open: OpenAssignment): string | 'lead-undesignated' | 'lead-changed' {
-  if (body.audience === 'professional') return open.record.professionalContactId;
+function recipientIdOf(body: IssuanceSendBody, open: OpenAssignment): string | 'lead-undesignated' | 'lead-changed' | 'no-email' {
+  // ADR-945 Δ4 — βιτρίνα του `/pro` δεν έχει επαφή στο βιβλίο ⇒ καμία διεύθυνση εδώ (η πρόσκλησή της: ADR-945 Φ3).
+  if (body.audience === 'professional') return professionalContactIdOf(open.record.professional) ?? 'no-email';
   return leadRefusalFor(open.registry, body.propertyId, body.expectedOwnerContactId) ?? open.leadId ?? 'lead-undesignated';
 }
 
@@ -124,9 +126,10 @@ export async function draftIssuanceMessage(db: Firestore, companyId: string, bod
   const open = openAssignmentOf(body, registry);
   if (typeof open === 'string') return refused(open);
   const recipientId = recipientIdOf(body, open);
-  if (recipientId === 'lead-undesignated' || recipientId === 'lead-changed') return refused(recipientId);
+  if (recipientId === 'lead-undesignated' || recipientId === 'lead-changed' || recipientId === 'no-email') return refused(recipientId);
   const coOwnerIds = coOwnerIdsOf(body, open);
-  const ids = [recipientId, open.record.professionalContactId, ...coOwnerIds, ...(open.leadId === null ? [] : [open.leadId])];
+  const professionalId = professionalContactIdOf(open.record.professional);
+  const ids = [recipientId, ...(professionalId === null ? [] : [professionalId]), ...coOwnerIds, ...(open.leadId === null ? [] : [open.leadId])];
   const [people, officeName] = await Promise.all([readIssuancePeople(db, companyId, ids), readWorkspaceName(companyId).catch(() => '')]);
   const recipient = people.get(recipientId);
   if (recipient === undefined || recipient.email === null) return refused('no-email');
@@ -160,7 +163,7 @@ function assemble(input: AssembleInput): IssuanceSendDraft {
       officeName: trimmedStringOrNull(input.officeName),
       propertyLabel: label.name,
       documentKind: body.documentKind,
-      professionalName: people.get(record.professionalContactId)?.name ?? null,
+      professionalName: people.get(professionalReferenceOf(record.professional))?.name ?? null,
       credential: record.credential,
       note: body.note,
     },

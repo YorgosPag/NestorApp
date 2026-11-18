@@ -41,6 +41,22 @@ export abstract class DocumentRegistryIdGenerators extends AreaMarketIdGenerator
   }
 
   /**
+   * ADR-945 §7.2 — **ΕΝΑ** αίτημα προσφορών ανά (κάτοχος, ακίνητο, είδος): νέος κύκλος ξαναγράφει το **ίδιο** έγγραφο
+   * (`cycle + 1`) ⇒ δύο ταυτόχρονα «ζήτα προσφορές» δεν γεννούν ποτέ δύο αιτήματα.
+   */
+  generateDeterministicDocumentIssuanceRequestId(seed: string): string {
+    return this.mintDeterministicV4Id(P.DOCUMENT_ISSUANCE_REQUEST, seed);
+  }
+
+  /**
+   * ADR-945 §7.2 — **ΜΙΑ** προσφορά ανά (αίτημα, κύκλος, επαγγελματίας): ίδια πρόσκληση ⇒ ίδια διεύθυνση (ιδεμποτές), και
+   * κάθε κύκλος κρατά το ιστορικό του — τίποτα δεν γράφεται από πάνω.
+   */
+  generateDeterministicDocumentIssuanceBidId(seed: string): string {
+    return this.mintDeterministicV4Id(P.DOCUMENT_ISSUANCE_BID, seed);
+  }
+
+  /**
    * ADR-915 §28 — ο **σύνδεσμος** της ανάθεσης (έγκριση ιδιοκτήτη · απάντηση επαγγελματία). Τυχαίο, όχι ντετερμινιστικό:
    * επαναποστολή = **νέο** id, και η ανάθεση θυμάται ποιο είναι το τρέχον (ο παλιός πεθαίνει από κατασκευή).
    */

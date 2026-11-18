@@ -31,6 +31,13 @@ export const ISSUANCE_STAGES = [
 ] as const;
 export type IssuanceStage = (typeof ISSUANCE_STAGES)[number];
 
+/**
+ * ADR-945 §7.2 — **γιατί** έκλεισε μια ανάθεση: ακυρώθηκε (από τον κάτοχο) ή **δεν επιλέχθηκε** (άλλη προσφορά του ίδιου
+ * αιτήματος κέρδισε). Ίδιο στάδιο `cancelled`, δύο λόγοι — «Lost ≠ Declined» (Fairmarkit), χωρίς νέο στάδιο.
+ */
+export const ISSUANCE_CANCELLATION_REASONS = ['cancelled', 'not-awarded'] as const;
+export type IssuanceCancellationReason = (typeof ISSUANCE_CANCELLATION_REASONS)[number];
+
 /** Σε ποιον είναι η μπάλα — Procore «Ball in Court», παραγόμενο. */
 export const BALL_IN_COURT_PARTIES = ['owner', 'office', 'professional'] as const;
 export type BallInCourtParty = (typeof BALL_IN_COURT_PARTIES)[number];

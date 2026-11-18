@@ -28,6 +28,7 @@ import { readDocumentRegistry } from './document-registry.service';
 import type { DocumentRegistryResponse } from './document-registry.types';
 import { issuanceAssignmentIdOf, type DocumentIssuanceAssignment } from './issuance-assignment-schema';
 import { stageIssuanceAction, type IssuanceWrite, type IssuanceWriteOutcome, type StagedIssuanceWrite } from './issuance-assignments.server';
+import { officeLedger } from './issuance-ledger';
 import { judgeIssuanceEngagement, ownIssuanceEngagement, readHostedIssuanceAssignment } from './issuance-engagement-host-adapter';
 
 export interface EngagementIssuanceActionInput {
@@ -94,7 +95,7 @@ export async function writeEngagementIssuanceAction(db: Firestore, input: Engage
   if (!registry.issuanceKnown) return refused('unavailable');
   if (issuance === undefined || label === undefined) return refused('not-found');
   const staged = await writeInTransaction(db, input, engagement, {
-    companyId,
+    ledger: officeLedger(companyId),
     writer: { kind: 'engagement', engagementId: engagement.id, uid: input.uid, name: input.name, expectedStage: input.expectedStage },
     property: { id: assignment.propertyId, scope: label.scope, name: label.name },
     documentKind: assignment.documentKind,

@@ -20,6 +20,7 @@ import { blockingDayOf } from './document-registry-view';
 import { needsIssuanceAssignment } from './document-next-step';
 import { issuanceKeyOf, issuanceStateOf } from './issuance-assignment';
 import { issuanceDeliveryStatusOf, type IssuanceLateness } from './issuance-delivery-due';
+import { professionalReferenceOf } from './issuance-professional';
 import type { RowIssuance } from './issuance-rows';
 import type { BallInCourtParty, IssuanceStage } from './issuance-stage';
 
@@ -73,7 +74,7 @@ function openItemOfRow(row: RegistryRow, input: IssuanceOpenItemsInput): Issuanc
     propertyId,
     documentKind: kind,
     propertyName: input.propertyNameOf(propertyId),
-    professionalName: input.contactNameOf(state.record.professionalContactId),
+    professionalName: input.contactNameOf(professionalReferenceOf(state.record.professional)),
     stage: state.stage,
     ballInCourt: state.ballInCourt,
     dueOn: delivery?.due?.dueOn ?? null,

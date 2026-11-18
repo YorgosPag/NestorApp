@@ -360,6 +360,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-945 §7.2 — το αίτημα προσφορών έκδοσης (γραφείο ή ιδιώτης). `deny_all`: εγγραφή από πελάτη θα έγραφε `award`
+    // χωρίς απόφαση στη νικήτρια ή 4η προσφορά. Η σουίτα σπέρνει αίτημα του ΙΔΙΟΥ μισθωτή ΚΑΙ αίτημα ΙΔΙΩΤΗ.
+    collection: 'document_issuance_requests',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/document-issuance-requests.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-915 §28 — οι σύνδεσμοι χωρίς λογαριασμό της ανάθεσης. `deny_all`: ανάγνωση θα έδινε email τρίτων· εγγραφή
     // (`state: 'accepted'`) θα «απαντούσε» χωρίς σύνδεσμο. Η σουίτα σπέρνει έγγραφο του ΙΔΙΟΥ μισθωτή.
     collection: 'document_issuance_invitations',

@@ -10,7 +10,9 @@
  *
  * 🔑 **Καμία διπλή γραμμή**: η δήλωση γίνεται γραμμή **μόνο** όταν το αρχείο που ονομάζει (`sourceFileId`) δεν είναι
  *    ήδη γραμμή. Αρχείο στον κάδο ⇒ η δήλωση **δεν** εξαφανίζεται μαζί του (ίδια εφεδρεία με την αξίωση, §10.3).
- * ❌ Transmittals (ξένη θεματοφυλακή) · ❌ `files_personal` (προσωπικός χώρος) — εκτός Φ4 (Ε1).
+ * ❌ Transmittals (ξένη θεματοφυλακή) · ❌ `files_personal` (προσωπικός χώρος) — εκτός Φ4 (Ε1) στο μητρώο **γραφείου**.
+ *    ADR-945 §7.5: τα έγγραφα **ενός** ακινήτου ιδιώτη τα διαβάζει το `owner-property-documents.server.ts` με τον ΙΔΙΟ
+ *    κριτή (`dossierRegistryFileOf`).
  * 🔑 Αρχείο επιπέδου **έργου** (`entityType: project`) ⇒ `propertyId: null`· το «τι σταματά» του έρχεται **μόνο** από
  *    ρητή έγκριση σε υπόθεση (ADR-915 Φ4δ Ε9 — `requirementCoveredBy`), ποτέ από μαντεψιά «έργο ⇒ όλα τα ακίνητα».
  * 🔑 Φ4δ Ε10 — οι δηλώσεις (β) έρχονται **και** από ακίνητα ιδιωτών υπό θεματοφυλακή του γραφείου: ίδιος κανόνας.
@@ -78,6 +80,16 @@ function undeclaredFileOf(fileId: string, data: FileData): RegistryFile | null {
   if (!isLiveFileRecord(data) || readDocumentFacts(data[DOCUMENT_FACTS_FIELD]) !== null) return null;
   const kind = namedDocumentKindOfFile(data);
   return kind === null ? null : registryFileFrom(fileId, data, kind, null);
+}
+
+/**
+ * ADR-945 §7.5 — ένα αρχείο του **φακέλου** ακινήτου ιδιώτη (`files_personal`, `property_dossier`) ως αρχείο μητρώου,
+ * με τους ΙΔΙΟΥΣ κριτές (α)/(γ). Το αρχείο ζει στον φάκελο, όχι στο ακίνητο ⇒ το ακίνητο το **αποδίδει ρητά** ο καλών,
+ * αφού έκρινε ότι ο φάκελος είναι του ακινήτου **και** του κατόχου του. Ποτέ έγγραφο προσώπου (ο φάκελος δεν έχει επαφές).
+ */
+export function dossierRegistryFileOf(fileId: string, data: FileData, propertyId: string): RegistryFile | null {
+  const file = registryFileOf(fileId, data) ?? undeclaredFileOf(fileId, data);
+  return file === null ? null : { ...file, propertyId, contactId: null };
 }
 
 /** Τα ζωντανά αρχεία της εταιρείας με γεγονότα εγγράφου. Ισότητα + `in`: χωρίς σύνθετο δείκτη (μετρημένο, §11.3). */

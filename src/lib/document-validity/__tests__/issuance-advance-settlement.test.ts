@@ -26,14 +26,14 @@ const TERMS: QuoteTerms = {
   scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: { amountMinor: 4_000, policy: 'moderate', inspectionValueMinor: 1_500 },
 };
 const ASSIGNED: readonly IssuanceAction[] = [
-  { kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-1' } },
+  { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-1' } },
   { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null },
   { kind: 'quote', terms: TERMS },
   { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null },
 ];
 const WITHIN_WITHDRAWAL = '2026-11-30T20:00:00.000Z';
 const AFTER_WITHDRAWAL = '2026-12-01T09:00:00.000Z';
-const CANCEL: IssuanceAction = { kind: 'cancel' };
+const CANCEL: IssuanceAction = { kind: 'cancel', reason: 'cancelled' };
 
 function act(record: IssuanceAssignmentRecord | null, action: IssuanceAction, actor: IssuanceActor) {
   return reduceIssuance('energy-certificate', record, null, action, actor);
@@ -127,7 +127,7 @@ describe('Θ-4/Θ-5 — διαφορά: τα χρήματα παγώνουν ω�
 });
 
 describe('Θ-8 — νέα πρόταση περιμένει όσο ζουν χρήματα στην ακυρωμένη ανάθεση', () => {
-  const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_other', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-2' } };
+  const PROPOSE: IssuanceAction = { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_other' }, credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-2' } };
 
   it('επιστροφή σε εξέλιξη ⇒ άρνηση· όταν επιστραφούν όλα ⇒ επιτρέπεται', () => {
     const cancelled = apply(funded(), CANCEL, at(OFFICE, WITHIN_WITHDRAWAL));

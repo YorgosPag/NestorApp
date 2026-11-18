@@ -54,13 +54,17 @@ import {
 } from '@/lib/document-validity/issuance-reminder';
 import { isOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { createModuleLogger } from '@/lib/telemetry';
+import { custodyOnly, isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { DOCUMENT_REGISTRY_CAPS, type RegistryPropertyScope } from './document-registry.types';
 import { recordIssuanceAudit, type IssuanceTransition } from './issuance-assignment-audit.server';
+import { ledgerAssignmentIdOf, ledgerOwnerOf, ledgerRequestOf, type IssuanceLedger } from './issuance-ledger';
 import {
   issuanceAssignmentIdOf,
   issuanceRecordOf,
   parseIssuanceAssignment,
+  parseOwnedIssuanceAssignment,
   type DocumentIssuanceAssignment,
+  type OwnedIssuanceAssignment,
 } from './issuance-assignment-schema';
 
 const logger = createModuleLogger('issuance-assignments');
@@ -102,13 +106,19 @@ export type IssuanceWriter =
   /** §45.20 Φ6γ — ο μηχανικός από τη συμμετοχή του (αποδεδειγμένη από τον καλούντα)· CAS όπως το γραφείο. */
   | { readonly kind: 'engagement'; readonly engagementId: string; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null }
   /**
+   * ADR-945 Δ3 — ο ίδιος ο ιδιώτης, στο **δικό του** βιβλίο (`owned`). Ότι το βιβλίο είναι δικό του το αποδεικνύει ο
+   * καλών (`mayDecide`) πριν από εδώ· CAS όπως το γραφείο — ό,τι είδε ο άνθρωπος στην οθόνη του.
+   */
+  | { readonly kind: 'owner'; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null }
+  /**
    * ADR-943 §5.9 — ο διακομιστής, **αφού** διάβασε την αλήθεια στο API του παρόχου (Κ-8). **Καμία CAS**: η δέσμευσή του
    * είναι η αναφορά του παρόχου, που την κρίνει ο μειωτής (ιδεμποτία · ποσό · στάδιο). `provider` = ο δράστης στο ίχνος.
    */
   | { readonly kind: 'system'; readonly source: 'payments'; readonly provider: string; readonly name: null };
 
 export interface IssuanceWrite {
-  readonly companyId: string;
+  /** ADR-945 Δ1 — σε ποιο βιβλίο ζει η ανάθεση (`./issuance-ledger.ts`). */
+  readonly ledger: IssuanceLedger;
   readonly writer: IssuanceWriter;
   readonly property: { readonly id: string; readonly scope: RegistryPropertyScope; readonly name: string | null };
   readonly documentKind: DocumentKind;
@@ -125,11 +135,15 @@ export type IssuanceWriteOutcome =
   | { readonly ok: false; readonly refusal: 'stale' | IssuanceRefusalReason };
 
 
-function storedOf(write: IssuanceWrite, id: string, record: IssuanceAssignmentRecord): DocumentIssuanceAssignment {
+/** Το σχήμα του δίσκου: ο κάτοχος ως **επίπεδο** πεδίο (`companyId` ή `userId`, ποτέ και τα δύο). */
+type StoredIssuanceAssignment = Omit<OwnedIssuanceAssignment, 'owner'> & CustodyScope;
+
+function storedOf(write: IssuanceWrite, id: string, record: IssuanceAssignmentRecord): StoredIssuanceAssignment {
   return {
     ...record,
     id,
-    companyId: write.companyId,
+    ...custodyOnly(ledgerOwnerOf(write.ledger)),
+    ...ledgerRequestOf(write.ledger),
     propertyId: write.property.id,
     scope: write.property.scope,
     documentKind: write.documentKind,
@@ -141,10 +155,23 @@ function assignmentRefOf(db: Firestore, companyId: string, propertyId: string, k
   return assignmentsCollection(db).doc(issuanceAssignmentIdOf(companyId, propertyId, kind));
 }
 
-/** Η ανάθεση του μισθωτή μέσα στη συναλλαγή — ξένη ή χαλασμένη ≡ καμία. */
-async function readInTx(tx: Transaction, ref: DocumentReference, companyId: string): Promise<IssuanceAssignmentRecord | null> {
-  const stored = parseIssuanceAssignment((await tx.get(ref)).data());
-  return stored !== null && stored.companyId === companyId ? issuanceRecordOf(stored) : null;
+/** Ωμό έγγραφο ⇒ η ανάθεση **αυτού** του κατόχου — ξένη ή χαλασμένη ≡ καμία. Ο ΕΝΑΣ κανόνας, μέσα και έξω από συναλλαγή. */
+export function ownedIssuanceRecordOf(raw: unknown, owner: CustodyScope): IssuanceAssignmentRecord | null {
+  const stored = parseOwnedIssuanceAssignment(raw);
+  return stored !== null && isOwnedByCustody(custodyOnly(stored.owner), owner) ? issuanceRecordOf(stored) : null;
+}
+
+/** Η ανάθεση **αυτού** του κατόχου μέσα στη συναλλαγή — ξένη ή χαλασμένη ≡ καμία. */
+async function readInTx(tx: Transaction, ref: DocumentReference, owner: CustodyScope): Promise<IssuanceAssignmentRecord | null> {
+  return ownedIssuanceRecordOf((await tx.get(ref)).data(), owner);
+}
+
+/**
+ * ADR-945 §7.5 — η ανάθεση ενός βιβλίου μέσα σε συναλλαγή **χωρίς** πράξη (π.χ. «είναι ακόμη ανοιχτή η νικήτρια;» πριν
+ * από τον μειωτή του αιτήματος). Ίδια διεύθυνση, ίδιος κάτοχος με τον γραφέα.
+ */
+export function readLedgerIssuanceInTx(tx: Transaction, db: Firestore, ledger: IssuanceLedger, propertyId: string, kind: DocumentKind): Promise<IssuanceAssignmentRecord | null> {
+  return readInTx(tx, assignmentsCollection(db).doc(ledgerAssignmentIdOf(ledger, propertyId, kind)), ledgerOwnerOf(ledger));
 }
 
 /**
@@ -159,7 +186,7 @@ export interface StagedIssuanceWrite {
 
 const NOTHING_TO_WRITE = { commit: (): void => undefined, audit: async (): Promise<void> => undefined };
 
-/** Η CAS του γραφείου και της συμμετοχής — ο σύνδεσμος και το σύστημα δεσμεύονται αλλού (στον μειωτή). */
+/** Η CAS του γραφείου, της συμμετοχής και του ιδιώτη — ο σύνδεσμος και το σύστημα δεσμεύονται αλλού (στον μειωτή). */
 function casHolds(writer: IssuanceWriter, previousStage: IssuanceStage | null): boolean {
   return writer.kind === 'link' || writer.kind === 'system' || previousStage === writer.expectedStage;
 }
@@ -169,6 +196,7 @@ function actorOf(writer: IssuanceWriter, nowIso: string): IssuanceActor {
     case 'office': return { kind: 'office', uid: writer.uid, nowIso };
     case 'link': return { kind: 'link', invitationId: writer.invitationId, verifiedBy: writer.verifiedBy, nowIso };
     case 'engagement': return { kind: 'engagement', engagementId: writer.engagementId, uid: writer.uid, nowIso };
+    case 'owner': return { kind: 'owner', uid: writer.uid, nowIso };
     case 'system': return { kind: 'system', source: writer.source, nowIso };
   }
 }
@@ -178,8 +206,8 @@ function actorOf(writer: IssuanceWriter, nowIso: string): IssuanceActor {
  * γραφείου, η αποστολή με σύνδεσμο (μαζί με την πρόσκληση, στην ίδια συναλλαγή) και η απάντηση από σύνδεσμο.
  */
 export async function stageIssuanceAction(tx: Transaction, db: Firestore, write: IssuanceWrite): Promise<StagedIssuanceWrite> {
-  const ref = assignmentRefOf(db, write.companyId, write.property.id, write.documentKind);
-  const previous = await readInTx(tx, ref, write.companyId);
+  const ref = assignmentsCollection(db).doc(ledgerAssignmentIdOf(write.ledger, write.property.id, write.documentKind));
+  const previous = await readInTx(tx, ref, ledgerOwnerOf(write.ledger));
   const previousStage = visibleIssuanceStage(issuanceStateOf(previous, write.latestIssuedOn));
   if (!casHolds(write.writer, previousStage)) return { outcome: { ok: false, refusal: 'stale' }, ...NOTHING_TO_WRITE };
   const reduced = reduceIssuance(write.documentKind, previous, write.latestIssuedOn, write.action, actorOf(write.writer, write.nowIso));

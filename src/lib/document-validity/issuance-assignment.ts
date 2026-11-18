@@ -30,7 +30,7 @@ import { documentKindSpec, type DocumentKind } from '@/config/document-validity/
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 
 import {
-  decisionBasisOf, quoteSubmissionOf, responseBasisOf,
+  actorMayAct, decisionBasisOf, quoteSubmissionOf, responseBasisOf,
   type InstructionChannel, type IssuanceActor, type IssuanceDecisionBasis, type IssuanceResponseBasis, type LinkVerification,
 } from './issuance-actor';
 import { advanceCollectedMinor, advanceStateOf, isAdvanceTermsValid, type AdvanceEvent } from './issuance-advance';
@@ -53,15 +53,16 @@ import {
 import type { IssuanceDeliveryReminders } from './issuance-delivery-reminder';
 import type { IssuanceOwnerAttestation } from './issuance-owner-attestation';
 import { INSPECTION_CONTACT_STAGES, inspectionContactSet, type IssuanceInspectionContactEntry, type IssuanceSetInspectionContactAction } from './issuance-inspection-contact';
+import { sameProfessional, type IssuanceProfessional } from './issuance-professional';
 import type { IssuanceReminders } from './issuance-reminder';
-import { ballInCourtOf, isLegacyIssuance, issuanceStageOf, type BallInCourtParty, type IssuanceStage } from './issuance-stage';
+import { ballInCourtOf, isLegacyIssuance, issuanceStageOf, type BallInCourtParty, type IssuanceCancellationReason, type IssuanceStage } from './issuance-stage';
 
 export {
-  BALL_IN_COURT_PARTIES, ISSUANCE_STAGES, ballInCourtOf, issuanceStageOf,
-  type BallInCourtParty, type IssuanceStage,
+  BALL_IN_COURT_PARTIES, ISSUANCE_CANCELLATION_REASONS, ISSUANCE_STAGES, ballInCourtOf, issuanceStageOf,
+  type BallInCourtParty, type IssuanceCancellationReason, type IssuanceStage,
 } from './issuance-stage';
 export {
-  INSTRUCTION_CHANNELS, LINK_VERIFICATIONS, linkVerificationSatisfies,
+  INSTRUCTION_CHANNELS, LINK_VERIFICATIONS, decisionOwnerContactIdOf, linkVerificationSatisfies,
   type InstructionChannel, type IssuanceActor, type IssuanceDecisionBasis, type IssuanceResponseBasis, type LinkVerification,
 } from './issuance-actor';
 
@@ -87,8 +88,6 @@ export type IssuanceDecision = IssuanceDecisionBasis & {
    * `null` = παλιά ανάθεση (§27), όπου κρινόταν το πρόσωπο πριν από κάθε τιμή.
    */
   readonly quoteRevision: number | null;
-  /** Ο υπεύθυνος ιδιοκτήτης (§26) **τη στιγμή της απόφασης** — παράγεται στον διακομιστή, ποτέ από τον πελάτη. */
-  readonly ownerContactId: string;
   /** §45.15 — τι βεβαίωσε ο ιδιοκτήτης για τους ιδιοκτήτες (στιγμιότυπο, κριμένο στον διακομιστή)· μόνο σύνδεσμος που εγκρίνει. */
   readonly ownerAttestation: IssuanceOwnerAttestation | null;
   readonly note: string | null;
@@ -133,7 +132,8 @@ export interface IssuanceNotice {
 
 /** Τα γεγονότα μιας ανάθεσης — ό,τι αποθηκεύεται πέρα από την ταυτότητα. */
 export interface IssuanceAssignmentRecord {
-  readonly professionalContactId: string;
+  /** ADR-945 Δ4 — επαφή του βιβλίου ή βιτρίνα του `/pro` (`./issuance-professional.ts`). */
+  readonly professional: IssuanceProfessional;
   readonly credential: IssuanceCredential;
   readonly proposedAt: string;
   readonly proposedByUid: string;
@@ -163,7 +163,8 @@ export interface IssuanceAssignmentRecord {
   readonly advanceEvents: readonly AdvanceEvent[];
   /** ADR-943 Κ-7 — ο ΜΑΡΚ του παραστατικού προκαταβολής, ίσος με ό,τι εισπράχθηκε. */
   readonly advanceReceipt: IssuanceReceipt | null;
-  readonly cancellation: { readonly at: string; readonly byUid: string } | null;
+  /** ADR-945 §7.2 — `reason`: ακύρωση ή «δεν επιλέχθηκε» (άλλη προσφορά του ίδιου αιτήματος κέρδισε). */
+  readonly cancellation: { readonly at: string; readonly byUid: string; readonly reason: IssuanceCancellationReason } | null;
 }
 
 /**
@@ -212,7 +213,7 @@ export function canProposeIssuance(state: IssuanceState): boolean {
 // ---------------------------------------------------------------------------
 
 export type IssuanceAction =
-  | { readonly kind: 'propose'; readonly professionalContactId: string; readonly credential: IssuanceCredential }
+  | { readonly kind: 'propose'; readonly professional: IssuanceProfessional; readonly credential: IssuanceCredential }
   /** §28 — στάλθηκε σύνδεσμος έγκρισης στον υπεύθυνο. Ίδιο στάδιο· νέο αίτημα ⇒ ο προηγούμενος σύνδεσμος πεθαίνει. */
   | { readonly kind: 'request-approval'; readonly invitationId: string; readonly ownerContactId: string; readonly note: string | null; readonly verification: LinkVerification }
   | {
@@ -221,8 +222,8 @@ export type IssuanceAction =
       /** Το κανάλι της **καταγραφής** του γραφείου· `null` ⇔ αποφασίζει ο ίδιος με σύνδεσμο. */
       readonly channel: InstructionChannel | null;
       readonly note: string | null;
-      /** Ο υπεύθυνος — από τον κριτή του διακομιστή (ή, αισιόδοξα, ό,τι είδε η οθόνη). */
-      readonly ownerContactId: string;
+      /** Ο υπεύθυνος — από τον κριτή του διακομιστή (ή, αισιόδοξα, ό,τι είδε η οθόνη)· `null` ⇔ αποφασίζει ο ιδιώτης (ADR-945 Δ3). */
+      readonly ownerContactId: string | null;
       /** §42 — η αναθεώρηση που **είδε** όποιος αποφασίζει· άλλη τρέχουσα ⇒ `terms-refused` (ποτέ «ναι» σε τιμή που δεν είδε). */
       readonly quoteRevision: number;
       readonly ownerAttestation: IssuanceOwnerAttestation | null;
@@ -244,7 +245,8 @@ export type IssuanceAction =
   | IssuanceDeclineDeliveryChangeAction
   /** ADR-943 — οι πράξεις της προκαταβολής· κρίνονται από τον δικό τους μειωτή (`./issuance-advance-reducer.ts`). */
   | IssuanceAdvanceAction
-  | { readonly kind: 'cancel' };
+  /** ADR-945 §7.2 — `not-awarded` μόνο από την ανάθεση στη νικήτρια του αιτήματος (το κρίνει ο διακομιστής). */
+  | { readonly kind: 'cancel'; readonly reason: IssuanceCancellationReason };
 
 export type IssuanceActionKind = IssuanceAction['kind'];
 
@@ -264,20 +266,6 @@ const ALLOWED_FROM: Readonly<Record<Exclude<IssuanceActionKind, 'propose' | Issu
   cancel: ['proposed', 'ownerApproved', 'sent', 'quoted', 'accepted', 'declined'],
 };
 
-/** Ποιες πράξεις μπορεί να κάνει **ο σύνδεσμος** — όλες οι άλλες ανήκουν στο γραφείο (§28 Η-Β2). */
-const LINK_ACTIONS: ReadonlySet<IssuanceActionKind> = new Set(['decide', 'respond', 'quote']);
-
-/** §45.20 Φ6γ — τι κάνει **η συμμετοχή** του μηχανικού: μόνο αίτημα· και αυτό **μόνο** εκείνη (ποτέ γραφείο ή σύνδεσμος). */
-const ENGAGEMENT_ACTIONS: ReadonlySet<IssuanceActionKind> = new Set(['request-delivery-change']);
-
-/** «Ποιος» πριν από «από πού»: κάθε actor κάνει μόνο τις δικές του πράξεις, σε **κανένα** στάδιο τις ξένες. */
-function actorMayAct(actor: IssuanceActor, kind: IssuanceActionKind): boolean {
-  if (actor.kind === 'system') return false; // ADR-943: μόνο πράξεις προκαταβολής, που κρίνονται πριν από εδώ.
-  if (actor.kind === 'engagement') return ENGAGEMENT_ACTIONS.has(kind);
-  if (ENGAGEMENT_ACTIONS.has(kind)) return false;
-  return actor.kind === 'office' || LINK_ACTIONS.has(kind);
-}
-
 /**
  * - `transition-refused` — η πράξη δεν επιτρέπεται από αυτό το στάδιο·
  * - `unqualified` — το προσόν δεν υπογράφει αυτό το είδος·
@@ -296,7 +284,7 @@ export type IssuanceReduction =
 /** Νέα πρόταση· ο υπεύθυνος αυτοψίας του ίδιου ανοιχτού κύκλου μένει (γεγονός του ακινήτου, όχι του επαγγελματία). */
 function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: string, nowIso: string, inspectionContacts: readonly IssuanceInspectionContactEntry[]): IssuanceAssignmentRecord {
   return {
-    professionalContactId: action.professionalContactId,
+    professional: action.professional,
     credential: action.credential,
     proposedAt: nowIso,
     proposedByUid: uid,
@@ -318,8 +306,8 @@ function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: str
 
 function sameProposal(state: IssuanceState, action: Extract<IssuanceAction, { kind: 'propose' }>): boolean {
   if (state.kind !== 'open' || state.stage !== 'proposed') return false;
-  const { professionalContactId, credential } = state.record;
-  return professionalContactId === action.professionalContactId
+  const { professional, credential } = state.record;
+  return sameProfessional(professional, action.professional)
     && credential.qualification === action.credential.qualification
     && credential.registryNumber === action.credential.registryNumber;
 }
@@ -348,7 +336,7 @@ function officeAdvanced(record: IssuanceAssignmentRecord, action: OfficeOnlyActi
         verification: action.invitationId === null ? null : action.verification ?? 'link', delivery: null, reminders: null,
       },
     };
-    case 'cancel': return { ...record, cancellation: { at, byUid: uid } };
+    case 'cancel': return { ...record, cancellation: { at, byUid: uid, reason: action.reason } };
   }
 }
 
@@ -384,9 +372,7 @@ function decided(record: IssuanceAssignmentRecord, action: Extract<AdvancingActi
   const basis = decisionBasisOf(record.approvalRequest, action, actor);
   if (basis === null) return { ok: false, refusal: 'actor-refused' };
   const ownerAttestation = basis.basis === 'owner-link-approval' && action.outcome === 'approved' ? action.ownerAttestation : null;
-  const decision: IssuanceDecision = {
-    ...basis, outcome: action.outcome, quoteRevision: action.quoteRevision, ownerContactId: action.ownerContactId, ownerAttestation, note: action.note, at: actor.nowIso,
-  };
+  const decision: IssuanceDecision = { ...basis, outcome: action.outcome, quoteRevision: action.quoteRevision, ownerAttestation, note: action.note, at: actor.nowIso };
   return { ok: true, record: { ...record, decision }, changed: true };
 }
 
@@ -415,7 +401,8 @@ function advanced(record: IssuanceAssignmentRecord, stage: IssuanceStage, action
       ? requestedDeliveryChange(record, action, actor)
       : { ok: false, refusal: 'actor-refused' };
   }
-  if (actor.kind !== 'office') return { ok: false, refusal: 'actor-refused' };
+  // Ο ιδιώτης φτάνει εδώ μόνο για ακύρωση (`OWNER_ACTIONS`).
+  if (actor.kind !== 'office' && actor.kind !== 'owner') return { ok: false, refusal: 'actor-refused' };
   if (action.kind === 'record-receipt') return receipted(record, action, actor.uid, actor.nowIso);
   if (action.kind === 'schedule-delivery') return rescheduled(record, action, actor.uid, actor.nowIso);
   if (action.kind === 'decline-delivery-change') return declinedDeliveryChange(record, action, actor.uid, actor.nowIso);
@@ -477,7 +464,7 @@ export function reduceIssuance(
 ): IssuanceReduction {
   const state = issuanceStateOf(current, latestIssuedOn);
   if (action.kind === 'propose') {
-    if (actor.kind !== 'office') return { ok: false, refusal: 'actor-refused' };
+    if (actor.kind !== 'office' && actor.kind !== 'owner') return { ok: false, refusal: 'actor-refused' };
     if (!qualifiesFor(kind, action.credential.qualification)) return { ok: false, refusal: 'unqualified' };
     if (sameProposal(state, action) && current !== null) return { ok: true, record: current, changed: false };
     if (!canProposeIssuance(state)) return { ok: false, refusal: 'transition-refused' };

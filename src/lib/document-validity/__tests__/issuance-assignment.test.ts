@@ -21,7 +21,7 @@ import type { QuoteTerms } from '@/lib/document-validity/issuance-quote';
 
 const ACTOR = { kind: 'office', uid: 'uid_agent', nowIso: '2026-10-17T09:00:00.000Z' } as const;
 const INSPECTOR = { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-123' } as const;
-const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_pro', credential: INSPECTOR };
+const PROPOSE: IssuanceAction = { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: INSPECTOR };
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null };
 const FIRM_TERMS: QuoteTerms = {
   basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false,
@@ -118,12 +118,12 @@ describe('ADR-915 §42 — ο μειωτής', () => {
   });
 
   it('🔴 «ποτέ δύο»: μετά την ενημέρωση νέα πρόταση ΑΡΝΕΙΤΑΙ — πριν, αντικαθιστά (και τα γεγονότα ξεκινούν από την αρχή)', () => {
-    const other: IssuanceAction = { ...PROPOSE, professionalContactId: 'cont_other' } as IssuanceAction;
+    const other: IssuanceAction = { ...PROPOSE, professional: { kind: 'contact', contactId: 'cont_other' } } as IssuanceAction;
     for (const committed of [[PROPOSE, NOTIFY], [PROPOSE, NOTIFY, QUOTE], ASSIGNED]) {
       expect(reduceIssuance('energy-certificate', run(committed), null, other, ACTOR)).toEqual({ ok: false, refusal: 'transition-refused' });
     }
     const replaced = reduceIssuance('energy-certificate', run([PROPOSE]), null, other, ACTOR);
-    expect(replaced.ok && replaced.record.professionalContactId).toBe('cont_other');
+    expect(replaced.ok && replaced.record.professional).toEqual({ kind: 'contact', contactId: 'cont_other' });
     expect(replaced.ok && replaced.record.decision).toBeNull();
   });
 
@@ -136,7 +136,7 @@ describe('ADR-915 §42 — ο μειωτής', () => {
   });
 
   it('ακύρωση και απόρριψη ιδιοκτήτη ΚΛΕΙΝΟΥΝ τον κύκλο: καμία μπάλα, νέα πρόταση ελεύθερη', () => {
-    for (const closing of [[PROPOSE, { kind: 'cancel' }], [PROPOSE, NOTIFY, QUOTE, REJECT]] as IssuanceAction[][]) {
+    for (const closing of [[PROPOSE, { kind: 'cancel', reason: 'cancelled' }], [PROPOSE, NOTIFY, QUOTE, REJECT]] as IssuanceAction[][]) {
       const state = issuanceStateOf(run(closing), null);
       expect(state.kind).toBe('none');
       expect(canProposeIssuance(state)).toBe(true);
@@ -150,7 +150,7 @@ describe('ADR-915 §42 — ο μειωτής', () => {
     expect(issuanceStateOf(accepted, '2026-10-16').kind).toBe('open');
     expect(issuanceStateOf(accepted, '2026-10-17')).toEqual({ kind: 'none', last: accepted, fulfilled: true });
     // Μετά την ολοκλήρωση καμία πράξη πάνω στον παλιό κύκλο — μόνο νέα πρόταση.
-    expect(reduceIssuance('energy-certificate', accepted, '2026-10-20', { kind: 'cancel' }, ACTOR).ok).toBe(false);
+    expect(reduceIssuance('energy-certificate', accepted, '2026-10-20', { kind: 'cancel', reason: 'cancelled' }, ACTOR).ok).toBe(false);
     expect(reduceIssuance('energy-certificate', accepted, '2026-10-20', PROPOSE, ACTOR).ok).toBe(true);
   });
 
@@ -278,7 +278,7 @@ describe('ADR-915 §27 — οι παλιές αναθέσεις διαβάζον
   });
 
   it('η ακύρωση νικά και την παλιά ανάθεση', () => {
-    expect(issuanceStageOf(legacy({ cancellation: { at: ACTOR.nowIso, byUid: 'uid_agent' } }))).toBe('cancelled');
+    expect(issuanceStageOf(legacy({ cancellation: { at: ACTOR.nowIso, byUid: 'uid_agent', reason: 'cancelled' } }))).toBe('cancelled');
   });
 
   it('η ενημέρωση από `ownerApproved` επιτρέπεται και δίνει `sent`', () => {
@@ -304,7 +304,7 @@ describe('ADR-915 §27 — προσόν ≠ επάγγελμα', () => {
 
 describe('ADR-915 §27 — υποψήφιοι «σε γνωστό»', () => {
   const approved = (contactId: string, proposedAt: string) => ({
-    ...run([{ ...PROPOSE, professionalContactId: contactId } as IssuanceAction, NOTIFY, QUOTE, APPROVE]),
+    ...run([{ ...PROPOSE, professional: { kind: 'contact', contactId: contactId } } as IssuanceAction, NOTIFY, QUOTE, APPROVE]),
     proposedAt,
   });
   const entry = (propertyId: string, documentKind: IssuanceRosterEntry['documentKind'], record: IssuanceAssignmentRecord) =>
@@ -327,7 +327,7 @@ describe('ADR-915 §27 — υποψήφιοι «σε γνωστό»', () => {
   });
 
   it('🔴 μόνο ΕΓΚΕΚΡΙΜΕΝΕΣ αναθέσεις μετρούν · όποιος μόλις αρνήθηκε εξαιρείται', () => {
-    const onlyProposed = run([{ ...PROPOSE, professionalContactId: 'cont_proposed' } as IssuanceAction]);
+    const onlyProposed = run([{ ...PROPOSE, professional: { kind: 'contact', contactId: 'cont_proposed' } } as IssuanceAction]);
     const roster = [
       entry('p9', 'energy-certificate', onlyProposed),
       entry('p8', 'energy-certificate', approved('cont_declined', '2026-03-01T00:00:00.000Z')),

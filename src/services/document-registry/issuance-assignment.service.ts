@@ -30,6 +30,7 @@ import { announceOfficeMoneyAction, announceOfficeObjection, orderMoneyBeforeOff
 import type { DocumentRegistryResponse } from './document-registry.types';
 import { issuanceAssignmentIdOf } from './issuance-assignment-schema';
 import { writeIssuanceAction, type IssuanceWriteOutcome } from './issuance-assignments.server';
+import { officeLedger } from './issuance-ledger';
 
 export interface IssuanceRequester {
   readonly companyId: string;
@@ -110,7 +111,7 @@ export async function actOnIssuanceAssignment(db: Firestore, actor: IssuanceRequ
   const money = await orderMoneyBeforeOfficeAction(db, { companyId: actor.companyId, uid: actor.uid, body, latestIssuedOn: issuance.latestIssuedOn, now });
   if (money?.kind === 'busy') return refused('settlement-busy');
   const result = await writeIssuanceAction(db, {
-    companyId: actor.companyId,
+    ledger: officeLedger(actor.companyId),
     writer: { kind: 'office', uid: actor.uid, name: actor.name, expectedStage: body.expectedStage },
     property: { id: body.propertyId, scope: label.scope, name: label.name },
     documentKind: body.documentKind,

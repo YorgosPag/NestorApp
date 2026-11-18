@@ -102,7 +102,9 @@
     "net": "Net amount",
     "vat": "VAT {rate}%",
     "gross": "Total",
-    "payable": "Amount payable"
+    "payable": "Amount payable",
+    "paid": "Amount paid",
+    "balance": "Amount remaining"
   },
   "notes": {
     "title": "Notes"

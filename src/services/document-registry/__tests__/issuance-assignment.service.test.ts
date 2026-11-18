@@ -89,12 +89,12 @@ describe('actOnIssuanceAssignment — πρόταση', () => {
     expect(await act(PROPOSE)).toMatchObject({ ok: true, outcome: 'changed', stage: 'proposed' });
     expect(stored()).toMatchObject({
       companyId: COMPANY, propertyId: 'prop_1', scope: 'property', documentKind: 'energy-certificate',
-      professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
+      professional: { kind: 'contact', contactId: 'cont_pro' }, credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-7' },
       proposedByUid: 'user_1', decision: null, quote: null, receipt: null, deliverySchedule: [], deliveryReminders: null,
     });
     const registry = await readDocumentRegistry(db(), COMPANY, NOW);
     expect(registry.issuanceKnown).toBe(true);
-    expect(registry.issuance[KEY].record?.professionalContactId).toBe('cont_pro');
+    expect(registry.issuance[KEY].record?.professional).toEqual({ kind: 'contact', contactId: 'cont_pro' });
     expect(registry.people.cont_pro).toEqual({ name: 'Επιθεωρητής Συνθετικός' });
     expect(EntityAuditService.recordChange).toHaveBeenCalledWith(expect.objectContaining({
       entityType: 'property', entityId: 'prop_1', companyId: COMPANY,
@@ -115,7 +115,7 @@ describe('actOnIssuanceAssignment — πρόταση', () => {
   it('🔴 CAS: οθόνη που δεν είδε την πρόταση (`expectedStage: null`) ⇒ `stale`, τίποτα δεν αλλάζει', async () => {
     await act(PROPOSE);
     expect(await act({ ...PROPOSE, professionalContactId: 'cont_b' })).toEqual({ ok: false, refusal: 'stale' });
-    expect(stored()).toMatchObject({ professionalContactId: 'cont_pro' });
+    expect(stored()).toMatchObject({ professional: { kind: 'contact', contactId: 'cont_pro' } });
   });
 
   it('επαφή ΑΛΛΟΥ γραφείου ⇒ `contact-unavailable` · προσόν που δεν υπογράφει ΠΕΑ ⇒ `unqualified`', async () => {

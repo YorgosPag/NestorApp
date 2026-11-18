@@ -24,7 +24,7 @@ const TERMS: QuoteTerms = {
   validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: null,
 };
 const SETUP: readonly IssuanceAction[] = [
-  { kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-1' } },
+  { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: { qualification: 'energy-inspector-registered', registryNumber: 'ΥΠΕΝ-1' } },
   { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null },
   { kind: 'quote', terms: TERMS },
   { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null },

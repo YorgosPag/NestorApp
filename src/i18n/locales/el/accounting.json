@@ -41,6 +41,7 @@
     "vatAmount": "Ποσό ΦΠΑ",
     "grossAmount": "Μικτό Ποσό",
     "paymentStatus": "Κατάσταση Πληρωμής",
+    "paymentMethod": "Τρόπος Πληρωμής",
     "mydataStatus": "Κατάσταση myDATA",
     "actions": "Ενέργειες",
     "types": {

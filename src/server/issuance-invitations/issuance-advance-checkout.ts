@@ -21,6 +21,7 @@ import 'server-only';
  *    η στιγμή της έναρξης, γραμμένη στη συνεδρία και από εκεί στο γεγονός `funded`.
  */
 
+import { professionalReferenceOf } from '@/lib/document-validity/issuance-professional';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { createBundleTranslate } from '@/i18n/bundle-translate';
@@ -84,7 +85,7 @@ export async function advanceViewOf(db: Firestore, payer: AdvancePayer, now: Dat
     officeName: await readWorkspaceName(invitation.companyId).then(trimmedStringOrNull, () => null),
     propertyLabel: context.label.name,
     documentKind: invitation.documentKind,
-    professionalName: context.registry.people[record.professionalContactId]?.name ?? null,
+    professionalName: context.registry.people[professionalReferenceOf(record.professional)]?.name ?? null,
     advance,
     state: payer.state.kind,
     methods: marketplaceMethodsOf(provider),

@@ -41,6 +41,7 @@
     "vatAmount": "VAT Amount",
     "grossAmount": "Gross Amount",
     "paymentStatus": "Payment Status",
+    "paymentMethod": "Payment Method",
     "mydataStatus": "myDATA Status",
     "actions": "Actions",
     "types": {

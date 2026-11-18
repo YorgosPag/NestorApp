@@ -65,6 +65,8 @@ export {
   generateDeterministicDocumentObligorDesignationId,
   generateDeterministicDocumentIssuanceAssignmentId,
   generateDeterministicPropertyUpkeepDeclarationId,
+  generateDeterministicDocumentIssuanceRequestId,
+  generateDeterministicDocumentIssuanceBidId,
   generateDeterministicProjectBudgetLineId,
   generateDeterministicExpenseJournalEntryId,
   generateDeterministicJournalReversalEntryId,

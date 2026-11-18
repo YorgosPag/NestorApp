@@ -33,6 +33,7 @@ import {
   stageIssuanceAction,
   type IssuanceWriteOutcome,
 } from '@/services/document-registry/issuance-assignments.server';
+import { officeLedger } from '@/services/document-registry/issuance-ledger';
 import { buildIssuanceEmail } from '@/services/email-templates/issuance-invitation-email';
 import type { IssuanceInvitation, IssuancePreview } from '@/types/issuance-invitation';
 
@@ -112,7 +113,7 @@ function actionOf(draft: IssuanceSendDraft, invitation: IssuanceInvitation, note
 async function commitSend(db: Firestore, sender: IssuanceSender, body: IssuanceSendBody, draft: IssuanceSendDraft, invitation: IssuanceInvitation) {
   const staged = await db.runTransaction(async (tx) => {
     const assignment = await stageIssuanceAction(tx, db, {
-      companyId: sender.companyId,
+      ledger: officeLedger(sender.companyId),
       writer: { kind: 'office', uid: sender.uid, name: sender.name, expectedStage: body.expectedStage },
       property: draft.property,
       documentKind: body.documentKind,

@@ -17,6 +17,7 @@ import { ISSUER_QUALIFICATIONS } from '@/config/document-validity/document-issue
 import { DOCUMENT_KINDS, type DocumentKind } from '@/config/document-validity/document-validity';
 import {
   INSTRUCTION_CHANNELS,
+  ISSUANCE_CANCELLATION_REASONS,
   ISSUANCE_NOTE_MAX,
   LINK_VERIFICATIONS,
   NOTICE_CHANNELS,
@@ -32,20 +33,46 @@ import { INSPECTION_CONTACT_POLICY, INSPECTION_CONTACT_ROLES } from '@/lib/docum
 import { OWNER_ATTESTATION_POLICY, OWNER_VERDICTS } from '@/lib/document-validity/issuance-owner-attestation';
 import { advanceTermsSchema, deliveryBusinessDaysSchema, isoDay, vatRatePercentSchema } from '@/lib/document-validity/issuance-request';
 import { ADVANCE_POLICY, ADVANCE_RELEASE_BASES } from '@/lib/document-validity/issuance-advance';
+import { ISSUANCE_PROFESSIONAL_KINDS, type IssuanceProfessional } from '@/lib/document-validity/issuance-professional';
+import { custodyScopeFromData, type CustodyScope } from '@/lib/workspace/custody-scope';
 import { generateDeterministicDocumentIssuanceAssignmentId } from '@/services/enterprise-id.service';
 import { REGISTRY_PROPERTY_SCOPES, type RegistryPropertyScope } from './document-registry.types';
 
-/** Το αποθηκευμένο έγγραφο (`document_issuance_assignments`, deny-all, μόνο ο server). */
-export interface DocumentIssuanceAssignment extends IssuanceAssignmentRecord {
+/** Ό,τι έχει κάθε ανάθεση πέρα από τα γεγονότα — χωρίς τον κάτοχο. */
+interface IssuanceAssignmentIdentity extends IssuanceAssignmentRecord {
   readonly id: string;
-  readonly companyId: string;
   readonly propertyId: string;
   readonly scope: RegistryPropertyScope;
   readonly documentKind: DocumentKind;
+  /** ADR-945 §7.2 — το αίτημα της προσφοράς και ο κύκλος του· `null` = απευθείας ανάθεση γραφείου (§27). */
+  readonly requestId: string | null;
+  readonly cycle: number | null;
   readonly updatedAt: string;
 }
 
+/**
+ * ADR-945 Δ1 — η ανάθεση **με τον κάτοχό της**: γραφείο `{ companyId }` ή ιδιώτης `{ userId }` (`CustodyScope`). Στον δίσκο
+ * ο κάτοχος είναι **επίπεδο** πεδίο (`custodyOnly`), ώστε το ερώτημα του καταλόγου γραφείου (`companyId ==`) να μένει ίδιο.
+ */
+export interface OwnedIssuanceAssignment extends IssuanceAssignmentIdentity {
+  readonly owner: CustodyScope;
+}
+
+/**
+ * Το αποθηκευμένο έγγραφο **όπως το βλέπει ένα γραφείο** (`document_issuance_assignments`, deny-all, μόνο ο server).
+ * 🔒 Ανάθεση ιδιώτη **δεν** γίνεται ποτέ `DocumentIssuanceAssignment` ({@link parseIssuanceAssignment} ⇒ `null`): κάθε
+ *    διαδρομή γραφείου μένει δομικά τυφλή στο προσωπικό βιβλίο (ADR-787 Ε-3 §3).
+ */
+export interface DocumentIssuanceAssignment extends IssuanceAssignmentIdentity {
+  readonly companyId: string;
+}
+
 const nonEmpty = z.string().min(1);
+/** ADR-945 Δ4 — ο επαγγελματίας ως ένωση· τα έγγραφα πριν από το ADR-945 έχουν μόνο `professionalContactId`. */
+export const professionalSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal(ISSUANCE_PROFESSIONAL_KINDS[0]), contactId: nonEmpty }),
+  z.object({ kind: z.literal(ISSUANCE_PROFESSIONAL_KINDS[1]), companyId: nonEmpty }),
+]);
 const note = z.string().max(ISSUANCE_NOTE_MAX).nullable();
 const delivery = z.enum(ISSUANCE_DELIVERY_OUTCOMES);
 const deliverySchema = z.object({ recipient: delivery, coOwners: z.record(z.string(), delivery) }).nullable();
@@ -54,15 +81,18 @@ const verification = z.enum(LINK_VERIFICATIONS).default('link');
 /** §31 — έγγραφα του §28–§30 δεν έγραφαν υπενθυμίσεις: διαβάζονται ως «καμία», που ήταν και η αλήθεια τους. */
 const remindersSchema = z.object({ dueAt: nonEmpty.nullable(), sentAt: z.array(nonEmpty) }).nullable().default(null);
 
-/** §28 Η-Β2 — η βάση είναι **ένωση**: καταγραφή του γραφείου ή ο ίδιος ο υπεύθυνος με σύνδεσμο. Τίποτα ενδιάμεσο. */
+/**
+ * §28 Η-Β2 — η βάση είναι **ένωση**: καταγραφή του γραφείου, ο ίδιος ο υπεύθυνος με σύνδεσμο, ή (ADR-945 Δ3) ο ιδιώτης
+ * ο ίδιος. Ο υπεύθυνος-επαφή υπάρχει **μόνο** στις δύο πρώτες — ίδιο σχήμα δίσκου με πριν, καμία μετανάστευση.
+ */
 const decisionSchema = z.discriminatedUnion('basis', [
-  z.object({ basis: z.literal('recorded-instruction'), channel: z.enum(INSTRUCTION_CHANNELS), recordedByUid: nonEmpty }),
-  z.object({ basis: z.literal('owner-link-approval'), invitationId: nonEmpty, verifiedBy: verification }),
+  z.object({ basis: z.literal('recorded-instruction'), channel: z.enum(INSTRUCTION_CHANNELS), recordedByUid: nonEmpty, ownerContactId: nonEmpty }),
+  z.object({ basis: z.literal('owner-link-approval'), invitationId: nonEmpty, verifiedBy: verification, ownerContactId: nonEmpty }),
+  z.object({ basis: z.literal('owner-self'), uid: nonEmpty }),
 ]).and(z.object({
   outcome: z.enum(['approved', 'rejected']),
   /** §42 — έγγραφα πριν από την προσφορά δεν το έγραφαν: διαβάζονται ως παλιά ανάθεση (`null`), που ήταν και η αλήθεια τους. */
   quoteRevision: z.number().int().min(1).nullable().default(null),
-  ownerContactId: nonEmpty,
   /** §45.15 — αποφάσεις πριν από το 1β-γ δεν έγραφαν τεκμήριο ιδιοκτητών: «δεν ζητήθηκε», που ήταν και η αλήθεια τους. */
   ownerAttestation: z.object({
     owners: z.array(z.object({ contactId: nonEmpty, verdict: z.enum(OWNER_VERDICTS), vatNumber: nonEmpty.nullable() }))
@@ -166,11 +196,18 @@ const deliveryChangeRequestsSchema = z.array(z.object({
 
 const assignmentSchema = z.object({
   id: nonEmpty,
-  companyId: nonEmpty,
+  /** Ο κάτοχος — **ακριβώς ένα** από τα δύο (`custodyScopeFromData`). */
+  companyId: nonEmpty.optional(),
+  userId: nonEmpty.optional(),
   propertyId: nonEmpty,
   scope: z.enum(REGISTRY_PROPERTY_SCOPES),
   documentKind: z.enum(DOCUMENT_KINDS),
-  professionalContactId: nonEmpty,
+  /** ADR-945 §7.2 — έγγραφα πριν από τα αιτήματα: απευθείας ανάθεση γραφείου, που ήταν και η αλήθεια τους. */
+  requestId: nonEmpty.nullable().default(null),
+  cycle: z.number().int().min(1).nullable().default(null),
+  professional: professionalSchema.optional(),
+  /** Μόνο σε έγγραφα πριν από το ADR-945 — διαβάζεται ως `{ kind: 'contact' }`, δεν ξαναγράφεται ποτέ. */
+  professionalContactId: nonEmpty.optional(),
   credential: z.object({
     qualification: z.enum(ISSUER_QUALIFICATIONS),
     registryNumber: z.string().min(1).max(REGISTRY_NUMBER_MAX).nullable(),
@@ -196,24 +233,50 @@ const assignmentSchema = z.object({
   deliveryChangeRequests: deliveryChangeRequestsSchema,
   advanceEvents: advanceEventsSchema,
   advanceReceipt: receiptSchema,
-  cancellation: z.object({ byUid: nonEmpty, at: nonEmpty }).nullable(),
+  /** ADR-945 §7.2 — ακυρώσεις πριν από τα αιτήματα δεν έγραφαν λόγο: «ακυρώθηκε», που ήταν και η αλήθεια τους. */
+  cancellation: z.object({ byUid: nonEmpty, at: nonEmpty, reason: z.enum(ISSUANCE_CANCELLATION_REASONS).default('cancelled') }).nullable(),
   updatedAt: nonEmpty,
 });
 
-/** Ωμό έγγραφο → `DocumentIssuanceAssignment`, ή `null` αν δεν είναι ανάθεση που καταλαβαίνουμε. */
-export function parseIssuanceAssignment(raw: unknown): DocumentIssuanceAssignment | null {
+/**
+ * Ο επαγγελματίας του εγγράφου: η ένωση (νέα έγγραφα) **ή** το παλιό `professionalContactId`. Και τα δύο και να
+ * διαφωνούν ⇒ `null` (fail-closed — ποτέ μαντεψιά για το ποιος ανέλαβε).
+ */
+function professionalOfStored(professional: IssuanceProfessional | undefined, legacyContactId: string | undefined): IssuanceProfessional | null {
+  if (professional === undefined) return legacyContactId === undefined ? null : { kind: 'contact', contactId: legacyContactId };
+  if (legacyContactId === undefined) return professional;
+  return professional.kind === 'contact' && professional.contactId === legacyContactId ? professional : null;
+}
+
+/** Ωμό έγγραφο → ανάθεση **με κάτοχο**, ή `null` αν δεν είναι ανάθεση που καταλαβαίνουμε. */
+export function parseOwnedIssuanceAssignment(raw: unknown): OwnedIssuanceAssignment | null {
   const parsed = assignmentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : null;
+  if (!parsed.success) return null;
+  const { companyId, userId, professional, professionalContactId, ...rest } = parsed.data;
+  // Ο ΙΔΙΟΣ κριτής «ακριβώς ένα βιβλίο» με ιστορικό, αρχεία και δηλώσεις — κανένα δεύτερο refine εδώ.
+  const owner = custodyScopeFromData({ companyId, userId });
+  const resolved = professionalOfStored(professional, professionalContactId);
+  // Αίτημα χωρίς κύκλο (ή αντίστροφα) δεν είναι ούτε προσφορά ούτε απευθείας ανάθεση ⇒ fail-closed.
+  if ((rest.requestId === null) !== (rest.cycle === null)) return null;
+  return owner === null || resolved === null ? null : { ...rest, professional: resolved, owner };
+}
+
+/** Ωμό έγγραφο → η ανάθεση **ενός γραφείου**, ή `null` (χαλασμένη · ανάθεση ιδιώτη). */
+export function parseIssuanceAssignment(raw: unknown): DocumentIssuanceAssignment | null {
+  const owned = parseOwnedIssuanceAssignment(raw);
+  if (owned === null || owned.owner.companyId === undefined) return null;
+  const { owner, ...rest } = owned;
+  return { ...rest, companyId: owner.companyId };
 }
 
 /** Τα γεγονότα μόνο — ό,τι κρίνει ο μειωτής, χωρίς την ταυτότητα. */
-export function issuanceRecordOf(assignment: DocumentIssuanceAssignment): IssuanceAssignmentRecord {
+export function issuanceRecordOf(assignment: IssuanceAssignmentIdentity): IssuanceAssignmentRecord {
   const {
-    professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
+    professional, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
     deliverySchedule, deliveryReminders, inspectionContacts, deliveryChangeRequests, advanceEvents, advanceReceipt, cancellation,
   } = assignment;
   return {
-    professionalContactId, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
+    professional, credential, proposedAt, proposedByUid, approvalRequest, decision, notice, response, quote, receipt,
     deliverySchedule, deliveryReminders, inspectionContacts, deliveryChangeRequests, advanceEvents, advanceReceipt, cancellation,
   };
 }

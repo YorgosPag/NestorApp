@@ -103,7 +103,7 @@ function recordOf(actions: readonly IssuanceAction[]): IssuanceAssignmentRecord 
   }, null) as IssuanceAssignmentRecord;
 }
 
-const PROPOSE: IssuanceAction = { kind: 'propose', professionalContactId: 'cont_client', credential: INSPECTOR };
+const PROPOSE: IssuanceAction = { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_client' }, credential: INSPECTOR };
 const APPROVE: IssuanceAction = { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_alpha', quoteRevision: 1, ownerAttestation: null };
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null };
 const FIRM_TERMS: QuoteTerms = { basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31', scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: null };

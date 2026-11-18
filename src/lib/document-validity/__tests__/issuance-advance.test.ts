@@ -42,7 +42,7 @@ const TERMS: QuoteTerms = {
   scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: { amountMinor: 4_000, policy: 'moderate', inspectionValueMinor: 1_500 },
 };
 const ASSIGNED: IssuanceAction[] = [
-  { kind: 'propose', professionalContactId: 'cont_pro', credential: INSPECTOR },
+  { kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: INSPECTOR },
   { kind: 'notify', channel: 'email', invitationId: null, note: null, verification: null },
   { kind: 'quote', terms: TERMS },
   { kind: 'decide', outcome: 'approved', channel: 'phone', note: null, ownerContactId: 'cont_lead', quoteRevision: 1, ownerAttestation: null },
@@ -118,7 +118,7 @@ describe('ADR-943 Κ-8 — γεγονότα χρημάτων μόνο από `sy
   });
 
   it('το system δεν κάνει πράξη της ανάθεσης (`actor-refused`)', () => {
-    expect(refusalOf(assigned(), { kind: 'cancel' }, SYSTEM)).toBe('actor-refused');
+    expect(refusalOf(assigned(), { kind: 'cancel', reason: 'cancelled' }, SYSTEM)).toBe('actor-refused');
   });
 
   it('πληρωμή ⇒ `held`· ίδια αναφορά ξανά (webhook + cron) ⇒ `changed: false`', () => {
@@ -278,7 +278,7 @@ describe('ADR-943 Κ-5 — πολιτικές ακύρωσης', () => {
   });
 
   it('επιστροφή μετά από ακύρωση γράφεται· πάνω από το εισπραχθέν ⇒ `terms-refused`· ολική ⇒ `refunded`', () => {
-    const cancelled = apply(funded(), { kind: 'cancel' }, OFFICE);
+    const cancelled = apply(funded(), { kind: 'cancel', reason: 'cancelled' }, OFFICE);
     expect(issuanceStageOf(cancelled)).toBe('cancelled');
     expect(refusalOf(cancelled, { kind: 'advance-refunded', amountMinor: 4_001, reference: 'ref_1' }, SYSTEM)).toBe('terms-refused');
     const refunded = apply(cancelled, { kind: 'advance-refunded', amountMinor: 4_000, reference: 'ref_1' }, SYSTEM);

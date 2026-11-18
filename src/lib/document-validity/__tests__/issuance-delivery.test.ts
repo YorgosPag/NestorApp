@@ -16,7 +16,7 @@ import {
 const NOW = '2026-10-17T09:00:00.000Z';
 const OFFICE: IssuanceActor = { kind: 'office', uid: 'uid_agent', nowIso: NOW };
 const PROPOSE: IssuanceAction = {
-  kind: 'propose', professionalContactId: 'cont_pro', credential: { qualification: 'energy-inspector-registered', registryNumber: null },
+  kind: 'propose', professional: { kind: 'contact', contactId: 'cont_pro' }, credential: { qualification: 'energy-inspector-registered', registryNumber: null },
 };
 /** §42 — το αίτημα έγκρισης φεύγει μόνο όταν υπάρχει προσφορά: πρόταση → αίτημα προσφοράς → προσφορά (`quoted`). */
 const NOTIFY: IssuanceAction = { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null };

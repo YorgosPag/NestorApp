@@ -11,6 +11,7 @@
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
 import { qualifiesFor, type IssuanceAssignmentRecord, type IssuanceCredential } from './issuance-assignment';
+import { professionalContactIdOf } from './issuance-professional';
 
 /** Μία ανάθεση του γραφείου στο παρελθόν ή τώρα — ό,τι χρειάζεται η κατάταξη. */
 export interface IssuanceRosterEntry {
@@ -48,7 +49,9 @@ interface CandidateTally {
 function tallyOf(entries: readonly IssuanceRosterEntry[], kind: DocumentKind, propertyId: string): Map<string, CandidateTally> {
   const tally = new Map<string, CandidateTally>();
   for (const { record, documentKind, propertyId: entryProperty } of entries) {
-    const id = record.professionalContactId;
+    // ADR-945 Δ4 — υποψήφιοι είναι **επαφές** του βιβλίου· βιτρίνα του `/pro` δεν προτείνεται από εδώ.
+    const id = professionalContactIdOf(record.professional);
+    if (id === null) continue;
     const fits = qualifiesFor(kind, record.credential.qualification) ? record.credential : null;
     const entry = tally.get(id) ?? { sameProperty: null, count: 0, lastAt: '', credential: null };
     if (entryProperty === propertyId && documentKind !== kind) entry.sameProperty = documentKind;
