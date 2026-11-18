@@ -21,6 +21,7 @@ import { updatePaymentCheckout, type PaymentCheckoutPatch, type PaymentCheckoutR
 import {
   startedCheckoutDiagnostics,
   type CheckoutLocale,
+  type CheckoutPayer,
   type PaymentProvider,
   type StartedCheckout,
 } from './payment-provider';
@@ -49,6 +50,8 @@ export interface CheckoutLaunchInput {
   readonly locale: CheckoutLocale;
   /** Η δημόσια αρχή της εφαρμογής (`publicOrigin()`), για τις διευθύνσεις επιστροφής / webhook. */
   readonly origin: string;
+  /** Ό,τι ξέρει ο καλών για τον πληρωτή — περνά αυτούσιο στον πάροχο (ADR-ACC-030 §5.11). */
+  readonly payer: CheckoutPayer;
 }
 
 export type CheckoutLaunchOutcome =
@@ -66,10 +69,13 @@ export async function launchCheckoutAtProvider(
       returnUrl: joinOrigin(input.origin, paymentReturnRoute(provider.id, record.checkoutId)),
       webhookUrl: joinOrigin(input.origin, paymentWebhookRoute(provider.id)),
       split: record.marketplace !== null,
+      payer: input.payer,
     });
     await updatePaymentCheckout(db, record.checkoutId, startedCheckoutPatch(started), nowISO());
     logger.info('Checkout started at provider', {
       checkoutId: record.checkoutId, provider: provider.id, method: record.method, split: record.marketplace !== null,
+      // Μόνο αν υπήρχε — ποτέ η διεύθυνση (προσωπικό δεδομένο).
+      payerEmail: input.payer.email !== null,
       ...startedCheckoutDiagnostics(started, record.createdAt),
     });
     return { status: 'started', checkoutId: record.checkoutId, launch: started.launch };

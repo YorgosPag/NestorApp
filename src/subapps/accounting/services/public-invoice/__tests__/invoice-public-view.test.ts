@@ -82,4 +82,17 @@ describe('buildInvoicePublicView', () => {
     const cash = buildInvoicePublicView(invoice({ paymentMethod: 'cash' }), TODAY, []);
     expect([cash.standing, cash.payment]).toEqual(['not-payable', null]);
   });
+
+  // ADR-ACC-030 §5.11 — η σελίδα μαθαίνει ΜΟΝΟ αν χρειάζεται email για κάρτα, ποτέ το ίδιο το email.
+  it('card payer email: required only for card when the file has no valid email — and the email never travels', () => {
+    const known = buildInvoicePublicView(invoice(), TODAY, [], ['card', 'iris']);
+    expect(known.cardPayerEmailRequired).toBe(false);
+    expect(JSON.stringify(known)).not.toContain('secret@customer.gr');
+    const customer = invoice().customer;
+    expect(buildInvoicePublicView(invoice({ customer: { ...customer, email: null } }), TODAY, [], ['card']).cardPayerEmailRequired).toBe(true);
+    expect(buildInvoicePublicView(invoice({ customer: { ...customer, email: 'not-an-email' } }), TODAY, [], ['card']).cardPayerEmailRequired).toBe(true);
+    expect(buildInvoicePublicView(invoice({ customer: { ...customer, email: null } }), TODAY, [], ['iris']).cardPayerEmailRequired).toBe(false);
+    const paid = invoice({ customer: { ...customer, email: null }, paymentStatus: 'paid', balanceDue: 0 });
+    expect(buildInvoicePublicView(paid, TODAY, [], ['card']).cardPayerEmailRequired).toBe(false);
+  });
 });

@@ -49,6 +49,12 @@
     "continue": "Pay {amount}",
     "starting": "Taking you to secure payment…",
     "secureNote": "Your card or account details never pass through us.",
+    "payerEmail": {
+      "label": "Email",
+      "hint": "Only the payment provider receives it, for your payment and for Apple Pay / Google Pay where supported.",
+      "required": "Enter your email to continue with card.",
+      "invalid": "Check your email address — e.g. name@example.com."
+    },
     "noMethodBody": "No payment method is available through this link. Please contact the issuer to arrange payment.",
     "processingTitle": "Your payment is being recorded",
     "processingBody": "As soon as the provider confirms the payment, this page will show “Paid”. This usually takes a few seconds.",
@@ -61,6 +67,7 @@
       "method-unavailable": "This payment method is not available. Please choose another method.",
       "provider-unavailable": "The payment provider did not respond. Try again shortly or pay by bank transfer.",
       "not-payable": "Nothing is owed on this invoice any more. Please refresh the page.",
+      "payer-email-required": "Card payment needs your email. Please refresh the page and enter it.",
       "generic": "The payment did not start. Check your connection and try again."
     }
   },

@@ -144,7 +144,7 @@ describe('startCheckout — λήξη του παρόχου', () => {
   const request = {
     checkoutId: 'pchk_9', amountMinor: 500, currency: 'EUR' as const, description: 'Α-13', locale: 'el' as const,
     returnUrl: 'https://example.test/r', webhookUrl: 'https://example.test/w', expiresAt: '2026-11-13T10:30:00.000Z',
-    split: false,
+    split: false, payer: { email: null },
   };
   const respond = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
   afterEach(() => jest.restoreAllMocks());
@@ -179,6 +179,7 @@ describe('split — πληρωμή marketplace', () => {
   const request = {
     checkoutId: 'pchk_7', amountMinor: 4000, currency: 'EUR' as const, description: 'pchk_7', locale: 'el' as const,
     returnUrl: 'https://example.test/r', webhookUrl: 'https://example.test/w', expiresAt: '2026-11-17T10:30:00.000Z',
+    payer: { email: null },
   };
   const respond = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
   const sentForm = (spy: jest.SpyInstance): URLSearchParams => new URLSearchParams(String((spy.mock.calls[0][1] as RequestInit).body));
@@ -202,5 +203,37 @@ describe('split — πληρωμή marketplace', () => {
       { checkoutId: 'pchk_7', method: 'iris', amountMinor: 4000, currency: 'EUR', providerReference: null, split: true }, 'src_7',
     );
     expect(sentForm(spy).get('split')).toBe('1');
+  });
+});
+
+// ADR-ACC-030 §5.11 — χωρίς `payee_email` η σελίδα της ειδοποίησης κρύβει Google Pay (μετρημένο 2026-11-18, `pnt_HeyWH3…`).
+describe('payee_email — ο πληρωτής στην ειδοποίηση', () => {
+  const request = {
+    checkoutId: 'pchk_5', amountMinor: 100, currency: 'EUR' as const, description: 'Α-20', locale: 'el' as const,
+    returnUrl: 'https://example.test/r', webhookUrl: 'https://example.test/w', expiresAt: '2026-11-18T10:30:00.000Z',
+    split: false,
+  };
+  const respond = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+  const sentForm = (spy: jest.SpyInstance): URLSearchParams => new URLSearchParams(String((spy.mock.calls[0][1] as RequestInit).body));
+  afterEach(() => jest.restoreAllMocks());
+
+  it('κάρτα με γνωστό email ⇒ `payee_email` στο `POST /notifications` (και `skip_notify=1`: κανένα email από τον πάροχο)', async () => {
+    const spy = jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({ token: 'pnt_5', payment_link_url: 'https://pay.test/pnt_5' }));
+    await provider.startCheckout({ ...request, method: 'card', payer: { email: 'pelatis@example.gr' } });
+    const form = sentForm(spy);
+    expect(form.get('payee_email')).toBe('pelatis@example.gr');
+    expect(form.get('skip_notify')).toBe('1');
+  });
+
+  it('κάρτα χωρίς email ⇒ ΚΑΜΙΑ παράμετρος `payee_email` (ποτέ κενή τιμή)', async () => {
+    const spy = jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({ token: 'pnt_6', payment_link_url: 'https://pay.test/pnt_6' }));
+    await provider.startCheckout({ ...request, method: 'card', payer: { email: null } });
+    expect(sentForm(spy).has('payee_email')).toBe(false);
+  });
+
+  it('IRIS: η συνεδρία `/iris/sessions` δεν είναι ειδοποίηση ⇒ ΔΕΝ φέρει `payee_email`, ακόμη κι αν το ξέρουμε', async () => {
+    const spy = jest.spyOn(global, 'fetch').mockImplementationOnce(() => respond({ signature: 'sig_5' }));
+    await provider.startCheckout({ ...request, method: 'iris', payer: { email: 'pelatis@example.gr' } });
+    expect(sentForm(spy).has('payee_email')).toBe(false);
   });
 });

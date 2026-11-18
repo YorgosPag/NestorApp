@@ -27,6 +27,16 @@ export type CheckoutCurrency = 'EUR';
 
 export type CheckoutLocale = 'el' | 'en';
 
+/**
+ * **Ο πληρωτής, όπως τον ξέρει ο διακομιστής** (ADR-ACC-030 §5.11 · ADR-943 §8 #16). Το email ανοίγει το Google Pay /
+ * Apple Pay στη σελίδα του παρόχου (EveryPay `payee_email`, μετρημένο 2026-11-18) — όπως το Stripe Checkout
+ * `customer_email`. `null` ⇒ δεν το ξέρουμε (π.χ. IRIS, όπου δεν ζητείται). **Κανένα τηλέφωνο**: καμία πηγή δεν το
+ * κρατά, και το Stripe επίσης δεν το προσυμπληρώνει από τη συνεδρία.
+ */
+export interface CheckoutPayer {
+  readonly email: string | null;
+}
+
 /** Ό,τι χρειάζεται ο πάροχος για να ξεκινήσει μια συνεδρία. Το ποσό το έχει ήδη ορίσει ο διακομιστής. */
 export interface CheckoutRequest {
   readonly checkoutId: string;
@@ -48,6 +58,8 @@ export interface CheckoutRequest {
    * `split=1`). `false` ⇒ στον λογαριασμό εμπόρου (τιμολόγιο). Ρητό, όχι προαιρετικό: κάθε καλών απαντά.
    */
   readonly split: boolean;
+  /** Ρητό, όχι προαιρετικό (όπως το `split`): κάθε καλών απαντά τι ξέρει για τον πληρωτή. */
+  readonly payer: CheckoutPayer;
 }
 
 export interface StartedCheckout {

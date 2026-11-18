@@ -186,6 +186,8 @@ export async function startIssuanceAdvanceCheckout(db: Firestore, token: string,
   await createPaymentCheckout(db, record);
   const result = await launchCheckoutAtProvider(db, provider, record, {
     description: providerDescriptionOf(payer, input.body.locale), locale: input.body.locale, origin: input.origin,
+    // Η πρόσκληση δεν φεύγει χωρίς email (`issueAdvanceLink`) ⇒ ο ιδιοκτήτης δεν ρωτιέται ποτέ (ADR-943 §8 #16).
+    payer: { email: payer.invitation.inviteeEmail },
   });
   return { kind: 'result', result };
 }

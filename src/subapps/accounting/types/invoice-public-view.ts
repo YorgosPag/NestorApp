@@ -113,6 +113,11 @@ export interface InvoicePublicView {
    * ή όταν δεν είναι ρυθμισμένος πάροχος — τότε μένει μόνο η μεταφορά. Το αποφασίζει ο διακομιστής.
    */
   readonly onlineMethods: readonly OnlinePaymentMethod[];
+  /**
+   * Η πληρωμή με **κάρτα** χρειάζεται email πληρωτή που ο φάκελος δεν έχει (ADR-ACC-030 §5.11) ⇒ η σελίδα το ζητά.
+   * 🔒 Μόνο **αν** — ποτέ το ίδιο το email: όποιος κρατά τον σύνδεσμο δεν μαθαίνει τη διεύθυνση του πελάτη.
+   */
+  readonly cardPayerEmailRequired: boolean;
   readonly notes: string | null;
 }
 

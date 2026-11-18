@@ -31,6 +31,11 @@ export interface InvoiceCheckoutRequestBody {
   readonly locale: 'el' | 'en';
   /** Η διαδρομή της σελίδας (`/shared/<token>`) — ελέγχεται ότι ανήκει στον ίδιο σύνδεσμο, ώστε η επιστροφή να μην είναι ανοιχτή ανακατεύθυνση. */
   readonly returnPath: string;
+  /**
+   * Το email που έδωσε ο πληρωτής, **μόνο** όταν η όψη το ζήτησε (`cardPayerEmailRequired`, ADR-ACC-030 §5.11). Ο φάκελος
+   * **νικά**: όταν το τιμολόγιο έχει email, αυτό αγνοείται — ο κάτοχος του συνδέσμου δεν αντικαθιστά τον πελάτη.
+   */
+  readonly payerEmail?: string;
 }
 
 export type InvoiceCheckoutRefusal =
@@ -39,6 +44,8 @@ export type InvoiceCheckoutRefusal =
   | 'not-payable'
   /** Ο τρόπος δεν είναι ενεργός για τον λογαριασμό εμπόρου. */
   | 'method-unavailable'
+  /** Κάρτα χωρίς email πληρωτή (ούτε στον φάκελο ούτε από τη σελίδα) — χωρίς αυτό ο πάροχος κρύβει Google/Apple Pay. */
+  | 'payer-email-required'
   /** Ο πάροχος δεν απάντησε — ο πελάτης μπορεί να ξαναδοκιμάσει ή να πληρώσει με μεταφορά. */
   | 'provider-unavailable';
 

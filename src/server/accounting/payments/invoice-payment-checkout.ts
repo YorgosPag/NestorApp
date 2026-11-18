@@ -8,6 +8,8 @@ import 'server-only';
  *   2. **Η διαδρομή επιστροφής** (`/shared/<token>`) λύνεται στον **ίδιο** σύνδεσμο — αλλιώς άρνηση (καμία ανοιχτή
  *      ανακατεύθυνση).
  *   3. **Ποσό από τον διακομιστή** (`invoiceAmountDueNow`), σε λεπτά. Ο πελάτης δεν στέλνει ποτέ ποσό.
+ *   3α. **Email πληρωτή** (§5.11): του φακέλου (`invoicePayerEmailOnFile`) **νικά** εκείνο της σελίδας· κάρτα χωρίς
+ *      κανένα ⇒ `payer-email-required` **πριν** από κάθε εγγραφή (Stripe Checkout: `customer_email` ή συλλογή).
  *   4. **Οι ανοιχτές συνεδρίες του ίδιου συνδέσμου κλείνουν**: ξεχασμένη καρτέλα κάρτας δεν πληρώνεται δεύτερη φορά
  *      αφού ο πελάτης πλήρωσε με IRIS.
  *   5. **Η συνεδρία γράφεται ΠΡΙΝ** μιλήσουμε με τον πάροχο: κάθε webhook βρίσκει πάντα συνεδρία να ταιριάξει.
@@ -22,13 +24,13 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { isPlausibleShareToken } from '@/lib/sharing/share-token';
 import { linkHolderActor } from '@/server/accounting/public-invoice/invoice-link-opened';
 import { readSharedInvoice } from '@/server/accounting/public-invoice/invoice-public-session';
-import type { PaymentProvider } from '@/server/payments/payment-provider';
+import type { CheckoutPayer, PaymentProvider } from '@/server/payments/payment-provider';
 import { CHECKOUT_LIFETIME_MS, launchCheckoutAtProvider } from '@/server/payments/payment-checkout-launch';
 import { paymentProviderForCompany } from '@/server/payments/payment-provider-registry';
 import { findActiveShareByToken } from '@/server/sharing/share-token-lookup';
 import { generatePaymentCheckoutId } from '@/services/enterprise-id.service';
 import { logAccountingEvent } from '@/subapps/accounting/services/accounting-audit-service';
-import { invoiceAmountDueNow } from '@/subapps/accounting/services/payments/invoice-payment-link';
+import { invoiceAmountDueNow, invoicePayerEmailOnFile } from '@/subapps/accounting/services/payments/invoice-payment-link';
 import type { Invoice } from '@/subapps/accounting/types';
 import type { InvoiceCheckoutRequestBody, InvoiceCheckoutResponse } from '@/subapps/accounting/types/online-payment';
 import type { IAccountingRepository } from '@/subapps/accounting/types/interfaces';
@@ -83,12 +85,22 @@ async function recordCheckoutStarted(
   });
 }
 
+/**
+ * Ο πληρωτής της συνεδρίας: το email του φακέλου **νικά** εκείνο της σελίδας (η σελίδα στέλνει μόνο όταν η όψη το ζήτησε).
+ * `null` ⇒ κάρτα δεν ξεκινά (η κάρτα χωρίς email χάνει Google/Apple Pay)· IRIS δεν το χρειάζεται.
+ */
+function payerOf(invoice: Invoice, input: StartInvoiceCheckoutInput): CheckoutPayer | null {
+  const email = invoicePayerEmailOnFile(invoice) ?? input.payerEmail ?? null;
+  return email === null && input.method === 'card' ? null : { email };
+}
+
 /** Ξεκινά τη συνεδρία στον πάροχο — ο ΕΝΑΣ δρόμος (`launchCheckoutAtProvider`). Αποτυχία ⇒ ονομασμένη άρνηση. */
 function launchAtProvider(
-  db: Firestore, provider: PaymentProvider, record: PaymentCheckoutRecord, input: StartInvoiceCheckoutInput, invoice: Invoice,
+  db: Firestore, provider: PaymentProvider, record: PaymentCheckoutRecord, input: StartInvoiceCheckoutInput,
+  invoice: Invoice, payer: CheckoutPayer,
 ): Promise<InvoiceCheckoutResponse> {
   return launchCheckoutAtProvider(db, provider, record, {
-    description: `${invoice.series}-${invoice.number}`, locale: input.locale, origin: input.origin,
+    description: `${invoice.series}-${invoice.number}`, locale: input.locale, origin: input.origin, payer,
   });
 }
 
@@ -103,11 +115,13 @@ export async function startInvoicePaymentCheckout(
   if (provider === null || !provider.methods.includes(input.method)) return { status: 'refused', reason: 'method-unavailable' };
   const amountMinor = minorUnitsOf(invoiceAmountDueNow(shared.invoice));
   if (shared.invoice.currency !== 'EUR' || amountMinor <= 0) return { status: 'refused', reason: 'not-payable' };
+  const payer = payerOf(shared.invoice, input);
+  if (payer === null) return { status: 'refused', reason: 'payer-email-required' };
 
   const subject: InvoicePayableSubject = { kind: 'invoice', invoiceId: shared.invoice.invoiceId, shareId: input.shareId };
   await closePendingCheckoutsOf(db, provider, subject);
   const record = newCheckoutRecord(input, subject, shared.share.companyId, provider, amountMinor);
   await createPaymentCheckout(db, record);
   await recordCheckoutStarted(shared.repository, record, subject);
-  return launchAtProvider(db, provider, record, input, shared.invoice);
+  return launchAtProvider(db, provider, record, input, shared.invoice, payer);
 }

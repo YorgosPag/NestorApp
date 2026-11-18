@@ -17,6 +17,7 @@ import 'server-only';
 import { plainRecordOrNull } from '@/lib/type-guards';
 
 import type {
+  CheckoutPayer,
   CheckoutRequest,
   CheckoutSettlement,
   CheckoutSubject,
@@ -63,6 +64,15 @@ function splitField(split: boolean): Record<string, string> {
   return split ? { split: '1' } : {};
 }
 
+/**
+ * `payee_email` μόνο όταν τον ξέρουμε (ADR-ACC-030 §5.11): **χωρίς** αυτόν η σελίδα της ειδοποίησης **δεν** δείχνει
+ * Google Pay / Apple Pay (μετρημένο sandbox 2026-11-18 · `pnt_HeyWH3…`). Με `skip_notify=1` η EveryPay **δεν** στέλνει
+ * email στον πληρωτή — το πεδίο μόνο ταυτοποιεί (API reference «Create a notification»).
+ */
+function payeeFields(payer: CheckoutPayer): Record<string, string> {
+  return payer.email === null ? {} : { payee_email: payer.email };
+}
+
 async function startCardCheckout(credentials: EverypayCredentials, request: CheckoutRequest): Promise<StartedCheckout> {
   const body = plainRecordOrNull(await everypayRequest(credentials, {
     method: 'POST',
@@ -75,6 +85,7 @@ async function startCardCheckout(credentials: EverypayCredentials, request: Chec
       expiration_date: everypayDateTime(request.expiresAt),
       // ADR-943 §5.9 — «Marketplace-only parameter» (API reference, `POST /notifications`).
       ...splitField(request.split),
+      ...payeeFields(request.payer),
     },
   }));
   const reference = textField(body, 'token');

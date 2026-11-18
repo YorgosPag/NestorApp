@@ -1,7 +1,8 @@
 /**
  * «Πληρωμή τώρα» — ο πελάτης διαλέγει τρόπο και ακολουθεί **ξεχωριστή ροή ανά τρόπο** (ADR-ACC-030 §5):
  *
- * - **Κάρτα** (Visa / Mastercard, και Apple Pay / Google Pay όπου υποστηρίζονται) → ασφαλής σελίδα του παρόχου.
+ * - **Κάρτα** (Visa / Mastercard, και Apple Pay / Google Pay όπου υποστηρίζονται) → ασφαλής σελίδα του παρόχου. Όταν
+ *   ο φάκελος δεν έχει email πληρωτή, το ζητάμε πρώτα (`InvoicePayerEmailField`, §5.11).
  * - **IRIS** → ασφαλής σελίδα του παρόχου, όπου επιλέγει τράπεζα ή σαρώνει QR. Τα λογότυπα τραπεζών είναι **του
  *   παρόχου** — η σελίδα μας δεν δείχνει ούτε συνδέει ποτέ σε τράπεζες (εμπορικά σήματα · όψη phishing).
  * - **Τραπεζική μεταφορά** → οι υπάρχουσες οδηγίες με EPC QR (ADR-ACC-018 §15–16), αμετάβλητες.
@@ -28,6 +29,7 @@ import type { OnlinePaymentMethod } from '@/subapps/accounting/types/online-paym
 import { formatAccountingCurrency } from '@/subapps/accounting/utils/format';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+import { InvoicePayerEmailField, usePayerEmailEntry } from './InvoicePayerEmailField';
 import { InvoicePublicPaymentSection } from './InvoicePublicPaymentSection';
 import { INVOICE_PUBLIC_PAYMENT_NS } from './invoice-payment-primitives';
 import { useInvoiceCheckout, type InvoiceCheckoutState } from './useInvoiceCheckout';
@@ -44,17 +46,28 @@ interface OnlineMethodPanelProps {
   readonly method: OnlinePaymentMethod;
   readonly amountDue: number;
   readonly checkout: InvoiceCheckoutState;
-  readonly onStart: (method: OnlinePaymentMethod) => void;
+  readonly onStart: (method: OnlinePaymentMethod, payerEmail?: string) => void;
+  /** Ο διακομιστής λέει ότι αυτή η πληρωμή χρειάζεται email πληρωτή (μόνο κάρτα · ποτέ το ίδιο το email). */
+  readonly asksPayerEmail: boolean;
 }
 
-function OnlineMethodPanel({ method, amountDue, checkout, onStart }: OnlineMethodPanelProps): React.ReactElement {
+function OnlineMethodPanel({ method, amountDue, checkout, onStart, asksPayerEmail }: OnlineMethodPanelProps): React.ReactElement {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
   const colors = useSemanticColors();
+  const payerEmail = usePayerEmailEntry();
   const starting = checkout.kind === 'starting' && checkout.method === method;
+  const busy = checkout.kind === 'starting';
+  // Σύγχρονα, μέσα στο πάτημα: ο έλεγχος δεν καθυστερεί το άνοιγμα της καρτέλας του παρόχου.
+  const submit = (): void => {
+    if (!asksPayerEmail) { onStart(method); return; }
+    const email = payerEmail.confirm();
+    if (email !== null) onStart(method, email);
+  };
   return (
     <article className="space-y-3">
       <p className="text-sm">{t(method === 'card' ? 'payNow.cardHint' : 'payNow.irisHint')}</p>
-      <Button type="button" size="lg" className="w-full sm:w-auto" disabled={checkout.kind === 'starting'} onClick={() => onStart(method)}>
+      {asksPayerEmail && <InvoicePayerEmailField entry={payerEmail} disabled={busy} />}
+      <Button type="button" size="lg" className="w-full sm:w-auto" disabled={busy} onClick={submit}>
         {starting
           ? <><Spinner size="small" />{t('payNow.starting')}</>
           : t('payNow.continue', { amount: formatAccountingCurrency(amountDue) })}
@@ -69,7 +82,7 @@ function OnlineMethodPanel({ method, amountDue, checkout, onStart }: OnlineMetho
 function CheckoutRefusal({ checkout }: { readonly checkout: InvoiceCheckoutState }): React.ReactElement | null {
   const { t } = useTranslation(INVOICE_PUBLIC_PAYMENT_NS);
   if (checkout.kind !== 'refused') return null;
-  const known = ['method-unavailable', 'provider-unavailable', 'not-payable'].includes(checkout.reason);
+  const known = ['method-unavailable', 'provider-unavailable', 'not-payable', 'payer-email-required'].includes(checkout.reason);
   return (
     <Alert variant="destructive" role="alert">
       <AlertDescription>{t(`payNow.errors.${known ? checkout.reason : 'generic'}`)}</AlertDescription>
@@ -110,7 +123,10 @@ export function InvoicePayNowSection({ view, shareId, onLaunched }: InvoicePayNo
         </TabsList>
         {view.onlineMethods.map((method) => (
           <TabsContent key={method} value={method}>
-            <OnlineMethodPanel method={method} amountDue={view.amountDue} checkout={checkout} onStart={start} />
+            <OnlineMethodPanel
+              method={method} amountDue={view.amountDue} checkout={checkout} onStart={start}
+              asksPayerEmail={method === 'card' && view.cardPayerEmailRequired}
+            />
           </TabsContent>
         ))}
         {view.payment && (

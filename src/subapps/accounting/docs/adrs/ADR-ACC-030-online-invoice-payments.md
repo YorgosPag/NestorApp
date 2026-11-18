@@ -339,6 +339,8 @@ browser (αλλιώς η σιωπηλή ανανέωση της όψης προ�
    (απάντηση στο ίδιο νήμα, 2026-11-13 ~21:25, Gmail message `1a1d65b6348fbf26`): τι λείπει για να εμφανιστεί το
    Google Pay / Apple Pay στη hosted σελίδα· μνεία του κενού `merchantName`· υπενθύμιση #7 (επαναλήψεις webhook).
    Οι δοκιμαστικοί σύνδεσμοι των A-13/A-14/A-15 ανακλήθηκαν.
+   ✅ **ΑΙΤΙΑ ΒΡΕΘΗΚΕ 2026-11-18** — λείπει το `payee_email` της ειδοποίησης (όχι το `merchantName`)· λύση στον κώδικα
+   §5.11. Μένει ο ζωντανός έλεγχος μετά το deploy.
    Ιστορικό ερώτησης:
    Το dashboard (Ρυθμίσεις: Προφίλ · Εταιρεία · Τραπεζικοί λογαριασμοί · Ειδοποιήσεις · Κλειδιά API · Webhooks) **δεν**
    έχει επιλογή πορτοφολιών· κατά την τεκμηρίωση το Apple Pay «not enabled by default» ⇒ αίτημα στην υποστήριξη.
@@ -508,6 +510,31 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 ⚠️ Αποθηκευμένα παράγωγα: τα έγγραφα με επιστροφή **πριν** από την αλλαγή (δοκιμαστικό Α-11: `partial`, υπόλοιπο
 6,00 €) κρατούν τα παλιά παράγωγα ώσπου να ξαναγραφτεί κίνηση ή να κληθεί το `resettleInvoicePayments`.
 
+### 5.11 Email πληρωτή στην ειδοποίηση — Google Pay / Apple Pay (2026-11-18)
+
+**Εύρημα (μετρημένο, sandbox):** η hosted σελίδα της ειδοποίησης δείχνει Google Pay **μόνο** όταν το `POST /notifications`
+φέρει email ή κινητό πελάτη (απάντηση EveryPay 18/11 13:00). Δοκιμή: `pnt_HeyWH3tmZkRO5HfSz5DnDc6t` (1 €, `payee_email`,
+`skip_notify=1`) ⇒ κουμπί **G Pay ορατό**· οι A-13/14/15 (χωρίς) δεν το έδειχναν. Πεδία (API reference «Create a
+notification»): `payee_email` (προαιρετικό με `skip_notify=1` — δεν στέλνεται email) · `payee_phone` · `payee_name`.
+
+**Πρότυπο: Stripe Checkout `customer_email`** — γνωστό ⇒ το δίνει ο server· άγνωστο ⇒ ο πελάτης **πρέπει** να το δώσει.
+Η σελίδα της EveryPay δεν το ζητά ⇒ το ζητάμε **εμείς**, πριν από τη μετάβαση.
+
+| Σημείο | Τι κάνει |
+|---|---|
+| `CheckoutRequest.payer: CheckoutPayer { email: string \| null }` | **Ρητό** (όπως το `split`): κάθε καλών απαντά. **Κανένα τηλέφωνο**: καμία πηγή δεν το κρατά, και το Stripe δεν το προσυμπληρώνει από τη συνεδρία (συλλογή κλειστή εξ ορισμού). |
+| adapter `payeeFields` | `payee_email` μόνο όταν μη-null, **μόνο** στο `POST /notifications` (το IRIS δεν είναι ειδοποίηση). |
+| `launchCheckoutAtProvider` | Περνά τον πληρωτή αυτούσιο· στο log μόνο `payerEmail: boolean` (ποτέ η διεύθυνση). |
+| `invoicePayerEmailOnFile` (`invoice-payment-link.ts`) | Ο **ΕΝΑΣ** κριτής: `customer.email` χωρίς κενά, αν `isValidEmail` — αλλιώς `null` (άκυρο = άγνωστο ⇒ ρωτάμε). Τον ρωτούν **και** η όψη **και** η έναρξη ⇒ ποτέ διαφωνία. |
+| `InvoicePublicView.cardPayerEmailRequired` | Μόνο **boolean** — 🔒 το γνωστό email **δεν** φτάνει ποτέ στη σελίδα του συνδέσμου (εδώ ξεπερνάμε το Stripe, που το δείχνει κλειδωμένο). |
+| σώμα `payerEmail?` (route) | `trim · max(EMAIL_MAX_LENGTH) · isValidEmail` — ο ίδιος κριτής με τη σελίδα. Ο φάκελος **νικά**: ο κάτοχος του συνδέσμου δεν αντικαθιστά γνωστό email. |
+| άρνηση `payer-email-required` | Κάρτα χωρίς κανένα email ⇒ ονομασμένη άρνηση **πριν** από κάθε εγγραφή (καμία συνεδρία, κανένα κλείσιμο). IRIS ⇒ καμία ερώτηση. |
+| `InvoicePayerEmailField` (πάνω στο `HintedField`) | `type="email"` · `autoComplete="email"` · επικύρωση με `isValidEmail` (ποτέ η εγγενής του browser)· σφάλμα στο blur μόνο για ό,τι γράφτηκε, στο πάτημα και για κενό· εστίαση στο πεδίο· σύγχρονος έλεγχος ⇒ η καρτέλα πληρωμής ανοίγει μέσα στο πάτημα. |
+| Προκαταβολή (ADR-943) | `payer.invitation.inviteeEmail` — η πρόσκληση δεν φεύγει χωρίς email ⇒ ο ιδιοκτήτης δεν ρωτιέται ποτέ. |
+| `EMAIL_MAX_LENGTH = 254` (`email-validation.ts`) | Το ΕΝΑ όριο RFC 5321· το `MAX_QUOTE_RECIPIENT_EMAIL_LENGTH` του καταλόγου έγινε alias του. |
+
+⏳ Ζωντανός έλεγχος μετά το deploy: τιμολόγιο χωρίς email ⇒ πεδίο ⇒ G Pay σε Chrome· με email ⇒ καμία ερώτηση.
+
 ## 6. Εκτός εμβέλειας
 
 - Επιστροφή χρημάτων **από** την εφαρμογή (το port την υποστηρίζει· οι επιστροφές από το dashboard του παρόχου
@@ -553,3 +580,4 @@ provider-not-configured`) · ένα webhook στο dashboard με τα συμβ�
 | 2026-11-16 | [ADR-943 §5.6](../../../../../docs/centralized-systems/reference/adrs/ADR-943-issuance-advance-escrow.md) Φ2 — γενίκευση checkout σε «πληρωτέο αντικείμενο», **χωρίς αλλαγή συμπεριφοράς**: `PaymentCheckoutRecord.subject` αντί για `invoiceId`/`shareId` (στη βάση ίδια πεδία + `subjectKind`· έγγραφο χωρίς αυτό = τιμολόγιο, **καμία μετάπτωση**, κανένας νέος δείκτης) · μητρώο γραφέων `payable-subject-registry.ts` (ο συγχρονισμός δεν καλεί πια το `recordInvoicePayment` απευθείας) · `CheckoutSyncOutcome` `invoice-absent` → `subject-absent` · `listPendingCheckoutsOfShare` → `listPendingCheckoutsOf(subject)` · `closePendingCheckoutsOfShare` → `server/payments/payment-checkout-closing.ts` `closePendingCheckoutsOf` · διαδρομές επιστροφής από τον κωδικοποιητή. Jest: 12 σουίτες / 104 tests (νέα `payable-subject.test.ts`). |
 | 2026-11-16 | [ADR-943 §5.7](../../../../../docs/centralized-systems/reference/adrs/ADR-943-issuance-advance-escrow.md) Φ3 — το port αποκτά `marketplace: MarketplaceCapability \| null` (ρητό `null` όταν `EVERYPAY_MARKETPLACE` ≠ `enabled`) και σήμα webhook `payee-kyc` (`SELLER_KYC.STATUS`, πριν από τον έλεγχο προθέματος token). Η πληρωμή τιμολογίου **δεν** αλλάζει· ο πελάτης REST δέχεται και `PUT`, η λίστα και `/transfers`. Νέα συλλογή `payment_payees` (deny-all). |
 | 2026-11-17 | [ADR-943 §5.9](../../../../../docs/centralized-systems/reference/adrs/ADR-943-issuance-advance-escrow.md) Φ4β — η πληρωμή τιμολογίου **αμετάβλητη στη συμπεριφορά**, με δομικές μετακινήσεις: η εκκίνηση στον πάροχο → `server/payments/payment-checkout-launch.ts` (`launchCheckoutAtProvider`, `CHECKOUT_LIFETIME_MS`) · η αναμονή επιβεβαίωσης → `components/shared/payments/usePaymentAttemptWatch.ts` (το `usePaymentConfirmationWatch` γίνεται λεπτό περιτύλιγμα με `readAttempt`) · η οδήγηση στον πάροχο → `checkout-launch.ts` · το `?payment=` → `returned-attempt.ts`. Νέα πεδία: `CheckoutRequest.split` / `CheckoutSubject.split` (τιμολόγιο `false` ⇒ **καμία** παράμετρος στο σώμα) · `PaymentCheckoutRecord.marketplace` (`null` για τιμολόγιο). Νέα έκβαση συγχρονισμού `subject-refused` (ο γραφέας του είδους αρνήθηκε χρήματα που μπήκαν — μετριέται ως `failed`). Το cron `payment-reconcile` αποκτά τρίτο πέρασμα (οφειλόμενες κρατημένες μεταφορές). |
+| 2026-11-18 | **§5.11** — email πληρωτή στην ειδοποίηση (`payee_email`): χωρίς αυτό η hosted σελίδα κρύβει Google Pay (μετρημένο, `pnt_HeyWH3…`) ⇒ αιτία του §5.8 #8. `CheckoutPayer` ρητό στο port · ένας κριτής `invoicePayerEmailOnFile` για όψη και έναρξη · `cardPayerEmailRequired` (μόνο boolean, ποτέ το email) · πεδίο `InvoicePayerEmailField` · άρνηση `payer-email-required` · `EMAIL_MAX_LENGTH` SSoT. Πρότυπο Stripe Checkout `customer_email`. |

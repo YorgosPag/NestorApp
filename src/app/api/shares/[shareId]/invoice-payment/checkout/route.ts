@@ -8,7 +8,8 @@ import 'server-only';
  * ιδεμποτίας (CHECK 3.92). Ίδιο κουπόνι επίσκεψης, ίδιο όριο STANDARD με την όψη.
  *
  * Δημόσια (ο πελάτης δεν έχει λογαριασμό): `withAuth` με `allowUnauthenticated` και το **κουπόνι επίσκεψης** του
- * συνδέσμου, όπως η όψη. Το σώμα φέρει **μόνο** τρόπο, γλώσσα και τη διαδρομή της σελίδας — ποτέ ποσό.
+ * συνδέσμου, όπως η όψη. Το σώμα φέρει **μόνο** τρόπο, γλώσσα, τη διαδρομή της σελίδας και — μόνο όταν η όψη το
+ * ζήτησε — το email του πληρωτή (§5.11) — ποτέ ποσό.
  *
  * Ιδεμποτία: εξ ορισμού στο σύνορο (`Idempotency-Key` από τη σελίδα, ένα ανά πάτημα) — η επανάληψη δικτύου
  * επιστρέφει την **ίδια** συνεδρία. Όριο ρυθμού STANDARD, όπως το υπόλοιπο `/api/shares`.
@@ -27,6 +28,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { PRIVATE_CHANNEL_HEADERS } from '@/lib/http/private-response-headers';
 import { publicOrigin } from '@/lib/http/public-origin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { EMAIL_MAX_LENGTH, isValidEmail } from '@/lib/validation/email-validation';
 import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { readInvoicePaymentAttempt } from '@/server/accounting/payments/invoice-payment-attempt';
 import { startInvoicePaymentCheckout } from '@/server/accounting/payments/invoice-payment-checkout';
@@ -54,6 +56,8 @@ const CheckoutBodySchema = z.object({
   method: z.enum(ONLINE_PAYMENT_METHODS),
   locale: z.enum(['el', 'en']),
   returnPath: z.string().max(512).refine(isPaymentReturnPath),
+  // ADR-ACC-030 §5.11 — ο ίδιος κριτής με τη σελίδα (`isValidEmail`) · το ΕΝΑ όριο RFC 5321.
+  payerEmail: z.string().trim().max(EMAIL_MAX_LENGTH).refine(isValidEmail).optional(),
 }).strict();
 
 function respond(outcome: InvoiceCheckoutResponse): NextResponse<InvoiceCheckoutResponse> {

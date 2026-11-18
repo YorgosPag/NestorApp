@@ -7,7 +7,8 @@
  * - **IRIS**: φόρμα POST στην **ίδια** καρτέλα — η επιλογή τράπεζας / QR γίνεται στον πάροχο και η επιστροφή
  *   φέρνει τον πελάτη πίσω εδώ (`?payment=…`).
  *
- * Το σώμα φέρει μόνο τρόπο, γλώσσα και τη διαδρομή της σελίδας — **ποτέ** ποσό. Ένα `Idempotency-Key` ανά πάτημα.
+ * Το σώμα φέρει μόνο τρόπο, γλώσσα, τη διαδρομή της σελίδας και — μόνο όταν η όψη το ζήτησε — το email του πληρωτή
+ * (§5.11) — **ποτέ** ποσό. Ένα `Idempotency-Key` ανά πάτημα.
  * Επίσκεψη που έληξε (ο άνθρωπος διάβαζε πάνω από 15′) ⇒ αθόρυβα νέα και **νέο** αίτημα με νέο κλειδί
  * (`fetchInVisit`, ADR-315 Α6): η πρώτη απορρίφθηκε χωρίς να εκτελεστεί.
  *
@@ -50,16 +51,19 @@ async function requestCheckout(shareId: string, body: InvoiceCheckoutRequestBody
 
 export function useInvoiceCheckout(shareId: string, locale: 'el' | 'en'): {
   readonly state: InvoiceCheckoutState;
-  readonly start: (method: OnlinePaymentMethod) => void;
+  /** `payerEmail` μόνο όταν η όψη το ζήτησε (`cardPayerEmailRequired`) και το πεδίο το έκρινε έγκυρο. */
+  readonly start: (method: OnlinePaymentMethod, payerEmail?: string) => void;
 } {
   const reopenVisit = useShareVisitReopen();
   const [state, setState] = useState<InvoiceCheckoutState>({ kind: 'idle' });
 
-  const start = useCallback((method: OnlinePaymentMethod) => {
+  const start = useCallback((method: OnlinePaymentMethod, payerEmail?: string) => {
     // Συγχρονικά, μέσα στο πάτημα: αλλιώς ο browser μπλοκάρει την καρτέλα.
     const paymentWindow = openPaymentWindow(method);
     setState({ kind: 'starting', method });
-    const body: InvoiceCheckoutRequestBody = { method, locale, returnPath: window.location.pathname };
+    const body: InvoiceCheckoutRequestBody = {
+      method, locale, returnPath: window.location.pathname, ...(payerEmail === undefined ? {} : { payerEmail }),
+    };
     fetchInVisit(() => requestCheckout(shareId, body), reopenVisit)
       .then((outcome) => {
         if (outcome?.status === 'started') {

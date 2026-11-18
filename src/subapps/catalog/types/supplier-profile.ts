@@ -13,6 +13,7 @@
  */
 
 import type { LocalizedText } from '@/i18n/localized-text';
+import { EMAIL_MAX_LENGTH } from '@/lib/validation/email-validation';
 
 export const MAX_PORTFOLIO_PROJECTS = 24;
 export const MAX_PORTFOLIO_PROJECT_IMAGES = 12;
@@ -37,8 +38,8 @@ export interface CatalogSupplierProfileDefinition {
 
 export const EMPTY_SUPPLIER_PROFILE: CatalogSupplierProfileDefinition = { description: {}, projects: [] };
 
-/** RFC 5321: το μέγιστο μήκος διεύθυνσης που περνά από SMTP. */
-export const MAX_QUOTE_RECIPIENT_EMAIL_LENGTH = 254;
+/** RFC 5321 — το ΕΝΑ όριο της εφαρμογής (`EMAIL_MAX_LENGTH`), με το όνομα του τομέα. */
+export const MAX_QUOTE_RECIPIENT_EMAIL_LENGTH = EMAIL_MAX_LENGTH;
 
 /**
  * **Αιτήματα προσφοράς από τη βιτρίνα** (ADR-923 §5.13 Ε6β): opt-in του προμηθευτή.

@@ -15,6 +15,8 @@
  * @see ADR-ACC-018 §16 · `invoice-payment-accounts.ts` (λογαριασμοί) · `utils/invoice-open-amount.ts` (υπόλοιπο)
  */
 
+import { isValidEmail } from '@/lib/validation/email-validation';
+
 import type { Invoice } from '../../types/invoice';
 import { isOnlinePaymentMethod } from '../../types/online-payment';
 import { invoiceOpenAmount, isCollectibleInvoice, isVoidedInvoice } from '../../utils/invoice-open-amount';
@@ -59,4 +61,15 @@ export function invoicePaymentStanding(invoice: StandingSubject): InvoicePayment
  */
 export function invoiceAmountDueNow(invoice: StandingSubject): number {
   return invoicePaymentStanding(invoice) === 'payable' ? invoiceOpenAmount(invoice) : 0;
+}
+
+/**
+ * **Το email του πληρωτή που έχει ο φάκελος** (ADR-ACC-030 §5.11) — αυτούσιο (χωρίς κενά) ή `null` όταν λείπει **ή δεν
+ * είναι έγκυρο**. Ο **ΕΝΑΣ** κριτής για τη δημόσια όψη («χρειάζεται email;») και για την έναρξη πληρωμής («ποιο email
+ * φεύγει;»): αν διέφεραν, η σελίδα θα έκρυβε το πεδίο και ο διακομιστής θα αρνιόταν. Άκυρη τιμή ⇒ άγνωστη ⇒ ρωτάμε,
+ * όπως το Stripe Checkout όταν λείπει το `customer_email`.
+ */
+export function invoicePayerEmailOnFile(invoice: Pick<Invoice, 'customer'>): string | null {
+  const email = invoice.customer.email?.trim() ?? '';
+  return isValidEmail(email) ? email : null;
 }

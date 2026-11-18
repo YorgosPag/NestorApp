@@ -81,6 +81,8 @@ export interface HintedFieldProps {
   readonly onBlur?: () => void;
   /** Μικρό επίθεμα δίπλα στην ετικέτα — *«(προαιρετικό)»* / *«(απαιτείται)»*. */
   readonly labelSuffix?: string;
+  /** Το όριο του **διακομιστή**, ώστε ο άνθρωπος να μη γράψει κάτι που θα απορριφθεί (π.χ. `EMAIL_MAX_LENGTH`). */
+  readonly maxLength?: number;
 }
 
 export function HintedField({
@@ -98,6 +100,7 @@ export function HintedField({
   inputMode,
   onBlur,
   labelSuffix,
+  maxLength,
 }: HintedFieldProps): React.ReactElement {
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
@@ -130,6 +133,7 @@ export function HintedField({
         disabled={disabled}
         autoComplete={autoComplete}
         inputMode={inputMode}
+        maxLength={maxLength}
         aria-describedby={describedBy === '' ? undefined : describedBy}
         aria-invalid={error !== undefined}
         placeholder={placeholder}

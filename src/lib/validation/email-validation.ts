@@ -17,6 +17,9 @@
  */
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** RFC 5321: το μέγιστο μήκος διεύθυνσης που περνά από SMTP — το ΕΝΑ όριο της εφαρμογής. */
+export const EMAIL_MAX_LENGTH = 254;
+
 /**
  * Validate an email address string.
  * Trims whitespace before testing.

@@ -26,7 +26,7 @@ import type {
 import {
   invoicePayableAmount, invoicePaymentReference, paymentBeneficiaryOf, paymentQrPayload,
 } from '../payments/invoice-payment-instructions';
-import { invoiceAmountDueNow, invoicePaymentStanding } from '../payments/invoice-payment-link';
+import { invoiceAmountDueNow, invoicePayerEmailOnFile, invoicePaymentStanding } from '../payments/invoice-payment-link';
 import type { HumanLanguage } from '@/i18n/languages';
 import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
 
@@ -99,6 +99,7 @@ export function buildInvoicePublicView(
   const standing = invoicePaymentStanding(invoice);
   const amountDue = invoiceAmountDueNow(invoice);
   const hasAccounts = (invoice.issuer.bankAccounts ?? []).length > 0;
+  const offered: OnlinePaymentMethod[] = standing === 'payable' && amountDue > 0 ? [...onlineMethods] : [];
   return {
     invoiceId: invoice.invoiceId,
     series: invoice.series,
@@ -124,7 +125,8 @@ export function buildInvoicePublicView(
     standing,
     overdue: standing === 'payable' && invoice.dueDate !== null && invoice.dueDate < today,
     payment: standing === 'payable' && hasAccounts ? publicPayment(invoice, amountDue) : null,
-    onlineMethods: standing === 'payable' && amountDue > 0 ? [...onlineMethods] : [],
+    onlineMethods: offered,
+    cardPayerEmailRequired: offered.includes('card') && invoicePayerEmailOnFile(invoice) === null,
     notes: invoice.notes,
   };
 }
