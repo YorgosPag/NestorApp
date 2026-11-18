@@ -18691,3 +18691,21 @@ resolver (το `projectId` είναι αποθηκευμένο, ADR-284).
 - 🔍 **Ίδιος καθρέφτης, άλλοι αναγνώστες (ΔΕΝ αγγίχτηκαν — θέλουν χωριστό έλεγχο):** `sales-dialog-utils.ts:29` ·
   `SellDialog.tsx:109` · `LegalTabContent.tsx:75` (εφεδρεία) · `property-identity-parts.tsx:75` ·
   `ShowcaseDetailSections.tsx:281` · `property-normalizer.ts:205`.
+- ✅ **Live 2026-11-18 (build `66372b4`)**: στο «ΔΟΚΙΜΗ Β» η φόρμα λέει πλέον «Δεν υπάρχει ακόμη ΜΕΑ στα έγγραφα του
+  έργου» — δηλαδή **βρήκε** το έργο και ρώτησε τα έγγραφά του (πριν: `studies === null`, καμία ερώτηση).
+
+**Κενή κατάσταση με ενέργεια (2026-11-18):** έργο χωρίς ΜΕΑ ήταν **αδιέξοδο** — σκέτο μήνυμα, ο άνθρωπος έπρεπε να
+μαντέψει πού πάει και να εγκαταλείψει τη φόρμα. Πρότυπο Revit «Manage Links» (οι αναφορές ζουν σε **ένα** σημείο, αλλά
+φτάνεις εκεί από τη χρήση) · κενές καταστάσεις Material/Atlassian (κάθε κενό δίνει την επόμενη ενέργεια).
+- `EnergyConstructionContext.studiesHref` — η καρτέλα «Έγγραφα» του έργου από το **υπάρχον** SSoT
+  `getProjectTabUrl(project, 'documents')` (`ProjectDeepLinkTab` πήρε το `'documents'`· η άγκυρα
+  `useProjectActiveTab.test.ts` το απαιτεί εξαντλητικά). **Καμία** δεύτερη πόρτα ανεβάσματος: η ΜΕΑ ανεβαίνει μόνο από τα
+  «Έγγραφα» του έργου, ο server κρίνει το ίδιο δοχείο.
+- `EnergyProjectionFields` → `StudySourceEmpty`: `Link` του χώρου (`@/lib/workspace/navigation`, CHECK 3.61) σε **νέα
+  καρτέλα** (`target="_blank"`, ADR-912 §12.12: η φόρμα με αλλαγές μένει) + `aria-describedby` που το δηλώνει.
+- **Χωρίς ανανέωση**: όταν η ΜΕΑ ανέβει στην άλλη καρτέλα, το `useEntityFiles` την ξαναδιαβάζει από το `FILE_CREATED`, που
+  το `RealtimeService` περνά **και μεταξύ καρτελών** (`storage` event) ⇒ η επιλογή γεμίζει μόνη της.
+- i18n `sourceEmptyAction` · `sourceEmptyActionHint` (el+en)· τύποι + shell slice ξαναπαράχθηκαν.
+- **Προτεινόμενο, ΟΧΙ υλοποιημένο:** ο σύνδεσμος να ανοίγει την καρτέλα **στη θέση** `study-energy-mea` (προεπιλεγμένη
+  στο ανέβασμα). Σήμερα **δεν υπάρχει** μηχανισμός βαθιάς σύνδεσης σε θέση στο `EntityFilesManager` (grep: καμία
+  παράμετρος `slot`/`entry`) — νέος μηχανισμός, θέλει «ναι».

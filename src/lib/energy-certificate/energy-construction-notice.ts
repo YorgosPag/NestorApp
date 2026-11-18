@@ -14,6 +14,7 @@
  */
 
 import { isPreCompletionOperationalStatus, normalizeOperationalStatus } from '@/constants/operational-statuses';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 
 import type { EnergyCertificate } from './energy-certificate';
 
@@ -32,6 +33,11 @@ export interface EnergyStudyOption {
 export interface EnergyConstructionContext {
   /** Οι ΜΕΑ του έργου — `null` = η μονάδα δεν ανήκει σε έργο. */
   readonly studies: readonly EnergyStudyOption[] | null;
+  /**
+   * **Η ΜΙΑ πόρτα ανεβάσματος της ΜΕΑ** — η καρτέλα «Έγγραφα» του έργου (`getProjectTabUrl`), `null` όταν δεν υπάρχει
+   * έργο. Η οθόνη **δείχνει** τον δρόμο, δεν ανοίγει δεύτερη διαδρομή ανεβάσματος (ίδιο δοχείο με τον server).
+   */
+  readonly studiesHref: WorkspaceHref | null;
 }
 
 /** Η υπενθύμιση για αυτή τη μονάδα — `null` όταν η ενότητα συμφωνεί με την κατάσταση (ή η κατάσταση δεν είναι γνωστή). */

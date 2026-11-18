@@ -209,6 +209,7 @@ export function EnergyCertificateFields(props: EnergyCertificateFieldsProps) {
               disabled={props.disabled}
               idPrefix={props.idPrefix}
               studies={props.construction?.studies ?? null}
+              studiesHref={props.construction?.studiesHref ?? null}
             />
           )}
         </>

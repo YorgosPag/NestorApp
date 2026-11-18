@@ -28,6 +28,7 @@ import {
   type EnergyStudyOption,
 } from '@/lib/energy-certificate/energy-construction-notice';
 import { companyReadCustodyOf } from '@/lib/files/file-custody';
+import { getProjectTabUrl } from '@/lib/navigation/project-urls';
 
 /** Οι ΜΕΑ του έργου — `null` όταν η μονάδα δεν ανήκει σε έργο (ή ο κατάλογος έχασε τη γραμμή, που το φυλάει test). */
 export function useProjectEnergyStudies(projectId: string | null, enabled: boolean): readonly EnergyStudyOption[] | null {
@@ -70,6 +71,9 @@ export function useEnergyConstructionContext(
   const project = typeof projectId === 'string' && projectId.trim() !== '' ? projectId : null;
   const studies = useProjectEnergyStudies(project, certificate.absence === 'under-construction');
   const notice = energyConstructionNoticeOf(operationalStatus, certificate);
-  const context = useMemo(() => ({ studies }), [studies]);
+  const context = useMemo(
+    () => ({ studies, studiesHref: project === null ? null : getProjectTabUrl(project, 'documents') }),
+    [project, studies],
+  );
   return { context, notice };
 }

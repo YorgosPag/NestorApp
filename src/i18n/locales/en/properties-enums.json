@@ -430,6 +430,8 @@
       "sourcePlaceholder": "Choose from the project’s documents",
       "sourceHint": "The study is uploaded to the project’s Documents, under energy. The reference is not shown in the listing.",
       "sourceEmpty": "There is no energy study in the project’s documents yet.",
+      "sourceEmptyAction": "Upload the study to the project’s Documents",
+      "sourceEmptyActionHint": "Opens in a new tab, so the form is kept. The study appears here as soon as it is uploaded.",
       "sourceNoProject": "The unit does not belong to a project, so there are no project documents to reference.",
       "suggestion": "The unit is declared under construction, so a certificate cannot be issued yet. Choose “under construction” and declare the study estimate.",
       "completedTitle": "Construction completed?",

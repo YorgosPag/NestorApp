@@ -94,7 +94,7 @@
     "src/i18n/generated/routes/offers__new.el.json": "d8d7c20a5a8b2afc8eb821f48bbb590b03e99df5c58764d4950283b89a299762",
     "src/i18n/generated/routes/offers__offerId.el.json": "485ab353ed4eada9148558484b36fbec6dc73ca66ec9320e10b9c5259d6541b5",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
-    "src/i18n/generated/routes/offers__offerId__improve.el.json": "92be6138ec14fed599fb359252322d62e0af1b431e440475390ce7936f05593b",
+    "src/i18n/generated/routes/offers__offerId__improve.el.json": "bfddc6394c00d7e5f4b2835153253ff9713022d528faa576b0066ccc0d8b246e",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "083cfe06b16d8273b52efe781d9cb2c1d2f04f4c3ced5618e6e835f5ecee5dd7",
+  "inputsSha256": "04f9f6642ee8ff90a443f45848d1dd02c12500ad70ecb6ab47e55ae04497b56f",
   "languages": [
     "el"
   ],
@@ -37780,6 +37780,8 @@
             "energyCertificate.projection.scopePlaceholder",
             "energyCertificate.projection.source",
             "energyCertificate.projection.sourceEmpty",
+            "energyCertificate.projection.sourceEmptyAction",
+            "energyCertificate.projection.sourceEmptyActionHint",
             "energyCertificate.projection.sourceHint",
             "energyCertificate.projection.sourceNoProject",
             "energyCertificate.projection.sourcePlaceholder",
@@ -41240,7 +41242,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1358069
+    "sliceBytes": 1358365
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
