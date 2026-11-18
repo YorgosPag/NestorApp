@@ -32,6 +32,14 @@ export interface AppFeatureFlags {
    *    API / άδεια αυτοματοποιημένης αναζήτησης / όροι χρήσης). Κλειστός ⇒ καμία κλήση· η οθόνη δείχνει τον σύνδεσμο.
    */
   readonly ENERGY_INSPECTOR_REGISTRY_LOOKUP: boolean;
+  /**
+   * **Αίτημα προσφορών έκδοσης από τον ιδιώτη** (ADR-945 Φ2 §7.6): η ενότητα «Βρες επιθεωρητή» στο ακίνητο του `/me` και
+   * το «Ζήτησε προσφορά» στον κατάλογο `/pro`.
+   *
+   * ⛔ **Κλειστός.** Ανοίγει με απόφαση Giorgio, **μετά** τη Φ3 (ειδοποίηση επαγγελματία + χώρος συνεργασίας): χωρίς αυτήν
+   *    ένα αίτημα δεν το βλέπει κανείς. Κλειστός ⇒ καμία ενότητα, κανένα κουμπί, καμία κλήση δικτύου.
+   */
+  readonly OWNER_ISSUANCE_REQUESTS: boolean;
 }
 
 export type AppFeatureFlag = keyof AppFeatureFlags;
@@ -39,6 +47,7 @@ export type AppFeatureFlag = keyof AppFeatureFlags;
 export const APP_FEATURE_FLAGS: Readonly<AppFeatureFlags> = Object.freeze({
   PUBLIC_SHOWCASE_PRICES: false,
   ENERGY_INSPECTOR_REGISTRY_LOOKUP: false,
+  OWNER_ISSUANCE_REQUESTS: false,
 });
 
 /** Η ΜΙΑ ερώτηση «είναι ανοιχτό;». */

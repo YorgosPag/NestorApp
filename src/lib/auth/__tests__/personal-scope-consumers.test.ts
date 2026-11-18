@@ -449,6 +449,207 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
       + 'userId === uid· ξένο ≡ 404. Το βιβλίο (CustodyScope) έρχεται από τον κριτή, ποτέ από το αίτημα, και η Φ1 '
       + 'αρνείται βιβλίο γραφείου (office-ledger). Ο οργανισμός κρατά το properties:properties:update μέσω του ΕΝΟΣ PDP.',
   },
+  // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  // 2026-11-18 (ADR-945 Φ1β) — οι 28 παρακάτω καλούσαν ήδη το περιτύλιγμα ΧΩΡΙΣ δήλωση (η Κ2 ήταν κόκκινη πριν από
+  // την Φ1β). Κάθε λόγος γράφτηκε από ΑΝΑΓΝΩΣΗ της διαδρομής και του κριτή της (route → service → writer), όχι από
+  // το όνομα. Καμία δεν βρέθηκε να ανοίγει σε πολίτη δεδομένα εταιρείας ή άλλου χρήστη.
+  // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  {
+    route: 'src/app/api/account/payouts/route.ts',
+    why:
+      'ADR-943 §5.9 · §5.14 — Η ΛΗΨΗ ΠΛΗΡΩΜΩΝ ΤΟΥ ΙΔΙΟΥ ΤΟΥ ΜΗΧΑΝΙΚΟΥ (δικαιούχος marketplace), άνθρωπος χωρίς οργανισμό. '
+      + 'Η ταυτότητα και το email είναι ΜΟΝΟ του token (actor.ctx.uid), ποτέ από το σώμα· ο δικαιούχος κλειδώνει ανά '
+      + 'userId (ένας ανά χρήστη) και η αλλαγή στοιχείων (PATCH) απαιτεί πρόσφατη σύνδεση (auth_time).',
+  },
+  {
+    route: 'src/app/api/engagement-invitations/redeem/route.ts',
+    why:
+      'ADR-901 Φ3 · ADR-853 §7.5 — ΕΞΑΡΓΥΡΩΣΗ ΠΡΟΣΚΛΗΣΗΣ ΥΠΟΘΕΣΗΣ από επαγγελματία που δεν είναι μέλος του χώρου του '
+      + 'οικοδεσπότη (ο νεοεγγραμμένος δεν έχει καν οργανισμό). Δύο έλεγχοι: υπογεγραμμένο token στο σώμα ΚΑΙ email του '
+      + 'Auth ίδιο με τον παραλήπτη (wrong-recipient αλλιώς)· καμία γραφή claim, η συμμετοχή γράφεται στον ίδιο τον uid.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/activity/route.ts',
+    why:
+      'ADR-901 Φ4 §5.9 — ΤΟ ΙΧΝΟΣ ΤΗΣ ΥΠΟΘΕΣΗΣ ΓΙΑ ΤΟΝ ΕΠΑΓΓΕΛΜΑΤΙΑ, που δεν είναι μέλος κανενός χώρου. Η πρόσβαση '
+      + 'περνά μόνο μέσω ΔΙΚΗΣ ΤΟΥ συμμετοχής: η αναζήτηση γίνεται ανάμεσα στις συμμετοχές του uid του token '
+      + '(listEngagementsOfUser) και το decideEngagement κρίνει κάθε αίτημα· ξένη ⇒ 404. Προβολή, ποτέ ωμές εγγραφές.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/contributions/[contributionId]/reissue/route.ts',
+    why:
+      'ADR-901 Φ4.5 — ΞΑΝΑΣΤΕΙΛΕ ΤΗ ΝΕΑ ΕΚΔΟΣΗ ΤΗΣ ΔΙΚΗΣ ΣΟΥ ΑΠΟΣΤΟΛΗΣ, από επαγγελματία χωρίς οργανισμό. Το uid έρχεται '
+      + 'μόνο από το token· κρίνεται μέσω δικής του ενεργής συμμετοχής (resolveEngagedCase) και απαιτεί authorUid === uid '
+      + 'με κεφαλή στοίβας του ίδιου χρήστη. Ξένη αποστολή ⇒ 404· το ακροατήριο το ορίζει ο ρόλος, όχι το σώμα.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/contributions/[contributionId]/withdraw/route.ts',
+    why:
+      'ADR-901 Φ4.4 §5.8.1 — ΑΠΟΣΥΡΣΗ ΤΗΣ ΔΙΚΗΣ ΣΟΥ ΑΠΟΣΤΟΛΗΣ από επαγγελματία χωρίς οργανισμό. Μόνο ο συντάκτης '
+      + '(authorUid === uid του token) και μόνο μέσω δικής του ενεργής συμμετοχής (resolveEngagedCase)· ξένη ή ανύπαρκτη '
+      + 'αποστολή ⇒ 404.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/contributions/route.ts',
+    why:
+      'ADR-901 Φ4.4 §5.8.1 — Ο ΕΠΑΓΓΕΛΜΑΤΙΑΣ ΣΤΕΛΝΕΙ ΕΚΔΟΣΗ ΔΙΚΟΥ ΤΟΥ ΑΡΧΕΙΟΥ σε γραμμή της υπόθεσης, χωρίς οργανισμό. '
+      + 'Η συμμετοχή κρίνεται ανά αίτημα με το uid του token, και το αρχείο γίνεται δεκτό μόνο αν userId === uid '
+      + '(isSendable) και ανήκει στην ίδια υπόθεση· το ακροατήριο όχι από το σώμα, από τον ρόλο.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/document-requests/route.ts',
+    why:
+      'ADR-901 Φ4.5 · ADR-942 Φ1 — ΑΙΤΗΜΑ ΕΓΓΡΑΦΩΝ ΤΗΣ ΔΙΚΗΣ ΤΟΥ ΥΠΟΘΕΣΗΣ από επαγγελματία χωρίς οργανισμό. Μόνο μέσω '
+      + 'δικής του ενεργής συμμετοχής (resolveEngagedCase με το uid του token). Ο παραλήπτης δεν έρχεται από το σώμα, '
+      + 'τον ορίζει ο πάροχος της γραμμής· γραμμή που ο ρόλος δεν βλέπει ⇒ not-found.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/files/[fileId]/route.ts',
+    why:
+      'ADR-901 Φ4 §5.4 · ADR-942 Φ2 — ΑΝΟΙΓΜΑ/ΛΗΨΗ ΑΡΧΕΙΟΥ ΤΗΣ ΥΠΟΘΕΣΗΣ ΤΟΥ από επαγγελματία χωρίς οργανισμό. Η συμμετοχή '
+      + 'αναζητείται ΜΟΝΟ ανάμεσα σε αυτές του uid του token (listEngagementsOfUser)· τι ανοίγει το κρίνει ο προσαρμογέας '
+      + 'του είδους συμμετοχής, και μη ορατό ⇒ 404 ίδιο με ανύπαρκτο. Σύνδεσμος 15′ και ίχνος πρόσβασης.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/issuance/advance-receipt/route.ts',
+    why:
+      'ADR-943 Φ5δ (Κ-7) — Ο ΜΗΧΑΝΙΚΟΣ ΚΑΤΑΓΡΑΦΕΙ ΤΟΝ ΜΑΡΚ ΤΗΣ ΠΡΟΚΑΤΑΒΟΛΗΣ, χωρίς οργανισμό. Ο ΕΝΑΣ δρόμος πράξης '
+      + 'μηχανικού (writeEngagementIssuanceAction): δική του συμμετοχή σε ανάθεση έκδοσης (ownIssuanceEngagement με το '
+      + 'uid του token, ξανακρίνεται μέσα στη συναλλαγή), ξένη ⇒ 404, CAS στο expectedStage.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/issuance/delivery-change/route.ts',
+    why:
+      'ADR-915 §45.20 Φ6γ — Ο ΜΗΧΑΝΙΚΟΣ ΖΗΤΑ ΝΕΑ ΗΜΕΡΟΜΗΝΙΑ ΠΑΡΑΔΟΣΗΣ, χωρίς οργανισμό. Αίτημα, όχι αλλαγή (το γραφείο '
+      + 'απαντά). Περνά από τον ΕΝΑ δρόμο πράξης μηχανικού (writeEngagementIssuanceAction): δική του συμμετοχή σε ανάθεση '
+      + 'έκδοσης με το uid του token, ξανακρίνεται στη συναλλαγή· ξένη ⇒ 404.',
+  },
+  {
+    route: 'src/app/api/engagements/[engagementId]/issuance/start-work/route.ts',
+    why:
+      'ADR-943 Φ5α — ΔΗΛΩΣΗ «ΕΓΙΝΕ Η ΑΥΤΟΨΙΑ» από τον ίδιο τον μηχανικό, χωρίς οργανισμό. Μέσω του ΕΝΟΣ δρόμου πράξης '
+      + 'μηχανικού (writeEngagementIssuanceAction): δική του συμμετοχή σε ανάθεση έκδοσης (uid του token, ξανακρίνεται '
+      + 'στη συναλλαγή), ξένη ⇒ 404· μόνο όσο η προκαταβολή κρατείται, CAS στο expectedStage.',
+  },
+  {
+    route: 'src/app/api/listings/preview/route.ts',
+    why:
+      'ADR-898 Φ3β-3 — ΠΡΟΕΠΙΣΚΟΠΗΣΗ «ΠΩΣ ΘΑ ΔΕΙ Ο ΑΓΟΡΑΣΤΗΣ ΤΗΝ ΑΓΓΕΛΙΑ ΜΟΥ», ιδιώτης ΚΑΙ γραφείο από την ίδια διαδρομή. '
+      + 'Η εύρεση κρίνεται από την κηδεμονία (lookupOwnedProjection: personal ⇒ userId === uid)· χωρίς εταιρεία η εταιρική '
+      + 'ανάγνωση δεν γίνεται καν, απούσα ή ξένη ≡ 404. Απάντηση private, no-store, τίποτα δεν γράφεται.',
+  },
+  {
+    route: 'src/app/api/owner-properties/[ownerPropertyId]/energy-certificate-import/route.ts',
+    why:
+      'ADR-777 §8.96 · ADR-866 — ΕΙΣΑΓΩΓΗ ΠΕΑ ΣΕ ΑΓΓΕΛΙΑ ΙΔΙΩΤΗ (πρόταση, δεν γράφει). Κριτής το mayAdminister(custodyOf(...)) '
+      + 'του listing-custody (CHECK 3.56): personal ⇒ userId === uid, company ⇒ μισθωτής και στις δύο πλευρές· ξένη ⇒ 404. '
+      + 'Το αρχείο ψάχνεται μόνο στον φάκελο του ίδιου ακινήτου (ownerPeaFileScope με το uid του καλούντος).',
+  },
+  {
+    route: 'src/app/api/owner-properties/[ownerPropertyId]/mandate-evidence/[evidenceId]/route.ts',
+    why:
+      'ADR-864 §19 (Α33-Α34) — ΛΗΨΗ ΠΑΓΩΜΕΝΟΥ ΑΠΟΔΕΙΚΤΙΚΟΥ ΕΝΤΟΛΗΣ, για ιδιοκτήτη ή γραφείο. Τον δρώντα τον ορίζει η '
+      + 'καταχώρηση (consentActorOfProperty): ιδιοκτήτης μόνο σε προσωπική καταχώρηση που διαχειρίζεται (mayAdminister), '
+      + 'αλλιώς γραφείο που βλέπει ΜΟΝΟ τις δικές του εντολές (companyId null ⇒ καμία). Ανύπαρκτο ≡ ξένο.',
+  },
+  {
+    route: 'src/app/api/owner-properties/[ownerPropertyId]/private-marketing/route.ts',
+    why:
+      'ADR-864 §18.4 Δ2 — ΠΟΥ ΒΡΙΣΚΕΤΑΙ Η ΣΥΝΑΙΝΕΣΗ ΚΛΕΙΣΤΗΣ ΔΙΑΘΕΣΗΣ (μόνο ανάγνωση, για ιδιοκτήτη χωρίς οργανισμό και '
+      + 'γραφείο). Ίδια εύρεση εντολής με τον γραφέα: mandatesVisibleTo μέσω consentActorOfProperty (ιδιοκτήτης μόνο στη '
+      + 'δική του προσωπική καταχώρηση, γραφείο μόνο τη δική του εντολή)· καμία εντολή ⇒ ίδιο σώμα με ανύπαρκτο.',
+  },
+  {
+    route: 'src/app/api/owner-properties/[ownerPropertyId]/stay-calendar/route.ts',
+    why:
+      'ADR-835 §20 · §23 — ΗΜΕΡΟΛΟΓΙΟ ΚΑΤΑΛΥΜΑΤΟΣ του οικοδεσπότη, ιδιώτη χωρίς εταιρεία. Ανάγνωση και πράξεις κρίνονται '
+      + 'από τον ΕΝΑ κριτή mayAdminister(custodyOf(property)) (personal ⇒ userId === uid, company ⇒ μισθωτής και στις δύο '
+      + 'πλευρές)· ξένο ⇒ 404. Σε αυτή την πόρτα ενεργεί πάντα ο οικοδεσπότης: πράξη επισκέπτη ή συστήματος απορρίπτεται.',
+  },
+  {
+    route: 'src/app/api/owner-properties/[ownerPropertyId]/stay-channels/route.ts',
+    why:
+      'ADR-835 §22 — ΤΑ ΚΑΝΑΛΙΑ ΚΑΤΑΛΥΜΑΤΟΣ του οικοδεσπότη, ιδιώτη χωρίς εταιρεία (ανάγνωση + πράξεις ροών). Η κατοχή '
+      + 'κρίνεται από τον ΕΝΑ κριτή mayAdminister(custodyOf(property)) του listing-custody (CHECK 3.56): personal ⇒ '
+      + 'userId === uid, company ⇒ μισθωτής και στις δύο πλευρές· ξένο ⇒ 404. Όριο Sensitive λόγω εξωτερικών αιτημάτων.',
+  },
+  {
+    route: 'src/app/api/owner-properties/[ownerPropertyId]/terrain/route.ts',
+    why:
+      'ADR-920 Β4.3 — ΤΟΠΟΓΡΑΦΙΚΟ ΑΓΓΕΛΙΑΣ ΟΙΚΟΠΕΔΟΥ ΙΔΙΟΚΤΗΤΗ. Μέσω publishOwnerPropertyMaterial: κηδεμονία '
+      + 'mayAdminister(custodyOf(...)), αλλιώς 404, και ο φάκελος πρέπει να ανήκει στον ΙΔΙΟ άνθρωπο '
+      + '(dossier.userId === custody.userId), αλλιώς 409. Γράφει μόνο στα προσωπικά αρχεία του κατόχου.',
+  },
+  {
+    route: 'src/app/api/places/declarable-areas/route.ts',
+    why:
+      'ADR-890 §21 — «ΣΕ ΠΟΙΑ ΠΕΡΙΟΧΗ ΜΠΟΡΩ ΝΑ ΠΩ ΟΤΙ ΕΙΝΑΙ;» για τον ιδιώτη που καταχωρεί ακίνητο. ΚΑΝΕΝΑΣ κριτής κατοχής, '
+      + 'ΕΠΙΤΗΔΕΣ: δεν διαβάζει ούτε γράφει δεδομένα χρήστη ή εταιρείας, μόνο δημόσια διοικητικά όρια ως συνάρτηση του '
+      + 'σημείου (declarableAdminAreasAt). Η ταυτότητα ζητείται μόνο ως φραγή φόρτου, όπως στο places/lookup.',
+  },
+  {
+    route: 'src/app/api/property-handover-invitations/redeem/route.ts',
+    why:
+      'ADR-916 Φ-Β Δ7 · ADR-853 §7.5 — Ο ΑΓΟΡΑΣΤΗΣ ΔΕΧΕΤΑΙ Ή ΑΡΝΕΙΤΑΙ ΤΟΝ ΦΑΚΕΛΟ ΤΟΥ, άνθρωπος που δεν είναι ούτε γίνεται '
+      + 'μέλος κανενός χώρου. Δύο έλεγχοι: υπογεγραμμένο token στο σώμα ΚΑΙ email του Auth ίδιο με τον παραλήπτη '
+      + '(wrong-recipient αλλιώς)· η αποδοχή δένει τον uid του και γεννά τον φάκελο στην ίδια συναλλαγή. Καμία γραφή claim.',
+  },
+  {
+    route: 'src/app/api/public-listings/[listingId]/stay-request/route.ts',
+    why:
+      'ADR-835 §23 — ΑΙΤΗΜΑ ΚΡΑΤΗΣΗΣ ΤΟΥ ΕΠΙΣΚΕΠΤΗ σε δημόσια αγγελία· ο επισκέπτης είναι άνθρωπος, όχι εταιρεία. Το GET '
+      + 'φιλτράρει guestUserId == uid (ίδιο σύνορο με τον κανόνα Firestore), το POST ενεργεί ως guest με μόνο το uid του '
+      + 'token και μόνο σε δημόσια αγγελία· πράξη οικοδεσπότη ⇒ άρνηση. Όνομα ποτέ με εφεδρεία το email.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/capture-plans/[contentHash]/route.ts',
+    why:
+      'ADR-904 Κ9 · Α8 — ΕΙΚΟΝΑ ΒΑΘΜΟΝΟΜΗΜΕΝΗΣ ΚΑΤΟΨΗΣ ΓΙΑ ΤΟΝ ΦΩΤΟΓΡΑΦΟ, που δεν είναι μέλος χώρου. Κριτής ο ΕΝΑΣ '
+      + 'mayUploadTourCapture: υπεύθυνος της περιήγησης (mayManageTour) ή άτομο με ενεργή άδεια λήψης στο όνομά του '
+      + '(granteeUid === uid, εύρος tour:capture:upload). Μόνο hash των ορόφων της περιήγησης, αλλιώς plan-absent.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/floorplans/route.ts',
+    why:
+      'ADR-884 Φ2στ-β §4.13 — ΚΑΤΑΛΟΓΟΣ ΚΑΤΟΨΕΩΝ ΠΟΥ ΜΠΟΡΕΙ ΝΑ ΠΑΡΕΙ Η ΠΕΡΙΗΓΗΣΗ, για τον ιδιώτη υπεύθυνο. Μόνο ο '
+      + 'υπεύθυνος (locateManagedTour → mayManageTour: owner-property ⇒ δική του κηδεμονία, company-property ⇒ ίδιος '
+      + 'μισθωτής, άρα ιδιώτης ⇒ denied-tenant)· έλεγχος κατόχου, ώστε περιήγηση προηγούμενου κατόχου να αρνείται.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/[kind]/[subjectId]/graph/route.ts',
+    why:
+      'ADR-884 Φ2β §4.9 — ΕΠΕΞΕΡΓΑΣΙΑ ΓΡΑΦΟΥ ΠΕΡΙΗΓΗΣΗΣ (σημεία, κάτοψη, χώροι, θόλωση) από τον ιδιώτη υπεύθυνο. Η εγγραφή '
+      + 'προϋποθέτει locateManagedTour: mayManageTour (δική του κηδεμονία ή ίδιος μισθωτής) και ταύτιση κατόχου '
+      + 'περιήγησης/ρίζας (αλλιώς άρνηση). Ιδεμποτία στο σύνορο· ξένο ⇒ άρνηση.',
+  },
+  {
+    route: 'src/app/api/spatial-tours/capture-targets/route.ts',
+    why:
+      'ADR-904 §3.2 Κ7 — «ΤΑ ΑΚΙΝΗΤΑ ΜΟΥ» ΤΗΣ ΕΦΑΡΜΟΓΗΣ ΛΗΨΗΣ, για υπεύθυνο ΚΑΙ φωτογράφο που δεν είναι μέλος χώρου. '
+      + 'Πηγές: οι άδειες λήψης του ίδιου uid και οι αγγελίες με authorUserId == uid· οι πηγές γραφείου/εταιρείας μένουν '
+      + 'κενές χωρίς μισθωτή. Κάθε γραμμή ξανακρίνεται από τον ίδιο mayManageTour.',
+  },
+  {
+    route: 'src/app/api/storage/file/[...path]/route.ts',
+    why:
+      'ADR-916 Φ-Ε1 — ΠΡΟΣΤΑΤΕΥΜΕΝΟΣ ΜΕΣΑΖΩΝ ΑΡΧΕΙΩΝ STORAGE, όπου ο κάτοχος μπορεί να είναι πολίτης χωρίς οργανισμό. Ο '
+      + 'ΕΝΑΣ κριτής διαδρομής judgeStorageCustody τρέχει πρώτος: δεκτά μόνο own-user (custody.uid === uid) ή own-company '
+      + '(custody.companyId === companyId)· για πολίτη το companyId είναι null, άρα κάθε εταιρική ή ξένη ρίζα ⇒ 403.',
+  },
+  {
+    route: 'src/app/api/supply-invitations/redeem/route.ts',
+    why:
+      'ADR-923 §5.12 Σ2·Σ3 · ADR-853 §7.5 — ΑΠΟΔΟΧΗ/ΑΡΝΗΣΗ ΠΡΟΣΚΛΗΣΗΣ ΠΡΟΜΗΘΕΙΑΣ από νεοεγγραμμένο που δεν έχει ακόμη '
+      + 'οργανισμό, ώστε να ακούσει «χρειάζεστε γραφείο» και όχι 403. Token στο σώμα ΚΑΙ email του Auth ίδιο με τον '
+      + 'παραλήπτη· η αποδοχή απαιτεί πραγματικό χώρο γραφείου (resolveBuyerOffice), πολίτης ⇒ office-required.',
+  },
+  {
+    route: 'src/app/api/supply-request-links/request/route.ts',
+    why:
+      'ADR-923 §5.12 Σ2 (πόρτα β) — ΑΙΤΗΜΑ ΣΥΝΔΕΣΗΣ ΜΕ ΠΡΟΜΗΘΕΥΤΗ ΜΕ ΣΥΝΔΕΣΜΟ/QR από αγοραστή που ίσως δεν έχει οργανισμό. '
+      + 'Ο σύνδεσμος δίνει ΜΟΝΟ το δικαίωμα να ζητήσεις (υπογεγραμμένο token, χωρίς δέσμευση παραλήπτη, επειδή τυπώνεται)· '
+      + 'ο πολίτης παίρνει office-required (resolveBuyerOffice) και τίποτα δεν ανοίγει χωρίς έγκριση του προμηθευτή.',
+  },
 ];
 
 /**
@@ -461,6 +662,13 @@ const DECLARED: ReadonlyArray<{ readonly route: string; readonly why: string }> 
 const DOOR_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   withFileCustodyAuth: [
     'src/app/api/download/route.ts',
+    // 🔭 ADR-897 Φ5 — GET: οπτικό πεδίο/πυξίδα EXIF. Ίδια αλυσίδα με τη λήψη (`loadOwnedFileBytes`): προσωπικό ⇒
+    //    `personalFileResource` (`userId == uid`) ΚΑΙ ρίζα Storage του ίδιου uid· καμία συντεταγμένη, δεν αποθηκεύει.
+    'src/app/api/files/[fileId]/capture-facts/route.ts',
+    // 🎯 ADR-880 — GET: πρόταση σημείου εστίασης πριν τη δημοσίευση· ίδια αλυσίδα `loadOwnedFileBytes`, ίδιο 404.
+    'src/app/api/files/[fileId]/focal-point/route.ts',
+    // 📐 ADR-922 — POST: εικόνα δημοσίευσης DXF. Ίδια αλυσίδα `loadOwnedFileBytes`· γράφει μόνο στο δοχείο του καλούντος.
+    'src/app/api/files/[fileId]/publish-raster/route.ts',
     // 🗂️ ADR-866 2β.3β — οι **εκδόσεις** του προσωπικού αρχείου (Ε-Φ0-1: εκδόσεις ΝΑΙ, φάσεις ΟΧΙ).
     //    Και οι τρεις φορτώνουν με `personalFileResource` (`userId == uid`, **κανένα** bypass super
     //    admin) και **δεν** καλούν κριτή δοχείου για άνθρωπο: προσωπικό αρχείο δεν έχει φάση να κριθεί.
@@ -489,6 +697,9 @@ const DOOR_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
     'src/app/api/network/threads/[threadId]/people/route.ts',
     'src/app/api/network/threads/[threadId]/presence/route.ts',
     'src/app/api/network/threads/[threadId]/read/route.ts',
+    // 🧭 ADR-867 Β9γ — τα συμφραζόμενα της συνομιλίας (πλευρά · ομάδα · τίτλος, κανένα μήνυμα). Περνά ΜΟΝΟ uid· το
+    //    «διαβάζει;» το κρίνει η ζωντανή γραμμή ακροατηρίου (`readAudienceAsReader`), ξένο ≡ ανύπαρκτο.
+    'src/app/api/network/threads/[threadId]/route.ts',
     'src/app/api/network/threads/route.ts',
   ],
 };
@@ -619,7 +830,10 @@ describe('ADR-817 §5 — το κλειστό σύνολο των διαδρομ
     //    (μετρά από το `git add`).
     // 27η-28η: η αποθήκευση αγγελίας (ADR-777 §8.74) — **δηλωμένες**: λίστα (GET) + κράτα/άφησε
     //    (PUT/DELETE). 26 + 2 = **28** (μετρά από το `git add`).
-    expect(actualConsumers().length).toBe(28);
+    // 🔴 Μετρημένο 2026-11-18 (ADR-945 Φ1β): το δέντρο είχε ήδη **76**, όχι 28 — 20 δηλωμένες μετά το 28 χωρίς ενημέρωση
+    //    αυτού του αριθμού, και 28 αδήλωτες (η Κ2 κόκκινη). Οι 28 **δηλώθηκαν** τώρα, η καθεμία με λόγο από ανάγνωση του
+    //    κριτή της. +1 η `document-registry/issuance-requests` (ADR-945 §7.5, δηλωμένη) ⇒ **77** = όλες δηλωμένες.
+    expect(actualConsumers().length).toBe(77);
   });
 
   it('Π2 — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΗΣ ΠΡΟΕΠΙΛΟΓΗΣ: η συντριπτική πλειοψηφία μένει εταιρική', () => {

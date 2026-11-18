@@ -79,7 +79,7 @@
 | Φάση | Περιεχόμενο | Τομείς |
 |---|---|---|
 | Φ1 | Δ1 + Δ2 + Δ3 + Δ4 (διακομιστής): βιβλίο, id, κριτής, πύλη, `self-approved`, επαγγελματίας-λογαριασμός | document-registry · auth |
-| Φ2 | UI `/me`: «Βρες επιθεωρητή» στη σελίδα ακινήτου → `/pro` με πλαίσιο → «Ζήτησε προσφορά» · χρονολόγιο σταδίων (επαναχρήση όψεων `EngagedIssuance*`) | owner-property · pro directory |
+| Φ2 | UI `/me`: «Βρες επιθεωρητή» στη σελίδα ακινήτου → `/pro` με πλαίσιο → «Ζήτησε προσφορά» · χρονολόγιο σταδίων (επαναχρήση **ετικετών** και `quoteLines` — όχι των όψεων `EngagedIssuance*`, βλ. §7.6) | owner-property · pro directory |
 | Φ3 | Δ5 + Δ6: χώρος συνεργασίας, πρόσκληση, όνομα οικοδεσπότη, emails/i18n | engagements · email |
 | Φ4 | Δ7: προκαταβολή/escrow για ιδιώτη + ουρά διαφορών πλατφόρμας (§6.1) | payments (ADR-943) |
 | Φ5 | Έως 3 προσφορές + σύγκριση (απόφαση 2 — πριν από την E2E) | document-registry · UI |
@@ -217,6 +217,20 @@
 - ⏭️ Μένουν: ειδοποίηση επαγγελματία και χώρος συνεργασίας για προσφορά βιτρίνας (Φ3 · Δ5/Δ6) · UI `/me` (Φ2) · άγκυρα
   πλήθους `allow` του `rules-liveness-gate.test.js` (από το μέρος 1).
 
+### 7.6 Φ2 — σχέδιο (εγκρίθηκε 2026-11-18, Plan Mode)
+
+- **Διόρθωση του §5 (ο κώδικας κερδίζει)**: οι όψεις `EngagedIssuance*` (`components/conveyance/my-cases/`) είναι
+  δεμένες στην πλευρά του **επαγγελματία** (δεύτερο πρόσωπο, `hostCompanyId`, δεδομένα από `/api/engagements/…/case`)
+  και δείχνουν μόνο το **τρέχον** στάδιο — όχι χρονολόγιο. Επαναχρησιμοποιούνται οι πίνακες ετικετών
+  (`issuance-labels.ts`) και το `quoteLines(t, record)` (`registry-issuance-quote-lines.tsx`)· το χρονολόγιο ακολουθεί το
+  `IssuanceAdvanceTimelineList.tsx`.
+- **Κλειστό μέχρι τη Φ3** (απόφαση Giorgio): διακόπτης `OWNER_ISSUANCE_REQUESTS: false` στο `config/feature-flags.ts`.
+  Χωρίς ειδοποίηση επαγγελματία (Φ3) ένα αίτημα δεν το βλέπει κανείς ⇒ καμία ενότητα στο `/me`, κανένα κουμπί στο `/pro`.
+- **Δομή**: client (`document-registry.client.ts`) · καθαρό μοντέλο όψης (`issuance-request-view-model.ts`: CAS εισόδων,
+  μπάλα ιδιώτη, όριο από τον **ίδιο** πυρήνα) · hooks **όχι αισιόδοξα** (CAS, ο server αποφασίζει — όπως το
+  `useUpkeepDeclaration`) · ενότητα κάτω από το `PropertyUpkeepSection` · πλαίσιο `/pro` ως **υπόδειξη** (ο server
+  ξανακρίνει κατοχή) με επέκταση του `documentIssuerSearchHref`, όχι δεύτερο δημιουργό URL.
+
 ## Changelog
 
 | Ημερομηνία | Αλλαγή |
@@ -226,3 +240,4 @@
 | 2026-11-18 | §7 σχέδιο Φ1 εγκρίθηκε· διορθώσεις Δ3/Δ4 από τον κώδικα· μοντέλο RFQ → bids → award. **Φ1α κώδικας**: `professional` (ένωση) στη θέση του `professionalContactId`, κάτοχος `CustodyScope` με δύο όψεις, `IssuanceLedger` στον γραφέα, άγκυρα σχήματος. tsc/jest **αναμένουν** τον Giorgio. |
 | 2026-11-18 | §7.4 **Φ1β μέρος 1**: ταυτότητες `disr`/`dibd` + συλλογή `document_issuance_requests` (deny-all, σουίτα κανόνων) · `requestId`/`cycle`/`cancellation.reason` · καθαρός πυρήνας `issuance-bidding.ts` · actor `owner` + βάση `owner-self` (`ownerContactId` μόνο στις βάσεις γραφείου). Διόρθωση σχεδίου: καμία γραμμή tenant-config. tsc/jest **αναμένουν** τον Giorgio. |
 | 2026-11-18 | §7.5 **Φ1β μέρος 2**: writer `owner` · κριτής υποκειμένου = `readUpkeepSubject` όπως είναι (Φ1 μόνο βιβλίο ιδιώτη, `office-ledger`) · `latestIssuedOn` ιδιώτη από δήλωση + φάκελο (`files_personal`) με τους ΙΔΙΟΥΣ κριτές του μητρώου · προσόν από τη βιτρίνα (ίδιος κριτής με το `/pro`) · `issuance-request.service.ts` (invite · award ατομικό · cancel) · route `issuance-requests` · tests. tsc/jest/πύλες **αναμένουν** τον Giorgio. |
+| 2026-11-18 | **Φ1β ενταγμένη** (`main` `ec82ec17`, squash μαζί με Φ1α + acc-030 από το ίδιο κλαδί). **Άγκυρες που προϋπήρχαν κόκκινες, διορθωμένες με εντολή Giorgio** — καμία αλλαγή κώδικα παραγωγής: (α) `personal-scope-consumers.test.ts`: 28 αδήλωτες διαδρομές του `withPersonalOrOrgAuth` δηλώθηκαν, η καθεμία με λόγο από **ανάγνωση του κριτή της** (καμία δεν ανοίγει σε πολίτη ξένα/εταιρικά δεδομένα· η `places/declarable-areas` δεν έχει κριτή κατοχής **επίτηδες** — μόνο δημόσια όρια)· +3 καταναλωτές `withFileCustodyAuth` (`capture-facts` · `focal-point` · `publish-raster`) και +1 `withNetworkDoor` (`threads/[threadId]`)· παρονομαστής 28 ⇒ 77 (το +1 είναι η δική μας `issuance-requests`). (β) `enterprise-id.service.test.ts`: 4 ντετερμινιστικοί χωρίς δήλωση (`cdp` ADR-942 · `ipay`/`pevt` ADR-ACC-030 · `ppye` ADR-943) ⇒ `DETERMINISTIC_ONLY` + χρυσά δείγματα από τους ίδιους τους γεννήτορες. (γ) `rules-liveness-gate.test.js`: 883 ⇒ **899** (+2 δικά μας, +14 προϋπάρχοντα μη αποδοσμένα ανά commit). |

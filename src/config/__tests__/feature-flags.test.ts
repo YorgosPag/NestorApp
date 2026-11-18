@@ -11,6 +11,12 @@ describe('APP_FEATURE_FLAGS', () => {
     expect(isAppFeatureEnabled('PUBLIC_SHOWCASE_PRICES')).toBe(false);
   });
 
+  // ADR-945 §7.6 — ανοίγει με απόφαση Giorgio ΜΕΤΑ τη Φ3 (ειδοποίηση επαγγελματία): όποιος τον ανοίξει αλλάζει ρητά κι αυτό.
+  it('το αίτημα προσφορών του ιδιώτη είναι ΚΛΕΙΣΤΟ', () => {
+    expect(APP_FEATURE_FLAGS.OWNER_ISSUANCE_REQUESTS).toBe(false);
+    expect(isAppFeatureEnabled('OWNER_ISSUANCE_REQUESTS')).toBe(false);
+  });
+
   it('παγωμένοι: καμία αλλαγή στην εκτέλεση', () => {
     expect(Object.isFrozen(APP_FEATURE_FLAGS)).toBe(true);
   });

@@ -397,6 +397,17 @@ describe('EnterpriseIdService', () => {
       'generateDeterministicSubcontractClauseVersionId',
       'generateDeterministicSubcontractTradeTemplateId',
       'generateDeterministicSubcontractRevisionId',
+      // ⚠️ Τα επόμενα 4 προστέθηκαν ΧΩΡΙΣ δήλωση και κοκκίνιζαν αυτή τη σουίτα· βρέθηκαν 2026-11-18 (ADR-945 Φ1β).
+      // Μετρημένο: ΚΑΝΕΝΑΣ δεν έχει τυχαίο αδελφό στο `enterpriseIdService` — όλοι από φυσικό κλειδί, όπως δηλώνει το JSDoc τους.
+      // ADR-942 Φ2 — ΕΝΑ δόσιμο ανά (υπόθεση, στοιχείο, αρχείο): τυχαίο id = δεύτερο δόσιμο του ίδιου αρχείου στο διπλό κλικ.
+      'generateDeterministicDocumentRequestProvisionId',
+      // ADR-ACC-030 — ΜΙΑ κίνηση πληρωμής ανά κίνηση παρόχου, ΕΝΑ συμβάν παρόχου μία φορά: τυχαίο id = το ίδιο webhook δύο
+      // φορές (ή webhook + συμφιλίωση cron) γράφει ΔΥΟ εισπράξεις για μία πληρωμή.
+      'generateDeterministicInvoicePaymentId',
+      'generateDeterministicPaymentProviderEventId',
+      // ADR-943 §5.7 — ΕΝΑΣ δικαιούχος marketplace ανά (πάροχος, χρήστης): τυχαίο id = δεύτερος πωλητής στον πάροχο για τον
+      // ίδιο μηχανικό όταν δύο εγγραφές φτάσουν μαζί.
+      'generateDeterministicPaymentPayeeId',
     ];
 
     const WITH_RANDOM_SIBLING = DETERMINISTIC_GENERATORS.filter(
@@ -586,6 +597,12 @@ describe('EnterpriseIdService', () => {
       // ADR-929 Δ11 — σπόρος `plan-reading:anchor-seed:undefined` (δύο παράμετροι, ένα όρισμα). Καταγεγραμμένο
       //    από τον ίδιο τον γεννήτορα, 2026-11-04.
       generateDeterministicPlanReadingId: 'plrd_c93cf899-99c5-4fc8-83aa-a5f9ec415e06',
+      // ADR-942 Φ2 · ADR-ACC-030 · ADR-943 §5.7 — καταγεγραμμένα από τους ίδιους τους γεννήτορες, 2026-11-18 (έλειπαν, η
+      //    σουίτα κοκκίνιζε). Το `cdp_` = σκέτος σπόρος ⇒ ίδιο uuid με το `dias_`/`pupk_`· οι άλλοι τρεις φέρουν πρόθημα σπόρου.
+      generateDeterministicDocumentRequestProvisionId: 'cdp_a387d0b1-9ad7-4af3-8db1-b8faf2f9bf16',
+      generateDeterministicInvoicePaymentId: 'ipay_5a088c3e-8da8-4886-83bb-1764c714b97d',
+      generateDeterministicPaymentPayeeId: 'ppye_0d4908a2-a7e9-4023-8cfe-cea77feb5bfb',
+      generateDeterministicPaymentProviderEventId: 'pevt_fa88e3df-f81e-4595-872d-0cb19e598dab',
     };
 
     // Ένας ΝΕΟΣ γεννήτορας δεν μπορεί να μπει σιωπηλά: οφείλει να δηλώσει το
