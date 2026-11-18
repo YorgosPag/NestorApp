@@ -2534,6 +2534,10 @@
       "renewDialog": {
         "title": "Renew access",
         "description": "The new expiry counts from today, and the professional is notified.",
+        "option": "{count, plural, one {# day} other {# days}} — until {date}",
+        "preview": "Expiry: {current} → {next}",
+        "shortens": "Access will end {count, plural, one {# day} other {# days}} earlier than its current expiry.",
+        "confirmShorten": "Shorten",
         "confirm": "Renew",
         "confirming": "Renewing…"
       },

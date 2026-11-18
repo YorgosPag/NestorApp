@@ -137,6 +137,16 @@ export function dossierShareExpiresAt(days: DossierShareDays, nowMs: number): st
 }
 
 /**
+ * Πόσες ημέρες **νωρίτερα** θα έληγε η πρόσβαση αν ανανεωθεί τώρα για `days` (0 ⇒ δεν συντομεύει). Ο ΙΔΙΟΣ υπολογισμός
+ * με τον server (`dossierShareExpiresAt`), ώστε ο διάλογος να μη δείχνει άλλη ημερομηνία από αυτή που θα γραφτεί.
+ * 🏆 Google Drive · Box: η λήξη **φαίνεται** πριν αποθηκευτεί και η συντόμευση είναι **ρητή** πράξη, ποτέ παρενέργεια.
+ */
+export function dossierRenewalShortensByDays(currentExpiresAt: string, days: DossierShareDays, nowMs: number): number {
+  const lostMs = Date.parse(currentExpiresAt) - Date.parse(dossierShareExpiresAt(days, nowMs));
+  return lostMs > 0 ? Math.ceil(lostMs / DAY_MS) : 0;
+}
+
+/**
  * ADR-901 Ε-5 — αν ο επαγγελματίας δεν απαντήσει σε **3** ημέρες, υπενθυμίζεται **ο προσκαλών** (όχι ο
  * επαγγελματίας: ο οικοδεσπότης ξέρει αν πρέπει να τηλεφωνήσει, να ξαναστείλει ή να ορίσει άλλον).
  */

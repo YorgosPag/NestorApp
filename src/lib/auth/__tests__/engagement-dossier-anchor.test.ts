@@ -11,12 +11,13 @@
  * | άγνωστη καρτέλα · διπλότυπη καρτέλα · διάρκεια εκτός μενού | Σ5 |
  * | η πρόσκληση φακέλου διαβάζεται ως μεταβίβαση / κρατά πεδία γραφείου | Π1 · Π2 |
  * | `planDossierChange` αγγίζει άλλο είδος · ανανεώνει ληγμένη · γράφει ίχνος χωρίς αλλαγή | Χ1–Χ5 |
+ * | ο διάλογος ανανέωσης κρύβει συντόμευση · προειδοποιεί για επέκταση · μετρά άλλη μέρα από τον server | Λ1–Λ3 |
  */
 
 import { engagementInvitationFromDocument, engagementInvitationToDocument } from '../engagement-invitation-schema';
 import { activeDossierByInvitation, planDossierChange } from '../engagement-dossier-plan';
 import { parseEngagement } from '../engagement-schema';
-import { dossierShareExpiresAt } from '@/config/engagement-policy';
+import { dossierRenewalShortensByDays, dossierShareExpiresAt } from '@/config/engagement-policy';
 import {
   TEMPLATE_OF_SUBJECT,
   isDossierEngagement,
@@ -178,5 +179,22 @@ describe('ADR-916 Φ-Ε1 — οι πράξεις του κατόχου (`planDos
     const plan = planDossierChange(dossierEngagement(), { kind: 'reach', reach }, NOW);
     reach.excludedFileIds.push('mutated');
     expect(plan.outcome === 'changed' && plan.after.reach.excludedFileIds).toEqual([]);
+  });
+});
+
+describe('ADR-916 Φ-Ε1 — η ανανέωση δεν συντομεύει σιωπηλά (`dossierRenewalShortensByDays`)', () => {
+  it('Λ1 — λήξη σε 89 ημέρες, ανανέωση 30 ⇒ συντομεύει κατά 59 (ο διάλογος ΠΡΕΠΕΙ να προειδοποιήσει)', () => {
+    expect(dossierRenewalShortensByDays(ISO(NOW + 89 * DAY), 30, NOW)).toBe(59);
+  });
+
+  it('Λ2 — νέα λήξη ίδια ή μεταγενέστερη ⇒ 0 (καμία ψευδής προειδοποίηση)', () => {
+    expect(dossierRenewalShortensByDays(ISO(NOW + 30 * DAY), 30, NOW)).toBe(0);
+    expect(dossierRenewalShortensByDays(ISO(NOW + 10 * DAY), 90, NOW)).toBe(0);
+  });
+
+  it('Λ3 — μετρά από τον ΙΔΙΟ υπολογισμό με τον server (από σήμερα, όχι από την αποδοχή)', () => {
+    const current = ISO(NOW + 50 * DAY);
+    const lostMs = Date.parse(current) - Date.parse(dossierShareExpiresAt(7, NOW));
+    expect(dossierRenewalShortensByDays(current, 7, NOW)).toBe(Math.ceil(lostMs / DAY));
   });
 });

@@ -11,10 +11,12 @@
 
 import React, { useState } from 'react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
-import type { DossierShareDays } from '@/config/engagement-policy';
+import { dossierRenewalShortensByDays, dossierShareExpiresAt, type DossierShareDays } from '@/config/engagement-policy';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatDate } from '@/lib/intl-utils';
 import type { FloorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
 import type { DossierEngagementSummary } from '@/types/dossier-access';
 import type { DossierShareReach } from '@/types/engagement';
@@ -89,15 +91,42 @@ interface RenewDialogProps {
   readonly onRenew: (engagement: DossierEngagementSummary, shareDays: DossierShareDays) => void;
 }
 
+/** «Τρέχουσα λήξη → νέα» και, αν η νέα είναι νωρίτερα, ρητή προειδοποίηση — η συντόμευση δεν γίνεται ποτέ σιωπηλά. */
+function RenewPreview({ currentExpiresAt, nextExpiresAt, shortensBy }: {
+  readonly currentExpiresAt: string;
+  readonly nextExpiresAt: string;
+  readonly shortensBy: number;
+}) {
+  const { t } = useTranslation(['property-market']);
+  return (
+    <section className="space-y-2" aria-live="polite">
+      <p className="text-sm">
+        {t(`${K}.renewDialog.preview`, { current: formatDate(currentExpiresAt), next: formatDate(nextExpiresAt) })}
+      </p>
+      {shortensBy > 0 && (
+        <Alert variant="destructive" withIcon>
+          <AlertDescription>{t(`${K}.renewDialog.shortens`, { count: shortensBy })}</AlertDescription>
+        </Alert>
+      )}
+    </section>
+  );
+}
+
 function RenewForm({ engagement, busy, onCancel, onRenew }: RenewDialogProps & { readonly engagement: DossierEngagementSummary }) {
   const { t } = useTranslation(['property-market']);
   const [shareDays, setShareDays] = useState<DossierShareDays>(engagement.shareDays);
+  /** Η στιγμή που άνοιξε ο διάλογος — σταθερή, ώστε η ημερομηνία που διαβάζει ο κάτοχος να μη «τρέχει» όσο διαλέγει. */
+  const [nowMs] = useState(() => Date.now());
+  const untilLabel = (days: DossierShareDays) =>
+    t(`${K}.renewDialog.option`, { count: days, date: formatDate(dossierShareExpiresAt(days, nowMs)) });
+  const shortensBy = dossierRenewalShortensByDays(engagement.expiresAt, shareDays, nowMs);
   return (
     <>
-      <DossierShareDaysField id="dossier-renew-days" value={shareDays} onChange={setShareDays} />
+      <DossierShareDaysField id="dossier-renew-days" value={shareDays} onChange={setShareDays} optionLabel={untilLabel} />
+      <RenewPreview currentExpiresAt={engagement.expiresAt} nextExpiresAt={dossierShareExpiresAt(shareDays, nowMs)} shortensBy={shortensBy} />
       <DialogActionFooter
         cancelLabel={t(`${K}.invite.cancel`)}
-        confirmLabel={t(`${K}.renewDialog.confirm`)}
+        confirmLabel={t(shortensBy > 0 ? `${K}.renewDialog.confirmShorten` : `${K}.renewDialog.confirm`)}
         busyLabel={t(`${K}.renewDialog.confirming`)}
         onCancel={onCancel}
         onConfirm={() => onRenew(engagement, shareDays)}

@@ -122,13 +122,19 @@ export function DossierReachFields(props: ReachFieldsProps): React.ReactElement 
   );
 }
 
-/** Η διάρκεια — **μόνο** από το κλειστό μενού πολιτικής (`DOSSIER_SHARE_DAYS`), ποτέ ελεύθερος αριθμός. */
-export function DossierShareDaysField({ id, value, onChange }: {
+/**
+ * Η διάρκεια — **μόνο** από το κλειστό μενού πολιτικής (`DOSSIER_SHARE_DAYS`), ποτέ ελεύθερος αριθμός.
+ * 🔑 Η ετικέτα λέει **από πότε μετρά**: η πρόσκληση «από την αποδοχή» (προεπιλογή)· η ανανέωση δίνει δική της
+ *    (`optionLabel`), γιατί εκεί ο server μετρά **από σήμερα** — ένα πεδίο, όχι μία ψευδής φράση για δύο πράξεις.
+ */
+export function DossierShareDaysField({ id, value, onChange, optionLabel }: {
   readonly id: string;
   readonly value: DossierShareDays;
   readonly onChange: (days: DossierShareDays) => void;
+  readonly optionLabel?: (days: DossierShareDays) => string;
 }): React.ReactElement {
   const { t } = useTranslation(['property-market']);
+  const labelOf = optionLabel ?? ((days: DossierShareDays) => t(`${K}.access.invite.days`, { count: days }));
   return (
     <section className="space-y-2">
       <Label htmlFor={id}>{t(`${K}.access.invite.daysLabel`)}</Label>
@@ -136,7 +142,7 @@ export function DossierShareDaysField({ id, value, onChange }: {
         <SelectTrigger id={id}><SelectValue /></SelectTrigger>
         <SelectContent>
           {DOSSIER_SHARE_DAYS.map((days) => (
-            <SelectItem key={days} value={String(days)}>{t(`${K}.access.invite.days`, { count: days })}</SelectItem>
+            <SelectItem key={days} value={String(days)}>{labelOf(days)}</SelectItem>
           ))}
         </SelectContent>
       </Select>
