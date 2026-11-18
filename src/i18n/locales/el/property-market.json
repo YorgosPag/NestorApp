@@ -2538,6 +2538,7 @@
         "preview": "Λήξη: {current} → {next}",
         "shortens": "Η πρόσβαση θα λήξει {count, plural, one {# ημέρα} other {# ημέρες}} νωρίτερα από την τρέχουσα λήξη.",
         "nonBusinessDay": "Η νέα λήξη πέφτει {day}, μη εργάσιμη ημέρα.",
+        "unchanged": "Η λήξη δεν αλλάζει — διάλεξε άλλη διάρκεια.",
         "confirmShorten": "Συντόμευση",
         "confirm": "Ανανέωση",
         "confirming": "Ανανέωση…"

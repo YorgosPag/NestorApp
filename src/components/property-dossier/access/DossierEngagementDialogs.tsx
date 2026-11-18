@@ -116,11 +116,23 @@ function ExpiryDayNotice({ expiresAt }: { readonly expiresAt: string }) {
   return <p className="text-sm text-muted-foreground">{t(`${K}.renewDialog.nonBusinessDay`, { day })}</p>;
 }
 
-/** «Τρέχουσα λήξη → νέα» και, αν η νέα είναι νωρίτερα, ρητή προειδοποίηση — η συντόμευση δεν γίνεται ποτέ σιωπηλά. */
-function RenewPreview({ currentExpiresAt, nextExpiresAt, shortensBy }: {
+/**
+ * Ίδια **ημέρα** λήξης (ώρα Ελλάδας) πριν και μετά ⇒ η ανανέωση δεν αλλάζει τίποτα που βλέπει ο άνθρωπος —
+ * θα έστελνε όμως ειδοποίηση στον επαγγελματία. Η κοκκοποίηση είναι η ημέρα, όπως ακριβώς τη δείχνει ο διάλογος.
+ */
+function isSameExpiryDay(currentExpiresAt: string, nextExpiresAt: string): boolean {
+  return expiryDayKey(currentExpiresAt) === expiryDayKey(nextExpiresAt);
+}
+
+/**
+ * «Τρέχουσα λήξη → νέα» και: αμετάβλητη ⇒ ουδέτερη γραμμή (το κουμπί κλειδώνει)· νωρίτερα ⇒ ρητή προειδοποίηση —
+ * η συντόμευση δεν γίνεται ποτέ σιωπηλά.
+ */
+function RenewPreview({ currentExpiresAt, nextExpiresAt, shortensBy, unchanged }: {
   readonly currentExpiresAt: string;
   readonly nextExpiresAt: string;
   readonly shortensBy: number;
+  readonly unchanged: boolean;
 }) {
   const { t } = useTranslation(['property-market']);
   return (
@@ -128,7 +140,8 @@ function RenewPreview({ currentExpiresAt, nextExpiresAt, shortensBy }: {
       <p className="text-sm">
         {t(`${K}.renewDialog.preview`, { current: formatExpiryDay(currentExpiresAt), next: formatExpiryDay(nextExpiresAt) })}
       </p>
-      <ExpiryDayNotice expiresAt={nextExpiresAt} />
+      {unchanged && <p className="text-sm text-muted-foreground">{t(`${K}.renewDialog.unchanged`)}</p>}
+      {!unchanged && <ExpiryDayNotice expiresAt={nextExpiresAt} />}
       {shortensBy > 0 && (
         <Alert variant="destructive" withIcon>
           <AlertDescription>{t(`${K}.renewDialog.shortens`, { count: shortensBy })}</AlertDescription>
@@ -145,11 +158,13 @@ function RenewForm({ engagement, busy, onCancel, onRenew }: RenewDialogProps & {
   const [nowMs] = useState(() => Date.now());
   const untilLabel = (days: DossierShareDays) =>
     t(`${K}.renewDialog.option`, { count: days, date: formatExpiryDay(dossierShareExpiresAt(days, nowMs)) });
-  const shortensBy = dossierRenewalShortensByDays(engagement.expiresAt, shareDays, nowMs);
+  const nextExpiresAt = dossierShareExpiresAt(shareDays, nowMs);
+  const unchanged = isSameExpiryDay(engagement.expiresAt, nextExpiresAt);
+  const shortensBy = unchanged ? 0 : dossierRenewalShortensByDays(engagement.expiresAt, shareDays, nowMs);
   return (
     <>
       <DossierShareDaysField id="dossier-renew-days" value={shareDays} onChange={setShareDays} optionLabel={untilLabel} />
-      <RenewPreview currentExpiresAt={engagement.expiresAt} nextExpiresAt={dossierShareExpiresAt(shareDays, nowMs)} shortensBy={shortensBy} />
+      <RenewPreview currentExpiresAt={engagement.expiresAt} nextExpiresAt={nextExpiresAt} shortensBy={shortensBy} unchanged={unchanged} />
       <DialogActionFooter
         cancelLabel={t(`${K}.invite.cancel`)}
         confirmLabel={t(shortensBy > 0 ? `${K}.renewDialog.confirmShorten` : `${K}.renewDialog.confirm`)}
@@ -157,6 +172,7 @@ function RenewForm({ engagement, busy, onCancel, onRenew }: RenewDialogProps & {
         onCancel={onCancel}
         onConfirm={() => onRenew(engagement, shareDays)}
         isSubmitting={busy}
+        canSubmit={!busy && !unchanged}
       />
     </>
   );
