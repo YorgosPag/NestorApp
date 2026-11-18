@@ -9,6 +9,7 @@
 
 import type { EntityAuditEntry, AuditAction } from '@/types/audit-trail';
 import type { PhotoShareRecord } from '@/types/photo-share';
+import type { AuditFilter, AuditFilterCategory } from '@/components/shared/audit/audit-filter-categories';
 
 // ============================================================================
 // DISCRIMINATED UNION
@@ -22,7 +23,8 @@ export type ContactTimelineEntry =
 // FILTER TYPE
 // ============================================================================
 
-export type ContactHistoryFilter = AuditAction | 'photo_share' | 'all';
+/** Οι κοινές κατηγορίες του Ιστορικού (`audit-filter-categories.ts`) + οι κοινοποιήσεις φωτογραφιών της επαφής. */
+export type ContactHistoryFilter = AuditFilter | 'photo_share';
 
 // ============================================================================
 // GROUPED TIMELINE
@@ -43,6 +45,8 @@ export interface ContactHistoryStats {
   auditCount: number;
   photoShareCount: number;
   byAction: Partial<Record<AuditAction, number>>;
+  /** Πόσες γραμμές δείχνει κάθε chip κατηγορίας — `total = photoShareCount + Σ byCategory`. */
+  byCategory: Record<AuditFilterCategory, number>;
   /**
    * Η στιγμή της τελευταίας αλλαγής — **όχι** έτοιμο κείμενο: το «πριν από 4 λεπτά» το γράφει το `AuditStatsPanel` κατά
    * την απόδοση, στη γλώσσα της στιγμής. Ψημένο εδώ, μέσα σε `useMemo([entries])`, έμενε στη γλώσσα που υπολογίστηκε.

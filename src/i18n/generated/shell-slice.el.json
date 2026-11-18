@@ -1357,7 +1357,7 @@
         "auto_submit_prompted": "Πρόταση αυτόματης υποβολής",
         "created": "Δημιουργήθηκε",
         "deleted": "Διαγράφηκε",
-        "document_accessed": "Άνοιγμα αποδεικτικού",
+        "document_accessed": "Άνοιγμα εγγράφου",
         "document_added": "Προσθήκη εγγράφου",
         "document_removed": "Αφαίρεση εγγράφου",
         "document_requested": "Αίτημα εγγράφου",
@@ -1509,18 +1509,14 @@
         "wall": "Τοίχος"
       },
       "filters": {
+        "access": "Πρόσβαση & κοινή χρήση",
         "all": "Όλα",
+        "changed": "Αλλαγές",
+        "communication": "Επικοινωνία",
         "created": "Δημιουργίες",
         "deleted": "Διαγραφές",
-        "document_added": "Προσθήκες εγγράφων",
-        "document_removed": "Αφαιρέσεις εγγράφων",
-        "email_sent": "Email",
-        "invoice_created": "Παραστατικά",
         "photo_share": "Φωτογραφίες",
-        "professional_assigned": "Αναθέσεις",
-        "professional_removed": "Αφαιρέσεις",
-        "status_changed": "Κατάσταση",
-        "updated": "Ενημερώσεις"
+        "viewed": "Προβολές & λήψεις"
       },
       "historyFilters": "Φίλτρα ιστορικού",
       "loadMore": "Περισσότερα",

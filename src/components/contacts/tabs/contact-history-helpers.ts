@@ -9,6 +9,10 @@
 import { formatDate } from '@/lib/intl-utils';
 import type { EntityAuditEntry, AuditAction } from '@/types/audit-trail';
 import type { PhotoShareRecord } from '@/types/photo-share';
+import {
+  countAuditFilterCategories,
+  matchesAuditFilter,
+} from '@/components/shared/audit/audit-filter-categories';
 import type {
   ContactTimelineEntry,
   ContactHistoryFilter,
@@ -110,7 +114,7 @@ export function filterTimeline(
 ): ContactTimelineEntry[] {
   if (filter === 'all') return entries;
   if (filter === 'photo_share') return entries.filter((e) => e.kind === 'photo_share');
-  return entries.filter((e) => e.kind === 'audit' && e.entry.action === filter);
+  return entries.filter((e) => e.kind === 'audit' && matchesAuditFilter(e.entry.action, filter));
 }
 
 // ============================================================================
@@ -153,6 +157,9 @@ export function computeContactStats(entries: ContactTimelineEntry[]): ContactHis
     auditCount,
     photoShareCount,
     byAction,
+    byCategory: countAuditFilterCategories(
+      entries.flatMap((item) => (item.kind === 'audit' ? [item.entry.action] : [])),
+    ),
     lastChangeAt,
     uniqueFieldsChanged: fieldSet.size,
     uniqueUsers: userSet.size,

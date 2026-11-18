@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
-import type { AuditAction } from "@/types/audit-trail";
+import type { AuditFilter } from "@/components/shared/audit/audit-filter-categories";
 import {
   useGlobalAuditTrail,
   type GlobalAuditFilters,
@@ -37,7 +37,7 @@ export function GlobalAuditLogView() {
   const colors = useSemanticColors();
 
   const [filters, setFilters] = useState<GlobalAuditFilters>({});
-  const [activeFilter, setActiveFilter] = useState<AuditAction | "all">("all");
+  const [activeFilter, setActiveFilter] = useState<AuditFilter>("all");
 
   const {
     entries,

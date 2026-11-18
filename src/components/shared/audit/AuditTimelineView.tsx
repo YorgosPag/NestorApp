@@ -26,17 +26,19 @@ import {
   Filter,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import type {
-  AuditAction,
-  EntityAuditEntry,
-} from "@/types/audit-trail";
+import type { EntityAuditEntry } from "@/types/audit-trail";
 import { AuditStatsPanel } from "./AuditStatsPanel";
 import { AuditDayDivider, AuditFilterChip } from "./AuditFilterChip";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors";
 import "@/lib/design-system";
-import { FILTER_OPTIONS } from "./activity-tab-config";
+import {
+  AUDIT_FILTER_OPTIONS,
+  countAuditFilterCategories,
+  matchesAuditFilter,
+  type AuditFilter,
+} from "./audit-filter-categories";
 import {
   groupEntriesByDate,
   type Stats,
@@ -55,8 +57,8 @@ export interface AuditTimelineViewProps {
   hasMore: boolean;
   onLoadMore: () => void;
   stats: Stats;
-  activeFilter: AuditAction | "all";
-  onFilterChange: (next: AuditAction | "all") => void;
+  activeFilter: AuditFilter;
+  onFilterChange: (next: AuditFilter) => void;
   /** When true, each entry shows the affected entity as a clickable link (global view). */
   showEntityLink?: boolean;
 }
@@ -79,11 +81,12 @@ export function AuditTimelineView({
   // ανάμεσα σε δύο επεξεργασίες κλείνει τη συνεδρία ακόμη κι όταν το φίλτρο την κρύβει.
   const sessions = React.useMemo(() => coalesceEditSessions(entries), [entries]);
 
-  const filteredEntries = React.useMemo(() => {
-    const shown = sessions.map((session) => session.net);
-    if (activeFilter === "all") return shown;
-    return shown.filter((e) => e.action === activeFilter);
-  }, [sessions, activeFilter]);
+  const shownEntries = React.useMemo(() => sessions.map((session) => session.net), [sessions]);
+
+  const filteredEntries = React.useMemo(
+    () => shownEntries.filter((e) => matchesAuditFilter(e.action, activeFilter)),
+    [shownEntries, activeFilter],
+  );
 
   const sessionOf = React.useMemo(
     () => new Map(sessions.map((session) => [session.net, session])),
@@ -113,7 +116,7 @@ export function AuditTimelineView({
         <QuickFilters
           active={activeFilter}
           onChange={onFilterChange}
-          stats={stats}
+          shownEntries={shownEntries}
         />
       )}
 
@@ -199,22 +202,26 @@ export function AuditTimelineView({
 function QuickFilters({
   active,
   onChange,
-  stats,
+  shownEntries,
 }: {
-  active: AuditAction | "all";
-  onChange: (v: AuditAction | "all") => void;
-  stats: Stats;
+  active: AuditFilter;
+  onChange: (v: AuditFilter) => void;
+  /** Οι γραμμές που δείχνει το χρονολόγιο (μετά τη σύμπτυξη) — αυτές μετρούν τα chips, όχι οι ωμές εγγραφές. */
+  shownEntries: readonly EntityAuditEntry[];
 }) {
   const { t } = useTranslation(COMMON_NAMESPACES);
+  const counts = React.useMemo(
+    () => countAuditFilterCategories(shownEntries.map((entry) => entry.action)),
+    [shownEntries],
+  );
   return (
     <nav
       className="flex flex-wrap gap-1.5"
       aria-label={t("audit.historyFilters")}
     >
-      {FILTER_OPTIONS.map(({ value, labelKey }) => {
+      {AUDIT_FILTER_OPTIONS.map(({ value, labelKey }) => {
         const isActive = active === value;
-        const count =
-          value === "all" ? stats.total : (stats.byAction[value] ?? 0);
+        const count = value === "all" ? shownEntries.length : counts[value];
 
         if (value !== "all" && count === 0) return null;
 

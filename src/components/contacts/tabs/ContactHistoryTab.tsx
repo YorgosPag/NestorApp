@@ -29,7 +29,7 @@ import { AuditDayDivider, AuditFilterChip } from '@/components/shared/audit/Audi
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { FILTER_OPTIONS } from '@/components/shared/audit/activity-tab-config';
+import { AUDIT_FILTER_OPTIONS } from '@/components/shared/audit/audit-filter-categories';
 import { AuditTimelineEntry } from '@/components/shared/audit/audit-timeline-entry';
 import { ShareEntry } from './ShareEntryRenderer';
 import {
@@ -42,21 +42,13 @@ import type { ContactHistoryFilter } from './contact-history-types';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // ============================================================================
-// EXTENDED FILTER OPTIONS (adds photo_share to audit filters)
+// EXTENDED FILTER OPTIONS (the shared audit categories + photo_share)
 // ============================================================================
 
-const CONTACT_FILTER_OPTIONS = [
-  ...FILTER_OPTIONS.map((option) => ({
-    value: option.value as ContactHistoryFilter,
-    labelKey: option.labelKey,
-  })),
-  { value: 'photo_share' as const, labelKey: 'audit.filters.photo_share' },
-].reduce<Array<{ value: ContactHistoryFilter; labelKey: string }>>((options, option) => {
-  if (!options.some((candidate) => candidate.value === option.value)) {
-    options.push(option);
-  }
-  return options;
-}, []);
+const CONTACT_FILTER_OPTIONS: ReadonlyArray<{ value: ContactHistoryFilter; labelKey: string }> = [
+  ...AUDIT_FILTER_OPTIONS,
+  { value: 'photo_share', labelKey: 'audit.filters.photo_share' },
+];
 
 // ============================================================================
 // PROPS
@@ -118,7 +110,7 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
               ? stats.total
               : value === 'photo_share'
                 ? stats.photoShareCount
-                : (stats.byAction[value] ?? 0);
+                : stats.byCategory[value];
 
             if (value !== 'all' && count === 0) return null;
 

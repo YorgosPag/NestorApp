@@ -20,7 +20,8 @@ import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo, useState } from "react";
 import { History } from "lucide-react";
 import { useEntityAudit } from "@/hooks/useEntityAudit";
-import type { AuditEntityType, AuditAction } from "@/types/audit-trail";
+import type { AuditEntityType } from "@/types/audit-trail";
+import type { AuditFilter } from "./audit-filter-categories";
 import type { AuditLedgerKind } from "@/lib/audit/audit-ledger";
 import type { TabComponentProps } from "@/components/generic/UniversalTabsRenderer";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
@@ -51,7 +52,7 @@ export function ActivityTab({
   const resolvedEntityType = entityType ?? "property";
   const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
-  const [activeFilter, setActiveFilter] = useState<AuditAction | "all">("all");
+  const [activeFilter, setActiveFilter] = useState<AuditFilter>("all");
 
   const { entries, isLoading, error, hasMore, loadMore } = useEntityAudit({
     entityType: resolvedEntityType,
