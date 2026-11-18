@@ -178,11 +178,20 @@ export class ContactsService {
     }
     const sanitizedData = sanitizeContactData(contactRecord) as unknown as Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>;
 
-    // Phase 2: Duplicate Prevention
-    const duplicateResult = await DuplicatePreventionService.detectDuplicates(sanitizedData, {
-      strictMode: true,
-      timeWindow: 5000,
-    });
+    // Phase 2: Auth + tenant — ο χώρος λύνεται ΠΡΙΝ τον έλεγχο διπλοτύπων (ADR-944 §8):
+    // ο έλεγχος ρωτά τον ΙΔΙΟ χώρο όπου θα γραφτεί η επαφή, ποτέ όλους τους χώρους.
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('AUTHENTICATION_ERROR: User must be logged in to create contacts');
+
+    const tokenResult = await currentUser.getIdTokenResult();
+    const userCompanyId = tokenResult.claims?.companyId as string | undefined;
+    if (!userCompanyId) throw new MissingTenantError();
+
+    // Phase 3: Duplicate Prevention (scoped to the write tenant)
+    const duplicateResult = await DuplicatePreventionService.detectDuplicates(
+      { ...sanitizedData, companyId: userCompanyId },
+      { strictMode: true, timeWindow: 5000 },
+    );
     if (duplicateResult.isDuplicate) {
       const rec = duplicateResult.recommendations[0];
       const match = duplicateResult.matchingContacts[0];
@@ -193,14 +202,7 @@ export class ContactsService {
       );
     }
 
-    // Phase 3: Auth + Create
-    const currentUser = auth.currentUser;
-    if (!currentUser) throw new Error('AUTHENTICATION_ERROR: User must be logged in to create contacts');
-
-    const tokenResult = await currentUser.getIdTokenResult();
-    const userCompanyId = tokenResult.claims?.companyId as string | undefined;
-    if (!userCompanyId) throw new MissingTenantError();
-
+    // Phase 4: Create
     const colRef = getCol<Contact>(CONTACTS_COLLECTION, contactConverter);
     const id = generateContactId();
     // ADR-332 D27 Β-ΙΙ: η θέση λύνεται ΠΡΙΝ την πρώτη εγγραφή (Salesforce: create ΚΑΙ update).

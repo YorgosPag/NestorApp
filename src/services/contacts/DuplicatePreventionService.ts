@@ -14,7 +14,9 @@ import {
   where,
   getDocs,
   limit,
-  Timestamp
+  Timestamp,
+  type Query,
+  type QueryConstraint
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Contact, ContactType } from '@/types/contacts';
@@ -268,7 +270,8 @@ export class DuplicatePreventionService {
     candidateContact: Partial<Contact>,
     config: DuplicateDetectionConfig
   ): Promise<Contact[]> {
-    const colRef = collection(db, this.COLLECTION).withConverter(contactConverter);
+    const scopedQuery = this.tenantQuery(candidateContact);
+    if (!scopedQuery) return [];
     const matches: Contact[] = [];
 
     // Query για κάθε comparison field
@@ -282,13 +285,12 @@ export class DuplicatePreventionService {
         // to catch duplicates across individual/company/service contacts.
         // All other fields use type-scoped queries as before.
         const isVatField = field === 'vatNumber' || field === 'companyVatNumber';
-        const companyId = candidateContact.companyId;
 
         const constraints = isVatField
-          ? [...(companyId ? [where('companyId', '==', companyId)] : []), where(field, '==', value), limit(5)]
-          : [...(companyId ? [where('companyId', '==', companyId)] : []), where(field, '==', value), where('type', '==', candidateContact.type), limit(5)];
+          ? [where(field, '==', value), limit(5)]
+          : [where(field, '==', value), where('type', '==', candidateContact.type), limit(5)];
 
-        const q = query(colRef, ...constraints);
+        const q = scopedQuery(...constraints);
 
         const snapshot = await getDocs(q);
         const fieldMatches = snapshot.docs.map(doc => ({
@@ -326,14 +328,12 @@ export class DuplicatePreventionService {
     candidateContact: Partial<Contact>,
     config: DuplicateDetectionConfig
   ): Promise<Contact[]> {
-    const colRef = collection(db, this.COLLECTION).withConverter(contactConverter);
+    const scopedQuery = this.tenantQuery(candidateContact);
+    if (!scopedQuery) return [];
     const cutoffTime = Timestamp.fromMillis(Date.now() - config.timeWindow);
-    const companyId = candidateContact.companyId;
 
     try {
-      const q = query(
-        colRef,
-        ...(companyId ? [where('companyId', '==', companyId)] : []),
+      const q = scopedQuery(
         where('type', '==', candidateContact.type),
         where('createdAt', '>=', cutoffTime),
         limit(10)
@@ -348,6 +348,25 @@ export class DuplicatePreventionService {
       logger.warn('Rapid duplicate detection error', { error });
       return [];
     }
+  }
+
+  /**
+   * 🏢 Tenant scope (ADR-944 §8) — ο έλεγχος ρωτά ΜΟΝΟ τον χώρο όπου θα γραφτεί η επαφή.
+   * Χωρίς `companyId` ΔΕΝ τρέχει κανένα ερώτημα: η παλιά συμπεριφορά (ερώτημα χωρίς φίλτρο
+   * χώρου) έβρισκε επαφές ΑΛΛΩΝ χώρων, μπλόκαρε νόμιμη δημιουργία και αποκάλυπτε ότι η
+   * εταιρεία υπάρχει σε ξένο βιβλίο επαφών.
+   */
+  private static tenantQuery(
+    candidateContact: Partial<Contact>
+  ): ((...constraints: QueryConstraint[]) => Query<Contact>) | null {
+    const companyId = candidateContact.companyId;
+    if (!companyId) {
+      logger.warn('Duplicate check skipped: candidate has no companyId (tenant scope required)');
+      return null;
+    }
+    const colRef = collection(db, this.COLLECTION).withConverter(contactConverter);
+    const tenant = where('companyId', '==', companyId);
+    return (...constraints) => query(colRef, tenant, ...constraints);
   }
 
   /**
