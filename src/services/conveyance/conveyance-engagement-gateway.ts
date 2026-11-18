@@ -232,7 +232,7 @@ export function declareIssuanceWorkStarted(
 }
 
 export function startWorkRejectionOf(error: unknown): StartWorkRejection | null {
-  return namedError(error, START_WORK_REJECTIONS);
+  return apiErrorCodeOf(error, START_WORK_REJECTIONS);
 }
 
 // =============================================================================
@@ -257,7 +257,7 @@ export function recordIssuanceAdvanceReceipt(engagementId: string, body: Advance
 }
 
 export function advanceReceiptRejectionOf(error: unknown): AdvanceReceiptRejection | null {
-  return namedError(error, ADVANCE_RECEIPT_REJECTIONS);
+  return apiErrorCodeOf(error, ADVANCE_RECEIPT_REJECTIONS);
 }
 
 // =============================================================================
