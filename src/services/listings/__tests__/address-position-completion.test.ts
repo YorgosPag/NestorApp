@@ -12,6 +12,11 @@
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { completePendingAddressPositions } from '../address-position-completion';
+import {
+  BUILDING_ADDRESS_CONTAINER,
+  CONTACT_ADDRESS_CONTAINER,
+  PROJECT_ADDRESS_CONTAINER,
+} from '../address-position-containers';
 import { geocodeWithVerdict } from '@/app/api/geocoding/geocoding-engine';
 import { EntityAuditService } from '@/services/entity-audit.service';
 
@@ -69,7 +74,7 @@ function fakeDb(initial: Address[], mutateBeforeTransaction?: (addresses: Addres
   return { db: db as unknown as AdminFirestore, state };
 }
 
-const JOB = { collection: 'projects', docId: 'proj_1', entityType: 'project' as const, pendingIds: ['addr_1'] };
+const JOB = { container: PROJECT_ADDRESS_CONTAINER, docId: 'proj_1', pendingIds: ['addr_1'] };
 
 beforeEach(() => {
   engine.mockReset();
@@ -212,31 +217,91 @@ describe('«μετακίνησε την πινέζα» που δεν πρόλα�
   });
 });
 
-describe('παράγωγα πεδία — στην ΙΔΙΑ συναλλαγή με τη θέση', () => {
-  it('Π1 — ό,τι παράγει το `derive` γράφεται μαζί με τις διευθύνσεις, από ό,τι ΓΡΑΦΕΤΑΙ', async () => {
+describe('παράγωγα πεδία — στην ΙΔΙΑ συναλλαγή με τη θέση (δοχείο κτιρίου)', () => {
+  const BUILDING_JOB = { ...JOB, container: BUILDING_ADDRESS_CONTAINER, docId: 'bldg_1' };
+
+  it('Π1 — το δοχείο κτιρίου γράφει `latitude`/`longitude` μαζί με τις διευθύνσεις, από ό,τι ΓΡΑΦΕΤΑΙ', async () => {
     engine.mockResolvedValue(HIT);
     const { db, state } = fakeDb([PENDING]);
-    const derive = jest.fn((addresses: readonly { coordinates?: { lat: number; lng: number } }[]) => ({
-      latitude: addresses[0].coordinates?.lat,
-      longitude: addresses[0].coordinates?.lng,
-    }));
 
-    await completePendingAddressPositions(db, { ...JOB, derive });
+    await completePendingAddressPositions(db, BUILDING_JOB);
 
     expect(state.updates).toBe(1);
     expect(state.extra).toEqual({ latitude: 40.6403, longitude: 22.9444 });
   });
 
-  it('Π2 — καμία αλλαγή θέσης ⇒ το `derive` δεν καλείται', async () => {
+  it('Π2 — καμία αλλαγή θέσης ⇒ καμία δεύτερη γραφή (ούτε των παραγώγων)', async () => {
     // Ίδια απάντηση πάνω σε ήδη γραμμένη θέση: η δεύτερη εκτέλεση δεν αλλάζει τίποτα.
     engine.mockResolvedValue(HIT);
-    const { db } = fakeDb([PENDING]);
-    await completePendingAddressPositions(db, JOB);
-    const derive = jest.fn(() => ({}));
+    const { db, state } = fakeDb([PENDING]);
+    await completePendingAddressPositions(db, BUILDING_JOB);
 
-    await completePendingAddressPositions(db, { ...JOB, derive });
+    await completePendingAddressPositions(db, BUILDING_JOB);
 
-    expect(derive).not.toHaveBeenCalled();
+    expect(state.updates).toBe(1);
+  });
+});
+
+describe('§D33 — προθεσμία σάρωσης: απάντηση που δεν πρόλαβε ΔΕΝ γράφεται', () => {
+  it('Β1 — εξαντλημένη προθεσμία ⇒ καμία γραφή, καμία κλήση στη μηχανή', async () => {
+    engine.mockResolvedValue(HIT);
+    // Θέση μηχανής που διαψεύδεται από το κείμενο (`resolvedFor` άλλης οδού) ⇒ εκκρεμεί, ρωτά τη μηχανή.
+    const placed = {
+      ...PENDING,
+      coordinates: { lat: 40.6, lng: 22.9 },
+      source: 'geocoded',
+      geocodingMetadata: { confidence: 0.5, accuracy: 'center', variantUsed: 1, resolvedFor: { street: 'Εγνατία' } },
+    };
+    const { db, state } = fakeDb([placed]);
+
+    const outcome = await completePendingAddressPositions(db, {
+      ...JOB,
+      budget: { remainingMs: () => 0, advisoryReserveMs: 0 },
+    });
+
+    expect(outcome.written).toBe(0);
+    expect(state.updates).toBe(0);
+    // 🔴 Η μετάλλαξη που φυλάει: χωρίς τον έλεγχο `budget-exhausted`, το `keepStored(null)` ΕΣΒΗΝΕ το σημείο.
+    expect(state.addresses[0].coordinates).toEqual({ lat: 40.6, lng: 22.9 });
+    expect(engine).not.toHaveBeenCalled();
+  });
+});
+
+describe('§D33 — δοχείο επαφής: αυθεντία + κάτοπτρο + σφραγίδα CDC, σε ΜΙΑ γραφή', () => {
+  function fakeContactDb(initial: Address[]) {
+    const patches: Array<Record<string, unknown>> = [];
+    let companyAddresses = initial;
+    const document = () => ({ companyId: 'comp_1', type: 'company', customFields: { companyAddresses } });
+    const ref = { get: async () => ({ data: document }) };
+    const db = {
+      collection: () => ({ doc: () => ref }),
+      runTransaction: async (run: (tx: unknown) => Promise<number>) => run({
+        get: async () => ({ data: document }),
+        update: (_ref: unknown, patch: Record<string, unknown>) => {
+          patches.push(patch);
+          companyAddresses = patch['customFields.companyAddresses'] as Address[];
+        },
+      }),
+    };
+    return { db: db as unknown as AdminFirestore, patches };
+  }
+
+  it('Ε1 — γράφει `customFields.companyAddresses` + `addresses` + φορέα μηχανής· ΚΑΜΙΑ χειρόγραφη γραμμή', async () => {
+    engine.mockResolvedValue(HIT);
+    const { db, patches } = fakeContactDb([PENDING]);
+
+    const outcome = await completePendingAddressPositions(db, {
+      container: CONTACT_ADDRESS_CONTAINER, docId: 'cont_1', pendingIds: ['addr_1'],
+    });
+
+    expect(outcome.written).toBe(1);
+    expect(patches).toHaveLength(1);
+    const [patch] = patches;
+    expect((patch['customFields.companyAddresses'] as Address[])[0].coordinates).toEqual({ lat: 40.6403, lng: 22.9444 });
+    expect((patch.addresses as Address[])[0]).toMatchObject({ coordinates: { lat: 40.6403, lng: 22.9444 } });
+    expect(patch._lastModifiedBy).toBe('system:address-position');
+    // Το ιστορικό το γράφει ο CDC της επαφής από τη σφραγίδα — δεύτερη γραμμή θα ήταν διπλή.
+    expect(recordChange).not.toHaveBeenCalled();
   });
 });
 

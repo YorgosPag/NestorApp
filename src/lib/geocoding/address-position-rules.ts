@@ -112,6 +112,26 @@ export function pointChanged(a: AddressLike | null, b: AddressLike): boolean {
  * 🔴 Η οδός του ERGO TEST είχε αποθηκευτεί ως «Σαμοθράκης » ⇒ η κάρτα έγραφε «Σαμοθράκης , 16».
  * Η **σύγκριση** ταυτότητας αγνοούσε ήδη τα κενά (`identityValue`)· η **γραφή** όχι.
  */
+/**
+ * **ΕΙΝΑΙ ΑΥΤΟ ΤΟ ΣΗΜΕΙΟ ΠΡΟΘΕΣΗ ΤΟΥ ΑΝΘΡΩΠΟΥ, Ή ΗΧΩ ΠΑΛΙΟΥ ΑΝΤΙΓΡΑΦΟΥ;** — ADR-332 §D33.
+ *
+ * 🔴 Ως το §D33 ο κανόνας 1 έλεγε «σημείο άλλαξε + κείμενο ίδιο ⇒ κάποιος έσυρε». Αυτό ίσχυε
+ * όσο **μόνο ο πελάτης** έγραφε θέσεις. Από τη στιγμή που ο διακομιστής ολοκληρώνει θέσεις στο
+ * παρασκήνιο, μια φόρμα ανοιγμένη **πριν** τη γραφή του στέλνει το **παλιό** σημείο μηχανής με
+ * το ίδιο κείμενο — και ο κανόνας 1 το έκανε **πινέζα ανθρώπου**: μόνιμα κριμένη, ποτέ ξανά ερώτηση.
+ *
+ * 🔑 Η πρόθεση **δηλώνεται**, δεν συμπεραίνεται: κάθε γραφέας του πελάτη που τοποθετεί σημείο
+ * περνά από το `humanPlacedPatch` (`components/shared/addresses/pin-drop.ts`), που γράφει
+ * `source: 'dragged'`. Σημείο που άλλαξε **χωρίς** αυτή τη δήλωση δεν το έβαλε κανένα χέρι.
+ * Η ηχώ μετρά ως «αμετάβλητο»: οι κανόνες κρίνουν την **αποθηκευμένη** θέση.
+ */
+export function echoesStoredPosition(stored: AddressLike | null, incoming: AddressLike): boolean {
+  return stored !== null
+    && incoming.source !== 'dragged'
+    && readPoint(incoming) !== null
+    && pointChanged(stored, incoming);
+}
+
 export function withTrimmedIdentity<T extends AddressLike>(address: T): T {
   const next: Record<string, unknown> = { ...address };
   for (const field of ADDRESS_IDENTITY_FIELDS) {

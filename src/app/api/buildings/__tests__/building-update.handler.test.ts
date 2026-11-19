@@ -197,14 +197,14 @@ describe('προθεσμία θέσης', () => {
     expect(schedule).toHaveBeenCalledTimes(1);
     const [job] = schedule.mock.calls[0];
     expect(job).toMatchObject({
-      collection: COLLECTIONS.BUILDINGS,
       docId: 'bld_1',
-      entityType: 'building',
       pendingIds: ['addr_2'],
       relocateIds: [],
     });
-    // Τα παράγωγα του κτιρίου γράφονται από την ολοκλήρωση, στην ίδια συναλλαγή με τη θέση.
-    expect(job.derive?.([{ ...PLACED, coordinates: { lat: 1, lng: 2 } }])).toEqual({ latitude: 1, longitude: 2 });
+    expect(job.container).toMatchObject({ collection: COLLECTIONS.BUILDINGS, entityType: 'building' });
+    // Τα παράγωγα του κτιρίου γράφονται από την ολοκλήρωση, στην ίδια συναλλαγή με τη θέση (το δοχείο, §D33).
+    expect(job.container.patch([{ ...PLACED, coordinates: { lat: 1, lng: 2 } }]))
+      .toMatchObject({ latitude: 1, longitude: 2 });
   });
 
   it('Π2 — η εκκρεμής διεύθυνση γράφεται στο ιστορικό ως προσθήκη ΧΩΡΙΣ θέση (η θέση είναι της μηχανής, αργότερα)', async () => {

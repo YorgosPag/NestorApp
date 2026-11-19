@@ -26,6 +26,7 @@ import type {
 } from '@/lib/geocoding/geocoding-types';
 import type { NominatimResult } from './geocoding-engine-helpers';
 import { composeStreet } from './geocoding-query-variants';
+import { paceNominatimRequest } from './nominatim-pacer';
 
 const logger = createModuleLogger('geocoding-api');
 
@@ -108,6 +109,8 @@ export async function fetchNominatim(
   url: string,
   variant: GeocodingVariant,
 ): Promise<NominatimFetchOutcome> {
+  // §D33 — η λωρίδα παρασκηνίου υποχωρεί (≤1 αίτημα/δευτ.)· η ανθρώπινη απλώς καταγράφεται.
+  await paceNominatimRequest();
   const startedAt = Date.now();
   try {
     const response = await fetch(url, {

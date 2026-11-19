@@ -81,7 +81,8 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
   it('Κ1 — ο ΑΝΘΡΩΠΟΣ πρώτος: σημείο άλλαξε, κείμενο ίδιο ⇒ human-pinned, ΚΑΜΙΑ κλήση', async () => {
     const { geocode, calls } = spyGeocoder(HIT_EXACT);
     const stored: AddressLike = { ...EGNATIA, coordinates: { lat: 40.60, lng: 22.90 } };
-    const incoming: AddressLike = { ...EGNATIA, coordinates: { lat: 40.65, lng: 22.95 } };
+    // §D33: το σύρσιμο **δηλώνεται** (`humanPlacedPatch` ⇒ `source: 'dragged'`) — αυτό είναι το σχήμα του πελάτη.
+    const incoming: AddressLike = { ...EGNATIA, coordinates: { lat: 40.65, lng: 22.95 }, source: 'dragged' };
 
     const { outcome, position } = await resolveAddressPosition(stored, incoming, geocode, NOW);
 
@@ -105,7 +106,7 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
       coordinates: { lat: 40.6401, lng: 22.9444 },
       geocodingMetadata: { confidence: 0.55, accuracy: 'center', variantUsed: 5 },
     };
-    const incoming: AddressLike = { ...stored, coordinates: { lat: 40.65, lng: 22.95 } };
+    const incoming: AddressLike = { ...stored, coordinates: { lat: 40.65, lng: 22.95 }, source: 'dragged' };
 
     const { outcome, position } = await resolveAddressPosition(stored, incoming, geocode, NOW);
 
@@ -120,6 +121,36 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
     );
     expect(candidate?.provenance).toBe('manual');
     expect(listingMapShape(candidate!)).toBe('pin');
+  });
+
+  describe('Κ1η — §D33: ΗΧΩ παλιού αντιγράφου ≠ σύρσιμο', () => {
+    // 🔴 Ο διακομιστής ξαναέγραψε τη θέση στο παρασκήνιο· μια φόρμα ανοιγμένη ΠΡΙΝ στέλνει το
+    // ΠΑΛΙΟ σημείο μηχανής με ίδιο κείμενο, χωρίς δήλωση συρσίματος. Ως το §D33 γινόταν πινέζα ανθρώπου.
+    const FRESH = { lat: 40.6401, lng: 22.9444 };
+    const STALE = { lat: 40.60, lng: 22.90 };
+    const META = { confidence: 0.93, accuracy: 'exact' as const, variantUsed: 2, resolvedFor: { ...EGNATIA } };
+    const stored: AddressLike = { ...EGNATIA, coordinates: FRESH, geocodingMetadata: META, source: 'geocoded' };
+
+    it('Κ1η — σημείο άλλαξε ΧΩΡΙΣ `dragged` ⇒ ΟΧΙ human-pinned· μένει η αποθηκευμένη, καμία κλήση', async () => {
+      const { geocode, calls } = spyGeocoder(HIT_EXACT);
+      const echo: AddressLike = { ...stored, coordinates: STALE };
+
+      const { outcome, position } = await resolveAddressPosition(stored, echo, geocode, NOW);
+
+      expect(outcome).toBe('unchanged');
+      expect(position.coordinates).toEqual(FRESH);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('Κ1θ — μετάλλαξη-μάρτυρας: το ΙΔΙΟ σημείο ΜΕ `dragged` ⇒ human-pinned', async () => {
+      const { geocode } = spyGeocoder(HIT_EXACT);
+      const drag: AddressLike = { ...stored, coordinates: STALE, source: 'dragged' };
+
+      const { outcome, position } = await resolveAddressPosition(stored, drag, geocode, NOW);
+
+      expect(outcome).toBe('human-pinned');
+      expect(position.coordinates).toEqual(STALE);
+    });
   });
 
   describe('Κ1γ-ε — σύρσιμο που ΞΑΝΑΓΡΑΦΕΙ το κείμενο (2026-09-10, «Σαμοθράκης 16»)', () => {

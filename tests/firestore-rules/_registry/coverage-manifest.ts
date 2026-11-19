@@ -2185,6 +2185,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/floor-stack-locks.rules.test.ts',
     ...denyAllMatrix(),
   },
+  // ADR-332 §D33 — μητρώο εργασίας θέσης. Γραφή από πελάτη = η θέση δεν ολοκληρώνεται ποτέ.
+  {
+    collection: 'address_position_work',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/address-position-work.rules.test.ts',
+    ...denyAllMatrix(),
+  },
   {
     collection: 'workspace_aliases',
     pattern: 'deny_all',

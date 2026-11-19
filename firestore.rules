@@ -7801,6 +7801,14 @@ service cloud.firestore {
       allow read, write: if false; // Server-side only via Admin SDK
     }
 
+    // ── ΤΟ ΜΗΤΡΩΟ ΕΡΓΑΣΙΑΣ ΤΗΣ ΘΕΣΗΣ (ADR-332 §D33) ──────────────────────────────
+    // Μία εγγραφή ανά επαφή/έργο/κτίριο με διεύθυνση χωρίς κριμένη θέση. Ρητή άρνηση,
+    // όχι default-deny: γραφή από πελάτη = διαγραφή εγγραφής (η θέση δεν ολοκληρώνεται
+    // ποτέ) ή `dueAt` στο μακρινό μέλλον· ανάγνωση = ποια έγγραφα ΞΕΝΩΝ χώρων υπάρχουν.
+    match /address_position_work/{workId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
     // ── Ο ΔΕΙΚΤΗΣ «ΑΥΤΗ Η ΑΛΛΑΓΗ ΕΓΙΝΕ ΗΔΗ» ΤΩΝ CLOUD FUNCTIONS (ADR-873 Φ1 §9.1) ──
     // Η άρνηση είναι ΡΗΤΗ, όχι default-deny — ίδιος λόγος με τα oauth_*, το cron_job_state
     // και τη μνήμη ιδεμποτίας από πάνω: «καλύπτεται από το default-deny» είναι σωστό ΣΗΜΕΡΑ

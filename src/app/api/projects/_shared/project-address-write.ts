@@ -24,8 +24,7 @@
 import 'server-only';
 
 import { createModuleLogger } from '@/lib/telemetry';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES } from '@/config/domain-constants';
+import { PROJECT_ADDRESS_CONTAINER } from '@/services/listings/address-position-containers';
 import {
   republishProjectListings,
   resolveAddressPositionsWithinDeadline,
@@ -122,15 +121,24 @@ export function scheduleProjectAddressCompletion(
 ): void {
   scheduleAddressPositionCompletion(
     {
-      collection: COLLECTIONS.PROJECTS,
+      container: PROJECT_ADDRESS_CONTAINER,
       docId: projectId,
-      entityType: ENTITY_TYPES.PROJECT,
       pendingIds: outcome.pendingIds,
       relocateIds: outcome.pendingRelocateIds,
     },
-    async (adminDb) => {
-      invalidateProjectCaches(companyId);
-      await republishProjectListings(adminDb, projectId);
-    },
+    (adminDb) => projectPositionsWritten(adminDb, projectId, companyId),
   );
+}
+
+/**
+ * Ό,τι οφείλει να ακολουθήσει **κάθε** γραφή θέσης έργου από τη μηχανή — μετά την απάντηση (D29)
+ * **και** από τη σάρωση (§D33): η λίστα έργων ξεχνά τη μνήμη της και οι αγγελίες ξαναπροβάλλονται.
+ */
+export async function projectPositionsWritten(
+  adminDb: Parameters<typeof republishProjectListings>[0],
+  projectId: string,
+  companyId: Parameters<typeof invalidateProjectCaches>[0],
+): Promise<void> {
+  invalidateProjectCaches(companyId);
+  await republishProjectListings(adminDb, projectId);
 }

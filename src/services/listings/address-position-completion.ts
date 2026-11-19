@@ -46,21 +46,24 @@ import { pointChanged } from '@/lib/geocoding/address-position-rules';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { storedPositionSignature, withStoredAddressPosition } from '@/utils/address/stored-address-position';
 import type { StoredAddressPosition } from '@/types/address-position';
-import type { AuditEntityType, AuditFieldChange } from '@/types/audit-trail';
+import type { AuditFieldChange } from '@/types/audit-trail';
+import type { AddressPositionBudget } from '@/lib/geocoding/address-position-types';
 import { resolveProjectAddressPositions, type ProjectAddressLike } from './address-place-writeback';
+import type { AddressPositionContainer } from './address-position-containers';
 
 const logger = createModuleLogger('AddressPositionCompletion');
 
-/** Το πεδίο του εγγράφου που φέρει τις διευθύνσεις — και το όνομά του στο ιστορικό. */
+/** Το όνομα των διευθύνσεων στη γραμμή ιστορικού του γραφέα (`history: 'writer'`). */
 const ADDRESSES_FIELD = 'addresses';
 
 export interface PendingAddressPositions {
-  /** Η συλλογή του εγγράφου που φέρει `addresses[]`. */
-  readonly collection: string;
+  /**
+   * **Πού** ζουν οι διευθύνσεις και **πώς** γράφονται (§D33): έργο · κτίριο (με τα παράγωγα
+   * `latitude`/`longitude`, στην **ίδια** συναλλαγή) · επαφή (αυθεντία + κάτοπτρο + σφραγίδα CDC).
+   */
+  readonly container: AddressPositionContainer;
   readonly docId: string;
-  /** Ο τύπος της οντότητας στο ιστορικό (ADR-195) — η γραμμή γράφεται στο **δικό της** χρονολόγιο. */
-  readonly entityType: AuditEntityType;
-  /** Οι διευθύνσεις που η αποθήκευση άφησε εκκρεμείς (`budget-exhausted`). */
+  /** Οι διευθύνσεις που εκκρεμούν (`budget-exhausted` αποθήκευσης · ή ό,τι βρήκε η σάρωση). */
   readonly pendingIds: readonly string[];
   /**
    * Όσες από τις εκκρεμείς ήταν **ρητή** «μετακίνησε την πινέζα στη διεύθυνση» (Φ2β).
@@ -71,10 +74,10 @@ export interface PendingAddressPositions {
    */
   readonly relocateIds?: readonly string[];
   /**
-   * Πεδία του εγγράφου που **παράγονται** από τις διευθύνσεις και γράφονται στην **ίδια** συναλλαγή
-   * (κτίριο: `latitude`/`longitude` της κύριας). Δεύτερη γραφή θα άφηνε παράθυρο όπου τα δύο διαφωνούν.
+   * Η προθεσμία της σάρωσης (§D33). Χωρίς αυτήν ο γραφέας περιμένει όσο χρειαστεί — σωστό μετά την
+   * απάντηση (`after()`), λάθος μέσα σε εργασία με όριο χρόνου. Απάντηση που δεν πρόλαβε ⇒ **καμία** γραφή.
    */
-  readonly derive?: (addresses: readonly ProjectAddressLike[]) => Record<string, unknown>;
+  readonly budget?: AddressPositionBudget;
 }
 
 export interface AddressPositionCompletion {
@@ -97,22 +100,19 @@ interface Written {
   readonly companyId: string | null;
 }
 
-function readAddresses(data: FirebaseFirestore.DocumentData | undefined): ProjectAddressLike[] {
-  return Array.isArray(data?.[ADDRESSES_FIELD]) ? (data[ADDRESSES_FIELD] as ProjectAddressLike[]) : [];
-}
-
 function readText(data: FirebaseFirestore.DocumentData, field: string): string | null {
   const value: unknown = data[field];
   return typeof value === 'string' && value !== '' ? value : null;
 }
 
 /**
- * Ρωτά τον **ίδιο** γραφέα θέσης για κάθε εκκρεμή διεύθυνση — χωρίς προθεσμία: ο άνθρωπος έχει
- * ήδη πάρει την απάντησή του. Σειριακά, όπως πάντα (1 αίτημα/δευτ.).
+ * Ρωτά τον **ίδιο** γραφέα θέσης για κάθε εκκρεμή διεύθυνση — μετά την απάντηση χωρίς προθεσμία (ο
+ * άνθρωπος έχει ήδη πάρει την απάντησή του), στη σάρωση μέσα στη δική της. Σειριακά (1 αίτημα/δευτ.).
  */
 async function decide(
   targets: readonly ProjectAddressLike[],
   relocateIds: ReadonlySet<string>,
+  budget: AddressPositionBudget | undefined,
 ): Promise<Map<string, Decision>> {
   const decisions = new Map<string, Decision>();
   for (const asked of targets) {
@@ -127,10 +127,12 @@ async function decide(
       relocate ? [asked] : [],
       [asked],
       Date.now(),
-      { relocateIds: relocate ? new Set([asked.id]) : new Set<string>() },
+      { relocateIds: relocate ? new Set([asked.id]) : new Set<string>(), ...(budget ? { budget } : {}) },
     );
-    // Άγνοια ⇒ δεν αγγίζουμε τίποτα· η επόμενη αποθήκευση θα ξαναρωτήσει.
-    if (tally['geocoder-unavailable'] > 0 || addresses.length === 0) continue;
+    // Άγνοια ⇒ δεν αγγίζουμε τίποτα· την επόμενη ερώτηση την κάνει η σάρωση (§D33).
+    // 🔴 `budget-exhausted` ⇒ ΟΥΤΕ αυτό γράφεται: η «αποθηκευμένη» εδώ είναι κενή (η διεύθυνση
+    //    ρωτήθηκε ως νέα), άρα το `keepStored` θα ΕΣΒΗΝΕ τη θέση της αντί να την κρατά.
+    if (tally['geocoder-unavailable'] > 0 || tally['budget-exhausted'] > 0 || addresses.length === 0) continue;
     // Πινέζα ανθρώπου **χωρίς** δήλωση μετακίνησης: η μηχανή δεν ρωτήθηκε, άρα δεν υπάρχει απάντηση.
     if (tally['human-pinned'] > 0) continue;
     decisions.set(asked.id, { asked, decided: addresses[0] });
@@ -191,16 +193,18 @@ function positionChanges(
 
 /** Η γραμμή ιστορικού της μηχανής. **Μετά** το commit: παρενέργεια μέσα στη συναλλαγή θα έφευγε ξανά σε κάθε επανάληψη. */
 async function recordCompletion(job: PendingAddressPositions, written: Written): Promise<void> {
+  // Επαφές: τη γραμμή τη γράφει ο CDC τους από τη σφραγίδα φορέα της ίδιας γραφής — δεύτερη θα ήταν διπλή.
+  if (job.container.history !== 'writer') return;
   if (written.changes.length === 0) return;
   if (!written.companyId) {
     logger.warn('Ολοκλήρωση θέσεων χωρίς κάτοχο ιστορικού — η γραμμή δεν γράφτηκε', {
-      collection: job.collection,
+      collection: job.container.collection,
       docId: job.docId,
     });
     return;
   }
   await EntityAuditService.recordChange({
-    entityType: job.entityType,
+    entityType: job.container.entityType,
     entityId: job.docId,
     entityName: written.entityName,
     action: 'updated',
@@ -223,25 +227,26 @@ export async function completePendingAddressPositions(
 ): Promise<AddressPositionCompletion> {
   const pending = new Set(job.pendingIds);
   if (pending.size === 0) return { written: 0 };
-  const ref = adminDb.collection(job.collection).doc(job.docId);
+  const { container } = job;
+  const ref = adminDb.collection(container.collection).doc(job.docId);
 
   try {
     const snapshot = await ref.get();
-    const targets = readAddresses(snapshot.data()).filter((address) => address.id && pending.has(address.id));
-    const decisions = await decide(targets, new Set(job.relocateIds ?? []));
+    const targets = container.read(snapshot.data() ?? {}).filter((address) => address.id && pending.has(address.id));
+    const decisions = await decide(targets, new Set(job.relocateIds ?? []), job.budget);
     if (decisions.size === 0) return { written: 0 };
 
     const outcome = await adminDb.runTransaction(async (tx): Promise<Written | null> => {
       const data = (await tx.get(ref)).data() ?? {};
-      const current = readAddresses(data);
+      const current = container.read(data);
       const next = current.map((address) => applyDecision(address, address.id ? decisions.get(address.id) : undefined));
       const moved = movedCount(current, next);
       if (moved === 0) return null;
-      tx.update(ref, { [ADDRESSES_FIELD]: next, ...(job.derive?.(next) ?? {}) });
+      tx.update(ref, container.patch(next));
       return {
         moved,
         changes: positionChanges(current, next),
-        entityName: readText(data, 'name'),
+        entityName: container.entityName(data),
         companyId: readText(data, 'companyId'),
       };
     });
@@ -250,15 +255,15 @@ export async function completePendingAddressPositions(
     if (outcome) await recordCompletion(job, outcome);
 
     logger.info('Εκκρεμείς θέσεις διευθύνσεων ολοκληρώθηκαν', {
-      collection: job.collection,
+      collection: container.collection,
       docId: job.docId,
       pending: pending.size,
       written,
     });
     return { written };
   } catch (error) {
-    logger.warn('Ολοκλήρωση θέσεων εκκρεμής — θα ξαναρωτηθεί στην επόμενη αποθήκευση', {
-      collection: job.collection,
+    logger.warn('Ολοκλήρωση θέσεων εκκρεμής — θα την ξαναρωτήσει η σάρωση', {
+      collection: container.collection,
       docId: job.docId,
       error: error instanceof Error ? error.message : String(error),
     });

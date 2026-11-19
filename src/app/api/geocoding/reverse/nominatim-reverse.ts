@@ -20,6 +20,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
 import { cleanPlaceName, declaredAdminLevel } from '@/utils/address/place-name';
 import type { ReverseGeocodingResult } from '@/lib/geocoding/geocoding-types';
+import { paceNominatimRequest } from '../nominatim-pacer';
 
 const logger = createModuleLogger('reverse-geocoding-nominatim');
 
@@ -130,6 +131,8 @@ export function buildReverseUrl(lat: number, lon: number): string {
 }
 
 export async function fetchNominatimReverse(url: string, deadline: Deadline): Promise<NominatimLookup> {
+  // §D33 — ανθρώπινη λωρίδα: καμία καθυστέρηση, μόνο καταγραφή, ώστε η σάρωση να υποχωρεί κι εδώ.
+  await paceNominatimRequest();
   try {
     const response = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT },

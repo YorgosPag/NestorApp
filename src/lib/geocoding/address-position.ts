@@ -87,6 +87,7 @@
 
 import {
   addressIdentityChanged,
+  echoesStoredPosition,
   geocodedPosition,
   humanPinned,
   keepStored,
@@ -248,7 +249,8 @@ async function keepHumanPin(
  * Η σειρά των κανόνων **είναι συμβόλαιο**:
  *
  * 1. **Ο άνθρωπος πρώτα.** Αν το σημείο άλλαξε και είτε το κείμενο έμεινε ίδιο είτε ο πελάτης
- *    **δηλώνει** `source: 'dragged'`, κάποιος έσυρε την πινέζα. Αν κρινόταν δεύτερο, μια αλλαγή
+ *    **δηλώνει** `source: 'dragged'`, κάποιος έσυρε την πινέζα. ⚠️ §D33: σημείο που άλλαξε
+ *    **χωρίς** τη δήλωση είναι ηχώ παλιού αντιγράφου (`echoesStoredPosition`) ⇒ μετρά αμετάβλητο. Αν κρινόταν δεύτερο, μια αλλαγή
  *    κειμένου **στην ίδια αποθήκευση** θα έσβηνε την πινέζα που μόλις τοποθέτησε άνθρωπος.
  * 1β. **Ρητή δήλωση «μετακίνησε στη διεύθυνση»** (`intent.relocate`) ⇒ ρώτα τη μηχανή — ακόμη κι
  *    αν τίποτα δεν άλλαξε: είναι η απάντηση του ανθρώπου σε συμβουλή απόκλισης.
@@ -274,7 +276,8 @@ export async function resolveAddressPosition(
 ): Promise<AddressPositionResolution> {
   const identityMoved = addressIdentityChanged(stored, incoming);
   const point = readPoint(incoming);
-  const moved = pointChanged(stored, incoming);
+  // §D33 — ηχώ παλιού αντιγράφου ≠ σύρσιμο: κρίνεται η αποθηκευμένη θέση, όχι η μπαγιάτικη.
+  const moved = !echoesStoredPosition(stored, incoming) && pointChanged(stored, incoming);
 
   // 🔴 «Κείμενο ίδιο» ΔΕΝ αρκεί: το σύρσιμο ξαναγράφει οδό/αριθμό από την αντίστροφη
   // γεωκωδικοποίηση, και χωρίς ρητή δήλωση ο κανόνας 3 έσβηνε την πινέζα (2026-09-10).

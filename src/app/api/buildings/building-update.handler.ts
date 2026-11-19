@@ -30,7 +30,6 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
-import { primaryOrFirst } from '@/lib/primary-entry';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { POLICY_ERROR_CODES } from '@/lib/policy';
 import {
@@ -40,6 +39,11 @@ import {
   type ProjectAddressLike,
 } from '@/services/listings/address-place-writeback';
 import { scheduleAddressPositionCompletion } from '@/services/listings/address-position-completion-schedule';
+import {
+  BUILDING_ADDRESS_CONTAINER,
+  buildingPointFields,
+  primaryPointOf,
+} from '@/services/listings/address-position-containers';
 import { buildingListingFactsChanged } from '@/services/listings/building-listing-facts';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { verifyPlaceRef } from '@/services/places/public-place-read.service';
@@ -104,30 +108,8 @@ async function resolveBuildingAddresses(
   return { addresses, primaryPoint: primaryPointOf(addresses), drifts, pendingIds };
 }
 
-/**
- * Το σημείο της **κύριας** διεύθυνσης — ή `null` όταν δεν έχει θέση.
- *
- * 🏆 ADR-332 **D24** — «κύριο ή πρώτο» λέγεται ΜΙΑ φορά. Ο μετασχηματισμός τύπου
- * (`as { isPrimary?: boolean }`) έφυγε **μαζί** με το διπλότυπο: ήταν δείκτης ότι
- * ο τοπικός τύπος δεν χωρούσε την ερώτηση — και ο κοινός τη χωράει.
- */
-function primaryPointOf(addresses: readonly ProjectAddressLike[]): { lat: number; lng: number } | null {
-  const primary = primaryOrFirst(addresses);
-  const lat = primary?.coordinates?.lat;
-  const lng = primary?.coordinates?.lng;
-  return typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
-}
-
-/**
- * Τα παράγωγα `latitude`/`longitude` του κτιρίου — **μία** διατύπωση για την αποθήκευση και για την
- * ολοκλήρωση που τρέχει μετά (ADR-332 D29), ώστε να μην μπορούν να διαφωνήσουν.
- *
- * 🔶 Ίδιο δηλωμένο όριο με πάνω: γράφονται **μόνο** όταν υπάρχει σημείο.
- */
-function buildingPointFields(addresses: readonly ProjectAddressLike[]): Record<string, unknown> {
-  const point = primaryPointOf(addresses);
-  return point ? { latitude: point.lat, longitude: point.lng } : {};
-}
+// `primaryPointOf` / `buildingPointFields` ζουν στο `address-position-containers` (§D33): η ίδια
+// διατύπωση γράφει την αποθήκευση, την ολοκλήρωση μετά την απάντηση **και** τη σάρωση.
 
 // ============================================================================
 // ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΕΠΙΠΕΔΟ Α (ADR-777 §14.5)
@@ -367,12 +349,10 @@ export const PATCH = withStandardRateLimit(
       // `latitude`/`longitude` γράφονται στην **ίδια** συναλλαγή με τη θέση της κύριας διεύθυνσης.
       // Καμία επαναπροβολή αγγελιών: η θέση αγγελίας ζει στο **έργο** (ADR-777 Α1), όχι στο κτίριο.
       scheduleAddressPositionCompletion({
-        collection: COLLECTIONS.BUILDINGS,
+        container: BUILDING_ADDRESS_CONTAINER,
         docId: buildingId,
-        entityType: ENTITY_TYPES.BUILDING,
         pendingIds: pendingAddressIds,
         relocateIds: pendingAddressIds.filter((id) => relocateIds.has(id)),
-        derive: buildingPointFields,
       });
 
       // **Ο ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΕΠΙΠΕΔΟ Α ΖΕΙ ΣΤΟ ΚΤΙΡΙΟ** (ADR-777 §14.5), και ο προβολέας

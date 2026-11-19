@@ -14,6 +14,7 @@ import 'server-only';
 
 import { after } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { inBackgroundGeocodingLane } from '@/app/api/geocoding/nominatim-pacer';
 import {
   completePendingAddressPositions,
   type PendingAddressPositions,
@@ -32,9 +33,11 @@ export function scheduleAddressPositionCompletion(
   onWritten?: (adminDb: AdminDb) => Promise<void> | void,
 ): void {
   if (job.pendingIds.length === 0) return;
-  after(async () => {
+  // §D33 — λωρίδα παρασκηνίου: κανείς δεν περιμένει αυτή την απάντηση, άρα υποχωρεί στους ανθρώπους.
+  // Αν χαθεί (επανεκκίνηση πριν τρέξει), την ξαναβρίσκει η σάρωση `address-position-sweep`.
+  after(() => inBackgroundGeocodingLane(async () => {
     const adminDb = getAdminFirestore();
     const { written } = await completePendingAddressPositions(adminDb, job);
     if (written > 0) await onWritten?.(adminDb);
-  });
+  }));
 }

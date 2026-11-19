@@ -70,6 +70,7 @@ import { runPropertyHandoverDelivery } from '@/lib/cron/jobs/property-handover-d
 import { runPropertyHandoverReconcile } from '@/lib/cron/jobs/property-handover-reconcile.job';
 import { runPurgeDeletedEntities } from '@/lib/cron/jobs/purge-deleted-entities.job';
 import { runRfqInviteDelivery } from '@/lib/cron/jobs/rfq-invite-delivery.job';
+import { runAddressPositionSweepJob } from '@/lib/cron/jobs/address-position-sweep.job';
 import { runStayChannelImport } from '@/lib/cron/jobs/stay-channel-import.job';
 import { runPaymentReconcile } from '@/lib/cron/jobs/payment-reconcile.job';
 import { runStayHoldExpiry } from '@/lib/cron/jobs/stay-hold-expiry.job';
@@ -724,6 +725,26 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 5,
     leaseMinutes: 6,
     run: runRfqInviteDelivery,
+  },
+  {
+    slug: 'address-position-sweep',
+    path: '/api/cron/address-position-sweep',
+    description: 'Ολοκλήρωση θέσης διευθύνσεων χωρίς κριμένη θέση σε επαφές · έργα · κτίρια, με μητρώο αναμονής (ADR-332 §D33)',
+    enabled: true,
+    // 🔑 **Μηχανισμός, όχι δίχτυ**: η θέση που δεν πρόλαβε η αποθήκευση (ή που δεν ρωτήθηκε ποτέ — παλιές
+    // εγγραφές, «Αποθήκευση» χωρίς αλλαγές) ολοκληρώνεται **μόνο** εδώ. Ανακάλυψη = 500 έγγραφα ανά συλλογή
+    // (ανάγνωση) · οφειλόμενες = ως 50, με το Nominatim στη λωρίδα παρασκηνίου (≤1 αίτημα/δευτ.).
+    //
+    // ⚠️ **:39 · :59**: τα μόνα λεπτά που δεν κατέχει καμία επαναλαμβανόμενη εργασία (*/5 · */5 από :02 ·
+    // */10 από :04 · */15 από :01/:08/:11 · :3,13,21,29,36,43,51 · :6 · :9,28,48 · :18 · :19,49 · :33). Το :58
+    // επίσης ελεύθερο, αλλά δύο εκτελέσεις σε 1′ θα έπεφταν στο lease η μία της άλλης. Το :39 μοιράζεται μόνο
+    // την ημερήσια 04:39 (`listing-media-reconcile` είναι 04:41). Σταματά να ξεκινά δοκιμές στα 240s ⇒ χωρά στο 5′.
+    schedule: '39,59 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 10,
+    maxRuntimeMinutes: 5,
+    leaseMinutes: 6,
+    run: runAddressPositionSweepJob,
   },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────
