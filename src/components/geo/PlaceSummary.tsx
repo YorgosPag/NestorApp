@@ -238,10 +238,25 @@ function PlaceOutlineFigure({
 
   return (
     <div className="space-y-1">
-      <PlaceMap center={center} outline={outline.kind === 'outline' ? outline.outline : null} heightClass="h-56" />
+      <PlaceMap
+        center={center}
+        outline={outline.kind === 'outline' ? outline.outline : null}
+        pin={outlineSettledWithoutShape(outline) ? center : null}
+        heightClass="h-56"
+      />
       <OutlineNotice state={outline} />
     </div>
   );
+}
+
+/**
+ * Τόπος **χωρίς σχήμα** (πινέζα, ή περίγραμμα που δεν ήρθε) ⇒ ο χάρτης δείχνει το **σημείο**.
+ * Χωρίς αυτό ο χάρτης κεντράρει σε ένα σημείο που **δεν σημαδεύει** — μετρημένο ζωντανά 2026-11-19
+ * (`pbld_18161f29…`, «δεν φαίνεται η πινέζα»). Όχι σε `idle`/`loading`: αλλιώς η πινέζα αναβοσβήνει
+ * πριν έρθει το περίγραμμα.
+ */
+function outlineSettledWithoutShape(state: PlaceOutlineState): boolean {
+  return state.kind === 'none' || state.kind === 'unavailable' || state.kind === 'failed';
 }
 
 /**
