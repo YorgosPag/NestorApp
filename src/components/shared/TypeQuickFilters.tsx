@@ -167,7 +167,7 @@ export function TypeQuickFilters({
   className,
   compact = false,
   label,
-  ariaLabel
+  ariaLabel,
   counts,
   translateOption,
 }: TypeQuickFiltersProps) {
