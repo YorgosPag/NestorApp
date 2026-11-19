@@ -10,7 +10,7 @@
 
 /* global describe, it, expect */
 
-import { compareAddressField, compareAddressFields } from '../field-match';
+import { compareAddressField, compareAddressFields, sameAddressFieldValue } from '../field-match';
 import type { ResolvedAddressFields } from '../geocoding-types';
 
 /** Η πραγματική απάντηση του Nominatim για το περιστατικό (μετρημένο 2026-09-14). */
@@ -79,5 +79,25 @@ describe('compareAddressFields — ο πίνακας του περιστατικ
       region: 'not-provided',
       country: 'not-provided',
     });
+  });
+});
+
+describe('ADR-332 D32 — sameAddressFieldValue: ΜΙΑ κρίση για διακομιστή και editor', () => {
+  it('η χώρα κρίνεται ως ταυτότητα ISO: «Greece» ⇄ «Ελλάδα» ⇒ match (ήταν mismatch μόνο εδώ)', () => {
+    expect(compareAddressField('country', 'Greece', { country: 'Ελλάδα' })).toBe('match');
+    expect(sameAddressFieldValue('country', 'Greece', 'Ελλάδα')).toBe(true);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: άλλη χώρα μένει διαφορετική', () => {
+    expect(sameAddressFieldValue('country', 'Greece', 'Βουλγαρία')).toBe(false);
+  });
+
+  it('η γραφή: παύλα ⇄ κενό είναι ίδια τιμή (Β7) — και στην οδό', () => {
+    expect(sameAddressFieldValue('street', 'Ελευθερίου-Βενιζέλου', 'Ελευθερίου Βενιζέλου')).toBe(true);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: καθαρεύουσα ΔΕΝ ισχύει στην οδό, ισχύει στην πόλη', () => {
+    expect(sameAddressFieldValue('street', 'Ωραιόκαστρον', 'Ωραιόκαστρο')).toBe(false);
+    expect(sameAddressFieldValue('city', 'Ωραιόκαστρον', 'Ωραιόκαστρο')).toBe(true);
   });
 });

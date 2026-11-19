@@ -93,9 +93,11 @@ import {
   measureDrift,
   NO_POSITION,
   pointChanged,
+  positionSettled,
   readPoint,
   storedHumanPoint,
   toQuery,
+  unmatchedPosition,
   withTrimmedIdentity,
 } from './address-position-rules';
 import { TimeoutError, withTimeout } from '@/lib/async-utils';
@@ -140,7 +142,7 @@ export type {
 } from './address-position-types';
 // Ζ6 — το `positionTextVerdict` είναι **δημόσια ερώτηση**: το ρωτούν και οι οθόνες, πάνω στα
 // ίδια αποθηκευμένα δεδομένα. Ίδιο σύνορο με τον κριτή που ήδη επανεξάγεται από δίπλα.
-export { addressIdentityChanged, positionTextVerdict } from './address-position-rules';
+export { addressIdentityChanged, positionSettled, positionTextVerdict } from './address-position-rules';
 
 // ============================================================================
 // Η ΑΠΟΦΑΣΗ
@@ -199,7 +201,8 @@ async function askMachine(
     }
     return { outcome: 'geocoder-unavailable', position: keepStored(stored) };
   }
-  if (hit === null) return { outcome: 'unresolved', position: NO_POSITION };
+  // §D32 — «δεν υπάρχει» γράφεται **με ίχνος**: αλλιώς είναι αδιάκριτο από «δεν ρωτήθηκε».
+  if (hit === null) return { outcome: 'unresolved', position: unmatchedPosition(query, now) };
   // Ζ6 — η **ερώτηση** ταξιδεύει μαζί με την απάντηση: χωρίς αυτήν η ακρίβεια είναι
   // ισχυρισμός χωρίς αντικείμενο, και κανένας μελλοντικός αναγνώστης δεν μπορεί να τον κρίνει.
   return { outcome: 'geocoded', position: geocodedPosition(hit, now, query) };
@@ -251,6 +254,8 @@ async function keepHumanPin(
  *    αν τίποτα δεν άλλαξε: είναι η απάντηση του ανθρώπου σε συμβουλή απόκλισης.
  * 2. **Τίποτα δεν άλλαξε ⇒ μηδέν αίτημα** — η συμμόρφωση με το **1 αίτημα/δευτ.** του Nominatim.
  *    Νέα διεύθυνση **με** σημείο και **χωρίς** μεταδεδομένα = ανθρώπινη τοποθέτηση (φόρμα προσθήκης).
+ * 2β. **…εκτός αν η αποθηκευμένη θέση δεν έχει κριθεί για αυτό το κείμενο** (`positionSettled`, §D32):
+ *    καμία θέση χωρίς ίχνος τρέχουσας έκδοσης, ή θέση μηχανής που διαψεύδεται από το `resolvedFor` ⇒ ρώτα.
  * 2γ. **Άλλαξε μόνο το κείμενο και η αποθηκευμένη πινέζα είναι ανθρώπου ⇒ μένει** (Φ2β).
  * 3. **Αλλιώς ρώτα τη μηχανή.**
  *
@@ -277,7 +282,11 @@ export async function resolveAddressPosition(
     return humanPinned(point, now);
   }
   if (intent.relocate) return askMachine(stored, incoming, geocode, now, intent.budget);
-  if (!identityMoved && !moved) return { outcome: 'unchanged', position: keepStored(stored) };
+  if (!identityMoved && !moved) {
+    // 2β (§D32) — «τίποτα δεν άλλαξε» ΔΕΝ σημαίνει «υπάρχει απάντηση». Μόνο η κριμένη θέση γλιτώνει την ερώτηση.
+    if (positionSettled(stored)) return { outcome: 'unchanged', position: keepStored(stored) };
+    return askMachine(stored, incoming, geocode, now, intent.budget);
+  }
   if (stored === null && point !== null && !incoming.geocodingMetadata) return humanPinned(point, now);
 
   const human = moved ? null : storedHumanPoint(stored);
@@ -314,8 +323,12 @@ export function applyAddressPosition<T extends object>(
   delete rest['geocodingMetadata'];
   delete rest['source'];
   delete rest['verifiedAt'];
+  delete rest['geocodeAttempt'];
 
-  if (position.coordinates === null) return rest as T;
+  if (position.coordinates === null) {
+    // §D32 — καμία θέση, **με ή χωρίς** ίχνος αποτυχίας. Σημείο και αποτυχία δεν συνυπάρχουν ποτέ.
+    return (position.geocodeAttempt ? { ...rest, geocodeAttempt: position.geocodeAttempt } : rest) as T;
+  }
 
   return {
     ...rest,

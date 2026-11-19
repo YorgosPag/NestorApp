@@ -44,6 +44,17 @@ export function geocodingMetadataSchema<A extends z.ZodTypeAny>(accuracy: A) {
   });
 }
 
+/**
+ * ADR-332 §D32 — το ίχνος «ρώτησα και δεν βρέθηκε» (Esri `U`). **Ένας ιδιοκτήτης** για έργα, κτίρια και
+ * επαφές· αδήλωτο εδώ = σβήνεται σε κάθε αποθήκευση και ο κανόνας 2β ξαναρωτά **για πάντα**.
+ */
+const geocodeAttemptSchema = z.object({
+  status: z.literal('unmatched'),
+  revision: z.number().int().nonnegative(),
+  at: z.number(),
+  resolvedFor: z.record(z.string().max(64), z.string().max(300)),
+});
+
 export const addressPositionFieldsSchema = z.object({
   coordinates: z.object({
     lat: z.number(),
@@ -56,6 +67,7 @@ export const addressPositionFieldsSchema = z.object({
   verifiedAt: z.number().optional(),
   // `z.string()` για το `accuracy`: εδώ το σχήμα **διασώζει** ό,τι βρει (δες κεφαλίδα).
   geocodingMetadata: geocodingMetadataSchema(z.string().max(64)).optional(),
+  geocodeAttempt: geocodeAttemptSchema.optional(),
 });
 
 /**

@@ -1,0 +1,103 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`§D32 — η σκάλα και η έκδοση πολιτικής αλλάζουν ΜΑΖΙ το σχήμα της σκάλας είναι δεμένο με τον αριθμό έκδοσης 1`] = `
+{
+  "ladder": [
+    {
+      "applies": true,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 1,
+    },
+    {
+      "applies": true,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 2,
+    },
+    {
+      "applies": false,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 3,
+    },
+    {
+      "applies": true,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 4,
+    },
+    {
+      "applies": false,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 5,
+    },
+    {
+      "applies": true,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 6,
+    },
+    {
+      "applies": true,
+      "guarded": true,
+      "relaxation": {
+        "anchor": "postalCode",
+        "dropped": [
+          "neighborhood",
+          "city",
+          "region",
+        ],
+      },
+      "variant": 9,
+    },
+    {
+      "applies": true,
+      "guarded": true,
+      "relaxation": {
+        "anchor": "locality",
+        "dropped": [
+          "street",
+          "neighborhood",
+          "region",
+        ],
+      },
+      "variant": 10,
+    },
+    {
+      "applies": false,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 11,
+    },
+    {
+      "applies": true,
+      "guarded": true,
+      "relaxation": {
+        "anchor": "postalCode",
+        "dropped": [
+          "street",
+          "neighborhood",
+          "city",
+          "region",
+        ],
+      },
+      "variant": 12,
+    },
+    {
+      "applies": true,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 7,
+    },
+    {
+      "applies": true,
+      "guarded": false,
+      "relaxation": null,
+      "variant": 8,
+    },
+  ],
+  "revision": 3,
+}
+`;

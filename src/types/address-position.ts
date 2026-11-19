@@ -53,4 +53,14 @@ export interface StoredAddressPosition {
     /** Ο πάροχος δήλωσε ότι **δεν ταίριαξαν όλα** τα πεδία που ζητήθηκαν (ADR-332 D27 Ζ6-Β). */
     partialMatch?: boolean;
   };
+  /**
+   * ADR-332 §D32 — **«ρώτησα και δεν βρέθηκε»** (Esri `U`): για ποιο κείμενο και με ποια έκδοση
+   * πολιτικής. Υπάρχει **μόνο** χωρίς `coordinates`. Δες `AddressGeocodeAttempt`.
+   */
+  geocodeAttempt?: {
+    status: 'unmatched';
+    revision: number;
+    at: number;
+    resolvedFor: Partial<Record<AddressIdentityField, string>>;
+  };
 }

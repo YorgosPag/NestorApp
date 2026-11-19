@@ -120,3 +120,27 @@ describe('diffAddressFields', () => {
     expect(hasFieldConflicts({}, {})).toBe(false);
   });
 });
+
+describe('ADR-332 D32 — «Συμφωνία Πεδίων» ρωτά την ΙΔΙΑ κρίση με την ετικέτα του πεδίου', () => {
+  // Μετρημένο ζωντανά 2026-11-19 (cont_c4d79d09): πεδίο «Ταιριάζει», πίνακας «1 εκκρεμής διαφορά».
+  it('καθαρεύουσα ΕΛΣΤΑΤ «Ωραιόκαστρον» ⇄ «Ωραιόκαστρο» του χάρτη ⇒ ΜΗΔΕΝ διαφορές', () => {
+    expect(diffAddressFields({ city: 'Ωραιόκαστρον' }, { city: 'Ωραιόκαστρο' })).toEqual([]);
+  });
+
+  it('Τ.Κ. «546 24» ⇄ «54624» ⇒ ΜΗΔΕΝ διαφορές (ήταν διαφορά μόνο εδώ)', () => {
+    expect(diffAddressFields({ postalCode: '546 24' }, { postalCode: '54624' })).toEqual([]);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: άλλος τόπος ΜΕΝΕΙ διαφορά — «Νέα Σμύρνη» δεν είναι «Σμύρνη»', () => {
+    expect(diffAddressFields({ city: 'Νέα Σμύρνη' }, { city: 'Σμύρνη' })).toHaveLength(1);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: ο κανόνας καθαρεύουσας ισχύει ΜΟΝΟ σε τοπωνύμια — όχι στην οδό', () => {
+    expect(diffAddressFields({ street: 'Ωραιόκαστρον' }, { street: 'Ωραιόκαστρο' })).toHaveLength(1);
+  });
+
+  it('αντικατάσταση: «Ωραιόκαστρον → Ωραιόκαστρο» ΔΕΝ είναι αλλαγή· σβήσιμο ΕΙΝΑΙ', () => {
+    expect(diffAddressReplacement({ city: 'Ωραιόκαστρον' }, { city: 'Ωραιόκαστρο' })).toEqual([]);
+    expect(diffAddressReplacement({ city: 'Ωραιόκαστρον' }, { city: '' })).toHaveLength(1);
+  });
+});

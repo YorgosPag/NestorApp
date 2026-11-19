@@ -8,7 +8,8 @@
  * the Reconciliation Panel (Phase 2/4) and per-field badges (Phase 3).
  *
  * Comparison rules:
- *   - Case-insensitive (Greek + Latin) via `normalizeGreekText`.
+ *   - Value identity = `sameAddressFieldValue` (`lib/geocoding/field-match`) — the ONE judgment
+ *     shared with the per-field badge and the server (ADR-332 D32).
  *   - Trim whitespace.
  *   - Ignore fields where either side is empty (handled by FieldMatchKind
  *     `unknown` / `not-provided`, not as conflicts).
@@ -17,69 +18,49 @@
  * @see ADR-332 §3.5 Reconciliation logic
  */
 
-import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
-import { foldPlaceName } from '@/utils/address/place-name';
-import { countryNameToCode } from '@/utils/address/country-codes';
+import {
+  COMPARABLE_ADDRESS_FIELDS,
+  sameAddressFieldValue,
+  type ComparableAddressField,
+} from '@/lib/geocoding/field-match';
 import type { AddressFieldConflict, ResolvedAddressFields } from '../types';
 
-const COMPARABLE_FIELDS: ReadonlyArray<keyof ResolvedAddressFields> = [
-  'street',
-  'number',
-  'postalCode',
-  'neighborhood',
-  'city',
-  'county',
-  'region',
-  'country',
-];
-
-function normalize(value: string | undefined): string {
-  if (!value) return '';
-  // ADR-332 D27 Βήμα Β (Β7): «Ελευθέριο-Κορδελιό» και «Ελευθέριο Κορδελιό» είναι το ΙΔΙΟ όνομα —
-  // διαφέρει η γραφή. Χωρίς αυτό ο διάλογος συρσίματος έδειχνε «αλλαγή» μόνο για την παύλα.
-  return normalizeGreekText(foldPlaceName(value)).toLowerCase();
-}
-
 /**
- * Η **ταυτότητα** μιας τιμής, όπως συγκρίνεται — ανά πεδίο.
+ * Το «τι μετρά ως διαφορά» — η **μόνη** παράμετρος του πυρήνα. Η **ταυτότητα** των τιμών δεν
+ * κρίνεται εδώ: τη δίνει το {@link sameAddressFieldValue} (ADR-332 D32).
  *
- * 🔴 ADR-332 D27 Β9: «Greece» (αποθηκευμένο `DEFAULT_COUNTRY`) και «Ελλάδα» (Nominatim με
- * `accept-language: el`) είναι **η ίδια χώρα με άλλη γραφή**, και ο διάλογος συρσίματος
- * τα έδειχνε ως αλλαγή. Η χώρα συγκρίνεται με το κλειδί ISO 3166-1 του ενός SSoT
- * (`utils/address/country-codes`) — όπως το `short_name` της Google: το όνομα είναι προβολή.
- * Άγνωστο όνομα ⇒ πέφτει στη σύγκριση κειμένου (καμία επινόηση ταυτότητας).
+ * 🔴 Ως το D32 αυτό το αρχείο είχε **δική του** κρίση ταυτότητας (γραφή + ISO χώρας), ενώ η ετικέτα
+ * του πεδίου ρωτούσε το `field-match` (γραφή + πτώση/καθαρεύουσα + Τ.Κ.). Η ίδια φόρμα έδειχνε
+ * «Ταιριάζει» στο πεδίο και «1 εκκρεμής διαφορά: Ωραιόκαστρον → Ωραιόκαστρο» στον πίνακα.
  */
-function comparable(field: keyof ResolvedAddressFields, value: string | undefined): string {
-  const text = normalize(value);
-  if (field !== 'country' || text === '') return text;
-  return countryNameToCode(value) ?? text;
-}
+type DiffRule = (field: ComparableAddressField, before: string, after: string) => boolean;
 
-/** Ο κοινός πυρήνας: ΕΝΑ πέρασμα· το «τι μετρά ως διαφορά» είναι η μόνη παράμετρος. */
+/** Ο κοινός πυρήνας: ΕΝΑ πέρασμα. */
 function collectFieldDiffs(
   before: ResolvedAddressFields,
   after: ResolvedAddressFields,
-  counts: (before: string, after: string) => boolean,
+  counts: DiffRule,
 ): AddressFieldConflict[] {
   const diffs: AddressFieldConflict[] = [];
-  for (const field of COMPARABLE_FIELDS) {
-    const userValue = before[field];
-    const resolvedValue = after[field];
-    if (counts(comparable(field, userValue), comparable(field, resolvedValue))) {
-      diffs.push({
-        field,
-        userValue: (userValue ?? '').trim(),
-        resolvedValue: (resolvedValue ?? '').trim(),
-      });
+  for (const field of COMPARABLE_ADDRESS_FIELDS) {
+    const userValue = (before[field] ?? '').trim();
+    const resolvedValue = (after[field] ?? '').trim();
+    if (counts(field, userValue, resolvedValue)) {
+      diffs.push({ field, userValue, resolvedValue });
     }
   }
   return diffs;
 }
 
-function isConflict(user: string, resolved: string): boolean {
-  if (user.length === 0 || resolved.length === 0) return false;
-  return user !== resolved;
-}
+/** Συμφιλίωση: κενό σε οποιαδήποτε πλευρά = «δεν ειπώθηκε», όχι διαφορά. */
+const isConflict: DiffRule = (field, user, resolved) =>
+  user.length > 0 && resolved.length > 0 && !sameAddressFieldValue(field, user, resolved);
+
+/** Αντικατάσταση: προσθήκη και σβήσιμο μετρούν· ίδια τιμή με άλλη γραφή όχι. */
+const isReplacementChange: DiffRule = (field, before, after) => {
+  if (before.length === 0 || after.length === 0) return before.length !== after.length;
+  return !sameAddressFieldValue(field, before, after);
+};
 
 /**
  * Returns one entry per field where user vs resolved disagree (both non-empty).
@@ -108,7 +89,7 @@ export function diffAddressReplacement(
   current: ResolvedAddressFields,
   next: ResolvedAddressFields,
 ): AddressFieldConflict[] {
-  return collectFieldDiffs(current, next, (before, after) => before !== after);
+  return collectFieldDiffs(current, next, isReplacementChange);
 }
 
 /** Σβήνει αυτή η αλλαγή τιμή που **υπήρχε**; */

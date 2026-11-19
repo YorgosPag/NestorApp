@@ -283,8 +283,10 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
 
   it('Κ8 — κενό, null και undefined είναι Η ΙΔΙΑ απουσία (αλλιώς κάθε αποθήκευση ρωτά)', async () => {
     const { geocode, calls } = spyGeocoder(HIT_EXACT);
-    const stored: AddressLike = { street: 'Εγνατίας', number: undefined, city: 'Θεσσαλονίκη' };
-    const incoming: AddressLike = { street: 'Εγνατίας ', number: '', city: 'Θεσσαλονίκη' };
+    // §D32 — με **κριμένη** θέση (πινέζα): χωρίς θέση ο κανόνας 2β ρωτά σωστά, και το test θα μετρούσε άλλο πράγμα.
+    const pin = { coordinates: { lat: 40.64, lng: 22.94 } };
+    const stored: AddressLike = { street: 'Εγνατίας', number: undefined, city: 'Θεσσαλονίκη', ...pin };
+    const incoming: AddressLike = { street: 'Εγνατίας ', number: '', city: 'Θεσσαλονίκη', ...pin };
 
     const { outcome } = await resolveAddressPosition(stored, incoming, geocode, NOW);
 

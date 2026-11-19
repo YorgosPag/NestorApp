@@ -221,4 +221,21 @@ describe('ADR-332 D27 Β-ΙΙ Φ2 — νέα επαφή', () => {
     expect(parsed.addresses[0].geocodingMetadata?.resolvedFor).toEqual(resolvedFor);
     expect(parsed.addresses[0].geocodingMetadata?.partialMatch).toBe(true);
   });
+
+  it('§D32-Σ — το ίχνος `geocodeAttempt` επιβιώνει του ΑΥΣΤΗΡΟΥ σχήματος (αλλιώς ο 2β ρωτά σε κάθε αποθήκευση)', () => {
+    // Ίδιο σχήμα κινδύνου με το Ζ6-Σ2: η άγκυρα χτυπά το ΣΧΗΜΑ, γιατί από το route ο γραφέας θα
+    // ξαναπαρήγαγε ίχνος για «δεν υπάρχει» και η απώλεια θα ήταν αόρατη.
+    const geocodeAttempt = {
+      status: 'unmatched' as const,
+      revision: 3,
+      at: 1_763_500_000_000,
+      resolvedFor: { street: 'ΒΙ.ΠΕ.', postalCode: '57013', city: 'Ωραιόκαστρον' },
+    };
+
+    const parsed = contactAddressPositionsRequestSchema.parse({
+      addresses: [{ id: 'addr_hq', street: 'ΒΙ.ΠΕ.', postalCode: '57013', city: 'Ωραιόκαστρον', geocodeAttempt }],
+    });
+
+    expect(parsed.addresses[0].geocodeAttempt).toEqual(geocodeAttempt);
+  });
 });

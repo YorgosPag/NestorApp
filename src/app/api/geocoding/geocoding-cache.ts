@@ -39,6 +39,7 @@ import { createVerdictCache } from '@/lib/cache/verdict-cache';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { GeocodingRequestBody } from '@/lib/geocoding/geocoding-types';
+import { GEOCODING_POLICY_REVISION } from '@/lib/geocoding/geocoding-policy-revision';
 // Μόνο τύπος: η μηχανή εισάγει **αυτό** το module σε χρόνο εκτέλεσης, άρα εδώ δεν επιτρέπεται κύκλος.
 import type { GeocodeVerdict } from './geocoding-engine';
 
@@ -69,7 +70,10 @@ const KEY_FIELDS: readonly (keyof GeocodingRequestBody)[] = [
  * 🔴 **`v2` — ADR-332 D28 (2026-09-14)**: η βαθμίδα 9 λύνει διευθύνσεις που η `v1` είχε αποθηκεύσει ως
  * **`absent`** (αρνητική μνήμη). Χωρίς αλλαγή έκδοσης, η διόρθωση θα έμενε αόρατη όσο ζούσαν εκείνες.
  */
-const KEY_PREFIX = 'geocoding:v2';
+//
+// 🔑 **`v3` — ADR-332 §D32**: ο αριθμός ζει πλέον στο **ένα** σημείο (`GEOCODING_POLICY_REVISION`), που
+// ακυρώνει **και** το ίχνος `unmatched` των αποθηκευμένων διευθύνσεων. Το D31 είχε αλλάξει πολιτική χωρίς αύξηση.
+const KEY_PREFIX = `geocoding:v${GEOCODING_POLICY_REVISION}`;
 
 /**
  * Κεφαλαία και κενά δεν αλλάζουν ερώτημα· **οι τόνοι αλλάζουν**.

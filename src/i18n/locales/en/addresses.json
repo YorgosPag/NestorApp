@@ -335,6 +335,12 @@
       "message": "The map position was computed for a different address than the one written here.",
       "resolve": "Compute position from the address",
       "resolveFailed": "The computation did not complete. Please try again."
+    },
+    "positionUnlocated": {
+      "unmatched": "The map provider could not find this address. It will be retried automatically when the search improves; you can also place the pin on the map.",
+      "unchecked": "The map position has not been computed for this address yet. It will be computed on the next save.",
+      "locate": "Locate now",
+      "locateFailed": "Locating did not complete. Please try again."
     }
   },
   "publicMap": {

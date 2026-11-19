@@ -56,6 +56,8 @@ export type AddressLike = {
    * τη θέση να το **κρατά** — ως τις 2026-09-10 σβηνόταν σε κάθε τέτοια αποθήκευση (άγκυρα Ζ).
    */
   readonly verifiedAt?: number | null;
+  /** ADR-332 §D32 — «ρώτησα και δεν βρέθηκε», για ποιο κείμενο και με ποια έκδοση. */
+  readonly geocodeAttempt?: AddressGeocodeAttempt | null;
 };
 
 /** Τα παγωμένα μεταδεδομένα ποιότητας — **το σχήμα του `ProjectAddress`, αυτούσιο**. */
@@ -164,6 +166,26 @@ export type GeocoderQuery = {
   readonly [K in AddressIdentityField]?: string;
 };
 
+/**
+ * **«ΡΩΤΗΣΑ ΚΑΙ ΔΕΝ ΒΡΕΘΗΚΕ»** — το ίχνος μιας απάντησης `absent` (ADR-332 §D32, Esri `Status = 'U'`).
+ *
+ * 🔴 Χωρίς αυτό, «δεν ρωτήθηκε ποτέ» και «ρωτήθηκε, δεν υπάρχει» ήταν **η ίδια** αποθηκευμένη τιμή (καμία
+ * θέση) ⇒ ο κανόνας 2 δεν μπορούσε να ξέρει πότε αξίζει νέα ερώτηση, και η βελτίωση του D31 δεν έφτασε
+ * **ποτέ** στη διεύθυνση που γράφτηκε πριν από αυτό (μετρημένο: έδρα `cont_c4d79d09`, 2026-11-19).
+ *
+ * ⚠️ **Ξεχωριστό πεδίο, ΟΧΙ μέσα στο `geocodingMetadata`**: η **παρουσία** εκείνου σημαίνει «θέση της
+ * μηχανής» για `keepStored` · `storedHumanPoint` · `positionTextVerdict` · badges.
+ */
+export interface AddressGeocodeAttempt {
+  readonly status: 'unmatched';
+  /** Η `GEOCODING_POLICY_REVISION` που απάντησε «δεν υπάρχει». Παλαιότερη ⇒ η απάντηση είναι μπαγιάτικη. */
+  readonly revision: number;
+  /** Unix-ms της ερώτησης. */
+  readonly at: number;
+  /** Το κείμενο που ρωτήθηκε — η απάντηση ισχύει **μόνο** γι' αυτό (ίδιος κριτής με το `resolvedFor`). */
+  readonly resolvedFor: GeocoderQuery;
+}
+
 // ============================================================================
 // ΕΞΟΔΟΣ — κλειστή ένωση καταστάσεων, καμία σιωπή
 // ============================================================================
@@ -197,7 +219,7 @@ export type AddressPositionOutcome =
   | 'geocoded'
   /** Τίποτα σχετικό δεν άλλαξε — η αποθηκευμένη θέση μένει **αυτούσια**. */
   | 'unchanged'
-  /** Ρωτήθηκε και **δεν υπάρχει**. Η θέση σβήνεται. */
+  /** Ρωτήθηκε και **δεν υπάρχει**. Η θέση σβήνεται και γράφεται ίχνος `unmatched` (§D32). */
   | 'unresolved'
   /** **Δεν μπόρεσε να ρωτηθεί.** Η αποθηκευμένη θέση μένει άθικτη. */
   | 'geocoder-unavailable'
@@ -243,6 +265,11 @@ export interface AddressPosition {
   readonly source: WrittenAddressSource | null;
   /** Unix-ms — πότε επιβεβαιώθηκε αυτή η θέση. `null` όταν δεν υπάρχει θέση. */
   readonly verifiedAt: number | null;
+  /**
+   * ADR-332 §D32 — το ίχνος «ρώτησα, δεν βρέθηκε». Υπάρχει **μόνο** όταν `coordinates === null`:
+   * σημείο και αποτυχία δεν συνυπάρχουν (`applyAddressPosition` το επιβάλλει).
+   */
+  readonly geocodeAttempt: AddressGeocodeAttempt | null;
 }
 
 /**

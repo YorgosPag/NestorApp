@@ -31,7 +31,8 @@
 
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
-import { samePlaceName } from '@/utils/address/place-name';
+import { foldPlaceName, samePlaceName } from '@/utils/address/place-name';
+import { countryNameToCode } from '@/utils/address/country-codes';
 import type { FieldMatchKind, FieldMatchMap, ResolvedAddressFields } from './geocoding-types';
 
 /** Τα πεδία που συγκρίνονται — το `admin` είναι αποδεδειγμένη ιεραρχία, όχι πεδίο σύγκρισης. */
@@ -66,9 +67,35 @@ const WIDER_THAN: Partial<Record<ComparableAddressField, readonly ComparableAddr
  */
 const PLACE_NAME_FIELDS: ReadonlySet<ComparableAddressField> = new Set(['neighborhood', 'city', 'county', 'region']);
 
-function sameValue(field: ComparableAddressField, a: string, b: string): boolean {
+/** Η **γραφή** ως ταυτότητα κειμένου: τόνοι, κεφαλαία, παύλα ⇄ κενό (ADR-332 D27 Β7). */
+function sameWriting(a: string, b: string): boolean {
+  return normalizeGreekText(foldPlaceName(a)).toLowerCase() === normalizeGreekText(foldPlaceName(b)).toLowerCase();
+}
+
+/**
+ * **ΕΙΝΑΙ ΟΙ ΔΥΟ ΤΙΜΕΣ ΤΟΥ ΠΕΔΙΟΥ Η ΙΔΙΑ ΤΙΜΗ;** — η ΜΙΑ κρίση, για διακομιστή **και** πελάτη.
+ *
+ * 🔴 ADR-332 D32 (μετρημένο 2026-11-19): η ίδια ερώτηση ζούσε **και** στο `diffAddressFields` του
+ * editor, με άλλους κανόνες. Τρεις αποκλίσεις, όλες ορατές στην ίδια φόρμα:
+ * | Ζεύγος | εδώ (ετικέτα πεδίου) | `diffAddressFields` («Συμφωνία Πεδίων») |
+ * |---|---|---|
+ * | «Ωραιόκαστρον» ⇄ «Ωραιόκαστρο» | ίδιο | **διαφορά** |
+ * | «546 24» ⇄ «54624» | ίδιο | **διαφορά** |
+ * | «Greece» ⇄ «Ελλάδα» | **διαφορά** | ίδιο |
+ * Τώρα ο editor ρωτά **εδώ**· κάθε κανόνας που ήξερε μόνο η μία πλευρά ισχύει και για τις δύο.
+ *
+ * ⚠️ Δεν κρίνει κενές τιμές — «ο πάροχος δεν το είπε» και «θα σβηστεί» είναι **άλλες** ερωτήσεις,
+ * που τις απαντά ο καλών (`compareAddressField` · `diffAddressFields` · `diffAddressReplacement`).
+ */
+export function sameAddressFieldValue(field: ComparableAddressField, a: string, b: string): boolean {
   if (field === 'postalCode') return toCanonicalGreekPostalCode(a) === toCanonicalGreekPostalCode(b);
-  if (normalizeGreekText(a) === normalizeGreekText(b)) return true;
+  if (field === 'country') {
+    // Β9 — η χώρα είναι ταυτότητα ISO 3166-1· άγνωστο όνομα ⇒ σύγκριση γραφής (καμία επινόηση).
+    const left = countryNameToCode(a);
+    const right = countryNameToCode(b);
+    if (left !== null && right !== null) return left === right;
+  }
+  if (sameWriting(a, b)) return true;
   return PLACE_NAME_FIELDS.has(field) && samePlaceName(a, b);
 }
 
@@ -96,7 +123,7 @@ export function compareAddressField(
   const user = (declared ?? '').trim();
   const found = (resolved[field] ?? '').trim();
   if (user === '') return 'not-provided';
-  if (found !== '' && sameValue(field, user, found)) return 'match';
+  if (found !== '' && sameAddressFieldValue(field, user, found)) return 'match';
   if (namesWiderArea(field, user, resolved)) return 'broader';
   return found === '' ? 'unknown' : 'mismatch';
 }

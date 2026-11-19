@@ -23,11 +23,15 @@ export function pickStoredAddressPosition(
   if (source.geocodingMetadata) picked.geocodingMetadata = { ...source.geocodingMetadata };
   if (source.source) picked.source = source.source;
   if (typeof source.verifiedAt === 'number') picked.verifiedAt = source.verifiedAt;
+  // §D32 — το ίχνος αποτυχίας είναι **μέρος** της θέσης: χωρίς αυτό εδώ, κάθε μεταφορά σχήματος το σβήνει.
+  if (source.geocodeAttempt) {
+    picked.geocodeAttempt = { ...source.geocodeAttempt, resolvedFor: { ...source.geocodeAttempt.resolvedFor } };
+  }
   return picked;
 }
 
 /** Τα πεδία που **είναι** η θέση — αντικαθίστανται ολόκληρα, ποτέ μερικώς. */
-const STORED_POSITION_FIELDS = ['coordinates', 'geocodingMetadata', 'source', 'verifiedAt'] as const;
+const STORED_POSITION_FIELDS = ['coordinates', 'geocodingMetadata', 'source', 'verifiedAt', 'geocodeAttempt'] as const;
 
 /**
  * Γράφει τη θέση πάνω στη διεύθυνση, **ολόκληρη**: ό,τι λείπει από τη θέση **αφαιρείται**, δεν μένει
@@ -50,9 +54,15 @@ export function withStoredAddressPosition<T extends object>(
  *
  * 🔴 Η στιγμή δεν είναι θέση· είναι το πότε τη μάθαμε. Με το `verifiedAt` μέσα, δύο αναγνώσεις της
  * **ίδιας** θέσης διαφέρουν όποτε η μηχανή ξαναρωτήθηκε — δηλαδή «άλλαξε» κάτι που δεν άλλαξε.
+ *
+ * §D32 — ίδιος λόγος για το `geocodeAttempt.at`: το ίχνος αποτυχίας **είναι** μέρος της θέσης
+ * (`status` · `revision` · `resolvedFor`), η στιγμή του όχι. Με το `at` μέσα, κάθε δεύτερο «δεν
+ * βρέθηκε» για το ίδιο κείμενο ήταν δεύτερη γραφή — η ολοκλήρωση έπαυε να είναι ιδεμποτική.
  */
 export function storedPositionSignature(source: Readonly<StoredAddressPosition> | undefined): string {
   if (!source) return '{}';
-  const { verifiedAt: _when, ...where } = pickStoredAddressPosition(source);
-  return JSON.stringify(where);
+  const { verifiedAt: _when, geocodeAttempt, ...where } = pickStoredAddressPosition(source);
+  if (!geocodeAttempt) return JSON.stringify(where);
+  const { at: _attemptedAt, ...attempt } = geocodeAttempt;
+  return JSON.stringify({ ...where, geocodeAttempt: attempt });
 }

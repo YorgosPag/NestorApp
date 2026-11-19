@@ -20,8 +20,15 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { AddressPositionDriftNotice } from '@/components/shared/addresses/AddressPositionDriftNotice';
 import { AddressPositionPendingNotice } from '@/components/shared/addresses/AddressPositionPendingNotice';
 import { AddressPositionStaleNotice } from '@/components/shared/addresses/AddressPositionStaleNotice';
-import { positionTextVerdict } from '@/lib/geocoding/address-position';
-import { contactAddressPositionView } from '@/utils/contacts/contact-address-position-view';
+import {
+  AddressPositionUnlocatedNotice,
+  type AddressUnlocatedState,
+} from '@/components/shared/addresses/AddressPositionUnlocatedNotice';
+import { positionSettled, positionTextVerdict } from '@/lib/geocoding/address-position';
+import {
+  contactAddressPositionView,
+  type ContactAddressPositionView,
+} from '@/utils/contacts/contact-address-position-view';
 import { ContactsService } from '@/services/contacts.service';
 import {
   dismissContactAddressAdvisory,
@@ -29,6 +36,16 @@ import {
 } from '@/services/contacts/contact-address-advisories';
 import { useAddressPositionsPending } from '@/services/addresses/address-positions-pending';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
+
+/**
+ * ADR-332 §D32 — **ποια** απουσία θέσης είναι αυτή, από τα ίδια τα αποθηκευμένα δεδομένα· `null` αν
+ * υπάρχει θέση ή δεν υπάρχει κείμενο να ρωτηθεί (ούτε οδός ούτε πόλη — ίδιο όριο με το `askMachine`).
+ * Η κρίση είναι του **ενός** γραφέα (`positionSettled`): ό,τι λέει η κάρτα είναι ό,τι θα κάνει η αποθήκευση.
+ */
+function unlocatedState(view: ContactAddressPositionView): AddressUnlocatedState | null {
+  if (view.coordinates || (!view.street && !view.city)) return null;
+  return positionSettled(view) ? 'unmatched' : 'unchecked';
+}
 
 /** Επιστρέφει τον αποδότη του υποσέλιδου κάρτας — `null` όταν δεν υπάρχει τίποτα να ειπωθεί. */
 export function useContactDriftFooter(contactId: string | undefined, enabled: boolean) {
@@ -95,7 +112,8 @@ export function useContactDriftFooter(contactId: string | undefined, enabled: bo
       και η οθόνη επέμενε. Το `contact-address-position-view` το είχε **γραμμένο στην κεφαλίδα
       του**: «ΜΙΑ συνάρτηση, δύο πλευρές… δύο αντιγραφές θα διαφωνούσαν». Έγινε τρίτη πλευρά.
     */
-    if (positionTextVerdict(contactAddressPositionView({ ...address, id: addressId })) === 'differs') {
+    const view = contactAddressPositionView({ ...address, id: addressId });
+    if (positionTextVerdict(view) === 'differs') {
       return (
         <AddressPositionStaleNotice
           busy={busyId === addressId}
@@ -112,6 +130,16 @@ export function useContactDriftFooter(contactId: string | undefined, enabled: bo
       Χωρίς ενέργειες: δεν υπάρχει τίποτα να αποφασίσει — μόνο να ξέρει.
     */
     if (pending.ids.includes(addressId)) return <AddressPositionPendingNotice phase={pending.phase} />;
-    return null;
+
+    // §D32 — η **μόνιμη** απουσία θέσης: λέει αν ρωτήθηκε ο πάροχος, και δίνει το rematch (Esri).
+    const unlocated = unlocatedState(view);
+    if (!unlocated) return null;
+    return (
+      <AddressPositionUnlocatedNotice
+        state={unlocated}
+        busy={busyId === addressId}
+        onLocate={() => { void relocate(addressId, 'editor.positionUnlocated.locateFailed'); }}
+      />
+    );
   }, [enabled, driftById, pending, contactId, busyId, relocate]);
 }

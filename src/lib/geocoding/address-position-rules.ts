@@ -10,6 +10,7 @@ import { distanceMeters } from '@/lib/geo/geo-distance';
 import { focusPresentation } from '@/lib/geo/geocoding-focus';
 import { storedCountryCodeOrDefault } from '@/utils/address/country-codes';
 import { HUMAN_PIN_DRIFT_FLOOR_METRES } from './geocoding-thresholds';
+import { GEOCODING_POLICY_REVISION } from './geocoding-policy-revision';
 import {
   ADDRESS_IDENTITY_FIELDS,
   type AddressIdentityField,
@@ -136,7 +137,19 @@ export const NO_POSITION: AddressPosition = {
   geocodingMetadata: null,
   source: null,
   verifiedAt: null,
+  geocodeAttempt: null,
 };
+
+/**
+ * «Ρωτήθηκε και **δεν υπάρχει**» — καμία θέση, **με ίχνος** (ADR-332 §D32, Esri `U`).
+ * Το `query` είναι αυτό που **ρωτήθηκε**, όπως το `resolvedFor` της επιτυχίας.
+ */
+export function unmatchedPosition(query: GeocoderQuery, now: number): AddressPosition {
+  return {
+    ...NO_POSITION,
+    geocodeAttempt: { status: 'unmatched', revision: GEOCODING_POLICY_REVISION, at: now, resolvedFor: query },
+  };
+}
 
 /**
  * Η αποθηκευμένη θέση, **αυτούσια** — για τις καταστάσεις που δεν αλλάζουν τίποτα.
@@ -149,7 +162,8 @@ export const NO_POSITION: AddressPosition = {
 export function keepStored(stored: AddressLike | null): AddressPosition {
   if (stored === null) return NO_POSITION;
   const point = readPoint(stored);
-  if (point === null) return NO_POSITION;
+  // §D32 — «αυτούσια» ισχύει και για την αποτυχία: χωρίς αυτό, κάθε αποθήκευση σβήνει το ίχνος.
+  if (point === null) return stored.geocodeAttempt ? { ...NO_POSITION, geocodeAttempt: stored.geocodeAttempt } : NO_POSITION;
   return {
     coordinates: point,
     geocodingMetadata: stored.geocodingMetadata ?? null,
@@ -158,6 +172,7 @@ export function keepStored(stored: AddressLike | null): AddressPosition {
     // Δεύτερο κριτήριο εδώ θα ήταν δεύτερη αλήθεια για την ίδια ερώτηση (ADR-749).
     source: stored.geocodingMetadata ? 'geocoded' : 'dragged',
     verifiedAt: typeof stored.verifiedAt === 'number' ? stored.verifiedAt : null,
+    geocodeAttempt: null,
   };
 }
 
@@ -176,7 +191,7 @@ export function storedHumanPoint(stored: AddressLike | null): Point | null {
 export function humanPinned(point: Point, now: number): AddressPositionResolution {
   return {
     outcome: 'human-pinned',
-    position: { coordinates: point, geocodingMetadata: null, source: 'dragged', verifiedAt: now },
+    position: { coordinates: point, geocodingMetadata: null, source: 'dragged', verifiedAt: now, geocodeAttempt: null },
   };
 }
 
@@ -206,6 +221,7 @@ export function geocodedPosition(
     },
     source: 'geocoded',
     verifiedAt: now,
+    geocodeAttempt: null,
   };
 }
 
@@ -229,6 +245,30 @@ export function positionTextVerdict(address: AddressLike): PositionTextVerdict {
   // μια «differs» εδώ θα κατήγγελλε ολόκληρη τη βάση για κάτι που κανείς δεν μέτρησε.
   if (!resolvedFor) return 'unverifiable';
   return addressIdentityChanged(resolvedFor, address) ? 'differs' : 'matches';
+}
+
+/**
+ * **ΕΧΕΙ ΚΡΙΘΕΙ Η ΘΕΣΗ ΓΙΑ ΤΟ ΚΕΙΜΕΝΟ ΠΟΥ ΣΥΝΟΔΕΥΕΙ;** — ο κανόνας 2β (ADR-332 §D32).
+ *
+ * 🔴 Ο κανόνας 2 («τίποτα δεν άλλαξε ⇒ μηδέν αίτημα») ρωτούσε **τι άλλαξε από την αποθήκευση**, ποτέ
+ * **αν η αποθήκευση είχε απάντηση**. Δύο ζωντανές συνέπειες:
+ * - έδρα γραμμένη πριν το D31 χωρίς θέση ⇒ καμία αποθήκευση δεν ξαναρωτούσε, για πάντα·
+ * - `budget-exhausted` σε **αλλαγμένο** κείμενο ⇒ παλιά θέση κάτω από νέο κείμενο, και η επόμενη
+ *   αποθήκευση το έβλεπε «αμετάβλητο» — η υπόσχεση `deferred` του D29 δεν τηρούνταν.
+ *
+ * Κριμένη = πινέζα ανθρώπου · θέση μηχανής που **δεν** διαψεύδεται από το `resolvedFor` (το
+ * `unverifiable` των προ-Ζ6 εγγραφών μετρά κριμένο: **ποτέ** μαζικό re-geocode ολόκληρης της βάσης) ·
+ * ή ίχνος `unmatched` για **το ίδιο** κείμενο στην **τρέχουσα** έκδοση πολιτικής.
+ *
+ * 🔑 **Καμία νέα σύγκριση**: ρωτά τους δύο υπάρχοντες κριτές (`positionTextVerdict`, `addressIdentityChanged`).
+ * Φραγμένο από κατασκευής: μια απάντηση γράφει θέση ή ίχνος, άρα η **επόμενη** αποθήκευση είναι κριμένη.
+ */
+export function positionSettled(stored: AddressLike | null): boolean {
+  if (stored === null) return true;
+  if (readPoint(stored) !== null) return positionTextVerdict(stored) !== 'differs';
+  const attempt = stored.geocodeAttempt;
+  if (!attempt || attempt.revision < GEOCODING_POLICY_REVISION) return false;
+  return !addressIdentityChanged(attempt.resolvedFor, stored);
 }
 
 /**

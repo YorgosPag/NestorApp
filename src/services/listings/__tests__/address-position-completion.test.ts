@@ -228,13 +228,46 @@ describe('παράγωγα πεδία — στην ΙΔΙΑ συναλλαγή �
   });
 
   it('Π2 — καμία αλλαγή θέσης ⇒ το `derive` δεν καλείται', async () => {
-    engine.mockResolvedValue({ kind: 'absent' } as Awaited<ReturnType<typeof geocodeWithVerdict>>);
+    // Ίδια απάντηση πάνω σε ήδη γραμμένη θέση: η δεύτερη εκτέλεση δεν αλλάζει τίποτα.
+    engine.mockResolvedValue(HIT);
     const { db } = fakeDb([PENDING]);
+    await completePendingAddressPositions(db, JOB);
     const derive = jest.fn(() => ({}));
 
     await completePendingAddressPositions(db, { ...JOB, derive });
 
     expect(derive).not.toHaveBeenCalled();
+  });
+});
+
+describe('ίχνος αποτυχίας (§D32) — γράφεται ΜΙΑ φορά', () => {
+  const ABSENT = { kind: 'absent' } as Awaited<ReturnType<typeof geocodeWithVerdict>>;
+
+  it('Α1 — «δεν βρέθηκε» ⇒ γράφεται το ίχνος για το κείμενο που ρωτήθηκε', async () => {
+    engine.mockResolvedValue(ABSENT);
+    const { db, state } = fakeDb([PENDING]);
+
+    await completePendingAddressPositions(db, JOB);
+
+    expect(state.updates).toBe(1);
+    expect(state.addresses[0].geocodeAttempt).toMatchObject({
+      status: 'unmatched',
+      resolvedFor: { street: 'Τσιμισκή', number: '43' },
+    });
+  });
+
+  it('Α2 — ιδεμποτικό: δεύτερο «δεν βρέθηκε» σε άλλη στιγμή δεν γράφει ξανά', async () => {
+    engine.mockResolvedValue(ABSENT);
+    const { db, state } = fakeDb([PENDING]);
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1_000);
+    await completePendingAddressPositions(db, JOB);
+    now.mockReturnValue(2_000);
+
+    const second = await completePendingAddressPositions(db, JOB);
+
+    now.mockRestore();
+    expect(second.written).toBe(0);
+    expect(state.updates).toBe(1);
   });
 });
 

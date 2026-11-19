@@ -73,6 +73,9 @@ const contactAddressPositionViewSchema = z.object({
   //    μένει μόνο η **αυστηρότητα** που αφορά αυτή τη διαδρομή: η τιμή **γεννιέται** τώρα,
   //    άρα οφείλει να ανήκει στο λεξιλόγιο — σε αντίθεση με το PATCH έργου, που διασώζει.
   geocodingMetadata: geocodingMetadataSchema(z.enum(GEOCODING_ACCURACIES)).optional(),
+  // §D32 — ίδιο μάθημα με το Ζ6: αδήλωτο σε `strict` = ο διακομιστής δεν βλέπει ποτέ το ίχνος ⇒
+  // ο κανόνας 2β ξαναρωτά σε **κάθε** αποθήκευση. Το σχήμα έχει έναν ιδιοκτήτη.
+  geocodeAttempt: addressPositionFieldsSchema.shape.geocodeAttempt,
 }).strict();
 
 export const contactAddressPositionsRequestSchema = z.object({
