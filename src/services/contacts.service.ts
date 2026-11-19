@@ -24,7 +24,7 @@ import { sanitizeContactData, sanitizeContactForUpdate, validateContactData, typ
 import { flattenCustomFieldsForUpdate } from '@/utils/contacts/contact-update-paths';
 import { positionContactPayload, relocateContactAddressPayload } from './contact-address-positions.client';
 import { authoritativeContactAddresses } from '@/utils/contacts/contact-addresses-reader';
-import { legacyRootAddressRepairPatch } from '@/utils/contacts/contact-hq-legacy-fields';
+import { LEGACY_ROOT_ADDRESS_FIELDS, legacyRootAddressRepairPatch } from '@/utils/contacts/contact-hq-legacy-fields';
 
 import { getCol, asDate } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -141,7 +141,7 @@ const UI_ONLY_FIELDS = [
   '_forceDeleteLogo', 'activePersonaTab', 'photoFileName',
 ] as const;
 
-/** Legacy fields removed from payload (not from Firestore) */
+/** Legacy fields never written with a value (an address key's `deleteField()` still passes — repair-on-write) */
 const LEGACY_FIELDS = ['email', 'phone', 'street', 'streetNumber', 'city', 'postalCode', 'website'] as const;
 
 /** System fields protected by Firestore rules */
@@ -385,9 +385,9 @@ export class ContactsService {
       }
     }
 
-    // Remove legacy fields from payload
+    // Legacy fields: never WRITTEN with a value — but an ADDRESS key's deletion (repair-on-write, ADR-332 §D30 Φ2) passes.
     const udRecord = updateData as Record<string, unknown>;
-    for (const field of LEGACY_FIELDS) { delete udRecord[field]; }
+    for (const field of LEGACY_FIELDS) { if (!(fieldsToDelete.includes(field) && LEGACY_ROOT_ADDRESS_FIELDS.includes(field))) delete udRecord[field]; }
 
     // ADR-121: Convert form-level persona fields to Firestore structure
     if (udRecord.activePersonas && Array.isArray(udRecord.activePersonas)) {

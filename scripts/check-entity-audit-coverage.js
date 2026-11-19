@@ -221,6 +221,9 @@ const HARD_EXEMPT_PATTERNS = [
   //   · postal-codes: «546 24» ➜ «54624», ίδια τιμή σε κανονική μορφή. `contacts` ⇒ CDC όπως πάνω.
   //     ⚠️ Δηλωμένο κενό: `projects` · `buildings` ΔΕΝ έχουν CDC ⇒ εκεί η αλλαγή δεν αφήνει γραμμή ανά οντότητα.
   /[\\/]api[\\/]admin[\\/]migrate-postal-codes[\\/]migration-operations\.ts$/,
+  //   · contact-hq-container (ADR-332 §D30 Φάση 2): υλοποιεί την αυθεντική λίστα διευθύνσεων όπου λείπει και σβήνει
+  //     τα κλειδιά διεύθυνσης της ρίζας. ΜΟΝΟ `contacts` ⇒ CDC όπως πάνω.
+  /[\\/]api[\\/]admin[\\/]migrate-contact-hq-container[\\/]migration-operations\.ts$/,
   //   · search-backfill (`migrateContactTenants`, 2026-10-30): συμπληρώνει `companyId` σε επαφές χωρίς οργανισμό —
   //     ΜΟΝΟ `contacts` ⇒ CDC όπως πάνω. Έγινε ορατό όταν το χειρόγραφο `batch.update(doc.ref)` πέρασε στο
   //     `flushInBatches`· ο γραφέας σφραγίζει πλέον τον διαχειριστή, άρα η γραμμή του CDC λέει «από ποιον» (ADR-704).

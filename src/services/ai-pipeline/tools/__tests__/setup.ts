@@ -42,6 +42,8 @@ jest.mock('@/services/enterprise-id.service', () => ({
   generateTaskId: jest.fn(() => 'task_test_001'),
   generateContactId: jest.fn(() => 'cont_test_001'),
   generateCompanyId: jest.fn(() => 'comp_gen_001'),
+  // ADR-332 §D30 Φάση 2: το `append_contact_info` δίνει ταυτότητα στη νέα εγγραφή της λίστας (N.6).
+  generateAddressId: jest.fn(() => 'addr_test_001'),
 }));
 
 // ── Validation modules (dynamic-imported by handlers) ──

@@ -165,9 +165,10 @@ describe('γραφείς επαφών του server — σφραγίδα φορ�
   });
 
   it('Σ5 🔴 κάθε `flushInBatches` που γράφει επαφές περνά τον φορέα (ο CDC τον διαβάζει από το έγγραφο)', () => {
-    // Παρονομαστής: οι τρεις γνωστές μεταπτώσεις επαφών ΒΡΙΣΚΟΝΤΑΙ — αλλιώς το πράσινο θα σήμαινε «δεν κοίταξα».
+    // Παρονομαστής: οι τέσσερις γνωστές μεταπτώσεις επαφών ΒΡΙΣΚΟΝΤΑΙ — αλλιώς το πράσινο θα σήμαινε «δεν κοίταξα».
     expect(new Set(CONTACT_FLUSHES.map(([file]) => file))).toEqual(new Set([
       'app/api/admin/migrate-address-labels/migration-operations.ts',
+      'app/api/admin/migrate-contact-hq-container/migration-operations.ts',
       'app/api/admin/migrate-postal-codes/migration-operations.ts',
       'app/api/admin/search-backfill/search-backfill.handlers.ts',
     ]));

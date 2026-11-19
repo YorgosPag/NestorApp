@@ -458,3 +458,14 @@ workflow θα απαιτούσε εγγραφή στο `.ci-gate-tiers.json` α�
   διεύθυνσης, **μέσα από τον πίνακα** (σειρά βαθμίδων από το `PATH_KEY_TO_LEVEL`, κελιά `NOT_STORED` προσπερνιούνται). Τον ρωτά
   η προβολή αγγελίας για τη δηλωμένη περιοχή του έργου (`addressToDeclaredAdminArea`). Το `AdminAreaAssignment` απέκτησε
   `measuredDepth` — **βαθμίδα**, όχι πεδίο διοικητικής ιεραρχίας, άρα **καμία** νέα γραμμή στον πίνακα.
+- **2026-11-19** — **Το λεξιλόγιο `contactFlat` γίνεται «μόνο αναγνώστης παλαιών εγγράφων»** (ADR-332 §D30 Φάση 2). Τα επίπεδα
+  πεδία έδρας **αφαιρέθηκαν** από το `ContactFormData`: η έδρα επαφής ζει σε **ένα** δοχείο (`customFields.companyAddresses[0]`,
+  λεξιλόγιο `companyAddress`), για εταιρεία, φυσικό πρόσωπο και υπηρεσία. Η στήλη `contactFlat` επιβιώνει **μόνο** σε δύο
+  σημεία, και τα δύο δηλωμένα ως legacy: (α) `buildCompanyAddressFromLegacyRoot` — η 4η, τελευταία πηγή του tolerant reader
+  (`resolveContactAddresses`), ολόκληρη εγγραφή από **μία** πηγή· (β) `LEGACY_ROOT_ADDRESS_FIELDS` (`contact-hq-legacy-fields.ts`)
+  — **παράγεται** από τη στήλη και είναι το σύνορο του saver + ο κατάλογος του repair-on-write και του backfill
+  (`/api/admin/migrate-contact-hq-container`). Αποσύρθηκαν οι αναγνώστες που ανακάτευαν πηγές **ανά πεδίο**
+  (`buildFlatFieldsFromCompanyHq`, `buildFlatFieldsFromAddressInfo`). 🔑 **Contract**: όταν το dry-run του backfill μετρήσει
+  0 έγγραφα παλαιού σχήματος, η στήλη `contactFlat`, το `FlatAddressFormFields` και τα (α)/(β) φεύγουν — χωριστό commit.
+  Το εύρημα §10.5 για το `ContactFormData` («το πραγματικό δοχείο των επίπεδων πεδίων») **δεν ισχύει πλέον**: ο τύπος δεν
+  είναι δοχείο ιεραρχίας (βγήκε από τη baseline του CHECK 3.44 στο `76eb8c76`).

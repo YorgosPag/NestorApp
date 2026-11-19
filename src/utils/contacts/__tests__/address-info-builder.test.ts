@@ -6,12 +6,14 @@
  * είδος. Πράσινα tests ΔΕΝ έπιαναν το ελάττωμα — γιατί δεν υπήρχαν.
  */
 
-import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
+import type { Contact } from '@/types/contacts';
+import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { DEFAULT_STORED_COUNTRY_CODE } from '@/utils/address/country-codes';
 import {
-  buildAddressInfoFromFlatFields,
   buildAddressInfoListFromCompanyAddresses,
+  buildCompanyAddressFromLegacyRoot,
 } from '../address-info-builder';
+import { resolveContactAddresses } from '../contact-addresses-reader';
 
 function companyAddress(partial: Partial<CompanyAddress> = {}): CompanyAddress {
   return {
@@ -162,69 +164,90 @@ describe('buildAddressInfoListFromCompanyAddresses', () => {
   });
 });
 
-describe('buildAddressInfoFromFlatFields', () => {
-  const flat: Partial<ContactFormData> = {
-    type: 'company',
+/**
+ * ADR-332 §D30 Φάση 2 — ο tolerant reader. Το `buildAddressInfoFromFlatFields` (δεύτερη πηγή του
+ * `addresses[]`, από επίπεδα πεδία φόρμας) αποσύρθηκε μαζί με τα ίδια τα πεδία· εδώ φυλάγεται η
+ * ΜΟΝΗ ανάγνωση της ρίζας που έμεινε: ολόκληρη εγγραφή, από μία πηγή, μόνο για πολύ παλιά έγγραφα.
+ */
+describe('buildCompanyAddressFromLegacyRoot', () => {
+  const root: Record<string, unknown> = {
     street: 'Τσιμισκή',
     streetNumber: '43',
     city: 'Θεσσαλονίκη',
     postalCode: '54623',
     municipality: 'Δήμος Θεσσαλονίκης',
-    settlement: 'Θεσσαλονίκη',
     settlementId: 'settlement:THES1',
     neighborhood: 'Κέντρο',
   };
 
-  it('χαρτογραφεί το flat `streetNumber` στο `number` του πίνακα', () => {
-    expect(buildAddressInfoFromFlatFields(flat).number).toBe('43');
+  it('χαρτογραφεί το επίπεδο `streetNumber` στο `number` της εγγραφής', () => {
+    expect(buildCompanyAddressFromLegacyRoot(root, 'headquarters')?.number).toBe('43');
   });
 
   it('μεταφέρει ιεραρχία και συνοικία', () => {
-    expect(buildAddressInfoFromFlatFields(flat)).toMatchObject({
-      municipality: 'Δήμος Θεσσαλονίκης',
-      settlement: 'Θεσσαλονίκη',
+    expect(buildCompanyAddressFromLegacyRoot(root, 'headquarters')).toMatchObject({
+      municipalityName: 'Δήμος Θεσσαλονίκης',
       settlementId: 'settlement:THES1',
       neighborhood: 'Κέντρο',
+      type: 'headquarters',
     });
   });
 
-  it('η κύρια διεύθυνση παίρνει την ταξινομία του είδους επαφής', () => {
-    expect(buildAddressInfoFromFlatFields({ ...flat, type: 'company' }).label).toBe('headquarters');
-    expect(buildAddressInfoFromFlatFields({ ...flat, type: 'individual' }).label).toBe('home');
-    expect(buildAddressInfoFromFlatFields({ ...flat, type: 'individual' }).type).toBe('home');
+  it('ρητός `primaryAddressType` υπερισχύει της προεπιλογής του είδους', () => {
+    expect(buildCompanyAddressFromLegacyRoot({ ...root, primaryAddressType: 'factory' }, 'headquarters')?.type)
+      .toBe('factory');
   });
 
-  it('ρητός `primaryAddressType` υπερισχύει του είδους επαφής', () => {
-    const address = buildAddressInfoFromFlatFields({ ...flat, primaryAddressType: 'factory' });
-    expect(address.label).toBe('factory');
+  it('η χώρα της ρίζας περνά από το σύνορο ταυτότητας (ετικέτα → ISO)', () => {
+    expect(buildCompanyAddressFromLegacyRoot({ ...root, hqAddressCountry: 'Ελλάδα' }, 'home')?.country).toBe('GR');
   });
 
-  it('ΙΣΟΔΥΝΑΜΙΑ: οι δύο κατασκευαστές παράγουν ίδια ιεραρχία για ίδια δεδομένα', () => {
-    // Αυτό ακριβώς είχε αποκλίνει: το ένα μονοπάτι έγραφε ιεραρχία, το άλλο όχι.
-    const fromFlat = buildAddressInfoFromFlatFields(flat);
-    const [fromCompany] = buildAddressInfoListFromCompanyAddresses([
+  it('ρίζα χωρίς διεύθυνση ⇒ καμία εγγραφή (όχι κενή έδρα στη βάση)', () => {
+    expect(buildCompanyAddressFromLegacyRoot({ companyName: 'ALFA' }, 'headquarters')).toBeUndefined();
+  });
+
+  it('ΙΣΟΔΥΝΑΜΙΑ: ρίζα → εγγραφή → παράγωγο δίνει την ίδια ιεραρχία με την αυθεντική εγγραφή', () => {
+    const fromRoot = buildCompanyAddressFromLegacyRoot(root, 'headquarters');
+    expect(fromRoot).toBeDefined();
+    const [derivedFromRoot] = buildAddressInfoListFromCompanyAddresses([fromRoot as CompanyAddress]);
+    const [derivedFromList] = buildAddressInfoListFromCompanyAddresses([
       companyAddress({
-        street: 'Τσιμισκή',
-        number: '43',
-        city: 'Θεσσαλονίκη',
-        postalCode: '54623',
-        municipalityName: 'Δήμος Θεσσαλονίκης',
-        settlementId: 'settlement:THES1',
-        neighborhood: 'Κέντρο',
-        type: 'headquarters',
+        street: 'Τσιμισκή', number: '43', city: 'Θεσσαλονίκη', postalCode: '54623',
+        municipalityName: 'Δήμος Θεσσαλονίκης', settlementId: 'settlement:THES1',
+        neighborhood: 'Κέντρο', type: 'headquarters',
       }),
     ]);
+    expect(derivedFromRoot).toEqual(derivedFromList);
+  });
+});
 
-    const hierarchyOf = (a: typeof fromFlat) => ({
-      municipality: a.municipality,
-      settlement: a.settlement,
-      settlementId: a.settlementId,
-      neighborhood: a.neighborhood,
-    });
+describe('resolveContactAddresses — μία πηγή ανά έγγραφο, ποτέ ανάμειξη ανά πεδίο (§D30 Φάση 2)', () => {
+  const asContact = (doc: Record<string, unknown>) => doc as unknown as Contact;
 
-    expect(hierarchyOf(fromCompany)).toEqual(hierarchyOf(fromFlat));
-    expect(fromCompany.label).toBe(fromFlat.label);
-    expect(fromCompany.type).toBe(fromFlat.type);
-    expect(fromCompany.isPrimary).toBe(fromFlat.isPrimary);
+  it('πεδίο ΚΑΘΑΡΙΣΜΕΝΟ στη λίστα + τιμή στη ρίζα ⇒ μένει κενό (η ρίζα δεν ανασταίνει)', () => {
+    const [hq] = resolveContactAddresses(asContact({
+      type: 'company',
+      neighborhood: 'Μπαγιάτικη Συνοικία',
+      municipality: 'Μπαγιάτικος Δήμος',
+      customFields: { companyAddresses: [companyAddress({ type: 'headquarters', neighborhood: '' })] },
+    }), 'company');
+    expect(hq.neighborhood).toBe('');
+    expect(hq.municipalityName).toBeUndefined();
+  });
+
+  it('πεδίο που λείπει από το `addresses[0]` + τιμή στη ρίζα ⇒ μένει κενό', () => {
+    const [hq] = resolveContactAddresses(asContact({
+      type: 'individual',
+      neighborhood: 'Μπαγιάτικη Συνοικία',
+      addresses: [{ street: 'Τσιμισκή', number: '1', city: 'Θεσσαλονίκη', postalCode: '54623', type: 'home', isPrimary: true }],
+    }), 'individual');
+    expect(hq.street).toBe('Τσιμισκή');
+    expect(hq.neighborhood).toBeUndefined();
+  });
+
+  it('μόνο ρίζα (πολύ παλιό έγγραφο) ⇒ μία εγγραφή με τον τύπο ADR-319 του είδους', () => {
+    const list = resolveContactAddresses(asContact({ type: 'service', street: 'Βασ. Σοφίας', city: 'Αθήνα' }), 'service');
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ street: 'Βασ. Σοφίας', city: 'Αθήνα', type: 'central_service' });
   });
 });

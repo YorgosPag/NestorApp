@@ -133,6 +133,56 @@ describe('ADR-332 D27 Β-ΙΙ Φ0 — το customFields δεν αντικαθί�
   });
 });
 
+/**
+ * ADR-332 §D30 Φάση 2 — **repair-on-write**. Παλαιά έγγραφα κρατούν κλειδιά διεύθυνσης στη ρίζα
+ * (μετρημένο στην `cont_c4d79d09…`: top-level `neighborhood`). Η αποθήκευση τα σβήνει — **ποτέ**
+ * όμως τη μόνη αντιγραφή της διεύθυνσης.
+ */
+describe('ADR-332 §D30 Φάση 2 — repair-on-write των κλειδιών διεύθυνσης ρίζας', () => {
+  const getById = jest.requireMock('@/services/firestore/firestore-query.service')
+    .firestoreQueryService.getById as jest.Mock;
+
+  it('διαρρεύσαν `neighborhood` στη ρίζα + λίστα αλλού ⇒ `deleteField` στην πρώτη αποθήκευση', async () => {
+    getById.mockResolvedValueOnce({ ...storedContact, neighborhood: 'Μπαγιάτικη', municipality: 'Χ' });
+    await ContactsService.updateContactFromForm(CONTACT_ID, { taxOffice: 'ΦΑΕ Θεσσαλονίκης' });
+
+    const payload = updateDocCalls[0];
+    expect(payload.neighborhood).toBe(DELETE_SENTINEL);
+    expect(payload.municipality).toBe(DELETE_SENTINEL);
+  });
+
+  it('ιδεμποτεντικό: έγγραφο χωρίς τέτοια κλειδιά ⇒ καμία διαγραφή διεύθυνσης', async () => {
+    await ContactsService.updateContactFromForm(CONTACT_ID, { taxOffice: 'ΦΑΕ Θεσσαλονίκης' });
+    expect(Object.values(updateDocCalls[0])).not.toContain(DELETE_SENTINEL);
+  });
+
+  it('η ΜΟΝΗ αντιγραφή στη ρίζα (χωρίς λίστα / addresses[]) ⇒ ΔΕΝ σβήνεται', async () => {
+    const { customFields, ...rest } = storedContact;
+    getById.mockResolvedValueOnce({
+      ...rest,
+      customFields: { ...customFields, companyAddresses: [] },
+      street: 'Αγγελάκη', city: 'Θεσσαλονίκη', neighborhood: 'Κέντρο',
+    });
+    await ContactsService.updateContactFromForm(CONTACT_ID, { taxOffice: 'ΦΑΕ Θεσσαλονίκης' });
+
+    const payload = updateDocCalls[0];
+    expect(payload).not.toHaveProperty(['street']);
+    expect(payload).not.toHaveProperty(['neighborhood']);
+  });
+
+  it('μόνη αντιγραφή στη ρίζα + η αποθήκευση γράφει λίστα ⇒ η λίστα αποφασίζει, η ρίζα σβήνει', async () => {
+    getById.mockResolvedValueOnce({ ...storedContact, customFields: {}, street: 'Αγγελάκη', neighborhood: 'Κέντρο' });
+    await ContactsService.updateContactFromForm(CONTACT_ID, {
+      companyAddresses: [{ type: 'headquarters', street: 'Αγγελάκη', number: '5', postalCode: '54621', city: 'Θεσσαλονίκη', neighborhood: 'Κέντρο' }],
+    });
+
+    const payload = updateDocCalls[0];
+    expect(payload.street).toBe(DELETE_SENTINEL);
+    expect(payload.neighborhood).toBe(DELETE_SENTINEL);
+    expect(payload['customFields.companyAddresses']).toHaveLength(1);
+  });
+});
+
 describe('ADR-323 · ADR-327 §8.5.4 — κενή διαφορά ⇒ καμία εγγραφή', () => {
   it('Αποθήκευση χωρίς αλλαγές δεν φτάνει στο `updateDoc` (ούτε σφραγίδες `_lastModified*`)', async () => {
     await ContactsService.updateContactFromForm(CONTACT_ID, {});

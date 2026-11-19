@@ -42,10 +42,7 @@ function formWithThreeAddresses(
   return {
     ...initialFormData,
     type,
-    street: addresses[0].street,
-    streetNumber: addresses[0].number,
-    postalCode: addresses[0].postalCode,
-    city: addresses[0].city,
+    // ADR-332 §D30 Φάση 2: η έδρα ΕΙΝΑΙ η θέση 0 — κανένα επίπεδο αντίγραφο στη φόρμα.
     companyAddresses: addresses,
   };
 }
@@ -213,7 +210,6 @@ describe('τα company-only πεδία δεν παρασύρθηκαν στη γ
     gemiNumber: '123456789000',
     activityCodeKAD: '41.20',
     chamber: 'ΕΒΕΘ',
-    municipality: 'Δήμος Θεσσαλονίκης',
   };
 
   it('τα ΓΕΜΗ/ΚΑΔ πεδία εξακολουθούν να πηγαίνουν στα customFields', () => {
@@ -222,20 +218,18 @@ describe('τα company-only πεδία δεν παρασύρθηκαν στη γ
     expect(result.customFields).toMatchObject({
       activityCodeKAD: '41.20',
       chamber: 'ΕΒΕΘ',
-      municipality: 'Δήμος Θεσσαλονίκης',
     });
   });
 
-  it('το top-level `municipality` αφαιρείται ΜΟΝΟ σε εταιρεία', () => {
-    // Σε εταιρεία το `municipality` είναι πεδίο ΓΕΜΗ· σε φυσικό πρόσωπο είναι
-    // επίπεδο της διοικητικής ιεραρχίας και η διαγραφή του θα έσβηνε διεύθυνση.
-    const company = EnterpriseContactSaver.convertToEnterpriseStructure(companyForm);
-    expect((company as Record<string, unknown>).municipality).toBeUndefined();
-
-    const individual = EnterpriseContactSaver.convertToEnterpriseStructure({
-      ...formWithThreeAddresses('individual', INDIVIDUAL_ADDRESSES),
-      municipality: 'Δήμος Θεσσαλονίκης',
-    });
-    expect((individual as Record<string, unknown>).municipality).toBe('Δήμος Θεσσαλονίκης');
+  it('το `municipality` δεν φτάνει ΠΟΤΕ στη ρίζα — για κανένα είδος (§D30 Φάση 2)', () => {
+    // Ως τη Φάση 2: σε εταιρεία ήταν κάτοπτρο ΓΕΜΗ (`customFields.municipality`, που κανείς δεν
+    // διάβαζε), σε φυσικό πρόσωπο επίπεδο ιεραρχίας στη ρίζα. Τώρα ο δήμος ζει ΜΟΝΟ στη λίστα
+    // (`municipalityName`) και το σύνορο του saver πετά κάθε κλειδί διεύθυνσης της ρίζας.
+    for (const [type, addresses] of [['company', COMPANY_ADDRESSES], ['individual', INDIVIDUAL_ADDRESSES]] as const) {
+      const leaked = { ...formWithThreeAddresses(type, [...addresses]), municipality: 'Δήμος Θεσσαλονίκης' };
+      const result = EnterpriseContactSaver.convertToEnterpriseStructure(leaked as unknown as ContactFormData);
+      expect((result as Record<string, unknown>).municipality).toBeUndefined();
+      expect(result.customFields).not.toHaveProperty('municipality');
+    }
   });
 });

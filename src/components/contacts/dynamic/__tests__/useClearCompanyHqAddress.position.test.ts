@@ -20,7 +20,6 @@ it('η καθαρισμένη έδρα δεν κρατά ούτε πινέζα �
   const formData: ContactFormData = {
     ...initialFormData,
     type: 'company',
-    street: 'Αγγελάκη', streetNumber: '5', postalCode: '54621', city: 'Θεσσαλονίκη',
     companyAddresses: [{
       id: 'addr_hq', type: 'headquarters', street: 'Αγγελάκη', number: '5', postalCode: '54621', city: 'Θεσσαλονίκη',
       coordinates: { lat: 40.63, lng: 22.94 }, source: 'dragged', verifiedAt: 7,

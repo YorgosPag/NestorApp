@@ -10,14 +10,15 @@
  * Strategy:
  *   - Mock @/providers/NotificationProvider → notify spy
  *   - Mock react-i18next → identity t() (returns the key verbatim)
- *   - Assert setFormData updater clears every HQ field (14 flat + HQ entry),
+ *   - Assert setFormData updater clears every field of the HQ entry (position 0 — the ONE
+ *     container since ADR-332 §D30 Φάση 2; there are no flat HQ fields any more),
  *     notify called with info/5000ms/undo action, undo restores exact snapshot
  *
  * @see src/components/contacts/dynamic/useClearCompanyHqAddress.ts
  * @see docs/centralized-systems/reference/adrs/ADR-297-hq-clear-undo-pattern.md
  */
 import { renderHook, act } from '@testing-library/react';
-import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import { useClearCompanyHqAddress } from '../useClearCompanyHqAddress';
 
 const notify = jest.fn();
@@ -30,12 +31,14 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-const HQ_KEYS: Array<keyof ContactFormData> = [
-  'street', 'streetNumber', 'postalCode', 'city',
-  'settlement', 'settlementId', 'community',
-  'municipalUnit', 'municipality', 'municipalityId',
-  'regionalUnit', 'region', 'decentAdmin', 'majorGeo',
-];
+/** Το πλήρες περιεχόμενο της έδρας πριν τον καθαρισμό — κάθε πεδίο του λεξιλογίου `companyAddress`. */
+const FULL_HQ: CompanyAddress = {
+  id: 'addr_hq', type: 'headquarters', street: 'Ακαδημίας', number: '15', postalCode: '10671', city: 'Αθήνα',
+  settlementId: 'settlement-123', communityName: 'Δημοτική Κοινότητα Αθηναίων', municipalUnitName: 'Δ.Ε. Αθηναίων',
+  municipalityName: 'Δήμος Αθηναίων', municipalityId: 'municipality-456', regionalUnitName: 'Π.Ε. Κεντρικού Τομέα Αθηνών',
+  regionName: 'Αττική', region: 'Αττική', decentAdminName: 'Αποκ. Διοίκηση Αττικής', majorGeoName: 'Αττική',
+  neighborhood: 'Κολωνάκι', country: 'GR', coordinates: { lat: 37.98, lng: 23.73 }, source: 'dragged',
+};
 
 function buildFormData(overrides: Partial<ContactFormData> = {}): ContactFormData {
   return {
@@ -43,22 +46,8 @@ function buildFormData(overrides: Partial<ContactFormData> = {}): ContactFormDat
     firstName: '',
     lastName: 'Preserved',
     email: 'preserved@example.com',
-    street: 'Ακαδημίας',
-    streetNumber: '15',
-    postalCode: '10671',
-    city: 'Αθήνα',
-    settlement: 'Αθήνα',
-    settlementId: 'settlement-123',
-    community: 'Δημοτική Κοινότητα Αθηναίων',
-    municipalUnit: 'Δ.Ε. Αθηναίων',
-    municipality: 'Δήμος Αθηναίων',
-    municipalityId: 'municipality-456',
-    regionalUnit: 'Π.Ε. Κεντρικού Τομέα Αθηνών',
-    region: 'Αττική',
-    decentAdmin: 'Αποκ. Διοίκηση Αττικής',
-    majorGeo: 'Αττική',
     companyAddresses: [
-      { type: 'headquarters', street: 'Ακαδημίας', number: '15', postalCode: '10671', city: 'Αθήνα', settlementId: 'settlement-123' },
+      FULL_HQ,
       { type: 'branch', street: 'Ερμού', number: '1', postalCode: '10557', city: 'Αθήνα' },
     ],
     ...overrides,
@@ -78,7 +67,7 @@ describe('useClearCompanyHqAddress', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('clearHq invokes setFormData with updater that blanks every HQ flat field', () => {
+  it('clearHq invokes setFormData with updater that blanks every field of the HQ entry', () => {
     const setFormData = jest.fn();
     const initial = buildFormData();
     const { result } = renderHook(() => useClearCompanyHqAddress(initial, setFormData));
@@ -87,12 +76,15 @@ describe('useClearCompanyHqAddress', () => {
 
     expect(setFormData).toHaveBeenCalledTimes(1);
     const updater = setFormData.mock.calls[0][0];
-    const next = updater(initial);
+    const hq = (updater(initial) as ContactFormData).companyAddresses?.[0] as unknown as Record<string, unknown>;
 
-    for (const key of HQ_KEYS) {
-      const expected = (key === 'settlementId' || key === 'municipalityId') ? null : '';
-      expect(next[key]).toBe(expected);
+    // Κάθε πεδίο κειμένου που είχε η έδρα είναι πλέον κενό ή απόν· οι ταυτότητες `null`.
+    for (const key of Object.keys(FULL_HQ).filter((k) => k !== 'type')) {
+      const value = hq[key];
+      const ids = key === 'settlementId' || key === 'municipalityId';
+      expect({ key, cleared: ids ? value === null : (value === undefined || value === '') }).toEqual({ key, cleared: true });
     }
+    expect(hq.type).toBe('headquarters');
   });
 
   it('clearHq preserves non-address formData fields (firstName, lastName, email, type)', () => {
@@ -164,7 +156,7 @@ describe('useClearCompanyHqAddress', () => {
 
   it('Undo action restores the exact snapshot captured before clear', () => {
     const setFormData = jest.fn();
-    const snapshot = buildFormData({ street: 'Πατησίων', streetNumber: '42' });
+    const snapshot = buildFormData({ companyAddresses: [{ ...FULL_HQ, street: 'Πατησίων', number: '42' }] });
     const { result } = renderHook(() =>
       useClearCompanyHqAddress(snapshot, setFormData),
     );

@@ -218,13 +218,14 @@ describe('EnterpriseContactSaver — δικλείδα κενών διευθύν�
     expect(result.customFields?.companyAddresses).toBeUndefined();
   });
 
-  it('flat έδρα με δεδομένα δεν χάνεται όταν η λίστα κλαδεύεται σε κενή', () => {
-    const result = EnterpriseContactSaver.convertToEnterpriseStructure(
-      { ...initialFormData, type: 'company', street: 'Ορφέως', city: 'Κομοτηνή', companyAddresses: [blankAddress()] },
-    );
+  it('λίστα που κλαδεύεται σε κενή ⇒ ρητό κενό παράγωγο· τίποτα δεν αναβιώνει από τη ρίζα (§D30 Φάση 2)', () => {
+    // Ως τη Φάση 2 το παράγωγο γεννιόταν και από τα επίπεδα πεδία της φόρμας. Δεν υπάρχουν πια:
+    // ακόμη κι αν «διαρρεύσουν», το σύνορο του saver τα πετά και το `addresses[]` ακολουθεί τη λίστα.
+    const leaked = { ...initialFormData, type: 'company', companyAddresses: [blankAddress()], street: 'Ορφέως', city: 'Κομοτηνή' };
+    const result = EnterpriseContactSaver.convertToEnterpriseStructure(leaked as unknown as ContactFormData);
 
-    // Το παράγωγο κρατά την έδρα των flat πεδίων — δεν μηδενίζεται από το κλάδεμα.
-    expect(result.addresses).toHaveLength(1);
-    expect(result.addresses?.[0].street).toBe('Ορφέως');
+    expect(result.addresses).toEqual([]);
+    expect(result).not.toHaveProperty('street');
+    expect(result).not.toHaveProperty('city');
   });
 });

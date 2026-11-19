@@ -378,6 +378,60 @@ describe('ContactHandler', () => {
       expect(addresses[0]).toEqual(expect.objectContaining({ street: 'Ονειροπόλων', isPrimary: true }));
       expect(addresses[1]).toEqual(expect.objectContaining({ street: 'Ορφέως', isPrimary: false }));
     });
+
+    /**
+     * ADR-332 §D30 Φάση 2: ως τώρα ο πράκτορας έγραφε ΜΟΝΟ στο παράγωγο `addresses[]`. Η φόρμα
+     * διαβάζει πρώτα την αυθεντική λίστα ⇒ η διεύθυνση δεν φαινόταν, και το επόμενο save την έσβηνε.
+     */
+    test('appends to the AUTHORITATIVE list and derives `addresses[]` from it (one source)', async () => {
+      const ctx = createCustomerContext();
+      mockDb.seedCollection('contacts', {
+        'cont_test_001': {
+          companyId: 'test-company-001',
+          type: 'company',
+          customFields: {
+            gemiStatus: 'Ενεργή',
+            companyAddresses: [
+              { id: 'addr_hq', type: 'headquarters', street: 'Αγγελάκη', number: '5', postalCode: '54621', city: 'Θεσσαλονίκη', neighborhood: 'Κέντρο' },
+            ],
+          },
+          // Μπαγιάτικο παράγωγο: δεν επιτρέπεται να γίνει πηγή.
+          addresses: [{ street: 'Παλιά', number: '1', city: 'Χ', postalCode: '', country: 'GR', type: 'work', isPrimary: true }],
+        },
+      });
+
+      const result = await handler.execute('append_contact_info', {
+        fieldType: 'address',
+        value: 'Ορφέως 7, 69100 Κομοτηνή',
+      }, ctx);
+
+      expect(result.success).toBe(true);
+      const doc = mockDb.getData('contacts', 'cont_test_001') as Record<string, unknown>;
+      const customFields = doc.customFields as Record<string, unknown>;
+      const list = customFields.companyAddresses as Array<Record<string, unknown>>;
+      expect(list).toHaveLength(2);
+      expect(list[0]).toEqual(expect.objectContaining({ id: 'addr_hq', street: 'Αγγελάκη', neighborhood: 'Κέντρο' }));
+      expect(list[1]).toEqual(expect.objectContaining({ type: 'branch', street: 'Ορφέως', number: '7', postalCode: '69100', city: 'Κομοτηνή' }));
+      expect(typeof list[1].id).toBe('string');
+      // Τα αδελφά customFields μένουν (διαδρομή πεδίου, όχι αντικατάσταση χάρτη).
+      expect(customFields.gemiStatus).toBe('Ενεργή');
+      const derived = doc.addresses as Array<Record<string, unknown>>;
+      expect(derived.map((a) => a.street)).toEqual(['Αγγελάκη', 'Ορφέως']);
+      expect(derived[0]).toEqual(expect.objectContaining({ neighborhood: 'Κέντρο', isPrimary: true }));
+    });
+
+    test('first address of an individual is `home` in the list (ADR-319 type of the kind)', async () => {
+      const ctx = createCustomerContext();
+      mockDb.seedCollection('contacts', {
+        'cont_test_001': { companyId: 'test-company-001', type: 'individual' },
+      });
+
+      await handler.execute('append_contact_info', { fieldType: 'address', value: 'Ορφέως 7, 69100 Κομοτηνή' }, ctx);
+
+      const doc = mockDb.getData('contacts', 'cont_test_001') as Record<string, unknown>;
+      const list = (doc.customFields as Record<string, unknown>).companyAddresses as Array<Record<string, unknown>>;
+      expect(list).toEqual([expect.objectContaining({ type: 'home', street: 'Ορφέως' })]);
+    });
   });
 
   // ==========================================================================

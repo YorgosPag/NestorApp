@@ -8,9 +8,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import { CONTACT_FIELD_TYPES, CONTACT_TYPES } from '../agentic-tool-definitions';
 import type { ContactFieldType, ContactTypeEnum } from '../agentic-tool-definitions';
-import type { AddressInfo } from '@/types/contacts/contracts';
-import { ADDRESS_LABEL_MAP, parseGreekAddress } from './address-parser';
-import { isBlankContactAddress } from '@/utils/contacts/contact-address-blankness';
+import { parseGreekAddress } from './address-parser';
+import { buildContactAddressAppendPatch } from './contact-address-append';
 import {
   type AgenticContext,
   type ToolHandler,
@@ -270,20 +269,8 @@ export class ContactHandler implements ToolHandler {
       };
       updatePayload.phones = [...currentPhones, newEntry];
     } else if (fieldType === 'address') {
-      const parsed = parseGreekAddress(value);
-      const addressType = ADDRESS_LABEL_MAP[label] ?? (entity === 'individual' ? 'home' : 'work');
-      // ADR-332 D20: μια προϋπάρχουσα ΚΕΝΗ εγγραφή δεν επιτρέπεται να επιβιώσει
-      // ούτε να κρατήσει το `isPrimary` — αλλιώς η νέα, πραγματική διεύθυνση
-      // μένει για πάντα δευτερεύουσα πίσω από ένα κενό.
-      const currentAddresses = ((contactData.addresses ?? []) as AddressInfo[])
-        .filter(address => !isBlankContactAddress(address));
-      const newAddress: AddressInfo = {
-        ...parsed,
-        type: addressType,
-        isPrimary: currentAddresses.length === 0,
-        country: parsed.country || 'GR',
-      };
-      updatePayload.addresses = [...currentAddresses, newAddress];
+      // ADR-332 §D30 Φάση 2: στην ΑΥΘΕΝΤΙΚΗ λίστα + το παράγωγό της, από τον ίδιο builder.
+      Object.assign(updatePayload, buildContactAddressAppendPatch(contactData, parseGreekAddress(value), label));
     } else if (fieldType === 'email') {
       const normalizedEmail = value.toLowerCase().trim();
       const currentEmails = (contactData.emails ?? []) as Array<{ email: string }>;

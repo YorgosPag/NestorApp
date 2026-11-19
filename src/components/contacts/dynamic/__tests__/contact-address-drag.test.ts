@@ -13,7 +13,7 @@ import { act, renderHook } from '@testing-library/react';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { useHqAddressMutations } from '../use-hq-address-mutations';
-import { hqEntryFromFlatFields } from '../addresses-section-form-mapping';
+import { contactAddressList } from '../contact-hq-state';
 import { buildAddressInfoListFromCompanyAddresses } from '@/utils/contacts/address-info-builder';
 import { toContactDraggedAddress, type DragResolvedAddress } from '@/components/contacts/details/contact-pin-drop';
 
@@ -38,9 +38,7 @@ function form(partial: Partial<ContactFormData> = {}): ContactFormData {
   return {
     ...initialFormData,
     type: 'company', companyName: 'ALFA',
-    street: HQ.street, streetNumber: HQ.number, postalCode: HQ.postalCode, city: HQ.city,
-    municipality: 'Θεσσαλονίκης', municipalityId: 'm_thess', neighborhood: 'Άνω Πόλη',
-    companyAddresses: [HQ, BRANCH],
+    companyAddresses: [{ ...HQ, neighborhood: 'Άνω Πόλη' }, BRANCH],
     ...partial,
   };
 }
@@ -55,7 +53,6 @@ function setup(formData: ContactFormData) {
   const { result } = renderHook(() => useHqAddressMutations({
     formData,
     setFormData,
-    effectiveAddresses: formData.companyAddresses ?? [],
     onDragMissingNumber,
   }));
   const last = () => writes[writes.length - 1];
@@ -71,10 +68,8 @@ describe('ADR-332 D27 Β-ΙΙ Φ4 — υποκατάστημα', () => {
     expect(branch).toMatchObject({ id: 'addr_br', street: 'Εγνατίας', number: '12', coordinates: POINT, source: 'dragged' });
     expect(branch.municipalityName).toBe('');
     expect(branch.municipalityId).toBeNull();
-    // Τα επίπεδα πεδία της ΕΔΡΑΣ δεν αγγίζονται από σύρσιμο υποκαταστήματος.
-    expect(last().municipality).toBe('Θεσσαλονίκης');
-    expect(last().municipalityId).toBe('m_thess');
-    expect(last().neighborhood).toBe('Άνω Πόλη');
+    // Η ΕΔΡΑ (θέση 0) δεν αγγίζεται από σύρσιμο υποκαταστήματος — ούτε ένα πεδίο.
+    expect(last().companyAddresses![0]).toEqual({ ...HQ, neighborhood: 'Άνω Πόλη' });
   });
 
   it('«Μόνο η θέση» ⇒ μόνο θέση· κείμενο ίδιο· τα μπαγιάτικα μεταδεδομένα της μηχανής φεύγουν', () => {
@@ -89,22 +84,25 @@ describe('ADR-332 D27 Β-ΙΙ Φ4 — υποκατάστημα', () => {
 });
 
 describe('ADR-332 D27 Β-ΙΙ Φ4 — έδρα', () => {
-  it('«Ναι, ενημέρωσε» ⇒ θέση στη θέση 0 ΚΑΙ επίπεδα πεδία με καθαρή ιεραρχία (ADR-277)', () => {
+  it('«Ναι, ενημέρωσε» ⇒ κείμενο + θέση στη θέση 0 με καθαρή ιεραρχία (ADR-277)· υποκατάστημα άθικτο', () => {
     const { result, last, onDragMissingNumber } = setup(form());
     act(() => result.current.applyConfirmedDrag(DRAGGED, 0, POINT));
 
-    expect(last().companyAddresses![0]).toMatchObject({ street: 'Εγνατίας', coordinates: POINT, source: 'dragged' });
-    expect(last()).toMatchObject({ street: 'Εγνατίας', streetNumber: '12', municipality: '', settlement: 'Θεσσαλονίκη', neighborhood: 'Κέντρο' });
+    expect(last().companyAddresses![0]).toMatchObject({
+      id: 'addr_hq', street: 'Εγνατίας', number: '12', city: 'Θεσσαλονίκη', neighborhood: 'Κέντρο',
+      municipalityName: '', municipalityId: null, coordinates: POINT, source: 'dragged',
+    });
+    expect(last().companyAddresses![1]).toEqual(BRANCH);
     expect(onDragMissingNumber).toHaveBeenCalledWith(DRAGGED);
   });
 
-  it('επαφή ΜΟΝΟ με επίπεδα πεδία ⇒ η πρώτη θέση υλοποιεί τη θέση 0, ΜΕ την ιεραρχία της', () => {
+  it('επαφή χωρίς λίστα ⇒ η πρώτη θέση υλοποιεί τη θέση 0 με τον τύπο ADR-319 του είδους', () => {
     const { result, last } = setup(form({ companyAddresses: [] }));
     act(() => result.current.applyConfirmedDrag(null, 0, POINT));
 
     const list = last().companyAddresses!;
     expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ street: 'Αγγελάκη', municipalityName: 'Θεσσαλονίκης', coordinates: POINT, source: 'dragged' });
+    expect(list[0]).toMatchObject({ type: 'headquarters', coordinates: POINT, source: 'dragged' });
   });
 
   it('placement → «Ναι, ενημέρωσε» στον ΙΔΙΟ κύκλο ⇒ η τελευταία εγγραφή κουβαλά ΚΑΙ θέση ΚΑΙ κείμενο', () => {
@@ -155,8 +153,7 @@ describe('ADR-332 D27 Φάση Α — η χώρα είναι ΚΩΔΙΚΑΣ, ό�
   it('Ζ4δ — νέα επαφή: η αυθεντική εγγραφή και το ΠΑΡΑΓΩΓΟ συμφωνούν στη χώρα', () => {
     // Μετρημένο στο έγγραφο του Λ6: `companyAddresses[0].country` **έλειπε εντελώς** ενώ το
     // παράγωγο `addresses[0]` έγραφε `'GR'` — δύο αποφάσεις για την κενή χώρα, σε δύο αρχεία.
-    const flat = form({ companyAddresses: [], hqAddressCountry: undefined });
-    const stored = hqEntryFromFlatFields(flat);
+    const [stored] = contactAddressList(form({ companyAddresses: [] }));
     const derived = buildAddressInfoListFromCompanyAddresses([stored]);
 
     expect(stored.country).toBe(derived[0].country);

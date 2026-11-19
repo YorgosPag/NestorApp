@@ -90,7 +90,6 @@ const BRANCH: CompanyAddress = {
 function initial(): ContactFormData {
   return {
     ...initialFormData, id: 'cont_1', type: 'company', companyName: 'ALFA',
-    street: HQ.street, streetNumber: HQ.number, postalCode: HQ.postalCode, city: HQ.city,
     companyAddresses: [HQ, BRANCH],
   };
 }
