@@ -173,6 +173,9 @@ export function PropertyDetailsHeader({
           icon={PropertyIcon}
           iconColor={propertyColor}
           title={headerTitle}
+          // Ίδιο σήμα με τη σελίδα εγγραφής και την κάρτα (ADR-777 §8.103): το πάνελ της λίστας δεν έλεγε αν το
+          // ακίνητο είναι στο κοινό. Στη δημιουργία δεν υπάρχει ακόμη ακίνητο ⇒ τίποτα.
+          titleAdornment={isCreatingNewUnit ? undefined : <PropertyIdentityStatus property={property} />}
           actions={actions}
           variant="detailed"
         />

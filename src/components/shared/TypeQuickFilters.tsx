@@ -269,7 +269,9 @@ export function TypeQuickFilters({
                   <span className="ml-1">{t('filters.all')}</span>
                 )}
                 {count !== undefined && (
-                  <span aria-hidden="true" className={cn('ml-1 tabular-nums', colors.text.muted)}>
+                  // Πατημένο ⇒ ο μετρητής κληρονομεί το μελάνι του κουμπιού (Fluent 2 checked: ένα foreground για όλο το
+                  // περιεχόμενο). Το `text-muted` πάνω στο `bg-control-accent` έδινε ≈1,0:1 και ο αριθμός χανόταν.
+                  <span aria-hidden="true" className={cn('ml-1 tabular-nums', !active && colors.text.muted)}>
                     {count}
                   </span>
                 )}

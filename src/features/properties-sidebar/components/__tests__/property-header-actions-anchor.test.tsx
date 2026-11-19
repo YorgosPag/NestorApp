@@ -156,8 +156,17 @@ describe('Υ5 — σήμα παρουσίας στην κεφαλίδα σελί
     expect(screen.queryByText(AUDIENCE)).toBeNull();
   });
 
-  it('✅ `compact` (δεξιά στήλη): κανένα σήμα — η λίστα δίπλα είναι η ταυτότητα', () => {
+  // 🔄 Ανατράπηκε 2026-11-20 (ADR-777 §8.103): ως τότε «κανένα σήμα — η λίστα δίπλα είναι η ταυτότητα». Το πάνελ
+  //    αποδίδεται και ως φύλλο κινητού, όπου η λίστα ΔΕΝ είναι δίπλα· SAP Fiori / Azure DevOps: το πάνελ λέει μόνο του
+  //    τις κύριες πληροφορίες του αντικειμένου.
+  it('✅ `compact` (δεξιά στήλη): το ΙΔΙΟ σήμα παρουσίας με τη σελίδα', () => {
     mountWith({ commercialStatus: 'for-sale' }, 'compact');
+    expect(screen.getByText('listingPresence.public')).toBeInTheDocument();
+  });
+
+  it('✅ `compact` στη δημιουργία: κανένα σήμα — δεν υπάρχει ακόμη ακίνητο να δημοσιευθεί', () => {
+    const property = { ...PROPERTY, type: 'apartment', commercialStatus: 'for-sale' } as unknown as Property;
+    render(<PropertyDetailsHeader property={property} identity="compact" isCreatingNewUnit />);
     expect(screen.queryByText(AUDIENCE)).toBeNull();
   });
 });

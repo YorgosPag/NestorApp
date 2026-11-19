@@ -88,7 +88,10 @@ const LISTING_PRESENCE_PRESENTATION: Readonly<
   public: { variant: 'success', icon: Globe },
   network: { variant: 'outline', icon: Network },
   custodians: { variant: 'outline', icon: Lock },
-  unlisted: { variant: 'outline', icon: EyeOff, className: 'border-dashed' },
+  // Το διακεκομμένο είναι **φορέας νοήματος** («δεν υπάρχει αγγελία»), άρα ζητά τον ρόλο περιγράμματος ≥3:1
+  // (WCAG 1.4.11 · Material 3 `outline` έναντι του διακοσμητικού `outline-variant`). Το γενικό `--border` του
+  // `outline` badge μετρήθηκε 1,46:1 στο σκοτεινό θέμα (ADR-777 §8.103): η γραμμή υπήρχε στο DOM και δεν φαινόταν.
+  unlisted: { variant: 'outline', icon: EyeOff, className: 'border-dashed border-control-outline' },
   settled: { variant: 'secondary', icon: Flag },
 };
 

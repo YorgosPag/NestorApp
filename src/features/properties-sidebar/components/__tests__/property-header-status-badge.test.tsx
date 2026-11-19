@@ -114,9 +114,12 @@ describe('Κ-ΚΕΦ — το σήμα κατάστασης στην κεφαλί
     expect(declaresBoth).toBe(true);
   });
 
-  it('✅ `compact` (δεξιά στήλη): κανένα σήμα — το λέει η κάρτα της λίστας δίπλα', () => {
+  // 🔄 Ανατράπηκε 2026-11-20 (ADR-777 §8.103): ως τότε «κανένα σήμα — το λέει η κάρτα της λίστας δίπλα».
+  it('✅ `compact` (δεξιά στήλη): το ΙΔΙΟ σήμα κατάστασης, στη γραμμή του τίτλου', () => {
     mountWith({ commercialStatus: 'unavailable' }, 'compact');
 
-    expect(screen.queryByText(STATUS)).toBeNull();
+    const status = screen.getByText(STATUS);
+    const titleRow = screen.getByRole('heading', { level: 3, name: 'Δοκιμή' }).parentElement;
+    expect(titleRow).toContainElement(status);
   });
 });
