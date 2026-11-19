@@ -47,13 +47,21 @@ jest.mock('@/services/owner-property/owner-property-publication.service', () => 
 }));
 
 const audited: Record<string, unknown>[] = [];
-jest.mock('@/services/entity-audit.service', () => ({
-  EntityAuditService: {
-    recordChange: jest.fn(async (entry: Record<string, unknown>) => {
-      audited.push(entry);
-    }),
-  },
-}));
+// ⚠️ `requireActual` + ΕΝΑ override (ίδιος κανόνας με το ADR-867 Β3 παρακάτω): από το 2ba1e206 η επαφή λογαριασμού σφραγίζει
+//    τον εκτελούντα με το `resolveUserDisplayName` του ίδιου module — σκέτο αντικείμενο το έσβηνε ⇒ «is not a function».
+//    Το όνομα λύνεται χωρίς τον πραγματικό Admin SDK: «κανένα έγγραφο χρήστη» ⇒ το fallback, όπως και στην παραγωγή.
+jest.mock('@/services/entity-audit.service', () => {
+  const actual = jest.requireActual('@/services/entity-audit.service');
+  return {
+    ...actual,
+    resolveUserDisplayName: jest.fn(async (_uid: string, fallback: string | null) => fallback),
+    EntityAuditService: {
+      recordChange: jest.fn(async (entry: Record<string, unknown>) => {
+        audited.push(entry);
+      }),
+    },
+  };
+});
 
 let contactSeq = 0;
 // ⚠️ **`requireActual` + ΕΝΑ override, ποτέ σκέτο αντικείμενο** (ADR-867 Β3): το module

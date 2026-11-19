@@ -20,7 +20,7 @@ import type { ExtractedCell, ExtractedGroup, ImportProposalField, ImportProposal
 import type { ImportValueMemoryHint } from '../types/catalog-import-requests';
 import { normalizeUniqueText } from '../values/normalize-unique';
 import type { ValueTextContext } from '../values/value-text-codec';
-import { editSourceOf, editsByAddress, fieldAddress, fieldSourcesOf, type EditStamp, type FieldSource } from './human-edits';
+import { editSourceOf, editsByAddress, fieldAddress, fieldSourcesOf, isUnitDoubted, type EditStamp, type FieldSource } from './human-edits';
 import type { ModelLevelTest } from './model-level-cells';
 import { valueMemoryKey } from './import-keys';
 import { importTargetKey, readsImportCell } from './proposal-values';
@@ -61,7 +61,7 @@ function unreadSource(source: FieldSource, schema: ValueMemorySchema): UnreadSou
   const [cell] = source.cells;
   const attribute = cell.target.kind === 'attribute' ? schema.attributes.get(cell.target.attributeId) : undefined;
   if (!attribute || attribute.type === 'text' || cell.text === null || cell.text.trim() === '') return null;
-  if (cell.flags.some((flag) => flag.code === 'unitUnconfirmed')) return null;
+  if (isUnitDoubted(cell)) return null;
   return reads(attribute, cell.text, cell.unitCode, schema.context) ? null : { attribute, cell: { ...cell, text: cell.text } };
 }
 

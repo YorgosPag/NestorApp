@@ -508,15 +508,16 @@ describe('🔴 Τ — Ο TAILWIND ΠΡΕΠΕΙ ΝΑ ΒΛΕΠΕΙ ΤΙΣ ΚΛΑΣ
     }
   });
 
-  it('🔴 ΚΑΜΙΑ κλάση Tailwind στο αρχείο των ΕΠΙΦΑΝΕΙΩΝ — ζει εκεί που ο σαρωτής ΔΕΝ κοιτά', () => {
-    // ⚠️ Το `lib/` **δεν σαρώνεται**: μια κλάση εδώ θα δούλευε μόνο όσο τη χρησιμοποιεί
-    //    κάποιος γείτονας, και θα έσβηνε σιωπηλά την ημέρα που εκείνος αλλάξει.
+  it('🔴 ΚΑΜΙΑ κλάση Tailwind στο αρχείο των ΕΠΙΦΑΝΕΙΩΝ — οι κλάσεις ζουν ΜΟΝΟ στον πίνακα του πλαισίου', () => {
+    // ⚠️ Από το ADR-940 §9 (2026-11-12) ο σαρωτής κοιτά ΟΛΟ το `src/`, άρα και το `lib/` — η άγκυρα
+    //    έλεγε το αντίθετο και κοκκίνιζε από τότε. Ο κανόνας μένει για άλλον λόγο: ο πίνακας του
+    //    πλαισίου (`showcase-mark-frame.ts`) είναι η ΜΙΑ πηγή των κλάσεων· οι επιφάνειες δεν δηλώνουν δεύτερη.
     const surfaces = fs.readFileSync(
       path.join(process.cwd(), 'src/lib/agency/showcase-mark-surfaces.ts'),
       'utf8',
     );
 
-    expect(isScannedByTailwind('src/lib/agency/showcase-mark-surfaces.ts')).toBe(false);
+    expect(isScannedByTailwind('src/lib/agency/showcase-mark-surfaces.ts')).toBe(true);
     expect(surfaces).not.toMatch(/className/);
   });
 });

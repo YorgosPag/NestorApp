@@ -83,6 +83,9 @@ export const editSourceOf = (source: FieldSource): Pick<ImportValueEdit, 'source
 
 const editKey = (edit: Pick<ImportValueEdit, 'rowKey' | 'targetKey'>): string => fieldAddress(edit.rowKey, edit.targetKey);
 
+/** Η μονάδα του κελιού είναι **υπόθεση** της ανάγνωσης (`unitUnconfirmed`), όχι κάτι που τύπωσε η πηγή δίπλα στον αριθμό. */
+export const isUnitDoubted = (cell: ExtractedCell): boolean => cell.flags.some((flag) => flag.code === 'unitUnconfirmed');
+
 /**
  * Διορθώσεις (όχι επαναφορές) σε διεύθυνση που η πηγή **δεν** έχει. Ο γραφέας τις αρνείται ρητά: ως 2026-11-14 προσπερνιούνταν και
  * ο άνθρωπος έπαιρνε «αποθηκεύτηκε» για διόρθωση που δεν γράφτηκε ποτέ.
@@ -115,7 +118,9 @@ export function recordEdits(
     const cells = sources.get(key)?.cells;
     if (cells === undefined) continue;
     const source = sourceOf(cells.map((cell) => cell.text));
-    const unchanged = source.sourceTexts === undefined && input.text === (source.sourceText ?? '');
+    // Αμφισβητούμενη μονάδα ⇒ καμία διόρθωση δεν είναι «ίδια με την πηγή»: ο γυμνός αριθμός **βγάζει** τη μονάδα (`withEdit`), και
+    // ίδιο ωμό κείμενο με της πηγής δεν σημαίνει ίδια τιμή. Ως 2026-11-19 το «1000» πάνω σε «1000 kW;» πεταγόταν σιωπηλά.
+    const unchanged = source.sourceTexts === undefined && !cells.some(isUnitDoubted) && input.text === (source.sourceText ?? '');
     if (input.revert === true || unchanged) edits.delete(key);
     else edits.set(key, { rowKey: input.rowKey, targetKey: input.targetKey, text: input.text, ...source, ...stamp });
   }
@@ -169,8 +174,7 @@ const printsText = ({ text, unitCode }: ExtractedCell, wanted: string): boolean 
 
 function withEdit(cell: ExtractedCell, edit: ImportValueEdit): ExtractedCell {
   // Η αμφισβητούμενη μονάδα δεν ντύνει ό,τι έγραψε ο άνθρωπος: γυμνός αριθμός εκεί ξαναζητά μονάδα.
-  const unitDoubted = cell.flags.some((flag) => flag.code === 'unitUnconfirmed');
-  return { ...cell, text: edit.text.trim() === '' ? null : edit.text, confidence: 1, flags: [], unitCode: unitDoubted ? null : cell.unitCode };
+  return { ...cell, text: edit.text.trim() === '' ? null : edit.text, confidence: 1, flags: [], unitCode: isUnitDoubted(cell) ? null : cell.unitCode };
 }
 
 /**
