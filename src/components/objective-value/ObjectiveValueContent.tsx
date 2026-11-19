@@ -59,8 +59,10 @@ export function ObjectiveValueContent() {
   const result = useMemo(() => computeObjectiveValue(draftToInput(effective, today)), [effective, today]);
   const questions = useMemo(() => relevantQuestions(effective, today), [effective, today]);
 
+  // `busy={false}` ΡΗΤΑ (ADR-797 §Φ.Ρ.3): η σελίδα δεν φορτώνει αρχικά δεδομένα (η τιμή ζώνης ζητείται όταν ο
+  // επισκέπτης δώσει θέση) — αλλά είναι στο εύρος του CHECK 3.94, που ζητά `aria-busy="false"` ως μάρτυρα ετοιμότητας.
   return (
-    <ShellSurface as="main" measure="wide" className="gap-y-6 py-4">
+    <ShellSurface as="main" measure="wide" busy={false} className="gap-y-6 py-4">
       <PageHeader />
       {/* Πλέγμα διάταξης μόνο (καμία σημασιολογία): οι ενότητες με επικεφαλίδα είναι τα βήματα μέσα του. */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">

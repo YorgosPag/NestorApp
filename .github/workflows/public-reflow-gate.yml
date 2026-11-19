@@ -15,6 +15,7 @@ on:
       - 'src/components/shared/landing-hero/**'
       - 'src/components/mandate/**'
       - 'src/components/short-stay-landing/**'
+      - 'src/components/objective-value/**'
       - 'src/core/containers/ShellUtilities.tsx'
       - 'src/core/containers/ShellSurface.tsx'
       - 'src/components/header/**'
@@ -36,6 +37,7 @@ on:
       - 'src/components/shared/landing-hero/**'
       - 'src/components/mandate/**'
       - 'src/components/short-stay-landing/**'
+      - 'src/components/objective-value/**'
       - 'src/core/containers/ShellUtilities.tsx'
       - 'src/core/containers/ShellSurface.tsx'
       - 'src/components/header/**'
@@ -115,9 +117,13 @@ jobs:
           tail -80 /tmp/dev-server.log
           exit 1
 
+      # ⏱️ `PLAYWRIGHT_LIST_PRINT_STEPS=1`: ο reporter `list` τυπώνει τη διάρκεια ΚΑΘΕ ονομασμένου βήματος
+      # (goto · κεφαλίδα · aria-busy · μέτρηση) τη στιγμή που τελειώνει — μετρημένο 2026-11-19: τα πράσινα
+      # tests κόστιζαν 33–55 s και η αναφορά HTML (γράφεται μόνο στο τέλος) χάνεται όταν το job ακυρώνεται.
       - name: 📱 CHECK 3.94 — η πύλη αναδιάταξης
         env:
           PLAYWRIGHT_WEB_SERVER_URL: http://localhost:3000/
+          PLAYWRIGHT_LIST_PRINT_STEPS: '1'
         run: pnpm run test:public-reflow
 
       - name: 📤 Upload playwright report
@@ -130,8 +136,10 @@ jobs:
             reports/junit/playwright.xml
           if-no-files-found: warn
 
+      # `always()`, όχι `failure()`: ένα job που ακυρώνεται στο όριο ΔΕΝ είναι «failure» ⇒ το log (χρόνοι
+      # μεταγλώττισης και απόκρισης ανά αίτημα του server) χανόταν ακριβώς όταν χρειαζόταν.
       - name: 📤 Upload dev server log
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: public-reflow-dev-server-log

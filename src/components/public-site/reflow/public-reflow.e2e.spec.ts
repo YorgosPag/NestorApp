@@ -45,7 +45,11 @@ const MAX_SAMPLES = 20;
  * Τα ευρήματα **αφού ηρεμήσει η διάταξη** (ADR-797 §Φ.Ρ.2) — και οι δύο ερωτήσεις από το ΙΔΙΟ δείγμα.
  * ⛔ Αν δεν ηρεμήσει ποτέ, η πύλη **ΑΠΟΤΥΓΧΑΝΕΙ** ρητά — ποτέ «πήρα το τελευταίο δείγμα και πέρασα».
  */
-async function findingsOf(page: Page): Promise<ReflowFindings> {
+function findingsOf(page: Page): Promise<ReflowFindings> {
+  return test.step('ηρεμία διάταξης + μέτρηση', () => sampleUntilStable(page));
+}
+
+async function sampleUntilStable(page: Page): Promise<ReflowFindings> {
   let previous = '';
   let agreeing = 0;
   for (let sample = 0; sample < MAX_SAMPLES; sample += 1) {
@@ -69,17 +73,26 @@ function expectFits(findings: ReflowFindings, where: string): void {
   expect.soft(findings.clipped, `${where} — κείμενο ψαλιδισμένο από το κουτί του`).toEqual([]);
 }
 
+/**
+ * ⏱️ Κάθε φάση ως **ονομασμένο βήμα** — με `PLAYWRIGHT_LIST_PRINT_STEPS=1` (workflow) ο reporter `list` τυπώνει τη
+ * διάρκεια ΚΑΘΕ βήματος τη στιγμή που τελειώνει. 🔴 Μετρημένο 2026-11-19: τα πράσινα tests κόστιζαν 33–55 s και η
+ * αναφορά HTML γράφεται μόνο στο τέλος — που ένα ακυρωμένο run δεν φτάνει ποτέ ⇒ καμία απάντηση στο «πού πάει ο χρόνος».
+ */
 async function openRoute(page: Page, route: string) {
-  const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
-  expect(response?.ok(), `${route}: η σελίδα δεν αποδόθηκε (HTTP ${response?.status()})`).toBe(true);
+  await test.step(`${route}: goto (domcontentloaded)`, async () => {
+    const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
+    expect(response?.ok(), `${route}: η σελίδα δεν αποδόθηκε (HTTP ${response?.status()})`).toBe(true);
+  });
   // Αρνητικός μάρτυρας ζωής: χωρίς ορατή κεφαλίδα, «μηδέν παραβάτες» δεν σημαίνει τίποτα.
-  await expect(page.locator('header nav').first()).toBeVisible({ timeout: 60_000 });
+  await test.step(`${route}: ορατή κεφαλίδα`, () =>
+    expect(page.locator('header nav').first()).toBeVisible({ timeout: 60_000 }));
   // 🔑 ΜΑΡΤΥΡΑΣ ΕΤΟΙΜΟΤΗΤΑΣ (ADR-797 §Φ.Ρ.3): κάθε σελίδα του εύρους φορτώνει δεδομένα και το ΔΗΛΩΝΕΙ
   //    (`<main aria-busy>` — `ShellSurface.busy`). Μετρημένο 2026-09-26: για ~3 s το `/stay` δεν είχε ούτε
   //    πεδίο ούτε κάρτες, και «3 δείγματα που συμφωνούν» έκριναν ήρεμη μια ΑΔΕΙΑ σελίδα. ⛔ Σελίδα που δεν
   //    δηλώνει `aria-busy` ή δεν βγαίνει ποτέ από τη φόρτωση ΑΠΟΤΥΓΧΑΝΕΙ — κι αυτό είναι βλάβη, όχι θόρυβος.
-  await expect(page.locator('main').first(), `${route}: η σελίδα δεν βγήκε από τη φόρτωση (<main aria-busy>)`)
-    .toHaveAttribute('aria-busy', 'false', { timeout: 60_000 });
+  await test.step(`${route}: <main aria-busy="false">`, () =>
+    expect(page.locator('main').first(), `${route}: η σελίδα δεν βγήκε από τη φόρτωση (<main aria-busy>)`)
+      .toHaveAttribute('aria-busy', 'false', { timeout: 60_000 }));
 }
 
 for (const theme of REFLOW_THEMES) {
