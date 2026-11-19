@@ -27,7 +27,6 @@ import { CompanyAddressesSection, type CompanyAddressesSectionHandle } from '@/c
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
 import type { DragResolvedAddress } from '@/components/contacts/details/contact-pin-drop';
 import type { DragApplyMode } from '@/components/shared/addresses/pin-drop';
-import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { createProjectAddress } from '@/types/project/address-helpers';
@@ -36,8 +35,7 @@ import { useClearCompanyHqAddress } from '@/components/contacts/dynamic/useClear
 import { useDerivedWorkAddresses } from '@/components/contacts/relationships/hooks/useDerivedWorkAddresses';
 import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
-import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
-import { pruneBlankContactAddresses } from '@/utils/contacts/contact-address-blankness';
+import { isBlankContactAddress, pruneBlankContactAddresses } from '@/utils/contacts/contact-address-blankness';
 import { addressListCenter } from '@/utils/address/address-list-center';
 import { useNotifications } from '@/providers/NotificationProvider';
 
@@ -48,11 +46,9 @@ interface AddressesSectionWithFullscreenProps {
 }
 
 // Καθαρές συναρτήσεις χαρτογράφησης — εξήχθησαν (N.7.1)
-import {
-  formatHqStreetLine,
-  formDataToResolvedFields,
-  hqEntryFromFlatFields,
-} from './addresses-section-form-mapping';
+import { contactAddressToResolvedFields, formatContactAddressStreetLine } from './addresses-section-form-mapping';
+// ADR-332 §D30 Φάση 2 — η έδρα ΕΙΝΑΙ η θέση 0 της λίστας: μία ανάγνωση, ένας γραφέας.
+import { contactAddressList } from './contact-hq-state';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 // Ο ΕΝΑΣ ιδιοκτήτης της εγγραφής της έδρας — εξήχθη (N.7.1, ADR-772).
 import { useHqAddressMutations } from './use-hq-address-mutations';
@@ -105,32 +101,25 @@ export function AddressesSectionWithFullscreen({
     [derivedWorkAddresses, workTypeLabel]
   );
 
-  // Stable resolved fields for the HQ AddressEditor (recomputed only when basic fields change).
-  const hqResolvedFields = useMemo(
-    () => formDataToResolvedFields(formData),
+  /**
+   * ADR-332 D20 · §D30 Φάση 2 — η λίστα που βλέπει η οθόνη. Επαφή χωρίς διεύθυνση δείχνει την
+   * **κενή** έδρα στη θέση 0: υπάρχει για να έχει η οθόνη κάρτα έδρας, ΔΕΝ είναι δεδομένο (κάθε
+   * εγγραφή της λίστας περνά από το `pruneBlankContactAddresses`).
+   */
+  const effectiveAddresses = useMemo(
+    () => contactAddressList(formData),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [formData.street, formData.streetNumber, formData.postalCode, formData.city,
-     formData.settlement, formData.neighborhood, formData.region],
+    [formData.companyAddresses, formData.type],
   );
+  const hq = effectiveAddresses[0];
+
+  // Stable resolved fields for the HQ AddressEditor (recomputed only when the HQ entry changes).
+  const hqResolvedFields = useMemo(() => contactAddressToResolvedFields(hq), [hq]);
 
   const isEditing = !disabled;
 
-  /** Has any HQ field been filled? Drives disabled state of Clear button. */
-  const hqHasValue =
-    !!formData.street ||
-    !!formData.streetNumber ||
-    !!formData.postalCode ||
-    !!formData.city ||
-    !!formData.settlement ||
-    !!formData.settlementId ||
-    !!formData.community ||
-    !!formData.municipalUnit ||
-    !!formData.municipality ||
-    !!formData.municipalityId ||
-    !!formData.regionalUnit ||
-    !!formData.region ||
-    !!formData.decentAdmin ||
-    !!formData.majorGeo;
+  /** Has the HQ any content? Drives the Clear affordance — the ONE blankness rule (ADR-332 D20). */
+  const hqHasValue = !isBlankContactAddress(hq);
 
   /** Keyboard affordance: Ctrl+Backspace on HQ form triggers clear. */
   const handleHqKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -154,28 +143,12 @@ export function AddressesSectionWithFullscreen({
     });
   }, [notify, tContacts]);
 
-  // ADR-319: semantic type for the primary (flat-field) address — resolved from
-  // formData or derived from the contact type (`home` for individuals,
-  // `headquarters` for companies/services).
-  const primaryType: ContactAddressType = formData.primaryAddressType ?? getPrimaryAddressType(formData.type);
-  const primaryCustomLabel = formData.primaryAddressCustomLabel;
+  // ADR-319: ο σημασιολογικός τύπος της έδρας ζει στην ίδια την εγγραφή (`home` για φυσικά
+  // πρόσωπα, `headquarters` για εταιρείες, …) — όχι σε δεύτερο πεδίο της φόρμας.
+  const primaryType = hq.type;
+  const primaryCustomLabel = hq.customLabel;
 
-  const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
-  /**
-   * ADR-332 D20 — όταν η λίστα είναι κενή, η γραμμή έδρας είναι **συνθετική**: υπάρχει μόνο
-   * για να έχει η οθόνη θέση έδρας. ΔΕΝ είναι δεδομένο — κάθε σημείο που γράφει
-   * `companyAddresses` περνά από το `pruneBlankContactAddresses`. Β-ΙΙ: την ίδια εγγραφή
-   * (με ιεραρχία) υλοποιεί η πρώτη τοποθέτηση θέσης (`hqEntryFromFlatFields`).
-   */
-  const effectiveAddresses: CompanyAddress[] = currentAddresses.length > 0
-    ? currentAddresses
-    : [hqEntryFromFlatFields(formData)];
-
-  /**
-   * Όλες οι γραφές της έδρας — **ένας** ιδιοκτήτης (N.7.1 / ADR-772).
-   * Η έδρα ζει σε δύο δοχεία (επίπεδα πεδία **και** θέση 0 της λίστας)· το hook
-   * κρατά την αναλλοίωτη ως δομή, όχι ως συνήθεια των σημείων κλήσης.
-   */
+  /** Όλες οι γραφές της έδρας — **ένας** ιδιοκτήτης, πάνω στον έναν γραφέα (`commitHq`). */
   const {
     handleHqChange,
     applyConfirmedDrag,
@@ -188,7 +161,6 @@ export function AddressesSectionWithFullscreen({
   } = useHqAddressMutations({
     formData,
     setFormData,
-    effectiveAddresses,
     onDragMissingNumber: maybeWarnMissingNumber,
   });
 
@@ -273,17 +245,15 @@ export function AddressesSectionWithFullscreen({
         {!isEditingHQ ? (
           <SharedAddressActionCard
             id="hq"
-            streetLine={formatHqStreetLine(formData)}
+            streetLine={formatContactAddressStreetLine(hq)}
             typeLabel={hqTypeLabel}
             isEditing={isEditing}
             onEdit={() => setIsEditingHQ(true)}
             onClear={clearHq}
             editLabel={tContacts('contacts-form:addressesSection.editAddress')}
             clearLabel={tContacts('contacts-form:addressesSection.clearAddress')}
-            {...(effectiveAddresses[0]?.id
-              ? { position: contactAddressPositionView({ ...effectiveAddresses[0], id: effectiveAddresses[0].id }) }
-              : {})}
-            footer={renderDriftFooter(effectiveAddresses[0])}
+            {...(hq.id ? { position: contactAddressPositionView({ ...hq, id: hq.id }) } : {})}
+            footer={renderDriftFooter(hq)}
           />
         ) : (
           <div className="border-2 border-primary rounded-lg p-3 space-y-3" onKeyDown={handleHqKeyDown}>
@@ -334,21 +304,9 @@ export function AddressesSectionWithFullscreen({
           renderCardFooter={renderDriftFooter}
           onChange={(newAddresses) => {
             if (!setFormData) return;
-            // ADR-332 D20: η συνθετική κενή έδρα δεν επιτρέπεται να γίνει δεδομένο.
-            const persistable = pruneBlankContactAddresses(newAddresses);
-            // ADR-319: HQ lives at index 0 (positional invariant) — `home` is
-            // primary for individuals, `headquarters` for companies/services,
-            // so find-by-type cannot match across both scopes.
-            const hq = persistable[0];
-            setFormData({
-              ...formData,
-              companyAddresses: persistable,
-              street: hq?.street ?? '',
-              streetNumber: hq?.number ?? '',
-              postalCode: hq?.postalCode ?? '',
-              city: hq?.city ?? '',
-              ...(hq ? { primaryAddressType: hq.type, primaryAddressCustomLabel: hq.customLabel } : {}),
-            });
+            // ADR-332 D20: η κενή έδρα της οθόνης δεν επιτρέπεται να γίνει δεδομένο. Η λίστα είναι
+            // το ΜΟΝΟ δοχείο της έδρας (θέση 0, ADR-319) — τίποτα άλλο να συγχρονιστεί (§D30 Φ2).
+            setFormData({ ...formData, companyAddresses: pruneBlankContactAddresses(newAddresses) });
           }}
         />
 
@@ -377,10 +335,6 @@ export function AddressesSectionWithFullscreen({
         <ContactAddressMapPreview
           className="!min-h-0 h-full rounded-lg"
           contactId={formData.id}
-          street={formData.street}
-          streetNumber={formData.streetNumber}
-          city={formData.city}
-          postalCode={formData.postalCode}
           companyAddresses={formData.companyAddresses}
           readOnlyExtraAddresses={derivedPinAddresses}
           draggable={isEditing}

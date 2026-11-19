@@ -9,19 +9,17 @@
  * (α) μηδένιζε τη διοικητική ιεραρχία **της έδρας** και της έγραφε τη συνοικία του
  * **υποκαταστήματος** σε **κάθε** σύρσιμο υποκαταστήματος, ενώ (β) **δεν** μηδένιζε την ιεραρχία
  * του ίδιου του υποκαταστήματος — μπαγιάτικος δήμος δίπλα σε νέα οδό. Εδώ κάθε εγγραφή
- * καθαρίζει **τη δική της** ιεραρχία, και τα επίπεδα πεδία της έδρας αλλάζουν **μόνο** όταν
- * σύρθηκε η έδρα.
+ * καθαρίζει **τη δική της** ιεραρχία.
  */
 
 import type { GeoPoint } from '@/types/geo/coordinates';
-import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
+import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { humanPlacedPatch } from '@/components/shared/addresses/pin-drop';
 import { provedHierarchyValue } from '@/components/shared/addresses/address-hierarchy-field-ops';
 import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
 import { overwriteAdminHierarchy } from '@/utils/address/administrative-hierarchy';
 import { toStoredCountryCode } from '@/utils/address/country-codes';
 import type { DragResolvedAddress } from '@/components/contacts/details/contact-pin-drop';
-import { hqEntryFromFlatFields } from './addresses-section-form-mapping';
 
 /**
  * Σημείο που επιβεβαίωσε άνθρωπος → η εγγραφή το **δηλώνει** (`source: 'dragged'`) και χάνει τα
@@ -103,31 +101,5 @@ function contactHierarchyPatch(dragged: DragResolvedAddress): Partial<CompanyAdd
   return { ...projected, city: form.settlementName || dragged.city };
 }
 
-/**
- * Η λίστα που γράφει η φόρμα. Επαφή με **μόνο** επίπεδα πεδία υλοποιεί εδώ τη θέση 0 — η θέση
- * χρειάζεται εγγραφή να ζήσει, και τα επίπεδα πεδία δεν έχουν χώρο γι' αυτήν.
- */
-export function contactAddressList(formData: ContactFormData): CompanyAddress[] {
-  const list = formData.companyAddresses ?? [];
-  return list.length > 0 ? [...list] : [hqEntryFromFlatFields(formData)];
-}
-
-/** Αντικαθιστά την εγγραφή `index` και ξανασυγχρονίζει τα επίπεδα πεδία από τη θέση 0 (ADR-319). */
-export function withContactAddressAt(
-  formData: ContactFormData,
-  index: number,
-  next: CompanyAddress,
-): ContactFormData {
-  const list = contactAddressList(formData);
-  if (index < 0 || index >= list.length) return formData;
-  list[index] = next;
-  const hq = list[0];
-  return {
-    ...formData,
-    companyAddresses: list,
-    street: hq.street,
-    streetNumber: hq.number,
-    postalCode: hq.postalCode,
-    city: hq.city,
-  };
-}
+// ADR-332 §D30 Φάση 2: το `contactAddressList` / `withContactAddressAt` μετακόμισαν στο
+// `contact-hq-state` — εκεί ζει ο ΕΝΑΣ γραφέας της λίστας, χωρίς επίπεδα πεδία να συγχρονιστούν.

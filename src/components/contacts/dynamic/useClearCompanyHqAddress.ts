@@ -3,8 +3,9 @@
 /**
  * useClearCompanyHqAddress — Google-level "Clear + Undo" for company HQ address
  *
- * Single optimistic click clears all 11+ HQ fields (street/number/postalCode +
- * 8-level Greek admin hierarchy) and companyAddresses[HQ] entry. Snapshot of
+ * Single optimistic click clears the HQ entry (`companyAddresses[0]`, ADR-319) — street/number/
+ * postalCode, the 8-level Greek admin hierarchy and the pin. ADR-332 §D30 Φάση 2: the HQ lives in
+ * ONE container, so there are no flat form fields to clear alongside it. Snapshot of
  * the full formData is captured before clearing; a 5s undo toast restores it
  * if the user changes their mind (Gmail pattern).
  *
@@ -19,28 +20,11 @@ import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { ContactFormData, CompanyAddress } from '@/types/ContactFormTypes';
-import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
+import type { ContactAddressType } from '@/types/contacts/address-types';
 import { COMPANY_ADDRESS_HIERARCHY_CLEARED } from './addresses-section-form-mapping';
+import { commitHq } from './contact-hq-state';
 
 const UNDO_DURATION_MS = 5000;
-
-/** Fields of ContactFormData cleared by the HQ "Clear address" action. */
-const HQ_CLEARED_FIELDS = {
-  street: '',
-  streetNumber: '',
-  postalCode: '',
-  city: '',
-  settlement: '',
-  settlementId: null,
-  community: '',
-  municipalUnit: '',
-  municipality: '',
-  municipalityId: null,
-  regionalUnit: '',
-  region: '',
-  decentAdmin: '',
-  majorGeo: '',
-} as const satisfies Partial<ContactFormData>;
 
 /**
  * Build a cleared HQ entry preserving the caller's semantic type (ADR-319).
@@ -59,25 +43,6 @@ function buildClearedHqEntry(primaryType: ContactAddressType, customLabel: strin
     city: '',
     ...COMPANY_ADDRESS_HIERARCHY_CLEARED,
   };
-}
-
-/**
- * Replace (or insert) the HQ entry in a companyAddresses array.
- * ADR-319: positional invariant — HQ is always index 0.
- */
-function withClearedHqEntry(
-  addresses: CompanyAddress[] | undefined,
-  primaryType: ContactAddressType,
-  customLabel: string | undefined,
-): CompanyAddress[] {
-  const list = addresses ? [...addresses] : [];
-  const cleared = buildClearedHqEntry(primaryType, customLabel);
-  if (list.length > 0) {
-    list[0] = cleared;
-  } else {
-    list.unshift(cleared);
-  }
-  return list;
 }
 
 export interface UseClearCompanyHqAddressResult {
@@ -100,14 +65,8 @@ export function useClearCompanyHqAddress(
 
     snapshotRef.current = formData;
 
-    setFormData(prev => {
-      const primaryType = prev.primaryAddressType ?? getPrimaryAddressType(prev.type);
-      return {
-        ...prev,
-        ...HQ_CLEARED_FIELDS,
-        companyAddresses: withClearedHqEntry(prev.companyAddresses, primaryType, prev.primaryAddressCustomLabel),
-      };
-    });
+    // Ο τύπος της έδρας (ADR-319) επιβιώνει: ένα φυσικό πρόσωπο μένει `home`/`vacation`/…
+    setFormData(prev => commitHq(prev, (hq) => buildClearedHqEntry(hq.type, hq.customLabel)));
 
     notify(t('contacts-form:addressesSection.addressCleared'), {
       type: 'info',

@@ -33,25 +33,15 @@
  */
 
 import type { AddressInfo } from '@/types/contacts';
-import type { ContactType } from '@/types/contacts';
-import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
+import type { CompanyAddress } from '@/types/ContactFormTypes';
 import {
-  getPrimaryAddressType,
   isValidContactAddressType,
   toAddressInfoType,
   type ContactAddressType,
 } from '@/types/contacts/address-types';
 import { type AddressFieldBag, projectAddressVocabulary } from '@/utils/address/administrative-hierarchy';
 import { DEFAULT_STORED_COUNTRY_CODE, toStoredCountryCode } from '@/utils/address/country-codes';
-import type { FlatAddressFormFields } from '@/utils/address/administrative-hierarchy-vocabulary';
 import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
-
-/**
- * ⚠️ **ADR-772**: ο τύπος μετακόμισε δίπλα στον πίνακα που τον τυπώνει (είναι ένα από τα
- * λεξιλόγιά του). Επανεξάγεται εδώ ώστε οι υπάρχοντες καταναλωτές (`individualMapper`,
- * `serviceMapper`) να μην αλλάξουν ούτε μία εισαγωγή.
- */
-export type { FlatAddressFormFields };
 
 // =============================================================================
 // ΣΤΑΘΕΡΕΣ
@@ -88,7 +78,7 @@ const CONTACT_ADDRESS_DEFAULT_COUNTRY = DEFAULT_STORED_COUNTRY_CODE;
  */
 function projectHierarchy(
   source: Readonly<Record<string, unknown>>,
-  vocabulary: 'companyAddress' | 'contactFlat',
+  vocabulary: 'companyAddress',
 ): Partial<AddressInfo> {
   return projectAddressVocabulary(source, vocabulary, 'addressInfo', {
     includePostal: false,
@@ -101,7 +91,7 @@ function projectHierarchy(
 /** Η **αντίστροφη** διαδρομή: `AddressInfo` ➜ λεξιλόγιο επαφών, ίδιος πίνακας. */
 function projectHierarchyFrom(
   addr: Readonly<AddressInfo>,
-  vocabulary: 'companyAddress' | 'contactFlat',
+  vocabulary: 'companyAddress',
 ): Record<string, string | null> {
   return projectAddressVocabulary(
     addr as Readonly<Record<string, unknown>>,
@@ -125,47 +115,13 @@ function resolveAddressLabel(type: ContactAddressType, customLabel?: string): st
   return type === 'other' && customLabel?.trim() ? customLabel.trim() : type;
 }
 
-/** Ταχυδρομικό είδος για την κύρια (flat) διεύθυνση, ανά είδος επαφής. */
-function contactTypeToAddressInfoType(contactType: ContactType | undefined): AddressInfo['type'] {
-  switch (contactType) {
-    case 'individual':
-      return 'home';
-    case 'company':
-    case 'service':
-      return 'work';
-    default:
-      return 'other';
-  }
-}
-
 // =============================================================================
 // ΚΑΤΑΣΚΕΥΑΣΤΕΣ
 // =============================================================================
 
-/**
- * Κύρια διεύθυνση από τα **flat πεδία** της φόρμας (έδρα / κατοικία).
- *
- * Ο καλών ελέγχει πρώτα αν υπάρχει καθόλου δεδομένο διεύθυνσης — η συνάρτηση
- * δεν αποφασίζει «αν», μόνο «πώς».
- */
-export function buildAddressInfoFromFlatFields(formData: Partial<ContactFormData>): AddressInfo {
-  const addressType = formData.primaryAddressType ?? getPrimaryAddressType(formData.type);
-
-  return {
-    street: formData.street || '',
-    number: formData.streetNumber || '', // flat: `streetNumber` — array: `number`
-    city: formData.city || '',
-    postalCode: formData.postalCode || '',
-    // ADR-332 §D30 — εδώ ήταν **σταθερά** η προεπιλογή: η χώρα που διάλεξε ο άνθρωπος για την
-    // έδρα (`hqAddressCountry`) χανόταν όσο η επαφή δεν είχε ακόμη λίστα διευθύνσεων. Το έπιασε
-    // ο φρουρός round-trip. Ίδια απόφαση με το `hqEntryFromFlatFields`: δήλωση, αλλιώς προεπιλογή.
-    country: toStoredCountryCode(formData.hqAddressCountry) ?? CONTACT_ADDRESS_DEFAULT_COUNTRY,
-    type: contactTypeToAddressInfoType(formData.type),
-    isPrimary: true,
-    label: resolveAddressLabel(addressType, formData.primaryAddressCustomLabel),
-    ...projectHierarchy(formData as Readonly<Record<string, unknown>>, 'contactFlat'),
-  };
-}
+// ⚠️ ADR-332 §D30 Φάση 2: εδώ ζούσε το `buildAddressInfoFromFlatFields` — δεύτερη πηγή του
+// `addresses[]`, από τα επίπεδα πεδία της φόρμας. Η φόρμα δεν έχει πια επίπεδα πεδία· το
+// `addresses[]` παράγεται ΜΟΝΟ από τη λίστα, με τον κατασκευαστή που ακολουθεί.
 
 /**
  * Το παράγωγο `addresses[]` από την αυθεντική εγγραφή `companyAddresses[]`.
@@ -236,82 +192,48 @@ export function buildCompanyAddressFromAddressInfo(
   };
 }
 
-/**
- * Η κύρια διεύθυνση του αποθηκευμένου εγγράφου ➜ επίπεδα πεδία φόρμας.
- *
- * Ήταν γραμμένη αυτούσια σε `individualMapper` και `serviceMapper` (18 γραμμές
- * η κάθε μία), με τον δεύτερο να έχει ήδη **ξεχάσει** το `neighborhood` — η
- * «Περιοχή / Συνοικία» μιας υπηρεσίας αποθηκευόταν κανονικά αλλά δεν
- * ξαναδιαβαζόταν ποτέ. Ακριβώς το μοτίβο που περιγράφει το ADR-584: δύο
- * αντίγραφα, το ένα αποκλίνει, κανένα gate ονομάτων δεν το βλέπει.
- */
-export function buildFlatFieldsFromAddressInfo(
-  addr: Readonly<AddressInfo> | undefined,
-): FlatAddressFormFields {
-  const empty: FlatAddressFormFields = {
-    street: '', streetNumber: '', city: '', postalCode: '',
-    settlement: '', settlementId: null, community: '', municipalUnit: '',
-    municipality: '', municipalityId: null, regionalUnit: '', region: '',
-    decentAdmin: '', majorGeo: '', neighborhood: '',
-  };
-  if (!addr) return empty;
-
-  return {
-    ...empty,
-    street: addr.street || '',
-    streetNumber: addr.number || '', // array: `number` — flat: `streetNumber`
-    city: addr.city || '',
-    postalCode: addr.postalCode || '',
-    ...projectHierarchyFrom(addr, 'contactFlat'),
-    // Οι ταυτότητες είναι `string | null` (ποτέ κενό string) — το `projectHierarchyFrom`
-    // παραλείπει τα κενά, οπότε η ρητή προεπιλογή `null` μένει.
-    settlementId: addr.settlementId ?? null,
-    municipalityId: addr.municipalityId ?? null,
-  };
+/** Υπάρχει έστω ένα πεδίο με περιεχόμενο; (`''` και `null` δεν μετρούν ως παρουσία.) */
+function hasAnyText(bag: AddressFieldBag): boolean {
+  return Object.values(bag).some((value) => typeof value === 'string' && value.trim() !== '');
 }
 
 /**
- * Η έδρα **εταιρείας** ➜ επίπεδα πεδία φόρμας, με προτεραιότητα
- * `companyAddresses[0]` (αυθεντική) → top-level κάτοπτρα παλαιών εγγράφων → `addresses[0]`.
+ * Η έδρα ενός **πολύ παλιού** εγγράφου, που κρατά τη διεύθυνση **μόνο** στη ρίζα (χωρίς λίστα και
+ * χωρίς `addresses[]`) ➜ εγγραφή της λίστας. Η τέταρτη και τελευταία πηγή του tolerant reader.
  *
- * 🔴 **ADR-332 §D30**: ήταν δεκαπέντε χειρόγραφες γραμμές μέσα στον `companyMapper`, χωρίς
- * `neighborhood` — η «Περιοχή / Συνοικία» της έδρας εταιρείας **δεν ξαναδιαβαζόταν ποτέ**,
- * ακόμη κι όταν ήταν αποθηκευμένη. Τώρα κάθε πεδίο προκύπτει από τον πίνακα (ADR-772) και το
- * σύνολο των πεδίων από το **ίδιο** κενό πρότυπο με τα αδέλφια (`buildFlatFieldsFromAddressInfo`).
+ * 🔴 **ADR-332 §D30 Φάση 2 — ολόκληρη εγγραφή, ποτέ ανά πεδίο.** Εδώ ζούσε το
+ * `buildFlatFieldsFromCompanyHq`, που ανακάτευε **ανά πεδίο** τρεις πηγές (λίστα → ρίζα →
+ * `addresses[0]`, «πρώτο με περιεχόμενο»): πεδίο που ο άνθρωπος **καθάρισε** στη λίστα ανασταινόταν
+ * από τη ρίζα. Ο reader πλέον διαλέγει **μία** πηγή ανά έγγραφο, και αυτή είναι η τελευταία.
+ *
+ * Μόνο-ανάγνωσης: το λεξιλόγιο `contactFlat` (ADR-772) επιβιώνει εδώ και στο σύνορο του saver,
+ * και φεύγει όταν το backfill μετρήσει 0 έγγραφα παλαιού σχήματος (contract).
+ *
+ * @returns `undefined` όταν η ρίζα δεν κρατά καμία διεύθυνση.
  */
-export function buildFlatFieldsFromCompanyHq(
-  hq: Readonly<CompanyAddress> | undefined,
-  legacy: Readonly<AddressInfo> | undefined,
+export function buildCompanyAddressFromLegacyRoot(
   root: Readonly<Record<string, unknown>>,
-): FlatAddressFormFields {
-  const fromLegacy = buildFlatFieldsFromAddressInfo(legacy);
-  const fromRoot = projectAddressVocabulary(root, 'contactFlat', 'contactFlat', {
-    includePostal: false,
+  fallbackType: ContactAddressType,
+): CompanyAddress | undefined {
+  const fields = projectAddressVocabulary(root, 'contactFlat', 'companyAddress', {
+    includePostal: true,
     clearedIdsAsNull: false,
   });
-  const fromHq: AddressFieldBag = hq
-    ? {
-      ...projectAddressVocabulary(hq as Readonly<Record<string, unknown>>, 'companyAddress', 'contactFlat', {
-        includePostal: true,
-        clearedIdsAsNull: false,
-      }),
-      // Το `city` της φόρμας δεν είναι επίπεδο του πίνακα (εκεί ζει το `settlement`)· η
-      // εγγραφή της λίστας το κρατά στο ίδιο όνομα.
-      city: hq.city,
-    }
-    : {};
+  if (!hasAnyText(fields)) return undefined;
 
-  const merged: Record<string, string | null> = { ...fromLegacy };
-  for (const key of Object.keys(fromLegacy)) {
-    merged[key] = firstPresent(fromHq[key], fromRoot[key]) ?? merged[key];
-  }
-  return merged as FlatAddressFormFields;
-}
+  const storedType = root.primaryAddressType;
+  const type = typeof storedType === 'string' && isValidContactAddressType(storedType) ? storedType : fallbackType;
+  const customLabel = typeof root.primaryAddressCustomLabel === 'string' ? root.primaryAddressCustomLabel.trim() : '';
+  const country = toStoredCountryCode(typeof root.hqAddressCountry === 'string' ? root.hqAddressCountry : undefined);
 
-/** Η πρώτη τιμή με περιεχόμενο — `''` και `null` δεν μετρούν ως παρουσία. */
-function firstPresent(...values: ReadonlyArray<string | null | undefined>): string | undefined {
-  for (const value of values) {
-    if (typeof value === 'string' && value !== '') return value;
-  }
-  return undefined;
+  return {
+    street: '',
+    number: '',
+    postalCode: '',
+    city: '',
+    ...(fields as Partial<CompanyAddress>),
+    type,
+    ...(type === 'other' && customLabel ? { customLabel } : {}),
+    ...(country ? { country } : {}),
+  };
 }

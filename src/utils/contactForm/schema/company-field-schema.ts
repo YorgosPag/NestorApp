@@ -30,11 +30,6 @@ export interface CompanyScalarBinding {
   readonly mirrors?: readonly string[];
   /** Κλειδιά που διαβάζονται, με τη σειρά, όταν το κανονικό είναι κενό (παλαιά έγγραφα). */
   readonly readFallbacks?: readonly string[];
-  /**
-   * Ποιος το **διαβάζει πίσω** στη φόρμα, όταν δεν είναι αυτός ο πίνακας.
-   * `'address'` = η προβολή της έδρας (ADR-772): το ίδιο όνομα είναι **και** επίπεδο ιεραρχίας.
-   */
-  readonly readOwner?: 'address';
 }
 
 /**
@@ -65,16 +60,16 @@ export const COMPANY_SCALAR_FIELDS = {
   lastUpdateDate: { store: 'customFields' },
   gemiDepartment: { store: 'customFields' },
   prefecture: { store: 'customFields' },
-  // ⚠️ Για εταιρείες κρατιέται **και** ως πεδίο ΓΕΜΗ στα `customFields`, αλλά στη φόρμα είναι
-  //    επίπεδο της ιεραρχίας της έδρας — την ανάγνωση την κάνει η προβολή διεύθυνσης.
-  municipality: { store: 'customFields', readOwner: 'address' },
+  // ⚠️ ADR-332 §D30 Φάση 2: εδώ ζούσε και το `municipality` — **τέταρτο** αντίγραφο του δήμου
+  //    της έδρας (`customFields.municipality`), γραμμένο από τα επίπεδα πεδία της φόρμας και
+  //    διαβασμένο από **κανέναν** (grep 2026-11-19). Ο δήμος ζει στη θέση 0 της λίστας.
 } as const satisfies Readonly<Partial<Record<keyof ContactFormData, CompanyScalarBinding>>>;
 
 export type CompanyScalarField = keyof typeof COMPANY_SCALAR_FIELDS;
 
 /** Ιδιοκτήτης ενός πεδίου φόρμας που **δεν** είναι βαθμωτό αυτού του πίνακα. */
 export type CompanyFieldOwner =
-  /** Η έδρα — επίπεδα πεδία ⇄ `customFields.companyAddresses[0]` ⇄ `addresses[0]` (ADR-332/772). */
+  /** Η έδρα — `companyAddresses[0]` (το μόνο δοχείο, ADR-332 §D30 Φάση 2) ⇄ `addresses[0]`. */
   | { readonly kind: 'address' }
   /** Συλλογή με δικό της γραφέα στο `EnterpriseContactSaver` / mapper. */
   | { readonly kind: 'collection'; readonly docPath: string };
@@ -121,11 +116,9 @@ export function writeCompanyScalarFields(formData: Readonly<ContactFormData>): C
   return { root, customFields };
 }
 
-/** Τα πεδία που διαβάζει **αυτός** ο πίνακας — όσα έχουν άλλον αναγνώστη εξαιρούνται από τον τύπο. */
+/** Τα πεδία που διαβάζει ο πίνακας — ένα ωμό string ανά γραμμή. */
 export type CompanyScalarRead = {
-  readonly [K in CompanyScalarField as (typeof COMPANY_SCALAR_FIELDS)[K] extends { readonly readOwner: 'address' }
-    ? never
-    : K]: string;
+  readonly [K in CompanyScalarField]: string;
 };
 
 type StoredCompanyDocument =Readonly<Record<string, unknown>> & {
@@ -147,7 +140,6 @@ function readStoredString(doc: StoredCompanyDocument, key: string): string {
 export function readCompanyScalarFields(doc: StoredCompanyDocument): CompanyScalarRead {
   const out: Partial<Record<CompanyScalarField, string>> = {};
   for (const [field, binding] of SCALAR_ENTRIES) {
-    if (binding.readOwner === 'address') continue;
     let value = readStoredString(doc, field);
     for (const fallback of binding.readFallbacks ?? []) {
       if (value) break;

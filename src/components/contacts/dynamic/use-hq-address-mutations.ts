@@ -5,11 +5,10 @@
  * Εξήχθη από το `AddressesSectionWithFullscreen.tsx` (N.7.1: 524 → κάτω από το όριο)
  * με **εξαγωγή, όχι κόψιμο**: μετακινείται ολόκληρη μια ευθύνη, δεν πετιέται κώδικας.
  *
- * 🔑 Η ευθύνη είναι μία και συγκεκριμένη: **η έδρα ζει σε δύο δοχεία ταυτόχρονα** —
- * τα επίπεδα πεδία του `ContactFormData` **και** η θέση 0 της `companyAddresses`
- * (θετική αναλλοίωτη ADR-319). Κάθε γραφή πρέπει να ενημερώσει **και τα δύο**, αλλιώς
- * η οθόνη δείχνει τη μία τιμή και η βάση κρατά την άλλη. Όσο αυτές οι γραφές ήταν
- * σκορπισμένες μέσα στο JSX, η αναλλοίωτη ήταν **συνήθεια**· εδώ είναι **δομή**.
+ * 🔑 **ADR-332 §D30 Φάση 2 — η έδρα ζει σε ΕΝΑ δοχείο**: τη θέση 0 της `companyAddresses`
+ * (ADR-319). Ως τη Φάση 2 ζούσε και σε επίπεδα πεδία του `ContactFormData`, και κάθε πράξη εδώ
+ * συγχρόνιζε με το χέρι διαφορετικό υποσύνολο. Τώρα κάθε πράξη είναι μετασχηματισμός
+ * `CompanyAddress → CompanyAddress` μέσα από τον **έναν** γραφέα (`commitHq`).
  *
  * 📍 **ADR-332 D27 Β-ΙΙ — η θέση.** Εδώ ζει και το `placement` του editor της έδρας («Μόνο η
  * θέση», αναίρεση πινέζας) και η εφαρμογή **κάθε** επιβεβαιωμένου συρσίματος (έδρα **και**
@@ -31,31 +30,17 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 import type { StoredAddressPosition } from '@/types/address-position';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactAddressType } from '@/types/contacts/address-types';
-import {
-  overwriteAdminHierarchy,
-  projectAddressVocabulary,
-  resolveCityFromHierarchy,
-} from '@/utils/address/administrative-hierarchy';
-import { provedHierarchyValue } from '@/components/shared/addresses/address-hierarchy-field-ops';
+import { projectAddressVocabulary, resolveCityFromHierarchy } from '@/utils/address/administrative-hierarchy';
 import { toStoredCountryCode } from '@/utils/address/country-codes';
 import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
 import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
-// ⚠️ Το `DRAG_RESOLVED_HIERARCHY_RESET` **δεν εισάγεται πλέον**: ο μηδενισμός δεν είναι
-//    χειρόγραφη λίστα αλλά **προβολή του πίνακα** (δες `flatHierarchyPatch`). Ο πίνακας μένει
-//    εξαγόμενος για τον «Καθαρισμό» της έδρας — **άλλη πράξη, άλλος λόγος**.
-import {
-  applyDraggedToContactAddress,
-  contactAddressList,
-  withContactAddressAt,
-  withHumanPoint,
-} from './contact-address-drag';
+import { applyDraggedToContactAddress, withHumanPoint } from './contact-address-drag';
+import { commitHq, contactAddressList, selectContactHq, withContactAddressAt } from './contact-hq-state';
 import { applyHqEditorChange } from './addresses-section-form-mapping';
 
 export interface HqAddressMutationsDeps {
   formData: ContactFormData;
   setFormData?: React.Dispatch<React.SetStateAction<ContactFormData>>;
-  /** Η λίστα που βλέπει η οθόνη — περιλαμβάνει τη **συνθετική** κενή έδρα (ADR-332 D20). */
-  effectiveAddresses: CompanyAddress[];
   /**
    * Καλείται όταν το reverse-geocoding δεν επέστρεψε αριθμό **για την έδρα**. Ζει **έξω**
    * από το hook επειδή είναι παρουσίαση (άνοιγμα φόρμας + ειδοποίηση), όχι εγγραφή.
@@ -77,7 +62,7 @@ export interface HqAddressMutations {
   handlePrimaryTypeChange: (next: { type: ContactAddressType; customLabel?: string }) => void;
 }
 
-/** Ενημέρωση της θέσης 0 από την ιεραρχία — το ένα από τα δύο δοχεία της έδρας. */
+/** Η έδρα μετά από επιλογή στην ιεραρχία — ολόκληρη η εγγραφή, από τον πίνακα (ADR-772). */
 function hierarchyToHqBranch(
   current: CompanyAddress,
   addr: AddressWithHierarchyValue,
@@ -125,8 +110,8 @@ function resolvedToDragged(addr: ResolvedAddressFields): DragResolvedAddress {
 }
 
 /**
- * Η εγγραφή μετά το σύρσιμο, και τα επίπεδα πεδία της έδρας **μόνο** αν σύρθηκε η έδρα.
- * Καθαρή συνάρτηση — βλ. `contact-address-drag` για το σφάλμα που διορθώνει.
+ * Η λίστα μετά το σύρσιμο της εγγραφής `index` (έδρα **ή** υποκατάστημα) — μία εγγραφή, κανένα
+ * δεύτερο δοχείο. Καθαρή συνάρτηση — βλ. `contact-address-drag` για το σφάλμα που διορθώνει.
  */
 function confirmedDragState(
   formData: ContactFormData,
@@ -137,43 +122,7 @@ function confirmedDragState(
   const current = contactAddressList(formData)[index];
   if (!current) return null;
   if (!dragged) return point ? withContactAddressAt(formData, index, withHumanPoint(current, point)) : null;
-  const next = applyDraggedToContactAddress(current, dragged, point);
-  const written = withContactAddressAt(formData, index, next);
-  if (index !== 0) return written;
-  return {
-    ...written,
-    ...flatHierarchyPatch(dragged),
-    // ⚠️ **Μετά τον πίνακα, επίτηδες**: το `settlement` είναι το όνομα του οικισμού **και**
-    //    το ελεύθερο κείμενο «Οικισμός / Πόλη» σε αυτό το λεξιλόγιο. Το `next.city` κουβαλά
-    //    ήδη τη σωστή απόφαση — όνομα **μητρώου** αν αποδείχθηκε, αλλιώς της μηχανής.
-    settlement: next.city,
-    neighborhood: dragged.neighborhood,
-  };
-}
-
-/**
- * Η ιεραρχία στα **επίπεδα πεδία** της έδρας — ο **ίδιος** κανόνας με την εγγραφή της λίστας.
- *
- * 🔴 **Ζ4γ**: εδώ εφαρμοζόταν το `DRAG_RESOLVED_HIERARCHY_RESET` **άνευ όρων**. Πλέον
- * γράφεται ό,τι αποδείχθηκε και καθαρίζεται ό,τι όχι — με την προβολή στο λεξιλόγιο
- * `contactFlat` να γίνεται από **τον πίνακα** (ADR-772), που ξέρει ότι εδώ κρατιούνται
- * **δύο** ταυτότητες και τα υπόλοιπα έξι επίπεδα είναι μόνο ονόματα.
- *
- * ⚠️ **Το `?? []` είναι η ίδια απόφαση με το `contactHierarchyPatch`** — και για τον ίδιο
- * λόγο: αυτή η διαδρομή τρέχει **μόνο** όταν το κείμενο αντικαθίσταται, οπότε καμία απόδειξη
- * σημαίνει **καθάρισμα**, όχι κληρονομιά *(ADR-277)*.
- *
- * ✅ **Και το αποτέλεσμα είναι ΤΑΥΤΟΣΗΜΟ με το `DRAG_RESOLVED_HIERARCHY_RESET`** όταν δεν
- * αποδεικνύεται τίποτα: το ίδιο σύνολο πεδίων, καθαρισμένο από **τον πίνακα** αντί από
- * χειρόγραφη λίστα. Ο παλιός πίνακας μένει για τον «Καθαρισμό» της έδρας, που είναι **άλλη
- * πράξη με άλλον λόγο** *(ρητή πρόθεση ανθρώπου)*.
- */
-function flatHierarchyPatch(dragged: DragResolvedAddress): Partial<ContactFormData> {
-  return overwriteAdminHierarchy(
-    provedHierarchyValue(dragged.admin ?? []),
-    'form',
-    'contactFlat',
-  ) as Partial<ContactFormData>;
+  return withContactAddressAt(formData, index, applyDraggedToContactAddress(current, dragged, point));
 }
 
 /** Το `placement` του editor της έδρας: σημείο, αναίρεση, και η αφετηρία της συνεδρίας. */
@@ -218,13 +167,11 @@ function useHqPlacement(
 export function useHqAddressMutations({
   formData,
   setFormData,
-  effectiveAddresses,
   onDragMissingNumber,
 }: HqAddressMutationsDeps): HqAddressMutations {
   /**
    * Το `AddressEditor` διόρθωσε βασικά πεδία (συμφιλίωση / πρόταση) — η ιεραρχία **μένει**.
-   * Η μετάβαση ζει στο καθαρό `applyHqEditorChange` (ADR-332 §D30): εκεί τα δύο δοχεία της
-   * έδρας μένουν είδωλα μέσα από τον πίνακα, όχι με χειρόγραφη λίστα πεδίων.
+   * Η μετάβαση ζει στο καθαρό `applyHqEditorChange` (ADR-332 §D30), πάνω στον έναν γραφέα.
    */
   const handleHqChange = useCallback((addr: ResolvedAddressFields) => {
     if (!setFormData) return;
@@ -254,66 +201,31 @@ export function useHqAddressMutations({
   }, [applyConfirmedDrag, hq.pointRef]);
 
   /**
-   * Η **ανάγνωση** της αντιστοίχισης — ήταν 15 γραμμές inline μέσα στο JSX, δηλαδή
-   * ένας μετατροπέας χωρίς όνομα, αόρατος σε κάθε αναζήτηση (ADR-772).
-   *
-   * ⚠️ Η χώρα της έδρας δεν ζει στα επίπεδα πεδία — γι' αυτό γράφεται ρητά από πάνω.
+   * Η έδρα όπως τη ζητά η φόρμα ιεραρχίας — **ανάγνωση** της εγγραφής μέσα από τον πίνακα (ADR-772).
+   * Η χώρα μπαίνει πρώτη ώστε η κενή να γίνεται `''` (η φόρμα δεν δέχεται `undefined`).
    */
-  const hqHierarchyValue = useMemo<Partial<AddressWithHierarchyValue>>(
-    () => ({
-      country: formData.hqAddressCountry || '',
-      ...(projectAddressVocabulary(
-        formData as Readonly<Record<string, unknown>>,
-        'contactFlat',
-        'form',
-        { includePostal: true, clearedIdsAsNull: true },
-      ) as Partial<AddressWithHierarchyValue>),
-    }),
-    [formData],
-  );
-
-  /**
-   * 🔴 **ADR-772** — ήταν το **τέταρτο** ιδιωτικό ζεύγος μετατροπέα, γραμμένο inline και
-   * απόν από κάθε χάρτη: γράφει σε **δύο** δοχεία ταυτόχρονα, με την αντιστοίχιση
-   * αντιγραμμένη δύο φορές μέσα στην ίδια συνάρτηση. Πλέον: μία κλήση ανά δοχείο,
-   * **ίδιος πίνακας**.
-   */
-  const handleHqHierarchyChange = useCallback((addr: AddressWithHierarchyValue) => {
-    if (!setFormData) return;
-    const city = resolveCityFromHierarchy(addr);
-    const updatedAddresses = [...effectiveAddresses];
-    if (updatedAddresses.length > 0) {
-      updatedAddresses[0] = hierarchyToHqBranch(updatedAddresses[0], addr, city);
-    }
-    setFormData({
-      ...formData,
-      ...projectAddressVocabulary(addr, 'form', 'contactFlat', {
+  const hqHierarchyValue = useMemo<Partial<AddressWithHierarchyValue>>(() => {
+    const hq = selectContactHq(formData);
+    return {
+      country: hq.country || '',
+      ...(projectAddressVocabulary(hq as Readonly<Record<string, unknown>>, 'companyAddress', 'form', {
         includePostal: true,
         clearedIdsAsNull: true,
-      }),
-      street: addr.street,
-      streetNumber: addr.number,
-      postalCode: addr.postalCode,
-      city,
-      // Η χώρα της έδρας ζει σε δικό της πεδίο, εκτός του λεξιλογίου επίπεδων πεδίων.
-      hqAddressCountry: toStoredCountryCode(addr.country),
-      companyAddresses: updatedAddresses,
-    });
-  }, [formData, setFormData, effectiveAddresses]);
+      }) as Partial<AddressWithHierarchyValue>),
+    };
+  }, [formData]);
 
+  /** Επιλογή στην ιεραρχία της έδρας — ένας μετασχηματισμός, ένας γραφέας. */
+  const handleHqHierarchyChange = useCallback((addr: AddressWithHierarchyValue) => {
+    if (!setFormData) return;
+    setFormData(prev => commitHq(prev, (hq) => hierarchyToHqBranch(hq, addr, resolveCityFromHierarchy(addr))));
+  }, [setFormData]);
+
+  /** Τύπος / ελεύθερη ετικέτα της έδρας (ADR-319) — ζουν στην ίδια την εγγραφή. */
   const handlePrimaryTypeChange = useCallback((next: { type: ContactAddressType; customLabel?: string }) => {
     if (!setFormData) return;
-    const existing = formData.companyAddresses ?? [];
-    const updated = existing.length > 0
-      ? [{ ...existing[0], type: next.type, customLabel: next.customLabel }, ...existing.slice(1)]
-      : existing;
-    setFormData({
-      ...formData,
-      primaryAddressType: next.type,
-      primaryAddressCustomLabel: next.customLabel,
-      ...(existing.length > 0 ? { companyAddresses: updated } : {}),
-    });
-  }, [formData, setFormData]);
+    setFormData(prev => commitHq(prev, (hq) => ({ ...hq, type: next.type, customLabel: next.customLabel })));
+  }, [setFormData]);
 
   return {
     handleHqChange,

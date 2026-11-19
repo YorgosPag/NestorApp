@@ -6,7 +6,6 @@ import { getSafeFieldValue } from '../contactMapper';
 // ADR-332 D18: η ανάγνωση της λίστας διευθύνσεων ζει σε ΕΝΑ σημείο και για τα
 // τρία είδη επαφής — ήταν ιδιωτική εδώ, ενώ individual/service δεν είχαν καμία.
 import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
-import { buildFlatFieldsFromCompanyHq } from '@/utils/contacts/address-info-builder';
 import { readCompanyScalarFields } from '../schema/company-field-schema';
 
 /** Extended company contact with custom fields access */
@@ -83,9 +82,8 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     : [];
 
 
+  // ADR-332 §D30 Φάση 2: η έδρα ΕΙΝΑΙ η θέση 0 της λίστας — η φόρμα δεν κρατά δεύτερο αντίγραφο.
   const companyAddresses = resolveContactAddresses(contact, 'company');
-  // HQ address: prioritize companyAddresses[0] (has hierarchy), fallback to legacy addresses[0]
-  const hqAddr = companyAddresses.find(a => a.type === 'headquarters') ?? companyAddresses[0];
   const rootRecord = contact as unknown as Record<string, unknown>;
   // ADR-332 §D30: ΚΑΘΕ βαθμωτό πεδίο από τον ΕΝΑ πίνακα (εκεί ζει και η Δ.Ο.Υ.).
   const scalars = readCompanyScalarFields(rootRecord);
@@ -101,10 +99,6 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     companyVatNumber: getSafeFieldValue(companyContact, 'vatNumber') ||
       getSafeFieldValue(companyContact, 'companyVatNumber'),
 
-    // Έδρα: `companyAddresses[0]` → top-level κάτοπτρα → `addresses[0]`, μέσα από τον πίνακα
-    // (ADR-772) — μαζί με το `neighborhood`, που εδώ δεν διαβαζόταν ποτέ (ADR-332 §D30).
-    ...buildFlatFieldsFromCompanyHq(hqAddr, contact.addresses?.[0], rootRecord),
-    ...(hqAddr?.country ? { hqAddressCountry: hqAddr.country } : {}),
     companyAddresses,
     phone: contact.phones?.[0]?.number || '',
     email: contact.emails?.[0]?.email || '',

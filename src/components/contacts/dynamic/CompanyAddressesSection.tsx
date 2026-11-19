@@ -23,14 +23,17 @@ import type { AddressWithHierarchyValue } from '@/components/shared/addresses/Ad
 import {
   projectAddressVocabulary,
   resolveCityFromHierarchy,
-  storedAddressToResolved,
 } from '@/utils/address/administrative-hierarchy';
 import { toStoredCountryCode } from '@/utils/address/country-codes';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
 import { getDefaultSecondaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
-import { formatContactAddressLine } from '@/utils/address/address-line';
+import {
+  applyResolvedToContactAddress,
+  contactAddressToResolvedFields,
+  formatContactAddressStreetLine,
+} from './addresses-section-form-mapping';
 import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { cn } from '@/lib/utils';
@@ -119,27 +122,8 @@ function fromHierarchyValue(existing: CompanyAddress, val: AddressWithHierarchyV
   };
 }
 
-function formatBranchStreetLine(addr: CompanyAddress): string {
-  return formatContactAddressLine(addr);
-}
-
-// ADR-772 / CHECK 3.28 — ήταν δίδυμο του `toResolvedFromAddr` των κτιρίων.
-function branchToResolvedFields(addr: CompanyAddress): ResolvedAddressFields {
-  return storedAddressToResolved(addr, 'companyAddress');
-}
-
-function applyResolvedToBranch(resolved: ResolvedAddressFields, existing: CompanyAddress): CompanyAddress {
-  return {
-    ...existing,
-    street: resolved.street ?? existing.street,
-    number: resolved.number ?? existing.number,
-    postalCode: resolved.postalCode ?? existing.postalCode,
-    city: resolved.city ?? existing.city,
-    // Χωρίς αυτό, η «Περιοχή / Συνοικία» του υποκαταστήματος χανόταν σιωπηλά
-    // στον πρώτο κύκλο onChange — ίδιο σφάλμα με την έδρα.
-    neighborhood: resolved.neighborhood ?? existing.neighborhood,
-  };
-}
+// ADR-332 §D30 Φάση 2: η μετατροπή editor ⇄ εγγραφή είναι ΚΟΙΝΗ με την έδρα — ίδια μορφή,
+// ίδιος μετασχηματισμός (`addresses-section-form-mapping`), όχι τοπικό δίδυμο.
 
 // Wrapper isolates memo + stable callbacks per branch (avoids hook-in-map anti-pattern).
 interface BranchEditorWrapperProps {
@@ -153,13 +137,13 @@ interface BranchEditorWrapperProps {
 
 function BranchEditorWrapper({ addr, branchVisualIndex, disabled, onUpdate, proximityAnchor }: BranchEditorWrapperProps) {
   const resolvedFields = React.useMemo(
-    () => branchToResolvedFields(addr),
+    () => contactAddressToResolvedFields(addr),
     // Only re-compute when basic fields change (keeps AddressEditor.value stable).
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [addr.street, addr.number, addr.postalCode, addr.city, addr.neighborhood, addr.region, addr.regionName, addr.country],
   );
   const handleResolvedChange = useCallback(
-    (resolved: ResolvedAddressFields) => onUpdate(branchVisualIndex, applyResolvedToBranch(resolved, addr)),
+    (resolved: ResolvedAddressFields) => onUpdate(branchVisualIndex, applyResolvedToContactAddress(resolved, addr)),
     [addr, branchVisualIndex, onUpdate],
   );
   const handleHierarchyChange = useCallback(
@@ -362,7 +346,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                   /* Card view */
                   <SharedAddressActionCard
                     id={`branch-${i}`}
-                    streetLine={formatBranchStreetLine(addr)}
+                    streetLine={formatContactAddressStreetLine(addr)}
                     typeLabel={resolveContactAddressLabel(addr.type, addr.customLabel, tAddrFn)}
                     isEditing={isEditing}
                     onEdit={() => setEditingBranchIndex(i)}

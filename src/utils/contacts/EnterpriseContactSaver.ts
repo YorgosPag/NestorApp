@@ -20,11 +20,9 @@ import { generateAddressId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { stripTypeExclusiveFields } from './contact-type-fields';
-import {
-  buildAddressInfoFromFlatFields,
-  buildAddressInfoListFromCompanyAddresses,
-} from './address-info-builder';
+import { buildAddressInfoListFromCompanyAddresses } from './address-info-builder';
 import { pruneBlankContactAddresses } from './contact-address-blankness';
+import { withoutLegacyRootAddressFields } from './contact-hq-legacy-fields';
 import {
   COMPANY_ONLY_TOP_LEVEL_FIELDS,
   collectCompanyCustomFields,
@@ -120,26 +118,10 @@ export class EnterpriseContactSaver {
   static convertToEnterpriseStructure(formData: Partial<ContactFormData>): EnterpriseContactData {
     logger.info('ENTERPRISE SAVER: Converting form data to arrays structure');
 
-    const enterpriseData: EnterpriseContactData = { ...formData } as EnterpriseContactData;
-
-    // ========================================================================
-    // ADDRESS CONVERSION: flat fields → addresses[]
-    // ========================================================================
-
-    const hasAddressData = formData.street || formData.streetNumber ||
-                          formData.city || formData.postalCode ||
-                          formData.municipality || formData.settlement;
-
-    if (hasAddressData) {
-      // Η ΠΑΡΑΓΩΓΗ ΖΕΙ ΣΕ ΕΝΑ ΣΗΜΕΙΟ (ADR-332 D15): ταξινομία ADR-319 για το
-      // `label`, προβολή ιεραρχίας και προεπιλογή χώρας απαντιούνται μία φορά
-      // στο `address-info-builder`, ώστε flat έδρα και `companyAddresses` να μη
-      // μπορούν να αποκλίνουν ξανά.
-      const primaryAddress: AddressInfo = buildAddressInfoFromFlatFields(formData);
-
-      enterpriseData.addresses = [primaryAddress];
-      logger.info('ENTERPRISE SAVER: Created primary address', { street: primaryAddress.street, city: primaryAddress.city, type: primaryAddress.type });
-    }
+    // ADR-332 §D30 Φάση 2 — ΤΟ ΣΥΝΟΡΟ: κανένα κλειδί διεύθυνσης δεν φεύγει προς τη ρίζα. Εδώ ήταν
+    // σκέτο `{ ...formData }` και αργότερα σβήνονταν μόνο τέσσερα κλειδιά — έτσι κάθε «βρώμικο»
+    // πεδίο έδρας (π.χ. `neighborhood`) έπεφτε στη ρίζα σε κάθε ενημέρωση. Η έδρα ζει ΜΟΝΟ στη λίστα.
+    const enterpriseData = withoutLegacyRootAddressFields({ ...formData } as EnterpriseContactData);
 
     // ========================================================================
     // WEBSITE CONVERSION: flat field → websites[] OR use existing arrays
@@ -215,14 +197,10 @@ export class EnterpriseContactSaver {
       const persistableAddresses = withContactAddressIds(pruneBlankContactAddresses(contactAddresses));
       customFields.companyAddresses = persistableAddresses;
 
-      // Το `addresses[]` είναι ΠΑΡΑΓΩΓΟ της αυθεντικής λίστας (ADR-332 D15).
-      if (persistableAddresses.length > 0) {
-        enterpriseData.addresses = buildAddressInfoListFromCompanyAddresses(persistableAddresses);
-      } else if (!hasAddressData) {
-        // Καμία διεύθυνση πουθενά — ούτε στα flat πεδία. Χωρίς ρητό κενό πίνακα
-        // το merge του Firestore θα κρατούσε την παλιά κενή εγγραφή για πάντα.
-        enterpriseData.addresses = [];
-      }
+      // Το `addresses[]` είναι ΠΑΡΑΓΩΓΟ της αυθεντικής λίστας (ADR-332 D15) — και ΜΟΝΟ αυτής
+      // (§D30 Φάση 2: δεν υπάρχει πια δεύτερη πηγή, τα επίπεδα πεδία της φόρμας). Κενή λίστα ⇒
+      // ρητό κενό πίνακα, αλλιώς το merge του Firestore θα κρατούσε την παλιά εγγραφή για πάντα.
+      enterpriseData.addresses = buildAddressInfoListFromCompanyAddresses(persistableAddresses);
     }
     // Η αυθεντική λίστα ζει στα `customFields` — ποτέ top-level, για κανέναν τύπο.
     delete (enterpriseData as Record<string, unknown>).companyAddresses;
@@ -246,11 +224,8 @@ export class EnterpriseContactSaver {
     // Note: This removes from payload only. Service layer handles deleteField() for updates
     // ========================================================================
 
-    // 🧹 Remove flat address/contact fields (migrated to arrays)
-    delete enterpriseData.street;
-    delete enterpriseData.streetNumber;
-    delete enterpriseData.city;
-    delete enterpriseData.postalCode;
+    // 🧹 Remove flat contact fields (migrated to arrays). Τα κλειδιά διεύθυνσης τα κόβει ήδη το
+    // σύνορο στην αρχή (`withoutLegacyRootAddressFields`) — όλα, όχι τέσσερα.
     delete enterpriseData.website;
     delete enterpriseData.email;
     delete enterpriseData.phone;
@@ -441,24 +416,12 @@ export class EnterpriseContactSaver {
     // Note: Service layer will handle actual Firestore deletion with deleteField()
     delete (updatedData as Record<string, unknown>).email;
     delete (updatedData as Record<string, unknown>).phone;
-    delete (updatedData as Record<string, unknown>).street;
-    delete (updatedData as Record<string, unknown>).streetNumber;
-    delete (updatedData as Record<string, unknown>).city;
-    delete (updatedData as Record<string, unknown>).postalCode;
     delete (updatedData as Record<string, unknown>).website;
-    // Administrative Hierarchy flat fields → stored inside addresses[]
-    delete (updatedData as Record<string, unknown>).municipality;
-    delete (updatedData as Record<string, unknown>).municipalityId;
-    delete (updatedData as Record<string, unknown>).regionalUnit;
-    delete (updatedData as Record<string, unknown>).decentAdmin;
-    delete (updatedData as Record<string, unknown>).majorGeo;
-    delete (updatedData as Record<string, unknown>).settlement;
-    delete (updatedData as Record<string, unknown>).settlementId;
-    delete (updatedData as Record<string, unknown>).community;
-    delete (updatedData as Record<string, unknown>).municipalUnit;
 
     logger.info('ENTERPRISE SAVER: Update complete');
-    return updatedData;
+    // ADR-332 §D30 Φάση 2: η πλήρης όψη (επικύρωση · φωτογραφίες · cascade ονόματος) δεν κουβαλά
+    // κλειδιά διεύθυνσης ρίζας ενός παλαιού εγγράφου — ίδιο σύνολο με το σύνορο, όχι δεύτερη λίστα.
+    return withoutLegacyRootAddressFields(updatedData as EnterpriseContactData);
   }
 }
 

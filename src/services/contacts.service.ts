@@ -24,6 +24,7 @@ import { sanitizeContactData, sanitizeContactForUpdate, validateContactData, typ
 import { flattenCustomFieldsForUpdate } from '@/utils/contacts/contact-update-paths';
 import { positionContactPayload, relocateContactAddressPayload } from './contact-address-positions.client';
 import { authoritativeContactAddresses } from '@/utils/contacts/contact-addresses-reader';
+import { legacyRootAddressRepairPatch } from '@/utils/contacts/contact-hq-legacy-fields';
 
 import { getCol, asDate } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -318,7 +319,9 @@ export class ContactsService {
     const enterpriseDiff = EnterpriseContactSaver.convertToEnterpriseStructure(resolveLicenceDraftsForUpdate(
       formData, (existingContact as unknown as Record<string, unknown>).licences, nowISO()));
     // ADR-332 D27 Β-ΙΙ: ο γραφέας θέσης αποφασίζει, και η απόφαση ταξιδεύει στην ΙΔΙΑ εγγραφή.
-    await this.updateContact(id, await positionContactPayload(enterpriseDiff, id));
+    const positioned = await positionContactPayload(enterpriseDiff, id);
+    // ADR-332 §D30 Φάση 2 — repair-on-write: κλειδιά διεύθυνσης ρίζας παλαιού εγγράφου σβήνουν εδώ.
+    await this.updateContact(id, { ...positioned, ...legacyRootAddressRepairPatch(existingContact as unknown as Record<string, unknown>, positioned) });
 
     // ADR-249: Contact name cascade (fire-and-forget)
     const oldName = this.getDisplayName(existingContact);

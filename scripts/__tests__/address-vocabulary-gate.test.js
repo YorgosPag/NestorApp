@@ -128,7 +128,6 @@ describe('Μ0 — το ζωντανό δέντρο', () => {
 
   it('η βάση του μίνι-repo είναι ΓΝΩΣΤΗ ονομαστικά — όχι «ό,τι βγει»', () => {
     expect([...MINI_BASE_IDS].sort()).toEqual([
-      'unregistered-vocabulary::src/types/ContactFormTypes.ts::ContactFormData',
       'unregistered-vocabulary::src/types/ContactFormTypes.ts::IndividualAddress',
     ]);
   });
@@ -139,7 +138,6 @@ describe('Μ0 — το ζωντανό δέντρο', () => {
     const baseline = JSON.parse(fs.readFileSync(gate.baselineFile(), 'utf8'));
     expect(baseline.violations).toEqual([
       'unregistered-vocabulary::src/components/contacts/relationships/hooks/useDerivedWorkAddresses.ts::DerivedWorkAddress',
-      'unregistered-vocabulary::src/types/ContactFormTypes.ts::ContactFormData',
       'unregistered-vocabulary::src/types/ContactFormTypes.ts::IndividualAddress',
     ]);
   });

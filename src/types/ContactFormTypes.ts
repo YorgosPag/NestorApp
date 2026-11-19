@@ -217,21 +217,16 @@ export interface ContactFormData {
   websites?: WebsiteInfo[];
   socialMediaArray?: SocialMediaInfo[];
 
-  // Address fields (separate from arrays — legacy singular)
-  street: string;
-  streetNumber: string;
-  city: string;
-  postalCode: string;
-  hqAddressCountry?: string;
   /**
-   * Semantic type for the primary (flat-field) address — ADR-319.
-   * Defaults to `home` for individuals and `headquarters` for company/service.
-   * When `other`, `primaryAddressCustomLabel` carries the free-text label.
+   * **Οι διευθύνσεις της επαφής — το ΜΟΝΟ δοχείο** (ADR-332 §D30 Φάση 2). Θέση 0 = έδρα /
+   * κατοικία / κεντρική υπηρεσία (ADR-319), για κάθε είδος επαφής. Ανάγνωση `selectContactHq`,
+   * εγγραφή `commitHq` (`components/contacts/dynamic/contact-hq-state`).
+   *
+   * ⛔ Εδώ ζούσαν και επίπεδα πεδία έδρας (`street`, `streetNumber`, `city`, `postalCode`,
+   * `settlement`, `neighborhood`, 8 επίπεδα ιεραρχίας, `hqAddressCountry`, `primaryAddressType`,
+   * `primaryAddressCustomLabel`) — δεύτερο δοχείο που επτά γραφείς συγχρόνιζαν με το χέρι, και η
+   * αιτία απωλειών στην αποθήκευση. **ΜΗΝ τα ξαναπροσθέσεις**: η έδρα έχει ένα σπίτι.
    */
-  primaryAddressType?: ContactAddressType;
-  /** Free-text label when `primaryAddressType === 'other'`. */
-  primaryAddressCustomLabel?: string;
-  /** Multi-address array for companies */
   companyAddresses?: CompanyAddress[];
   /** Multi-address array for individuals (home, work, vacation, other) */
   individualAddresses?: IndividualAddress[];
@@ -286,19 +281,6 @@ export interface ContactFormData {
   lastUpdateDate: string;
   gemiDepartment: string; // Τοπική υπηρεσία ΓΕΜΗ
   prefecture: string; // Νομός
-  municipality: string; // Δήμος
-  // Administrative Hierarchy (Διοικητική Διαίρεση)
-  municipalityId: string | null;
-  regionalUnit: string;
-  region: string;
-  decentAdmin: string;
-  majorGeo: string;
-  settlement: string;
-  settlementId: string | null;
-  community: string;
-  municipalUnit: string;
-  /** Περιοχή / Συνοικία — ελεύθερο κείμενο, εκτός διοικητικής ιεραρχίας. */
-  neighborhood: string;
   activityCodeKAD: string; // ΚΑΔ κωδικός (legacy singular)
   activityDescription: string; // Περιγραφή δραστηριότητας (legacy singular)
   activityType: LegacyKadActivityType; // Κύρια/Δευτερεύουσα (legacy singular) — ψευδώνυμο του KadActivityType
@@ -484,11 +466,6 @@ export const initialFormData: ContactFormData = {
   websites: [],
   socialMediaArray: [],
 
-  // Address fields
-  street: '',
-  streetNumber: '',
-  city: '',
-  postalCode: '',
   companyAddresses: [],
   // Επαγγελματικά
   profession: '',
@@ -541,17 +518,6 @@ export const initialFormData: ContactFormData = {
   lastUpdateDate: '',
   gemiDepartment: '',
   prefecture: '',
-  municipality: '',
-  municipalityId: null,
-  regionalUnit: '',
-  region: '',
-  decentAdmin: '',
-  majorGeo: '',
-  settlement: '',
-  settlementId: null,
-  community: '',
-  municipalUnit: '',
-  neighborhood: '',
   activityCodeKAD: '',
   activityDescription: '',
   activityType: 'main',

@@ -3,7 +3,6 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData, toLegacyKadActivityType } from '@/types/ContactFormTypes';
 import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../contactMapper';
 import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
-import { buildFlatFieldsFromAddressInfo } from '@/utils/contacts/address-info-builder';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('ServiceMapper');
@@ -111,11 +110,8 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     serviceCategory: getSafeFieldValue(serviceContact, 'serviceCategory'),
     officialWebsite: getSafeFieldValue(serviceContact, 'officialWebsite'),
 
-    // Επίπεδα πεδία + διοικητική ιεραρχία από το `addresses[0]` — μία υλοποίηση
-    // κοινή με τον `individualMapper` (ADR-332 D18). Η αντιγραμμένη έκδοση εδώ
-    // είχε ξεχάσει το `neighborhood`: η «Περιοχή / Συνοικία» της υπηρεσίας
-    // αποθηκευόταν αλλά δεν ξαναδιαβαζόταν ποτέ.
-    ...buildFlatFieldsFromAddressInfo(contact.addresses?.[0]),
+    // ADR-332 §D30 Φάση 2: η κεντρική υπηρεσία ΕΙΝΑΙ η θέση 0 της λίστας — τα επίπεδα πεδία
+    // που διαβάζονταν εδώ από το ΠΑΡΑΓΩΓΟ `addresses[0]` δεν υπάρχουν πια στη φόρμα.
     // ADR-332 D18: τα υποκαταστήματα υπηρεσίας (`regional_service`/`annex`/
     // `department`, ADR-319) δεν διαβάζονταν καθόλου — η φόρμα ξεκινούσε πάντα
     // με άδεια λίστα και το επόμενο save έσβηνε ό,τι είχε γραφτεί.

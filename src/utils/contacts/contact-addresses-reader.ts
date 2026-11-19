@@ -40,7 +40,7 @@ import {
   getDefaultSecondaryAddressType,
   getPrimaryAddressType,
 } from '@/types/contacts/address-types';
-import { buildCompanyAddressFromAddressInfo } from './address-info-builder';
+import { buildCompanyAddressFromAddressInfo, buildCompanyAddressFromLegacyRoot } from './address-info-builder';
 
 /** Επαφή με πρόσβαση στα `customFields` (δεν υπάρχουν στον βασικό τύπο). */
 interface ContactWithCustomFields {
@@ -105,5 +105,11 @@ export function resolveContactAddresses(
     );
   }
 
-  return [];
+  // 4. ADR-332 §D30 Φάση 2 — πολύ παλιό έγγραφο, με την έδρα ΜΟΝΟ στη ρίζα. Ολόκληρη εγγραφή από
+  //    μία πηγή (ποτέ ανάμειξη ανά πεδίο)· φεύγει όταν το backfill μετρήσει 0 (contract).
+  const legacyHq = buildCompanyAddressFromLegacyRoot(
+    contact as unknown as Record<string, unknown>,
+    getPrimaryAddressType(contactType),
+  );
+  return legacyHq ? [legacyHq] : [];
 }

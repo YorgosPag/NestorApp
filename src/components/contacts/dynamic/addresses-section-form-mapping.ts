@@ -1,35 +1,31 @@
 /**
  * =============================================================================
- * ADDRESSES SECTION — form ⇄ editor field mapping (ADR-332)
+ * ADDRESSES SECTION — editor ⇄ εγγραφή διεύθυνσης επαφής (ADR-332)
  * =============================================================================
  *
- * Εξήχθη από το `AddressesSectionWithFullscreen.tsx` (N.7.1: το component
- * ξεπέρασε τις 500 γραμμές). Καθαρές συναρτήσεις πάνω στο `ContactFormData` —
- * καμία εξάρτηση από React.
+ * Καθαρές συναρτήσεις, χωρίς React. Όλες δουλεύουν πάνω σε **μία** εγγραφή `CompanyAddress`
+ * — την έδρα (θέση 0) ή υποκατάστημα: από τη Φάση 2 του §D30 είναι η **ίδια** μορφή, άρα και ο
+ * **ίδιος** μετασχηματισμός. Τα επίπεδα πεδία της φόρμας (`street`, `streetNumber`,
+ * `settlement`, `hqAddressCountry`, …) δεν υπάρχουν πια· η έδρα γράφεται **μόνο** μέσα από το
+ * `commitHq` (`contact-hq-state`).
  *
  * @module components/contacts/dynamic/addresses-section-form-mapping
- * @see ADR-332 — Enterprise Address Editor System
+ * @see ADR-332 §D30 — ό,τι βλέπεις είναι ό,τι αποθηκεύεται
  */
 
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
-import { getPrimaryAddressType } from '@/types/contacts/address-types';
 import { formatContactAddressLine } from '@/utils/address/address-line';
-import { DEFAULT_STORED_COUNTRY_CODE, toStoredCountryCode } from '@/utils/address/country-codes';
-import {
-  mirrorAddressTextFields,
-  projectAddressVocabulary,
-  storedAddressToResolved,
-} from '@/utils/address/administrative-hierarchy';
+import { toStoredCountryCode } from '@/utils/address/country-codes';
+import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
+import { commitHq } from './contact-hq-state';
 
 /**
- * Η διοικητική ιεραρχία **μιας εγγραφής της λίστας**, καθαρισμένη — το αντίστοιχο του
- * `DRAG_RESOLVED_HIERARCHY_RESET` στο λεξιλόγιο `companyAddress`.
+ * Η διοικητική ιεραρχία **μιας εγγραφής της λίστας**, καθαρισμένη.
  *
- * Τη χρειάζονται δύο πράξεις: ο «Καθαρισμός» της έδρας (`useClearCompanyHqAddress`, όπου ήταν
- * γραμμένη inline) και το σύρσιμο με «Ναι, ενημέρωσε» (ADR-332 D27 Β-ΙΙ): νέα οδός από τη
- * μηχανή με την παλιά ταυτότητα δήμου δίπλα της θα έδειχνε όνομα μιας περιοχής με ταυτότητα
- * άλλης (ADR-277).
+ * Τη χρειάζονται δύο πράξεις: ο «Καθαρισμός» της έδρας (`useClearCompanyHqAddress`) και το
+ * σύρσιμο με «Ναι, ενημέρωσε» (ADR-332 D27 Β-ΙΙ): νέα οδός από τη μηχανή με την παλιά ταυτότητα
+ * δήμου δίπλα της θα έδειχνε όνομα μιας περιοχής με ταυτότητα άλλης (ADR-277).
  */
 export const COMPANY_ADDRESS_HIERARCHY_CLEARED = {
   settlementId: null,
@@ -43,126 +39,62 @@ export const COMPANY_ADDRESS_HIERARCHY_CLEARED = {
   majorGeoName: '',
 } as const satisfies Partial<CompanyAddress>;
 
+/** Η εγγραφή όπως τη ζωγραφίζει ο `AddressEditor` — ίδιος πίνακας (ADR-772) για έδρα και υποκατάστημα. */
+export function contactAddressToResolvedFields(address: CompanyAddress): ResolvedAddressFields {
+  return storedAddressToResolved(address, 'companyAddress');
+}
+
+/** Η γραμμή «Οδός Αριθμός, Πόλη, Τ.Κ.» της εγγραφής. */
+export function formatContactAddressStreetLine(address: CompanyAddress): string {
+  return formatContactAddressLine(address);
+}
+
 /**
- * Η έδρα των **επίπεδων πεδίων** ως εγγραφή της λίστας.
- *
- * 🔑 **Μία συνάρτηση, δύο χρήσεις** (ADR-332 D27 Β-ΙΙ): η συνθετική γραμμή έδρας της οθόνης
- * (D20) **και** η υλοποίηση της λίστας όταν άνθρωπος τοποθετεί πρώτη φορά θέση σε επαφή που
- * έχει μόνο επίπεδα πεδία. Η ιεραρχία περνά από τον πίνακα (ADR-772) — αλλιώς η πρώτη θέση θα
- * έσβηνε τον δήμο της έδρας, αφού το παράγωγο `addresses[]` χτίζεται πλέον από τη λίστα.
+ * Ο editor διόρθωσε **κείμενο** μιας εγγραφής (συμφιλίωση / πρόταση / πληκτρολόγηση) — η
+ * ιεραρχία **μένει**. Ο βασικός μετασχηματισμός, κοινός για έδρα και υποκαταστήματα.
  */
-export function hqEntryFromFlatFields(formData: ContactFormData): CompanyAddress {
-  const hierarchy = projectAddressVocabulary(
-    formData as Readonly<Record<string, unknown>>,
-    'contactFlat',
-    'companyAddress',
-    { includePostal: true, clearedIdsAsNull: false },
-  ) as Partial<CompanyAddress>;
+export function applyResolvedToContactAddress(
+  resolved: ResolvedAddressFields,
+  existing: CompanyAddress,
+): CompanyAddress {
   return {
-    ...hierarchy,
-    type: formData.primaryAddressType ?? getPrimaryAddressType(formData.type),
-    ...(formData.primaryAddressCustomLabel ? { customLabel: formData.primaryAddressCustomLabel } : {}),
-    street: formData.street ?? '',
-    number: formData.streetNumber ?? '',
-    postalCode: formData.postalCode ?? '',
-    city: formData.city ?? '',
-    // 🔴 **Ζ4δ** (ADR-332 D27 Φάση Α): εδώ το πεδίο **παραλειπόταν** όταν η φόρμα δεν δήλωνε
-    // χώρα, ενώ το **παράγωγο** `addresses[]` έγραφε `'GR'` (`address-info-builder:185`) —
-    // δύο αποφάσεις για την κενή χώρα, σε δύο αρχεία, μέσα στο **ίδιο** έγγραφο. Μετρημένο
-    // ζωντανά στο Λ6. Η απόφαση ζει πλέον **μία φορά**, στο λεξιλόγιο χώρας.
-    country: toStoredCountryCode(formData.hqAddressCountry) ?? DEFAULT_STORED_COUNTRY_CODE,
+    ...existing,
+    street: resolved.street ?? existing.street,
+    number: resolved.number ?? existing.number,
+    postalCode: resolved.postalCode ?? existing.postalCode,
+    city: resolved.city ?? existing.city,
+    // Χωρίς αυτό, η «Περιοχή / Συνοικία» χανόταν σιωπηλά στον πρώτο κύκλο onChange.
+    neighborhood: resolved.neighborhood ?? existing.neighborhood,
   };
 }
 
-export function formatHqStreetLine(formData: ContactFormData): string {
-  return formatContactAddressLine({
-    street: formData.street,
-    number: formData.streetNumber, // flat: `streetNumber` — array: `number`
-    city: formData.city,
-    postalCode: formData.postalCode,
-    country: formData.hqAddressCountry,
-  });
-}
-
 /**
- * Μηδενισμός της διοικητικής ιεραρχίας μετά από επίλυση θέσης στον χάρτη (ADR-277).
+ * Ο editor της **έδρας** — ο βασικός μετασχηματισμός, συν ό,τι ο editor της έδρας γράφει και ο
+ * editor υποκαταστήματος όχι (σήμερα): χώρα, περιοχή, και συνέπεια ταυτότητας οικισμού.
  *
- * Το reverse-geocoding επιστρέφει **ονόματα**, όχι ταυτότητες ΕΛΣΤΑΤ. Αν κρατούσαμε
- * τα παλιά ids, θα εμφανιζόταν το όνομα μιας περιοχής με την ταυτότητα μιας άλλης.
- * Κοινό και για τους δύο κλάδους του `applyDragResolve` — ένας ορισμός, ώστε να μη
- * μπορούν να αποκλίνουν.
+ * - **Οικισμός**: όνομα που άλλαξε από πηγή εκτός ιεραρχίας ⇒ το `settlementId` δεν αντιστοιχεί
+ *   πλέον στο εμφανιζόμενο όνομα και καθαρίζει. Ταυτότητα και ετικέτα δεν αποκλίνουν (ADR-277).
+ * - **Περιοχή**: ο editor δείχνει `regionName ‖ region` (ADR-772)· η διόρθωση γράφεται στο
+ *   **κανονικό** πεδίο του πίνακα (`regionName`) — αλλιώς ο αναγνώστης θα συνέχιζε να δείχνει το παλιό.
+ * - **Χώρα**: `!== undefined` = «ο editor εφάρμοσε το πεδίο»· μέσα σε αυτό, κενό = «καθαρίστηκε» (Ζ4α).
  */
-export const DRAG_RESOLVED_HIERARCHY_RESET = {
-  settlementId: null,
-  community: '',
-  municipalUnit: '',
-  municipality: '',
-  municipalityId: null,
-  regionalUnit: '',
-  region: '',
-  decentAdmin: '',
-  majorGeo: '',
-} as const;
-
-/**
- * ADR-772 — ήταν το **τέταρτο** δίδυμο, και το πιο ύπουλο: διέφερε από τα άλλα τρία σε
- * **δύο** σημεία (`streetNumber` αντί `number`, `settlement || city` αντί σκέτο `city`),
- * δηλαδή έμοιαζε με «διαφορετική συνάρτηση» ενώ ήταν το ίδιο ερώτημα σε **άλλο λεξιλόγιο**.
- *
- * ⚠️ **Η προειδοποίηση που ήταν εδώ σε σχόλιο είναι πλέον ΔΟΜΗ**: η προτεραιότητα
- * «`settlement` πριν `city`» δηλώνεται μία φορά στον πίνακα
- * (`ADMIN_LEVEL_VOCABULARY.settlement.contactFlat`) και ισχύει αυτόματα παντού. Όσο ήταν
- * σχόλιο, η απόκλιση ήταν θέμα προσοχής· τώρα είναι αδύνατη. *(Το γιατί μετρά: όταν
- * αποκλίνει, ο πίνακας «Συμφωνία Πεδίων» συγκρίνει **άλλη** τιμή από αυτή που βλέπει ο
- * χρήστης και το «Διόρθωση» φαίνεται να μην κάνει τίποτα.)*
- */
-export function formDataToResolvedFields(fd: ContactFormData): ResolvedAddressFields {
-  return storedAddressToResolved(fd as Readonly<Record<string, unknown>>, 'contactFlat');
-}
-
-/**
- * Ο editor της έδρας διόρθωσε κείμενο (συμφιλίωση / πρόταση / πληκτρολόγηση) — η επόμενη
- * κατάσταση της φόρμας. Καθαρή συνάρτηση: την καλεί το `useHqAddressMutations.handleHqChange`
- * και την εκτελεί αυτούσια ο φρουρός round-trip (ADR-332 §D30).
- *
- * 🔴 **ADR-332 §D30 — η αιτία που μετρήθηκε στην παραγωγή** (`cont_c4d79d09…`): η θέση 0 της
- * λίστας ενημερωνόταν με **χειρόγραφη** λίστα τεσσάρων πεδίων, ενώ τα επίπεδα πεδία έπαιρναν
- * και το `neighborhood`. Μόλις η λίστα υπήρχε (π.χ. αφού διαλέχτηκε ιεραρχία), εκείνη ήταν η
- * αυθεντική πηγή της αποθήκευσης ⇒ «ΒΙ.ΠΕ. Ωραιοκάστρου» στην οθόνη, **τίποτα** στο έγγραφο.
- * Τώρα η θέση 0 είναι **κάτοπτρο** των επίπεδων πεδίων μέσα από τον πίνακα (ADR-772).
- *
- * ⚠️ Η «Πόλη» του editor αντιστοιχεί στο ορατό «Οικισμός / Πόλη», που διαβάζει
- * `settlement || city`· γράφεται και στα δύο, αλλιώς η διόρθωση πάει σε σκιώδες πεδίο.
- */
-export function applyHqEditorChange(prev: ContactFormData, addr: ResolvedAddressFields): ContactFormData {
-  const cityApplied = addr.city !== undefined;
-  const settlementRenamed = cityApplied && addr.city !== (prev.settlement ?? '');
-  const country = addr.country !== undefined ? toStoredCountryCode(addr.country) : prev.hqAddressCountry;
-
-  const next: ContactFormData = {
-    ...prev,
-    street: addr.street ?? prev.street ?? '',
-    streetNumber: addr.number ?? prev.streetNumber ?? '',
-    postalCode: addr.postalCode ?? prev.postalCode ?? '',
-    city: addr.city ?? prev.city ?? '',
-    neighborhood: addr.neighborhood ?? prev.neighborhood ?? '',
-    region: addr.region ?? prev.region ?? '',
-    ...(cityApplied ? { settlement: addr.city } : {}),
-    // Το όνομα άλλαξε από πηγή εκτός ιεραρχίας → το προηγούμενο `settlementId` δεν
-    // αντιστοιχεί πλέον στο εμφανιζόμενο όνομα. Ταυτότητα και ετικέτα δεν αποκλίνουν.
+export function applyResolvedToContactHq(resolved: ResolvedAddressFields, hq: CompanyAddress): CompanyAddress {
+  const settlementRenamed = resolved.city !== undefined && resolved.city !== hq.city;
+  return {
+    ...applyResolvedToContactAddress(resolved, hq),
+    ...(resolved.region !== undefined ? { regionName: resolved.region } : {}),
     ...(settlementRenamed ? { settlementId: null } : {}),
-    // `!== undefined` = «ο editor εφάρμοσε το πεδίο»· μέσα σε αυτό, κενό = «καθαρίστηκε» (Ζ4α).
-    ...(addr.country !== undefined ? { hqAddressCountry: country } : {}),
+    ...(resolved.country !== undefined ? { country: toStoredCountryCode(resolved.country) } : {}),
   };
+}
 
-  const existing = prev.companyAddresses ?? [];
-  if (existing.length === 0) return next;
-  const [hq, ...branches] = existing;
-  const mirroredHq: CompanyAddress = {
-    ...hq,
-    ...(mirrorAddressTextFields(next as Readonly<Record<string, unknown>>, 'contactFlat', 'companyAddress') as Partial<CompanyAddress>),
-    city: addr.city ?? hq.city,
-    ...(addr.country !== undefined ? { country } : {}),
-  };
-  return { ...next, companyAddresses: [mirroredHq, ...branches] };
+/**
+ * Η επόμενη κατάσταση της φόρμας μετά από διόρθωση στον editor της έδρας. Καθαρή συνάρτηση:
+ * την καλεί το `useHqAddressMutations.handleHqChange` και την εκτελεί αυτούσια ο φρουρός round-trip.
+ *
+ * 🔴 **ADR-332 §D30** — εδώ η Φάση 1 κρατούσε **δύο** δοχεία σε κάτοπτρο (επίπεδα πεδία + θέση 0).
+ * Η Φάση 2 έσβησε το πρώτο: δεν υπάρχει πια τίποτα να συγχρονιστεί.
+ */
+export function applyHqEditorChange(prev: ContactFormData, resolved: ResolvedAddressFields): ContactFormData {
+  return commitHq(prev, (hq) => applyResolvedToContactHq(resolved, hq));
 }

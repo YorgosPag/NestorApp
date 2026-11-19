@@ -14,17 +14,11 @@ import { toContactDraggedAddress, type DragResolvedAddress } from './contact-pin
 
 interface ContactAddressMapPreviewProps {
   contactId?: string;
-  street?: string;
-  streetNumber?: string;
-  city?: string;
-  postalCode?: string;
-  /** Municipality name for geocoding disambiguation */
-  municipality?: string;
-  /** Regional unit name for geocoding disambiguation */
-  regionalUnit?: string;
-  /** Region name for geocoding disambiguation */
-  region?: string;
-  /** Multi-address array for company contacts (HQ + branches) */
+  /**
+   * Οι διευθύνσεις της επαφής — θέση 0 = έδρα / κατοικία (ADR-319). ADR-332 §D30 Φάση 2: το
+   * **μόνο** δοχείο· τα επίπεδα props (`street`, `city`, …) της «μονής διεύθυνσης» έφυγαν μαζί με
+   * τα επίπεδα πεδία της φόρμας.
+   */
   companyAddresses?: CompanyAddress[];
   /**
    * ADR-318: additional addresses rendered as read-only pins (e.g. derived
@@ -61,13 +55,6 @@ function mapContactTypeToProjectType(type: CompanyAddress['type']): ProjectAddre
 
 export function ContactAddressMapPreview({
   contactId,
-  street,
-  streetNumber,
-  city,
-  postalCode,
-  municipality,
-  regionalUnit,
-  region,
   companyAddresses,
   readOnlyExtraAddresses,
   heightPreset,
@@ -83,7 +70,6 @@ export function ContactAddressMapPreview({
   // SSoT labels — pulled from locale files, never hardcoded
   const hqLabel = tContactsForm('addressesSection.headquarters');
   const branchLabel = tContactsForm('addressesSection.branch');
-  const homeLabel = tAddr('types.home');
 
   // Resolve a CompanyAddress to its human-readable pin label (ADR-319).
   // `customLabel` wins for `other`; everything else reads from `addresses.types`.
@@ -97,63 +83,34 @@ export function ContactAddressMapPreview({
   const addresses = useMemo<ProjectAddress[]>(() => {
     const defaults = AddressUtils.getNewAddressDefaults();
 
-    // Multi-address mode: company contacts with HQ + branches
-    if (companyAddresses && companyAddresses.length > 0) {
-      // In draggable mode: include ALL addresses (even empty) so each gets a pin
-      const filtered = draggable
-        ? companyAddresses
-        : companyAddresses.filter((addr) => addr.city.trim() || (addr.street.trim() && addr.postalCode.trim()));
-      return filtered
-        .map((addr, index) => {
-          const isPrimary = addr.type === 'headquarters' || addr.type === 'home';
-          return createProjectAddress({
-            ...defaults,
-            // ADR-332 D27 Β-ΙΙ: η ΑΠΟΘΗΚΕΥΜΕΝΗ θέση — ο χάρτης την προτιμά από τη γεωκωδικοποίηση
-            // της οθόνης (`displayedPosition`), οπότε η πινέζα δεν «πηδά» μετά το σύρσιμο.
-            ...pickStoredAddressPosition(addr),
-            // Η πραγματική ταυτότητα, όπου υπάρχει — ο δείκτης αλλάζει όταν σβήνεται υποκατάστημα.
-            id: addr.id ?? `${contactId || fallbackAddressIdRef.current}-${index}`,
-            street: addr.street.trim(),
-            city: addr.city.trim(),
-            number: addr.number.trim() || undefined,
-            postalCode: addr.postalCode.trim(),
-            municipality: addr.municipalityName?.trim() || undefined,
-            regionalUnit: addr.regionalUnitName?.trim() || undefined,
-            region: addr.regionName?.trim() || addr.region?.trim() || undefined,
-            type: mapContactTypeToProjectType(addr.type),
-            label: resolveTypeLabel(addr),
-            isPrimary,
-          });
+    if (!companyAddresses || companyAddresses.length === 0) return [];
+    // In draggable mode: include ALL addresses (even empty) so each gets a pin
+    const filtered = draggable
+      ? companyAddresses
+      : companyAddresses.filter((addr) => addr.city.trim() || (addr.street.trim() && addr.postalCode.trim()));
+    return filtered
+      .map((addr, index) => {
+        const isPrimary = addr.type === 'headquarters' || addr.type === 'home';
+        return createProjectAddress({
+          ...defaults,
+          // ADR-332 D27 Β-ΙΙ: η ΑΠΟΘΗΚΕΥΜΕΝΗ θέση — ο χάρτης την προτιμά από τη γεωκωδικοποίηση
+          // της οθόνης (`displayedPosition`), οπότε η πινέζα δεν «πηδά» μετά το σύρσιμο.
+          ...pickStoredAddressPosition(addr),
+          // Η πραγματική ταυτότητα, όπου υπάρχει — ο δείκτης αλλάζει όταν σβήνεται υποκατάστημα.
+          id: addr.id ?? `${contactId || fallbackAddressIdRef.current}-${index}`,
+          street: addr.street.trim(),
+          city: addr.city.trim(),
+          number: addr.number.trim() || undefined,
+          postalCode: addr.postalCode.trim(),
+          municipality: addr.municipalityName?.trim() || undefined,
+          regionalUnit: addr.regionalUnitName?.trim() || undefined,
+          region: addr.regionName?.trim() || addr.region?.trim() || undefined,
+          type: mapContactTypeToProjectType(addr.type),
+          label: resolveTypeLabel(addr),
+          isPrimary,
         });
-    }
-
-    // Single-address mode: individual / service contacts
-    const trimmedStreet = (street ?? '').trim();
-    const trimmedCity = (city ?? '').trim();
-    const trimmedStreetNumber = (streetNumber ?? '').trim();
-    const trimmedPostalCode = (postalCode ?? '').trim();
-
-    if (!trimmedCity && !(trimmedStreet && trimmedPostalCode)) {
-      return [];
-    }
-
-    return [
-      createProjectAddress({
-        ...defaults,
-        id: contactId || fallbackAddressIdRef.current,
-        street: trimmedStreet,
-        city: trimmedCity,
-        number: trimmedStreetNumber || undefined,
-        postalCode: trimmedPostalCode,
-        municipality: municipality?.trim() || undefined,
-        regionalUnit: regionalUnit?.trim() || undefined,
-        region: region?.trim() || undefined,
-        type: 'legal',
-        label: homeLabel,
-        isPrimary: true,
-      }),
-    ];
-  }, [city, contactId, postalCode, street, streetNumber, municipality, regionalUnit, region, companyAddresses, draggable, hqLabel, branchLabel, homeLabel]);
+      });
+  }, [contactId, companyAddresses, draggable, hqLabel, branchLabel]);
 
   // ADR-318: append read-only derived addresses and track their ids so the
   // map knows not to make them draggable.

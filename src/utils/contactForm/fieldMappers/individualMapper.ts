@@ -8,7 +8,6 @@ import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
 import type { PersonaType, PersonaData } from '@/types/contacts/personas';
 import { getPersonaFields } from '@/config/persona-config';
 import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
-import { buildFlatFieldsFromAddressInfo } from '@/utils/contacts/address-info-builder';
 import { readContactLicences } from '@/lib/contacts/contact-licences';
 import { licenceDraftsOf } from '@/lib/professional/licence-drafts';
 
@@ -153,10 +152,8 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     ...licenceFormFieldsOf(individualContact.licences),
 
     // 📞 Επικοινωνία - ENTERPRISE Arrays Structure
-    // Επίπεδα πεδία + διοικητική ιεραρχία από το `addresses[0]` — μία υλοποίηση
-    // κοινή με τον `serviceMapper` (ADR-332 D18· ήταν αντιγραμμένη και είχε ήδη
-    // αποκλίνει στο `neighborhood`).
-    ...buildFlatFieldsFromAddressInfo(contact.addresses?.[0]),
+    // ADR-332 §D30 Φάση 2: η κατοικία/έδρα ΕΙΝΑΙ η θέση 0 της λίστας — τα επίπεδα πεδία που
+    // διαβάζονταν εδώ από το ΠΑΡΑΓΩΓΟ `addresses[0]` δεν υπάρχουν πια στη φόρμα.
     // ADR-332 D18: οι επιπλέον διευθύνσεις (`home`/`office`/`vacation`, ADR-319)
     // δεν διαβάζονταν καθόλου — η φόρμα ξεκινούσε πάντα με άδεια λίστα και το
     // επόμενο save έσβηνε ό,τι είχε γραφτεί.

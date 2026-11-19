@@ -148,10 +148,7 @@ export function buildSectionFooterRenderers(ctx: RendererContext): Record<string
     contact: () => (
       <ContactAddressMapPreview
         contactId={formData.id}
-        street={formData.street}
-        streetNumber={formData.streetNumber}
-        city={formData.city}
-        postalCode={formData.postalCode}
+        companyAddresses={formData.companyAddresses}
       />
     ),
   };
