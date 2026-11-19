@@ -29,6 +29,10 @@ on:
       - 'playwright.config.ts'
       - 'package.json'
       - '.github/workflows/public-reflow-gate.yml'
+      - '.github/actions/setup-firebase-emulators/**'
+      - 'firebase.json'
+      - 'firestore.rules'
+      - 'src/lib/firebase.ts'
   push:
     branches: [main]
     paths:
@@ -51,6 +55,10 @@ on:
       - 'playwright.config.ts'
       - 'package.json'
       - '.github/workflows/public-reflow-gate.yml'
+      - '.github/actions/setup-firebase-emulators/**'
+      - 'firebase.json'
+      - 'firestore.rules'
+      - 'src/lib/firebase.ts'
   workflow_dispatch:
 
 permissions:
@@ -76,15 +84,27 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.57.0-noble
       options: --user 1001
 
-    # Ίδια ψεύτικα κλειδιά με το 3.82: οι σελίδες αποδίδονται ανώνυμες, χωρίς δίκτυο προς
-    # Firebase — η πύλη κρίνει τη ΔΙΑΤΑΞΗ του κελύφους/ήρωα/πορτών, όχι δεδομένα.
+    # 🔒 HERMETIC (ADR-797, 2026-11-19): οι σελίδες αποδίδονται ανώνυμες πάνω σε Auth + Firestore
+    # **emulator** (project `demo-*` = σύμβαση Firebase «κανένας πραγματικός πόρος»), ΟΧΙ σε ψεύτικο
+    # project στο διαδίκτυο. Μετρημένο στο run 44526875434: με το ψεύτικο `ci-public-reflow` το
+    # `onSnapshot` του `usePublicListings` ξαναδοκίμαζε ως το σφάλμα ⇒ `<main aria-busy>` έμενε `true`
+    # ~31 s σε ΚΑΘΕ test (1.752 s από ~2.500 s) και η πύλη δεν τελείωνε ποτέ στα 45′· το `/ergaleia`,
+    # που δεν διαβάζει Firestore, έβγαινε σε 0,1 s. Η πύλη κρίνει τη ΔΙΑΤΑΞΗ, όχι δεδομένα: η άδεια
+    # βάση είναι το σταθερό, αναπαραγώγιμο σύνολο δεδομένων της.
+    # ⚠️ Ο client ΔΕΝ ρωτά δικό του διακόπτη: το `next.config.js` παράγει το
+    #    `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` από το `FIREBASE_AUTH_EMULATOR_HOST` (ΜΙΑ πηγή) και το
+    #    `src/lib/firebase.ts` συνδέεται στο `localhost:8080/9099` (οι θύρες του `firebase.json`).
     env:
-      NEXT_PUBLIC_FIREBASE_API_KEY: ci-public-reflow-no-network
-      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-public-reflow
-      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-public-reflow.appspot.com
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-public-reflow-emulator
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: localhost
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: demo-nestor-reflow
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: demo-nestor-reflow.appspot.com
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
       NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+      FIREBASE_PROJECT_ID: demo-nestor-reflow
+      GCLOUD_PROJECT: demo-nestor-reflow
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
 
     steps:
       - uses: actions/checkout@v5
@@ -101,6 +121,28 @@ jobs:
 
       - name: 📦 Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # ADR-800 · ADR-875 §12 — cache + Java + firebase-tools στην ΕΚΔΟΣΗ ΤΟΥ DEPLOYER.
+      # ΠΟΤΕ inline εγκατάσταση firebase-tools εδώ: το μπλοκάρει το CHECK 3.65 (ci-tools).
+      - name: 🧰 Firebase emulator toolchain (μία έκδοση)
+        uses: ./.github/actions/setup-firebase-emulators
+
+      # Οι ΠΡΑΓΜΑΤΙΚΟΙ κανόνες (μεταγλωττισμένοι), όχι ανοιχτός emulator: ό,τι διαβάζει ανώνυμα η σελίδα
+      # στην παραγωγή, το διαβάζει κι εδώ — και τίποτα παραπάνω. ΠΡΙΝ τον dev server: ένας client που
+      # ξεκινά χωρίς emulator ξαναπέφτει στο ίδιο σενάριο επαναλήψεων που μετρήσαμε.
+      - name: 🧪 Σήκωσε Auth + Firestore emulator (demo-nestor-reflow)
+        run: |
+          node scripts/build-firestore-rules.js
+          firebase emulators:start --only auth,firestore --project demo-nestor-reflow > /tmp/emulators.log 2>&1 &
+          for i in $(seq 1 120); do
+            if curl -s -o /dev/null http://127.0.0.1:9099/ && curl -s -o /dev/null http://127.0.0.1:8080/; then
+              echo "emulators up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error title=CHECK 3.94 (ADR-797)::οι emulators δεν σηκώθηκαν σε 120s"
+          cat /tmp/emulators.log
+          exit 1
 
       - name: 🚀 Start dev server
         run: pnpm run dev > /tmp/dev-server.log 2>&1 &
@@ -143,5 +185,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: public-reflow-dev-server-log
-          path: /tmp/dev-server.log
+          path: |
+            /tmp/dev-server.log
+            /tmp/emulators.log
           if-no-files-found: warn
