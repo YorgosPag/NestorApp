@@ -190,6 +190,8 @@ on:
       - 'pnpm-lock.yaml'
       - '.ssot-discover-baseline.json'
       - '.ssot-registry.json'
+      # Το ίδιο το workflow: αλλαγή του μπορεί να φτάσει στο main χωρίς να τρέξει (push 7ef9033f).
+      - '.github/workflows/ssot-discover.yml'
 
 concurrency:
   group: ssot-discover-${{ github.event_name == 'pull_request' && github.ref || github.sha }}

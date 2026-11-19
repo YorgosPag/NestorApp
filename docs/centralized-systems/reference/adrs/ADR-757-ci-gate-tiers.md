@@ -382,6 +382,14 @@ tests που δηλώνει;»*. Η κλάση «test που τραβά ιστο
 
 ## Changelog
 
+### 2026-11-19 — Κάθε workflow ξυπνά όταν αλλάζει το ίδιο
+
+Στο push `7ef9033f` το `i18n-governance.yml` και το `ui-contrast-ratchet.yml` άλλαξαν και **δεν έτρεξαν**: το
+`push.paths` τους δεν περιείχε το δικό τους αρχείο, ενώ το `pull_request.paths` το περιείχε. Έτσι μια διόρθωση στο
+workflow έφτανε στο `main` χωρίς να αποδειχθεί. Μετρήθηκαν όλα τα workflows με `push.paths`: το κενό το είχαν **3**
+(`i18n-governance` · `ui-contrast-ratchet` · `ssot-discover`). Το `ci-gate-tiers.yml` καλύπτεται ήδη από το
+`.github/workflows/**`. Προστέθηκε σε καθένα το δικό του `.github/workflows/<όνομα>.yml`.
+
 ### 2026-09-21 — Όλα τα actions σε Node 24 (deprecation του Node 20)
 
 Κάθε workflow έγραφε *«Node.js 20 is deprecated…»*. **Μία** μαζική αλλαγή σε `.github/workflows/*.yml` +

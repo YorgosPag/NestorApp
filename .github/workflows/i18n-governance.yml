@@ -76,6 +76,8 @@ on:
       - 'scripts/validate-translations.js'
       - 'scripts/_shared/i18n-governance.js'
       - '.i18n-*.json'
+      # Το ίδιο το workflow: αλλαγή του έφτανε στο main χωρίς να τρέξει ποτέ (push 7ef9033f).
+      - '.github/workflows/i18n-governance.yml'
 
 concurrency:
   group: i18n-governance-${{ github.event_name == 'pull_request' && github.ref || github.sha }}

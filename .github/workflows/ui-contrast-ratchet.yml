@@ -135,6 +135,8 @@ on:
       - 'tailwind.config.ts'
       - '.ssot-registry.json'
       - '.theme-classes-baseline.json'
+      # Το ίδιο το workflow: αλλαγή του έφτανε στο main χωρίς να τρέξει ποτέ (push 7ef9033f).
+      - '.github/workflows/ui-contrast-ratchet.yml'
 
 concurrency:
   group: ui-contrast-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
