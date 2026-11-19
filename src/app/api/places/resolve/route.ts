@@ -24,12 +24,17 @@
  * ⚠️ **Καμία άδεια (`permissions`)** — ίδιος λόγος με το `/api/owner-properties`: τα
  * δικαιώματα είναι **εμβέλειας εταιρείας** και ο ιδιώτης **δεν έχει εταιρεία**. Ένας
  * τέτοιος φρουρός θα ήταν κλειστός για **όλους** όσους υπάρχει για να μπουν.
+ *
+ * 🔴 **`withPersonalOrOrgAuth`, ΟΧΙ `withAuth`** (ADR-817 §12, 2026-11-19): το `withAuth`
+ * εγγυάται μισθωτή και απαντούσε **401 `missing_claims`** στον ιδιώτη — μετρημένο ζωντανά,
+ * «Ο τόπος δεν καταχωρήθηκε». Η επικεφαλίδα έλεγε ήδη ότι ο ιδιώτης δεν έχει εταιρεία· η
+ * πόρτα δεν το άκουγε. Η ταυτότητα μένει **υποχρεωτική** (ρυθμός + ODbL, παραπάνω)· ο δρων
+ * **δεν διαβάζεται** — κανένα στοιχείο του δεν φτάνει στο δημόσιο έγγραφο.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { withAuth } from '@/lib/auth/middleware';
-import type { AuthContext } from '@/lib/auth/types';
+import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { nowISO } from '@/lib/date-local';
@@ -53,7 +58,7 @@ import {
  */
 async function handler(
   request: NextRequest,
-  _ctx: AuthContext,
+  _actor: ApiActor,
 ): Promise<NextResponse<PlaceApiResponse>> {
   const body: unknown = await request.json().catch(() => null);
 
@@ -76,4 +81,4 @@ async function handler(
   );
 }
 
-export const POST = withStandardRateLimit(withAuth(handler));
+export const POST = withStandardRateLimit(withPersonalOrOrgAuth(handler));

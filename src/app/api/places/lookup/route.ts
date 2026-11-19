@@ -17,6 +17,11 @@
  * μας UA. Και ο **ρυθμιστής** είναι «βαρύς» (10/λεπτό) για τον ίδιο λόγο — μία
  * ανθρώπινη χειρονομία τη φορά (§13.5).
  *
+ * 🔴 **`withPersonalOrOrgAuth`, ΟΧΙ `withAuth`** (ADR-817 §12, 2026-11-19): ο επιλογέας
+ * τόπου (`hooks/geo/usePlaceIdentity`) ρωτά **εδώ** πριν από το `/resolve`, και ο κύριος
+ * χρήστης του είναι ο **ιδιώτης** που καταχωρεί το σπίτι του — που το `withAuth` τον
+ * απέρριπτε με 401 (δεν έχει μισθωτή). Η ταυτότητα μένει φραγή φόρτου· ο δρων δεν διαβάζεται.
+ *
  * ⛔ **ΜΗΝ δεχτείς ποτέ πλαίσιο (bbox) εδώ.** Το σημείο είναι **μία** χειρονομία· ένα
  * πλαίσιο είναι **σάρωση**, και η σάρωση είναι ακριβώς αυτό που ενεργοποιεί το
  * share-alike (§13.4). Ο τύπος `GeoBoundingBox` υπάρχει για **αίτημα προς** το
@@ -25,8 +30,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { withAuth } from '@/lib/auth/middleware';
-import type { AuthContext } from '@/lib/auth/types';
+import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { isWithinServedArea } from '@/lib/places/place-claim-validation';
 import { placeAddressLine } from '@/lib/places/place-facts';
@@ -69,7 +73,7 @@ function numberParam(request: NextRequest, name: string): number | null {
 
 async function handler(
   request: NextRequest,
-  _ctx: AuthContext,
+  _actor: ApiActor,
 ): Promise<NextResponse<LookupResponse>> {
   const lat = numberParam(request, 'lat');
   const lng = numberParam(request, 'lng');
@@ -114,4 +118,4 @@ async function handler(
   }
 }
 
-export const GET = withHeavyRateLimit(withAuth(handler));
+export const GET = withHeavyRateLimit(withPersonalOrOrgAuth(handler));
