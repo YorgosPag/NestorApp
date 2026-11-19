@@ -84,11 +84,18 @@ export function LookupStatus({ lookup }: { lookup: BuildingLookup }): React.Reac
       //    δουλεύει ή αν κόλλησε. Η κίνηση είναι η πληροφορία.
       return <StatusLine tone="busy">{t('place.picker.searching')}</StatusLine>;
     case 'found':
+      // ⚠️ Από την **οθόνη** (ADR-777 §8.104) η διεύθυνση **δεν είναι ακόμη γνωστή** — τη συμπληρώνει ο διακομιστής
+      //    στην εγγραφή. Το «Χωρίς καταχωρημένη διεύθυνση» θα ήταν εκεί **ψέμα** («δεν ξέρουμε» ≠ «δεν υπάρχει»)·
+      //    η γραμμή σωπαίνει για τη διεύθυνση αντί να το πει.
       return (
         <StatusLine tone="good">
           {t('place.picker.found')}
-          {' — '}
-          {lookup.displayAddress ?? t('place.picker.noAddress')}
+          {lookup.origin === 'server' && (
+            <>
+              {' — '}
+              {lookup.displayAddress ?? t('place.picker.noAddress')}
+            </>
+          )}
         </StatusLine>
       );
     case 'none':

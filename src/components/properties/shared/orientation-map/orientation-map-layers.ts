@@ -13,20 +13,15 @@
 
 import type { FeatureCollection, LineString, Polygon } from 'geojson';
 
+import { protomapsBuildingKindFilter } from '@/lib/geo/osm/protomaps-osm-identity';
 import type { LayerProps } from '@/lib/maps/maplibre';
+import type { BuildingSource } from '@/lib/maps/rendered-buildings';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
-/** Η στρώση κτιρίων του στυλ Protomaps (`@protomaps/basemaps`). Στον εφεδρικό χάρτη (raster) δεν υπάρχει. */
-export const BUILDINGS_LAYER = 'buildings';
 export const EDGE_SOURCE = 'orientation-edges';
 export const HOVER_SOURCE = 'orientation-hover-building';
 export const BUILDING_ZOOM = 18;
 
-/** Πού ζουν τα κτίρια του στυλ — όπως τα δηλώνει η ίδια η στρώση `buildings`. */
-export interface BuildingSource {
-  readonly source: string;
-  readonly sourceLayer: string;
-}
 
 /* eslint-disable design-system/no-hardcoded-colors -- Το MapLibre δέχεται ΜΟΝΟ literal χρώματα στο `paint`: δεν αποτιμά
    CSS custom properties (ίδια δήλωση με το `components/geo/PlaceMap.tsx`). */
@@ -40,7 +35,7 @@ export function buildingOutlineLayer(building: BuildingSource): LayerProps {
     type: 'line',
     source: building.source,
     'source-layer': building.sourceLayer,
-    filter: ['in', ['get', 'kind'], ['literal', ['building', 'building_part']]],
+    filter: protomapsBuildingKindFilter(),
     paint: { 'line-color': OUTLINE, 'line-opacity': 0.45, 'line-width': 1 },
   };
 }

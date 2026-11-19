@@ -33,12 +33,19 @@ import {
   Map,
   Marker,
   Source,
+  type LayerProps,
   type MapLayerMouseEvent,
   type MapRef,
 } from '@/lib/maps/maplibre';
+import type { ExpressionSpecification } from 'maplibre-gl';
 import { MapPin } from 'lucide-react';
 
 import { useDefaultBasemap } from '@/lib/maps/use-default-basemap';
+import {
+  renderedBuildingPickAt,
+  type BuildingHighlight,
+  type RenderedBuildingPick,
+} from '@/lib/maps/rendered-buildings';
 import { useCooperativeGestures } from '@/lib/maps/use-cooperative-gestures';
 import { Spinner } from '@/components/ui/spinner/Spinner';
 import { cameraBirthView, useCameraFrame } from '@/components/geo/use-camera-frame';
@@ -78,11 +85,28 @@ const SHAPE_FILL = {
  */
 export const PLACE_SHAPE_LINE_LAYER = 'place-shape-line';
 
+/**
+ * **Ο τονισμός ενός κτιρίου του φόντου** — στρώση πάνω στην **ίδια** πηγή διανυσμάτων, με φίλτρο ταυτότητας (ADR-777
+ * §8.104). Ζωγραφίζει **κάθε** κομμάτι του κτιρίου σε κάθε πλακίδιο, χωρίς ραφές και χωρίς γεωμετρία που ταξιδεύει
+ * (η πρακτική Mapbox/MapLibre για επιλογή χαρακτηριστικού). Ίδιο στυλ με το σχήμα: για τον άνθρωπο είναι το ίδιο
+ * πράγμα — «αυτό διάλεξα».
+ */
+function highlightLayers(highlight: BuildingHighlight): readonly LayerProps[] {
+  const filter: ExpressionSpecification = ['==', ['id'], highlight.featureId];
+  const at = { source: highlight.source.source, 'source-layer': highlight.source.sourceLayer, filter };
+  return [
+    { ...at, id: 'place-building-highlight-fill', type: 'fill', paint: SHAPE_FILL.paint },
+    { ...at, id: 'place-building-highlight-line', type: 'line', paint: SHAPE_LINE_PAINT },
+  ];
+}
+
+const SHAPE_LINE_PAINT = { 'line-color': '#2563eb', 'line-width': 2 };
+
 const SHAPE_LINE = {
   id: PLACE_SHAPE_LINE_LAYER,
   type: 'line' as const,
   source: SHAPE_SOURCE,
-  paint: { 'line-color': '#2563eb', 'line-width': 2 },
+  paint: SHAPE_LINE_PAINT,
 };
 
 const TRACE_LINE = {
@@ -131,7 +155,12 @@ export interface PlaceMapProps {
    * και τα πετά — δηλαδή επιφάνεια που υπόσχεται πράξη χωρίς να την κάνει. Χωρίς
    * `onPick` ο δείκτης μένει προεπιλεγμένος και δεν προσκαλείται κανείς να πατήσει.
    */
-  readonly onPick?: (point: GeoPoint) => void;
+  readonly onPick?: (point: GeoPoint, building: RenderedBuildingPick | null) => void;
+  /**
+   * Κτίριο του **φόντου** προς τονισμό (ADR-777 §8.104) — η στιγμιαία επιλογή, χωρίς γεωμετρία. Το `outline` μένει για
+   * ό,τι **δεν** ζει στο φόντο: απάντηση διακομιστή στον εφεδρικό (raster) χάρτη, ολοκληρωμένο σχέδιο.
+   */
+  readonly highlight?: BuildingHighlight | null;
   /** Κλειστό σχήμα προς εμφάνιση — κτίριο OSM (**ζωντανά**) ή ολοκληρωμένο σχέδιο. */
   readonly outline?: GeoOutline | null;
   /**
@@ -249,8 +278,20 @@ function halosOf(focus: PlaceFocus | null): GeoOutline | null {
  * που ξέρουμε, μετά ό,τι κρατά ο άνθρωπος στο χέρι του. Αν η επιφύλαξη ζωγραφιζόταν
  * τελευταία, θα σκέπαζε **κυριολεκτικά** τη βεβαιότητα.
  */
+/** Ο τονισμός ως δύο στρώσεις στην πηγή του φόντου (δες {@link BuildingHighlight}). */
+function BuildingHighlightLayers({ highlight }: { readonly highlight: BuildingHighlight }): React.ReactElement {
+  return (
+    <>
+      {highlightLayers(highlight).map((layer) => (
+        <Layer key={layer.id} {...layer} />
+      ))}
+    </>
+  );
+}
+
 function PlaceMapLayers({
   halo,
+  highlight,
   outline,
   shapes,
   shapeFill,
@@ -259,6 +300,7 @@ function PlaceMapLayers({
   focus,
 }: {
   readonly halo: GeoOutline | null;
+  readonly highlight: BuildingHighlight | null;
   readonly outline: GeoOutline | null;
   readonly shapes: readonly GeoOutline[];
   readonly shapeFill: boolean;
@@ -275,6 +317,8 @@ function PlaceMapLayers({
           <Layer {...HALO_LINE} />
         </Source>
       )}
+
+      {highlight !== null && <BuildingHighlightLayers highlight={highlight} />}
 
       {closed !== null && (
         <Source id={SHAPE_SOURCE} type="geojson" data={closed}>
@@ -339,6 +383,7 @@ function closedShapesGeoJson(
 export function PlaceMap({
   center,
   onPick,
+  highlight = null,
   outline = null,
   shapes = NO_SHAPES,
   trace = [],
@@ -381,7 +426,8 @@ export function PlaceMap({
   const handleClick = useCallback(
     (event: MapLayerMouseEvent) => {
       if (!interactive) return;
-      onPick?.({ lat: event.lngLat.lat, lng: event.lngLat.lng });
+      // 🔑 Βαθμίδα 1 (ADR-777 §8.104): ο χάρτης **ξέρει ήδη** ποιο κτίριο πατήθηκε — το λέει μαζί με το σημείο.
+      onPick?.({ lat: event.lngLat.lat, lng: event.lngLat.lng }, renderedBuildingPickAt(event.target, event.point));
     },
     [interactive, onPick],
   );
@@ -402,7 +448,7 @@ export function PlaceMap({
         onClick={handleClick}
         cursor={interactive ? 'crosshair' : 'default'}
       >
-        <PlaceMapLayers halo={halo} outline={outline} shapes={shapes} shapeFill={shapeFill} trace={trace} pin={pin} focus={focus} />
+        <PlaceMapLayers halo={halo} highlight={highlight} outline={outline} shapes={shapes} shapeFill={shapeFill} trace={trace} pin={pin} focus={focus} />
         {children}
       </Map>
 

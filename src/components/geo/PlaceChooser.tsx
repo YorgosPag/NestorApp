@@ -34,6 +34,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePlaceIdentity, type PlaceIdentityState } from '@/hooks/geo/usePlaceIdentity';
 import type { PlaceClaim, PlaceTarget } from '@/lib/places/place-claim';
 import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
+import type { RenderedBuildingPick } from '@/lib/maps/rendered-buildings';
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -127,8 +128,9 @@ export function PlaceChooser({
   );
 
   const handlePick = useCallback(
-    (point: GeoPoint) => {
-      if (gesture === 'pick') return void look(point);
+    (point: GeoPoint, building: RenderedBuildingPick | null) => {
+      // 🔑 Βαθμίδα 1 (ADR-777 §8.104): ο χάρτης ξέρει ήδη το κτίριο ⇒ στιγμιαία, χωρίς αίτημα.
+      if (gesture === 'pick') return void look(point, building);
       if (gesture === 'pin') {
         setPin(point);
         return;
@@ -142,7 +144,7 @@ export function PlaceChooser({
   const pending: PlaceClaim | null = useMemo(() => {
     if (gesture === 'pick') {
       return lookup.kind === 'found'
-        ? { gesture: 'picked-osm-building', elementType: lookup.elementType, elementId: lookup.elementId }
+        ? { gesture: 'picked-osm-building', elementType: lookup.elementType, elementId: lookup.elementId, near: lookup.near }
         : null;
     }
     if (gesture === 'pin') return pin === null ? null : { gesture: 'dropped-pin', point: pin };
@@ -154,6 +156,7 @@ export function PlaceChooser({
 
   const shownOutline: GeoOutline | null =
     gesture === 'pick' && lookup.kind === 'found' ? lookup.outline : null;
+  const shownHighlight = gesture === 'pick' && lookup.kind === 'found' ? lookup.highlight : null;
 
   const submitClaim = useCallback(
     (next: PlaceClaim, distinctFromNearby: boolean) => {
@@ -222,6 +225,7 @@ export function PlaceChooser({
         busy={lookup.kind === 'searching' || state.kind === 'working'}
         onPick={handlePick}
         outline={shownOutline}
+        highlight={shownHighlight}
         trace={gesture === 'draw' ? draft.vertices : []}
         pin={gesture === 'pin' ? pin : null}
         disabled={state.kind === 'working'}

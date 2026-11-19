@@ -9,7 +9,7 @@
  *
  * | Χειρονομία | Ποιος είναι η **πηγή** | Τι κάνει ο διακομιστής |
  * |---|---|---|
- * | `picked-osm-building` | το **OpenStreetMap** | **ξαναρωτά το Overpass**: υπάρχει; είναι κτίριο; και παίρνει **από εκεί** σημείο/διεύθυνση/ορόφους |
+ * | `picked-osm-building` | το **OpenStreetMap** | ρωτά το **δικό μας αρχείο OSM** (build καρφωμένο), αλλιώς τον **Overpass**: υπάρχει; είναι κτίριο; και παίρνει **από εκεί** σημείο/διεύθυνση/ορόφους (`osm-building-source`) |
  * | `typed-address` | ο **geocoder** | **γεωκωδικοποιεί ο ίδιος** — ποτέ δεν δέχεται σημείο από τον πελάτη |
  * | `dropped-pin` | ο **άνθρωπος** | η χειρονομία **είναι** η πηγή· ελέγχεται μόνο δομικά |
  * | `drew-outline` | ο **άνθρωπος** | το ίδιο — και το **εμβαδόν** προκύπτει από το σχήμα |
@@ -36,13 +36,15 @@ import 'server-only';
 import { geocode } from '@/app/api/geocoding/geocoding-engine';
 import { addressLineToQuery } from '@/lib/geocoding/address-line-query';
 import { vertexCentroid } from '@/lib/geo/geo-ring';
+import { createDeadline } from '@/lib/async-utils';
+import type { OsmBuildingFact, OsmBuildingPick } from '@/lib/geo/osm/osm-building';
 import {
-  findOsmBuildingAt,
-  verifyOsmBuilding,
-  type OsmBuildingFact,
-  type OsmBuildingPick,
-} from '@/lib/geo/osm/osm-building';
+  findBuildingFromSources,
+  verifyBuildingFromSources,
+  type OsmSourceSnapshot,
+} from '@/lib/geo/osm/osm-building-source';
 import {
+  isWithinServedArea,
   placeClaimDefect,
   type PlaceClaimDefect,
 } from '@/lib/places/place-claim-validation';
@@ -98,7 +100,7 @@ const NOTHING = {
   accuracy: null,
 } as const;
 
-function factsFromOsm(fact: OsmBuildingFact, seenAt: string): ResolvedPlaceFacts {
+function factsFromOsm(fact: OsmBuildingFact, seenAt: string, snapshot: OsmSourceSnapshot): ResolvedPlaceFacts {
   return {
     ...NOTHING,
     provenance: 'osm',
@@ -110,6 +112,9 @@ function factsFromOsm(fact: OsmBuildingFact, seenAt: string): ResolvedPlaceFacts
       // ⚠️ Η στιγμή που το είδαμε **ζωντανό** — και είναι η μόνη εγγύηση που δίνει
       // αυτή η αναφορά: κάθε πεδίο της μπορεί να πάψει να ισχύει χωρίς να το μάθουμε.
       seenAt,
+      // 🏆 Από ποιο **αμετάβλητο** αντίγραφο επαληθεύτηκε (αναπαραγώγιμο). Το κλειδί **λείπει** όταν η πηγή ήταν ο
+      //    ζωντανός Overpass — ποτέ `undefined`/`null` στο έγγραφο.
+      ...(snapshot !== null ? { snapshot } : {}),
     },
     displayAddress: placeAddressLine(fact.address),
     floorsAboveGround: fact.floorsAboveGround,
@@ -140,10 +145,12 @@ export async function verifyPlaceClaim(
 
   switch (claim.gesture) {
     case 'picked-osm-building': {
-      const verdict = await verifyOsmBuilding(claim.elementType, claim.elementId);
+      // 🔴 Το `near` εντοπίζει **μόνο** το πλακίδιο· εκτός εξυπηρετούμενης περιοχής δεν υπάρχει πλακίδιο να ανοιχτεί.
+      const near = claim.near !== undefined && isWithinServedArea(claim.near) ? claim.near : null;
+      const verdict = await verifyBuildingFromSources(claim.elementType, claim.elementId, near);
       switch (verdict.kind) {
         case 'verified':
-          return { kind: 'verified', facts: factsFromOsm(verdict.fact, at) };
+          return { kind: 'verified', facts: factsFromOsm(verdict.fact, at, verdict.snapshot) };
         case 'absent':
           return { kind: 'rejected', reason: 'osm-absent' };
         case 'not-a-building':
@@ -230,6 +237,9 @@ export async function verifyPlaceClaim(
 // 4. Η ΑΝΑΖΗΤΗΣΗ ΓΙΑ ΤΟΝ ΕΠΙΛΟΓΕΑ — δεν γράφει, μόνο δείχνει
 // =============================================================================
 
+/** Η συνολική προθεσμία του επιλογέα: το αρχείο απαντά σε δεκάδες ms, ο Overpass (φρεσκάδα) παίρνει ό,τι απομένει. */
+const LOOKUP_BUDGET_MS = 8_000;
+
 /**
  * **Ποιο κτίριο OSM είναι κάτω από αυτό το σημείο**, για την οθόνη επιλογής.
  *
@@ -239,9 +249,16 @@ export async function verifyPlaceClaim(
  * Η δεύτερη είναι εκείνη που γράφει, άρα εκείνη οφείλει να ρωτήσει.
  */
 export async function lookupOsmBuildingAt(point: GeoPoint): Promise<OsmBuildingPick> {
-  const pick = await findOsmBuildingAt(point);
-  if (pick.kind === 'unavailable') {
-    logger.warn('Η άντληση κτιρίου OSM δεν απάντησε', { data: { lat: point.lat, lng: point.lng } });
+  // 🔑 **Μία συνολική προθεσμία** για όλες τις βαθμίδες (Google SRE: deadline propagation) — ο επιλογέας δεν μένει
+  //    ποτέ «σε αναμονή για πάντα» επειδή ο Overpass άργησε (ζωντανό εύρημα 2026-11-19).
+  const deadline = createDeadline(LOOKUP_BUDGET_MS);
+  try {
+    const pick = await findBuildingFromSources(point, deadline);
+    if (pick.kind === 'unavailable') {
+      logger.warn('Η άντληση κτιρίου OSM δεν απάντησε', { data: { lat: point.lat, lng: point.lng } });
+    }
+    return pick;
+  } finally {
+    deadline.dispose();
   }
-  return pick;
 }

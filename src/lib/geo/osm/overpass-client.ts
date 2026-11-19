@@ -41,8 +41,36 @@ import { retryAfterMs } from '@/lib/http/retry-after';
 
 const logger = createModuleLogger('overpass-client');
 
-const OVERPASS_BASE_URL =
-  process.env.OVERPASS_BASE_URL || 'https://overpass-api.de/api/interpreter';
+/**
+ * **Η πισίνα των endpoints** — σειρά προτίμησης, με εναλλαγή σε επαναλήψιμη αποτυχία (ADR-777, 2026-11-19).
+ *
+ * 🔴 Ζωντανά 2026-11-19 το `overpass-api.de` απαντούσε **503** («at capacity»): ένας μόνο δημόσιος διακομιστής είναι
+ *    **ενιαίο σημείο αστοχίας**. Η προεπιλογή είναι οι δύο δημόσιες εγκαταστάσεις του OSM Wiki (*Public Overpass API
+ *    instances*) χωρίς κλειδί: FOSSGIS (`overpass-api.de`, «light use») και **Private.coffee** (πρώην `kumi.systems`,
+ *    «no rate limit» — ζητά ειδοποίηση μόνο για μεγάλα έργα). Ο Overpass είναι πλέον **τρίτη** βαθμίδα (φρεσκάδα +
+ *    εμπλουτισμός)· η ταυτότητα κτιρίου έρχεται από το δικό μας αρχείο (`osm-archive.ts`).
+ *
+ * 🔑 `OVERPASS_ENDPOINTS` (χωρισμένα με κόμμα) αντικαθιστά την πισίνα — π.χ. με δικό μας ή επί πληρωμή διακομιστή.
+ *    Το παλιό `OVERPASS_BASE_URL` μένει σεβαστό ως **πρώτο** endpoint, ώστε καμία υπάρχουσα ρύθμιση να μη χαθεί σιωπηλά.
+ */
+const DEFAULT_OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+] as const;
+
+function overpassEndpointsFrom(env: NodeJS.ProcessEnv): readonly string[] {
+  const listed = (env.OVERPASS_ENDPOINTS ?? '').split(',').map((url) => url.trim()).filter((url) => url !== '');
+  const preferred = env.OVERPASS_BASE_URL?.trim();
+  const pool = listed.length > 0 ? listed : [...DEFAULT_OVERPASS_ENDPOINTS];
+  return preferred ? [preferred, ...pool.filter((url) => url !== preferred)] : pool;
+}
+
+const OVERPASS_ENDPOINTS = overpassEndpointsFrom(process.env);
+
+/** Το endpoint της προσπάθειας `attempt` (από 1): κάθε επανάληψη πάει στο **επόμενο** της πισίνας. */
+function endpointOfAttempt(attempt: number): string {
+  return OVERPASS_ENDPOINTS[(attempt - 1) % OVERPASS_ENDPOINTS.length];
+}
 const OVERPASS_TIMEOUT_MS = parseInt(process.env.OVERPASS_TIMEOUT_MS || '6000', 10);
 const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (geocoding)';
 
@@ -207,7 +235,7 @@ export async function runOverpassQueryStrict(
     const budgetMs = attemptBudgetMs(deadline);
     // 🔑 ADR-332 D27 Β13: χωρίς χρόνο για ΤΙΜΙΑ προσπάθεια, δεν ξεκινάμε.
     if (budgetMs < MIN_ATTEMPT_MS) break;
-    const outcome = await attemptOverpass(query, budgetMs);
+    const outcome = await attemptOverpass(endpointOfAttempt(attempt), query, budgetMs);
 
     if (outcome.kind === 'ok') return { ok: true, elements: outcome.elements };
 
@@ -236,6 +264,7 @@ export async function runOverpassQueryStrict(
  * `catch` — δηλαδή θα κρινόταν από **κείμενο σφάλματος** αντί από κωδικό κατάστασης.
  */
 async function attemptOverpass(
+  endpoint: string,
   query: string,
   timeoutMs: number,
 ): Promise<
@@ -248,7 +277,7 @@ async function attemptOverpass(
     }
 > {
   try {
-    const response = await fetch(OVERPASS_BASE_URL, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -259,7 +288,7 @@ async function attemptOverpass(
     });
 
     if (!response.ok) {
-      logger.warn('Overpass non-OK response', { data: { status: response.status } });
+      logger.warn('Overpass non-OK response', { data: { endpoint, status: response.status } });
       return {
         kind: 'failed',
         retryable: RETRYABLE_STATUS.has(response.status),
@@ -273,7 +302,7 @@ async function attemptOverpass(
   } catch (error) {
     // 🔑 **Δίκτυο και λήξη χρόνου ΕΙΝΑΙ επαναλήψιμα** — είναι ακριβώς η περίπτωση
     //    «ο διακομιστής άργησε», που ήταν και η συχνότερη στην αναφορά της 02/09.
-    logger.warn('Overpass fetch error', { error: getErrorMessage(error) });
+    logger.warn('Overpass fetch error', { data: { endpoint }, error: getErrorMessage(error) });
     return { kind: 'failed', retryable: true, status: null, response: null };
   }
 }

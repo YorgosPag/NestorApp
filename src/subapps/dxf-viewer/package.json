@@ -3,8 +3,7 @@
   "version": "0.1.1",
   "private": true,
   "dependencies": {
-    "@formulajs/formulajs": "4.6.1",
-    "polygon-clipping": "0.15.7"
+    "@formulajs/formulajs": "4.6.1"
   },
   "devDependencies": {
     "fast-check": "^3.16.0"

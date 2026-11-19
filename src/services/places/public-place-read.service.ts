@@ -7,8 +7,8 @@
  * οθόνη τις διαβάζει **απευθείας** (ίδιο σχήμα με το `usePublicListings`). Αυτό το
  * αρχείο υπάρχει για τη **μία** ερώτηση που ο πελάτης δεν μπορεί να απαντήσει μόνος
  * του: *«ποιο είναι το ζωντανό περίγραμμα αυτού του τόπου;»* — γιατί η απάντηση
- * απαιτεί κλήση προς το Overpass, και **αυτή** οφείλει να γίνει από τον διακομιστή
- * (ένα κλειδί χρήστη προς δημόσιο API θα ήταν ανοιχτός ενισχυτής).
+ * απαιτεί ανάγνωση της πηγής (το δικό μας αρχείο OSM, αλλιώς ο Overpass), και **αυτή**
+ * οφείλει να γίνει από τον διακομιστή (ένα κλειδί χρήστη προς δημόσιο API θα ήταν ανοιχτός ενισχυτής).
  */
 
 import 'server-only';
@@ -18,6 +18,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import { enterpriseIdType, isValidEnterpriseId } from '@/services/enterprise-id-parse';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import type { OsmReference, PlaceRef, PublicBuilding, PublicLand } from '@/types/geo/public-place';
 
 /**
@@ -39,7 +40,11 @@ export function placeKindOf(placeId: string): PlaceKind | null {
 }
 
 /**
- * Η αναφορά OSM αυτού του τόπου, όταν από εκεί ήρθε η θέση του.
+ * **Η άγκυρα OSM αυτού του τόπου** — η αναφορά **και** το αποθηκευμένο σημείο, όταν η θέση ήρθε από OSM.
+ *
+ * 🔑 Το σημείο ταξιδεύει μαζί επειδή ο αναγνώστης του δικού μας αρχείου OSM (`lib/geo/osm/osm-archive`) χρειάζεται
+ *    **πού** να ανοίξει πλακίδιο για να βρει το way (ADR-777, 2026-11-19). Δεν είναι «σημείο του πελάτη»: είναι αυτό που
+ *    **έγραψε ο διακομιστής** μετά από επαλήθευση πηγής.
  *
  * ⚠️ `null` σημαίνει **τρία διαφορετικά πράγματα** και εδώ σκόπιμα δεν ξεχωρίζονται:
  * δεν υπάρχει τέτοιος τόπος · υπάρχει αλλά η θέση του δεν ήρθε από OSM · η θέση είναι
@@ -47,10 +52,15 @@ export function placeKindOf(placeId: string): PlaceKind | null {
  * απάντηση «όχι» είναι η ίδια και στις τρεις — μια διάκριση εδώ θα ήταν λεξιλόγιο που
  * κανείς δεν διαβάζει (ADR-749 §5: φρουρός χωρίς απόδειξη ζωής).
  */
-export async function readPlaceOsmRef(
+export interface PlaceOsmAnchor {
+  readonly ref: OsmReference;
+  readonly point: GeoPoint;
+}
+
+export async function readPlaceOsmAnchor(
   adminDb: AdminFirestore,
   placeId: string,
-): Promise<OsmReference | null> {
+): Promise<PlaceOsmAnchor | null> {
   const kind = placeKindOf(placeId);
   if (kind === null) return null;
 
@@ -60,7 +70,7 @@ export async function readPlaceOsmRef(
     ).data() as PublicLand | undefined;
 
     return land?.position.kind === 'known' && land.position.provenance === 'osm'
-      ? land.position.osmRef
+      ? { ref: land.position.osmRef, point: land.position.point }
       : null;
   }
 
@@ -69,7 +79,7 @@ export async function readPlaceOsmRef(
   ).data() as PublicBuilding | undefined;
 
   return building?.footprint.kind === 'known' && building.footprint.provenance === 'osm'
-    ? building.footprint.osmRef
+    ? { ref: building.footprint.osmRef, point: building.footprint.point }
     : null;
 }
 

@@ -16,18 +16,21 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { MapLayerMouseEvent } from '@/lib/maps/maplibre';
+import {
+  renderedBuildingAt,
+  renderedBuildingSourceOf,
+  renderedBuildingsAt,
+  type BuildingSource,
+} from '@/lib/maps/rendered-buildings';
 import type { OrientationType } from '@/constants/property-features-enterprise';
 import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import {
   BUILDING_SUGGEST_RADIUS_PX,
-  buildingRingOf,
   nearestEdgeIndex,
   orientationsOfSelectedEdges,
   suggestedBuildingIndex,
 } from '@/lib/property/orientation-from-map';
 import type { GeoPoint } from '@/types/geo/coordinates';
-
-import { BUILDINGS_LAYER, type BuildingSource } from './orientation-map-layers';
 
 type MapInstance = MapLayerMouseEvent['target'];
 type MapEvent = { readonly target: MapInstance };
@@ -39,25 +42,17 @@ function toScreen(map: MapInstance, ring: readonly GeoPoint[]): PlanarPoint[] {
   });
 }
 
-function buildingSourceOf(map: MapInstance): BuildingSource | null {
-  const layer = map.getLayer(BUILDINGS_LAYER);
-  return layer?.source && layer.sourceLayer ? { source: layer.source, sourceLayer: layer.sourceLayer } : null;
-}
-
+/** Ο δακτύλιος του κτιρίου κάτω από το pixel — ο κοινός αναγνώστης κτιρίων οθόνης (`lib/maps/rendered-buildings`). */
 function buildingAt(map: MapInstance, point: PlanarPoint): GeoPoint[] | null {
-  if (!map.getLayer(BUILDINGS_LAYER)) return null;
-  const feature = map.queryRenderedFeatures([point.x, point.y], { layers: [BUILDINGS_LAYER] })[0];
-  return feature ? buildingRingOf(feature.geometry) : null;
+  return renderedBuildingAt(map, point)?.ring ?? null;
 }
 
 function suggestBuilding(map: MapInstance, center: GeoPoint): GeoPoint[] | null {
-  if (!map.getLayer(BUILDINGS_LAYER)) return null;
   const c = map.project([center.lng, center.lat]);
   const r = BUILDING_SUGGEST_RADIUS_PX;
-  const rings = map
-    .queryRenderedFeatures([[c.x - r, c.y - r], [c.x + r, c.y + r]], { layers: [BUILDINGS_LAYER] })
-    .map((feature) => buildingRingOf(feature.geometry))
-    .filter((ring): ring is GeoPoint[] => ring !== null);
+  const rings = renderedBuildingsAt(map, [{ x: c.x - r, y: c.y - r }, { x: c.x + r, y: c.y + r }]).map(
+    (building) => building.ring,
+  );
   const index = suggestedBuildingIndex(rings.map((ring) => toScreen(map, ring)), { x: c.x, y: c.y });
   return index === null ? null : rings[index];
 }
@@ -142,7 +137,7 @@ export function useOrientationMapPick(center: GeoPoint): OrientationMapPick {
   }, []);
 
   const onStyleData = useCallback((event: MapEvent) => {
-    const next = buildingSourceOf(event.target);
+    const next = renderedBuildingSourceOf(event.target);
     setBuildingSource((prev) => (sameSource(prev, next) ? prev : next));
   }, []);
 

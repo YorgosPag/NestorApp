@@ -100,6 +100,15 @@ export type PlaceClaim =
       readonly elementType: OsmElementType;
       /** Το OSM id ως **συμβολοσειρά** — ποτέ αριθμητική πάνω του (βλ. `OsmReference`). */
       readonly elementId: string;
+      /**
+       * **Πού έγινε το κλικ** — ΜΟΝΟ για να βρει ο διακομιστής **ποιο πλακίδιο** του δικού μας αρχείου OSM να ανοίξει
+       * (ADR-777, 2026-11-19 · `lib/geo/osm/osm-archive`).
+       *
+       * 🔴 **ΔΕΝ είναι το σημείο που γράφεται**, και ο §14.4 κ.2 μένει ακέραιος: το σημείο του τόπου βγαίνει από τη
+       *    **γεωμετρία της πηγής**. Ένα ψεύτικο `near` μπορεί μόνο να κάνει το κτίριο να **μη βρεθεί** στο αρχείο (⇒ ο
+       *    διακομιστής ρωτά τον Overpass), ποτέ να μετακινήσει τον τόπο. Απουσία (παλιοί πελάτες) ⇒ Overpass, όπως πριν.
+       */
+      readonly near?: GeoPoint;
     }
   /** **Σκαλοπάτι 2** — πινέζα με το δάχτυλο. */
   | { readonly gesture: 'dropped-pin'; readonly point: GeoPoint }
@@ -170,6 +179,7 @@ export const placeClaimSchema = z.discriminatedUnion('gesture', [
     gesture: z.literal('picked-osm-building'),
     elementType: z.enum(['node', 'way', 'relation']),
     elementId: osmElementIdSchema,
+    near: geoPointSchema.optional(),
   }),
   z.object({
     gesture: z.literal('dropped-pin'),

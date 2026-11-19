@@ -158,8 +158,11 @@ const config = {
   // `pdfjs-dist` (το `legacy/build/pdf.mjs` + ο worker του, που φορτώνεται με `import(workerSrc)`) είναι ESM — ο χρυσός runner
   // της αναγνώρισης κάτοψης (ADR-929 §6.21.5) αποδίδει **αληθινή** σελίδα με τον server-side SSoT (`pdf-rasterize.service`).
   // Ως τότε κάθε σουίτα το έκανε mock. Μετρημένο: χωρίς `import.meta`, χωρίς top-level `await`.
+  // `@mapbox/vector-tile@2` + η εξάρτησή του `@mapbox/point-geometry@1` + `pbf@4` είναι ESM-only (`"type": "module"`,
+  // κανένα CJS build) — ο αποκωδικοποιητής πλακιδίων του δικού μας αρχείου OSM (ADR-777, `lib/geo/osm/osm-archive-tile.ts`).
+  // Το `pbf/index.js` δεν εισάγει τίποτα· το `pmtiles` και το `polygon-clipping` έχουν CJS build (μετρημένο 2026-11-19).
   transformIgnorePatterns: [
-    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates|parse5|entities|pdfjs-dist)/)'
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates|parse5|entities|pdfjs-dist|@mapbox/vector-tile|@mapbox/point-geometry|pbf)/)'
   ],
   moduleDirectories: ['node_modules', '<rootDir>'],
   // 🔴 ΟΡΙΟ ΠΟΡΩΝ ΤΟΠΙΚΑ (2026-07-31) — ΜΗΝ το αφαιρέσεις.

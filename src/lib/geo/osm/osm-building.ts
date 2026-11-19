@@ -50,8 +50,28 @@ import type { OsmElementType } from '@/types/geo/public-place';
 import {
   overpassQuerySeconds,
   runOverpassQueryStrict,
+  type OverpassCallOptions,
   type OverpassElement,
 } from './overpass-client';
+
+/** Το `timeout:` του ερωτήματος — το **υπόλοιπο** της προθεσμίας όταν υπάρχει (ADR-332 D27 Β13). */
+function querySecondsFor(options: OverpassCallOptions): number {
+  return options.deadline ? overpassQuerySeconds(options.deadline.remainingMs()) : overpassQuerySeconds();
+}
+
+/**
+ * **Ένα στοιχείο με την ταυτότητά του** — `selector` (π.χ. `way(123)`) + φράση εξόδου. `undefined` = το Overpass
+ * **απάντησε** ότι δεν υπάρχει· `unavailable` = **δεν** απάντησε. Ένας τρόπος για τις δύο ερωτήσεις ταυτότητας.
+ */
+async function singleElement(
+  selector: string,
+  output: 'out center tags' | 'out geom',
+  options: OverpassCallOptions,
+): Promise<{ readonly kind: 'answered'; readonly element: OverpassElement | undefined } | { readonly kind: 'unavailable' }> {
+  const query = [`[out:json][timeout:${querySecondsFor(options)}];`, `${selector};`, `${output};`].join('\n');
+  const outcome = await runOverpassQueryStrict(query, options);
+  return outcome.ok ? { kind: 'answered', element: outcome.elements[0] } : { kind: 'unavailable' };
+}
 
 // =============================================================================
 // 1. ΤΙ ΜΑΘΑΙΝΟΥΜΕ ΓΙΑ ΕΝΑ ΚΤΙΡΙΟ — και τι επίτηδες ΔΕΝ μαθαίνουμε
@@ -201,14 +221,17 @@ export type OsmBuildingPick =
  * συγκεκριμένο** — και η επιλογή δεν είναι εικασία **ταυτότητας** αλλά επιλογή
  * **ανάλυσης**: και τα δύο περιέχουν πραγματικά το σημείο.
  */
-export async function findOsmBuildingAt(point: GeoPoint): Promise<OsmBuildingPick> {
+export async function findOsmBuildingAt(
+  point: GeoPoint,
+  options: OverpassCallOptions = {},
+): Promise<OsmBuildingPick> {
   const query = `
-    [out:json][timeout:${overpassQuerySeconds()}];
+    [out:json][timeout:${querySecondsFor(options)}];
     way["building"](around:${PICK_RADIUS_METRES},${point.lat},${point.lng});
     out geom tags;
   `.trim();
 
-  const outcome = await runOverpassQueryStrict(query);
+  const outcome = await runOverpassQueryStrict(query, options);
   if (!outcome.ok) return { kind: 'unavailable' };
 
   const containing = outcome.elements
@@ -272,17 +295,12 @@ export type OsmBuildingVerdict =
 export async function verifyOsmBuilding(
   elementType: OsmElementType,
   elementId: string,
+  options: OverpassCallOptions = {},
 ): Promise<OsmBuildingVerdict> {
-  const query = `
-    [out:json][timeout:${overpassQuerySeconds()}];
-    ${elementType}(${elementId});
-    out center tags;
-  `.trim();
+  const answer = await singleElement(`${elementType}(${elementId})`, 'out center tags', options);
+  if (answer.kind === 'unavailable') return { kind: 'unavailable' };
 
-  const outcome = await runOverpassQueryStrict(query);
-  if (!outcome.ok) return { kind: 'unavailable' };
-
-  const element = outcome.elements[0];
+  const { element } = answer;
   if (element === undefined) return { kind: 'absent' };
   if (!isBuilding(element)) return { kind: 'not-a-building' };
 
@@ -333,19 +351,14 @@ export type OsmOutlineFetch =
 export async function fetchOsmBuildingOutline(
   elementType: OsmElementType,
   elementId: string,
+  options: OverpassCallOptions = {},
 ): Promise<OsmOutlineFetch> {
   if (elementType !== 'way') return { kind: 'no-shape' };
 
-  const query = `
-    [out:json][timeout:${overpassQuerySeconds()}];
-    way(${elementId});
-    out geom;
-  `.trim();
+  const answer = await singleElement(`way(${elementId})`, 'out geom', options);
+  if (answer.kind === 'unavailable') return { kind: 'unavailable' };
 
-  const outcome = await runOverpassQueryStrict(query);
-  if (!outcome.ok) return { kind: 'unavailable' };
-
-  const element = outcome.elements[0];
+  const { element } = answer;
   if (element === undefined) return { kind: 'no-shape' };
 
   const outline = elementOutline(element);

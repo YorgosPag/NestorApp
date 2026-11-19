@@ -10,6 +10,7 @@
  * | Α26 | `outdated` λέγεται **με όνομα** | σύμπτυξη σε `absent` |
  * | Α30 | όσο διαρκεί η αναμονή, **ώρα** αντί για κουμπί αιτήματος | κουμπί πάντα |
  * | Α33 | ο ιδιοκτήτης βλέπει **λήψη + αποτύπωμα** του παγωμένου εντύπου, ζητώντας με **ταυτότητα**, ποτέ διαδρομή | λίστα χωρίς αποτύπωμα · λήψη με διαδρομή |
+ * | Ε13 | ιδιοκτήτης χωρίς εντολή (κενή λίστα) ⇒ **τίποτα** στην οθόνη · με μία εντολή ⇒ η ενότητα | κενό πλαίσιο με τίτλο |
  * | Α35 | «Δεν ενδιαφέρομαι» δίπλα στο εκκρεμές αίτημα · `declined` με όνομα · καμία πρόταση αιτήματος μετά | κουμπί χωρίς αίτημα · αίτημα μετά την άρνηση |
  *
  * Μοκάρονται: ο αναγνώστης (δίνει πάνελ), ο πελάτης δικτύου (μετρά κλήσεις), το πεδίο αρχείου (το ανέβασμα
@@ -150,6 +151,18 @@ describe('🏆 Α24 · Α25 — ο ιδιοκτήτης συναινεί μόν�
     expect(grantPrivateMarketing).toHaveBeenCalledWith('ownp_a', null, [
       expect.objectContaining({ agencyCompanyId: 'comp_beta', requestId: 'pmev_req', submission: expect.objectContaining({ values: SERVER_VALUES }) }),
     ]);
+  });
+
+  it('🔴 Ε13 — ιδιοκτήτης χωρίς εντολή (200 με κενή λίστα) ⇒ ΤΙΠΟΤΑ: ούτε τίτλος, ούτε κενό πλαίσιο', () => {
+    currentLoad = found('owner', []);
+    const { container } = render(<PrivateMarketingOwnerSection ownerPropertyId="ownp_a" marketingAudience="public" revision={null} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('🔑 παρονομαστής Ε13: μία εντολή ⇒ η ενότητα αποδίδεται με τον τίτλο της', () => {
+    currentLoad = found('owner', [panel('comp_alfa', GRANTED)]);
+    render(<PrivateMarketingOwnerSection ownerPropertyId="ownp_a" marketingAudience="public" revision={null} />);
+    expect(screen.getByText('property-market:mandate.privateMarketing.title')).toBeInTheDocument();
   });
 
   it('🔑 χωρίς αίτημα η φόρμα ΔΕΝ ανοίγει μόνη της — μόνο με ρητή πράξη', async () => {

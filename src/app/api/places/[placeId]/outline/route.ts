@@ -29,8 +29,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { fetchOsmBuildingOutline } from '@/lib/geo/osm/osm-building';
-import { placeKindOf, readPlaceOsmRef } from '@/services/places/public-place-read.service';
+import { buildingOutlineFromSources } from '@/lib/geo/osm/osm-building-source';
+import { placeKindOf, readPlaceOsmAnchor } from '@/services/places/public-place-read.service';
 import type { GeoOutline } from '@/types/geo/coordinates';
 
 type RouteContext = { params: Promise<{ placeId: string }> };
@@ -61,10 +61,12 @@ async function handler(
     return NextResponse.json({ error: 'NOT_A_PLACE_ID' }, { status: 400 });
   }
 
-  const ref = await readPlaceOsmRef(getAdminFirestore(), placeId);
-  if (ref === null) return NextResponse.json({ outline: null });
+  const anchor = await readPlaceOsmAnchor(getAdminFirestore(), placeId);
+  if (anchor === null) return NextResponse.json({ outline: null });
 
-  const fetched = await fetchOsmBuildingOutline(ref.elementType, ref.elementId);
+  // 🔑 Το δικό μας αρχείο OSM πρώτα (το αποθηκευμένο σημείο εντοπίζει το πλακίδιο)· ο Overpass μόνο αν το way δεν είναι
+  //    σε αυτό το build (ADR-777, 2026-11-19). Η **κάθε εμφάνιση** περιγράμματος έπαψε να κρέμεται από δημόσιο διακομιστή.
+  const fetched = await buildingOutlineFromSources(anchor.ref.elementType, anchor.ref.elementId, anchor.point);
 
   switch (fetched.kind) {
     case 'outline':

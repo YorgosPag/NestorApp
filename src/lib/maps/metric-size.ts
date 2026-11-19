@@ -150,6 +150,20 @@ export function lngLatToWorldPixel(lng: number, lat: number, zoom: number): read
   return [x, y];
 }
 
+/**
+ * **Το αντίστροφο του {@link lngLatToWorldPixel}** — pixel «κόσμου» στο ζουμ `zoom` → `[lng, lat]`.
+ *
+ * 🔑 Ζει **δίπλα** στο ευθύ, ώστε η προβολή να έχει **μία** διατύπωση: ο αναγνώστης πλακιδίων του αρχείου OSM
+ *    (`lib/geo/osm/osm-archive-tile.ts`) μετατρέπει τις κορυφές του πλακιδίου με αυτό, και ένα δεύτερο Mercator εκεί θα
+ *    μπορούσε να αποκλίνει (π.χ. 256 ⇄ 512) χωρίς να το δει κανείς — το κτίριο θα «γλιστρούσε» μισό πλακίδιο.
+ */
+export function worldPixelToLngLat(x: number, y: number, zoom: number): readonly [number, number] {
+  const size = MAPLIBRE_TILE_SIZE_PX * 2 ** zoom;
+  const lng = (x / size) * 360 - 180;
+  const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / size))) * 180) / Math.PI;
+  return [lng, lat];
+}
+
 interface MetricCircleRadiusOptions {
   /** Το πεδίο του feature που κρατά την ακτίνα σε **μέτρα**. */
   readonly metersProperty: string;
