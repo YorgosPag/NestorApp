@@ -124,7 +124,8 @@ export function PrivateMarketingOwnerSection({
   const [outcome, setOutcome] = React.useState<PrivateMarketingActionOutcome | null>(null);
   const [started, setStarted] = React.useState(false);
 
-  if (load === null || load.kind !== 'found' || load.panels.viewer !== 'owner') return null;
+  // Καμία εντολή γραφείου ⇒ τίποτα να δειχθεί (ο διακομιστής απαντά 200 με κενή λίστα στον ιδιοκτήτη, ADR-864 §18.4).
+  if (load === null || load.kind !== 'found' || load.panels.viewer !== 'owner' || load.panels.panels.length === 0) return null;
   const { panels, disclosure } = load.panels;
   const awaiting = panelsAwaitingConsent(panels);
   const requested = awaiting.some((panel) => pendingRequestIdOf(panel) !== null);

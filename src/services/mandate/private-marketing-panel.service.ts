@@ -7,6 +7,7 @@
  * 🔑 **Εξουσιοδότηση = η ίδια εύρεση εντολής με τον γραφέα** (`mandatesVisibleTo`, Α28): ο ιδιοκτήτης
  * βλέπει **όλες** τις εντολές πάνω στη **δική του** προσωπική καταχώρηση· κάθε άλλος βλέπει **μόνο** τη
  * δική του. Καμία εντολή ⇒ `absent` — ίδιο σώμα με το ανύπαρκτο, ώστε ο αναγνώστης να μη γίνει μαντείο.
+ * Εξαίρεση ο **ιδιοκτήτης**: γι' αυτόν «καμία εντολή» = `found` με κενή λίστα (Ε13, ADR-864 changelog 2026-11-19).
  */
 
 import 'server-only';
@@ -62,7 +63,10 @@ export async function readPrivateMarketingPanels(
 
   const who = consentActorOfProperty(property, actor);
   const mandates = mandatesVisibleTo(property, who, nowISOValue);
-  if (mandates.length === 0) return { kind: 'absent' };
+  // 🔑 **Ο ιδιοκτήτης ξέρει ήδη ότι το ακίνητό του υπάρχει** ⇒ «καμία εντολή» είναι γι' αυτόν **απάντηση** (κενή λίστα),
+  //    όχι «δεν υπάρχει». Το 404 έγραφε WARN στην κονσόλα σε κάθε άνοιγμα αγγελίας (Ε13, 2026-11-19). Για κάθε άλλον
+  //    μένει `absent`: εκεί το ίδιο σώμα για «ανύπαρκτο» και «όχι δικό σου» είναι ακριβώς η άμυνα κατά του μαντείου.
+  if (mandates.length === 0 && who.kind !== 'owner-account') return { kind: 'absent' };
 
   const retainUntilById = await retainUntilByEvidenceOf(adminDb, ownerPropertyId);
   const panels = await Promise.all(
