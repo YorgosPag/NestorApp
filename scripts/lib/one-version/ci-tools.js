@@ -136,4 +136,4 @@ function judgeCiTools(repoRoot, push, tools = CI_TOOLS, input = openGateInput({ 
   }
 }
 
-module.exports = { CI_TOOLS, ciFiles, judgeCiTools, readAuthorityVersion };
+module.exports = { CI_TOOLS, ciFiles, codeLines, judgeCiTools, readAuthorityVersion };

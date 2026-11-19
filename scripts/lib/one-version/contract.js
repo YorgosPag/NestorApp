@@ -79,6 +79,18 @@ const GATE_STATES = Object.freeze({
   SINGLETON_REASONLESS: 'singleton-reasonless',
   /** ✅ Μία επιλυμένη έκδοση. */
   SINGLETON_ONE: 'singleton-one',
+
+  // ── Η · ΕΙΚΟΝΕΣ CI (ADR-775 §11.1) — η ετικέτα της εικόνας ΠΡΟΒΑΛΛΕΙ πακέτο του lockfile ──
+  /** ⛔ Η ετικέτα λέει άλλη έκδοση από αυτή που κλειδώνει το lockfile. */
+  CI_IMAGE_DRIFT: 'ci-image-version-drift',
+  /** ⛔ Αναφορά στην εικόνα χωρίς ετικέτα ακριβούς έκδοσης (`latest`, κενό, `v1.57`). */
+  CI_IMAGE_UNPINNED: 'ci-image-unpinned',
+  /** ⛔ Το lockfile δεν δίνει ΜΙΑ έκδοση της αυθεντίας, ή η δήλωση δεν έχει λόγο. */
+  CI_IMAGE_AUTHORITY_BROKEN: 'ci-image-authority-broken',
+  /** ⛔ `playwright install` σε workflow — browser έξω από την εικόνα, δηλαδή από το λειτουργικό του runner. */
+  CI_IMAGE_BYPASS: 'ci-image-bypass',
+  /** ✅ Ετικέτα ίση με την έκδοση του lockfile. */
+  CI_IMAGE_PINNED: 'ci-image-pinned',
 });
 
 /**

@@ -317,6 +317,41 @@ Linux golden σε Docker») **δεν είναι πλέον εκτελέσιμο�
 σήμερα θα κλείδωνε **κενούς καμβάδες** — ακριβώς η πράξη που δημιούργησε το πρόβλημα τον Μάιο.
 Ο δρόμος **α** μένει ανεπηρέαστος (δεν αγγίζει golden).
 
+### 11.1 ✅ ΑΠΟΦΑΣΗ (Giorgio, 2026-11-19) — η εικόνα Docker γίνεται το υπόστρωμα **κάθε** job με browser
+
+**Τι συνέβη (μετρημένο, run `44382268675`)**: το `runs-on: ubuntu-latest` άρχισε να δίνει **Ubuntu 26.04**
+(`ubuntu26/20261111.196`). Το `playwright@1.57.0` του lockfile απαντά
+`ERROR: Playwright does not support chromium on ubuntu26.04-x64` στο `playwright install --with-deps chromium`.
+Η υποστήριξη ξεκινά από το **1.61.0**. Έπεσαν **πέντε** πύλες με browser χωρίς κανένα commit μας:
+3.40 (`ui-contrast-ratchet.yml` · job `runtime-contrast`) · 3.77 (`camera-motion-gate.yml` · `flight`) ·
+3.82 (`address-field-width-gate.yml`) · 3.94 (`public-reflow-gate.yml`) · 3.101 (`public-floorplan-pixels-gate.yml`).
+Το `e2e-executability.yml` (3.46) **δεν** επηρεάστηκε και **δεν** αγγίχθηκε: δεν εγκαθιστά browser, γιατί η πύλη
+δεν ανοίγει σελίδα (`--ignore-scripts`, μόνο AST + device descriptors).
+
+**Η απόφαση**: τα πέντε jobs τρέχουν σε `container: image: mcr.microsoft.com/playwright:v1.57.0-noble` με
+`options: --user 1001` (η οδηγία του Playwright για GitHub Actions: ο χρήστης του runner, ώστε workspace, tool cache
+και `HOME=/github/home` να μένουν δικά του). Το βήμα `playwright install --with-deps` **αφαιρέθηκε**. Η εικόνα φέρνει
+τον **ίδιο** Chromium (143) και την **ίδια** Ubuntu 24.04 με τα σημερινά baselines, άρα κανένα baseline δεν κινείται.
+Ο dev server και ο Playwright τρέχουν μέσα στο **ίδιο** container, οπότε το `localhost:3000` μένει ίδιο.
+
+🔑 **Γιατί αυτή και όχι οι άλλες δύο**:
+* **`runs-on: ubuntu-24.04`**: διορθώνει το σήμερα, αλλά ο browser εξακολουθεί να εξαρτάται από ό,τι εγκαθιστά ο
+  runner. Είναι αναβολή, όχι υπόστρωμα.
+* **Αναβάθμιση σε 1.61+**: Chrome 143 → 159 μετακινεί τα baselines pixel/αντίθεσης (3.101 · 3.40). Είναι χωριστή
+  απόφαση και θα γίνει **μέσα** στην ίδια εικόνα (ετικέτα + πακέτο μαζί).
+* Η εικόνα είναι αυτό που προτείνει το ίδιο το Playwright *(«generate your baseline snapshots inside the same
+  Docker image you use in CI»)*. Αυτό ήταν και το ανοιχτό σκέλος του δρόμου **β** παραπάνω.
+
+⚠️ **Η εικόνα φέρνει δεύτερο αριθμό, και αυτός ΚΡΙΝΕΤΑΙ**: η ετικέτα `v1.57.0` πρέπει να είναι ίση με την έκδοση
+`playwright-core` του lockfile, αλλιώς το πακέτο ζητά browser που η εικόνα δεν έχει. Το φυλάει το **CHECK 3.65 ·
+κατάστιχο Η** (ADR-800 §6.1, `scripts/lib/one-version/ci-images.js`): ⛔ `ci-image-version-drift` ·
+⛔ `ci-image-unpinned` · ⛔ `ci-image-authority-broken` · ⛔ `ci-image-bypass` (κάθε `playwright install` σε workflow,
+ώστε να μη γυρίσει ο browser του runner). Αναβάθμιση του Playwright ⇒ πακέτο **και** ετικέτα στο
+**ίδιο** commit.
+
+🔶 **Τι ΔΕΝ αποφασίστηκε εδώ**: το σκέλος «παραγωγή Linux golden για το `visual-dxf`» του δρόμου **β** μένει
+ανοιχτό, με την προϋπόθεση του §12.
+
 ---
 
 ## 12. 🔴 Η ΕΚΤΕΛΕΣΗ ΕΓΙΝΕ — και η απάντηση δεν ήταν καμία από τις δύο που περιμέναμε
@@ -695,6 +730,14 @@ it('computeRulerOriginTransform: world(0,0) στην κάτω-αριστερή �
 ---
 
 ## Changelog
+
+- **2026-11-19** — ✅ **§11.1: η εικόνα Docker του Playwright έγινε το υπόστρωμα των 5 jobs με browser.**
+  Το `ubuntu-latest` έγινε 26.04 και το `playwright@1.57.0` δεν την υποστηρίζει: έπεσαν οι 3.40 · 3.77 · 3.82 ·
+  3.94 · 3.101 (run `44382268675`). Τα jobs τρέχουν πλέον σε `mcr.microsoft.com/playwright:v1.57.0-noble`
+  (`--user 1001`), χωρίς `playwright install --with-deps`. Ίδιος Chromium 143 και ίδια Ubuntu 24.04, άρα τα
+  baselines μένουν ως έχουν. Το `e2e-executability.yml` δεν αγγίχθηκε (δεν έχει browser). Η ετικέτα της εικόνας
+  κρίνεται απέναντι στο lockfile από το νέο **κατάστιχο Η** του CHECK 3.65 (ADR-800). ⚠️ **Δεν επαληθεύτηκε ακόμη σε
+  CI**: η πρώτη απόδειξη θα είναι το run μετά το push.
 
 - **2026-09-09** — ✅ **Η ΡΙΖΑ ΤΩΝ «~172 ΒΕΒΑΙΩΝ ΑΠΟΤΥΧΙΩΝ» ΤΗΣ Φ5 ΕΚΛΕΙΣΕ** (§11). Τα 5 γενικά
   projects δεν είχαν `testMatch`, άρα σήκωναν **κάθε** spec — και τα **τρία** που έχουν δικό τους

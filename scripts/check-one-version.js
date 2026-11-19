@@ -97,6 +97,7 @@ const LEDGER_TITLES = {
   exceptions: 'Ε · ΕΞΑΙΡΕΣΕΙΣ',
   ciTools: 'ΣΤ · ΕΡΓΑΛΕΙΑ CI',
   singletons: 'Ζ · ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ',
+  ciImages: 'Η · ΕΙΚΟΝΕΣ CI',
 };
 
 const ADVICE = [
@@ -113,6 +114,10 @@ const ADVICE = [
   '  singleton-split        → κάρφωσε ΜΙΑ έκδοση του κατόχου στο pnpm.overrides και τρέξε pnpm install.',
   '  singleton-absent       → ο κάτοχος έφυγε από τον γράφο: σβήσε τη γραμμή του από το "singletons".',
   '  singleton-reasonless   → γράψε "holds" (η μεταβλητή επιπέδου module) και "reason".',
+  '  ci-image-version-drift → η ετικέτα της εικόνας ≠ lockfile: ανέβασε ετικέτα ΚΑΙ πακέτο στο ΙΔΙΟ commit.',
+  '  ci-image-unpinned      → γράψε ακριβή ετικέτα (π.χ. :v1.57.0-noble), ποτέ latest ή σκέτο όνομα.',
+  '  ci-image-bypass        → σβήσε το playwright install· βάλε το job σε container: image: mcr.microsoft.com/playwright:v<έκδοση>-noble.',
+  '  ci-image-authority-broken →το lockfile δεν δίνει ΜΙΑ έκδοση της αυθεντίας — scripts/lib/one-version/ci-images.js.',
   '',
   'Αν ΔΥΟ εσωτερικά μέλη ΠΡΕΠΕΙ να δηλώνουν το ίδιο πακέτο, δήλωσέ το στο',
   '.one-version.json — ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ.',

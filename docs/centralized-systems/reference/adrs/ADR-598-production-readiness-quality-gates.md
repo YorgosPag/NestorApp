@@ -126,6 +126,11 @@
 
 ## 7. Changelog
 
+- **2026-11-19** — **G5 type-coverage: heap 8192 → 12288 MB** (`type-coverage-ratchet.yml`). Μετρημένο στο run `44382268382`:
+  `Mark-Compact 8060 → 8046 MB` και `heap out of memory` στα ~452s· τελευταία επιτυχία 2026-09-15, το δέντρο μεγάλωσε από τότε.
+  Το repo είναι δημόσιο ⇒ ο `ubuntu-latest` έχει 16 GB RAM, άρα 12288 MB αφήνουν ~4 GB στο σύστημα. ⚠️ Αν σκάσει ξανά, το
+  επόμενο βήμα δεν είναι νέο νούμερο: είναι μεγαλύτερος runner ή κομμάτιασμα της σάρωσης. Δεν έχει επαληθευτεί ακόμη στο CI.
+
 - **2026-10-24** — **Ο orchestrator έγινε πραγματικά pool** (`scripts/run-checks-parallel.js`). Η §2 τον έλεγε «worker-thread
   pool», αλλά ήταν `Promise.all` χωρίς όριο: **72 workers = 72 V8 isolates ταυτόχρονα** σε ΕΝΑ process. Σε μηχάνημα 4 πυρήνων με
   ~4 GB ελεύθερα το process έπεφτε με native `Segmentation fault` (`pre-commit: line 343`) **χωρίς καμία έξοδο ελέγχου**, άρα

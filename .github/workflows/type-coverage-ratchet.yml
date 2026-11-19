@@ -79,10 +79,14 @@ jobs:
           else
             node scripts/check-type-coverage-ratchet.js --check
           fi
-        # type-coverage drives the TS compiler API → OOMs at the ~4 GB default
-        # heap; give it 8192 MB (mirrors the other ratchet gates).
+        # type-coverage drives the TS compiler API → OOMs at the ~4 GB default heap.
+        # ⚠️ 2026-11-19: με 8192 MB ΕΣΚΑΣΕ (run 44382268382: Mark-Compact 8060 → 8046 MB,
+        # «heap out of memory» στα ~452s· τελευταία επιτυχία 2026-09-15 — το δέντρο
+        # μεγάλωσε). Το repo είναι δημόσιο ⇒ ο `ubuntu-latest` έχει 16 GB RAM· 12288 MB
+        # αφήνουν ~4 GB στο σύστημα. Αν σκάσει ξανά, το επόμενο βήμα ΔΕΝ είναι νέο
+        # νούμερο: είναι μεγαλύτερος runner ή κομμάτιασμα της σάρωσης.
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
 
       - name: 📤 Upload seeded baseline (seed mode only)
         if: ${{ inputs.seed == true }}

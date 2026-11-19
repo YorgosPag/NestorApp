@@ -187,8 +187,17 @@ viewer**, **όπως το `polygon-clipping`**», με έλεγχο αδείας
 | **Ε · ΕΞΑΙΡΕΣΕΙΣ** | ⛔ `orphan-declaration` · ⛔ `reasonless-declaration` · ✅ `declaration-used` |
 | **ΣΤ · ΕΡΓΑΛΕΙΑ CI** (ADR-875 §12) | ⛔ `ci-tool-bypass` · ⛔ `ci-tool-version-literal` · ⛔ `ci-tool-owner-broken` · ✅ `ci-tool-owner` · ✅ `ci-tool-via-owner` |
 | **Ζ · ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ** (ADR-915 §15) | ⛔ `singleton-split` · ⛔ `singleton-absent` · ⛔ `singleton-reasonless` · ✅ `singleton-one` |
+| **Η · ΕΙΚΟΝΕΣ CI** (ADR-775 §11.1) | ⛔ `ci-image-version-drift` · ⛔ `ci-image-unpinned` · ⛔ `ci-image-authority-broken` · ⛔ `ci-image-bypass` · ✅ `ci-image-pinned` |
 
-*(Ο τίτλος «πέντε κατάστιχα» είναι ιστορικός· σήμερα είναι επτά. Πρώτο το ΣΤ, που δεν είχε γραφτεί εδώ μέχρι 2026-10-16.)*
+*(Ο τίτλος «πέντε κατάστιχα» είναι ιστορικός· σήμερα είναι οκτώ. Πρώτο το ΣΤ, που δεν είχε γραφτεί εδώ μέχρι 2026-10-16.)*
+
+* `ci-image-version-drift` — **το αντίστροφο του ΣΤ**. Εκεί το εργαλείο δεν ζει στο lockfile, άρα κάθε γραμμένη
+  έκδοση στο `.github/` απαγορεύεται. Εδώ η αυθεντία **είναι** το lockfile (`playwright-core`, που καρφώνει την
+  αναθεώρηση του Chromium), και η ετικέτα της εικόνας `mcr.microsoft.com/playwright:v<έκδοση>-<διανομή>`
+  **πρέπει** να είναι γραμμένη, γιατί ο runner διαλέγει εικόνα πριν από κάθε βήμα. Η πύλη την κάνει **προβολή**
+  του lockfile: ανέβασμα πακέτου χωρίς ετικέτα (ή αντίστροφα) μπλοκάρει στο commit. Κλειστό σύνολο
+  `CI_IMAGES` στο `scripts/lib/one-version/ci-images.js`, με λόγο. Το `ci-image-bypass` κλείνει τον άλλο δρόμο:
+  `playwright install` σε workflow σημαίνει browser από το λειτουργικό του runner, δηλαδή το περιστατικό της 19/11.
 
 **Γιατί το καθένα υπάρχει:**
 
@@ -292,6 +301,13 @@ CHECK 3.48 · 3.55 · 3.61).
 ---
 
 ## 9. Changelog
+
+* **2026-11-19** — **Κατάστιχο Η · ΕΙΚΟΝΕΣ CI (ADR-775 §11.1).** Τα 5 jobs με browser τρέχουν πλέον μέσα στην
+  επίσημη εικόνα `mcr.microsoft.com/playwright:v1.57.0-noble` (το `ubuntu-latest` έγινε 26.04 και το
+  `playwright install --with-deps` έσκαγε). Η ετικέτα είναι δεύτερος αριθμός της ίδιας αλήθειας, άρα κρίνεται:
+  νέο module `ci-images.js` που ξαναχρησιμοποιεί τα `ciFiles`/`codeLines` του ΣΤ και το `resolvedVersions` του Ζ.
+  Καμία δεύτερη μηχανή. Τέσσερις νέες ⛔ (`ci-image-version-drift` · `ci-image-unpinned` · `ci-image-authority-broken` ·
+  `ci-image-bypass`). Άγκυρες **Η1-Η11**· βαθμονόμηση του bypass στο καρφωμένο `bffd72ca` (ακριβώς 5, μία ανά ροή).
 
 * **2026-10-16** — **Κατάστιχο Ζ · ΚΑΤΟΧΟΙ ΚΑΘΟΛΙΚΗΣ ΣΤΟΙΒΑΣ (ADR-915 §15).** Το lockfile είχε `react-dismissable-layer`
   1.1.11 (Dialog/Select/Menu) **και** 1.1.15 (Popover/Tooltip), επίσης `focus-scope` 1.1.7/1.1.12 και `focus-guards`

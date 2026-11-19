@@ -12,6 +12,7 @@ const { readLockfile, bareVersion } = require('./lockfile.js');
 const { readWorkspace, declaredDependencies } = require('./workspace.js');
 const { judgeCiTools } = require('./ci-tools.js');
 const { judgeSingletons } = require('./singletons.js');
+const { judgeCiImages } = require('./ci-images.js');
 const { openGateInput } = require('../gate-input');
 
 const BLOCKING = Object.freeze([
@@ -22,6 +23,7 @@ const BLOCKING = Object.freeze([
   S.ORPHAN_DECLARATION, S.REASONLESS_DECLARATION,
   S.CI_TOOL_BYPASS, S.CI_TOOL_VERSION_LITERAL, S.CI_TOOL_OWNER_BROKEN,
   S.SINGLETON_SPLIT, S.SINGLETON_ABSENT, S.SINGLETON_REASONLESS,
+  S.CI_IMAGE_DRIFT, S.CI_IMAGE_UNPINNED, S.CI_IMAGE_AUTHORITY_BROKEN, S.CI_IMAGE_BYPASS,
 ]);
 
 const tallyOf = (states) => Object.fromEntries(states.map((s) => [s, 0]));
@@ -148,6 +150,7 @@ const LEDGER_STATES = Object.freeze({
   exceptions: [S.ORPHAN_DECLARATION, S.REASONLESS_DECLARATION, S.DECLARATION_USED],
   ciTools: [S.CI_TOOL_BYPASS, S.CI_TOOL_VERSION_LITERAL, S.CI_TOOL_OWNER_BROKEN, S.CI_TOOL_OWNER, S.CI_TOOL_VIA_OWNER],
   singletons: [S.SINGLETON_SPLIT, S.SINGLETON_ABSENT, S.SINGLETON_REASONLESS, S.SINGLETON_ONE],
+  ciImages: [S.CI_IMAGE_DRIFT, S.CI_IMAGE_UNPINNED, S.CI_IMAGE_AUTHORITY_BROKEN, S.CI_IMAGE_BYPASS, S.CI_IMAGE_PINNED],
 });
 
 /** `input` = η είσοδος (ADR-924): με `--index` (εκτελεστής) το workspace, το lockfile και τα manifests ΤΟΥ COMMIT. */
@@ -173,6 +176,7 @@ function sweep(repoRoot, input = openGateInput({ root: repoRoot })) {
   judgeExceptions(declarations, used, pushTo('exceptions'));
   judgeCiTools(repoRoot, pushTo('ciTools'), undefined, input);
   judgeSingletons(repoRoot, loadSingletons(repoRoot, input), pushTo('singletons'), input);
+  judgeCiImages(repoRoot, pushTo('ciImages'), undefined, input);
 
   for (const [name, states] of Object.entries(LEDGER_STATES)) {
     ledgers[name].population = states.reduce((n, s) => n + ledgers[name].tally[s], 0);

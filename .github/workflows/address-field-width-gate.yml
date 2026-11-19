@@ -104,6 +104,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # 🐳 ADR-775 §11.1 — browser, βιβλιοθήκες συστήματος και γραμματοσειρές έρχονται ΚΑΡΦΩΜΕΝΑ
+    # από την επίσημη εικόνα, όχι από το λειτουργικό του runner (το `ubuntu-latest` έγινε 26.04
+    # στις 19/11 και έριξε το `playwright install --with-deps`, χωρίς κανένα commit μας).
+    # ⚠️ Η ετικέτα = το `playwright-core` του lockfile· το φυλάει το CHECK 3.65 · Η. Αναβάθμιση
+    # πακέτου ⇒ ίδια ετικέτα εδώ, στο ΙΔΙΟ commit. `--user 1001` = ο χρήστης του runner
+    # (οδηγία Playwright): workspace και tool cache μένουν δικά του.
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      options: --user 1001
+
     # 🔴 ΨΕΥΤΙΚΑ ΔΙΑΠΙΣΤΕΥΤΗΡΙΑ, ΕΠΙΤΗΔΕΣ — μετρημένο, όχι εικασία: χωρίς `apiKey` το
     # `getAuth(app)` πετά ΚΑΤΑ ΤΗΝ ΑΠΟΤΙΜΗΣΗ του module, μέσα από την αλυσίδα
     # `global-error.tsx → ErrorBoundary → ErrorTracker → enterprise-api-client → lib/firebase`,
@@ -141,11 +151,6 @@ jobs:
       # ⚠️ ΧΩΡΙΣ `--ignore-scripts`: ο Next dev server πρέπει όντως να σηκωθεί.
       - name: 📦 Install dependencies
         run: pnpm install --frozen-lockfile
-
-      # Μόνο chromium: το project `address-field-width` είναι Desktop Chrome. **Καμία
-      # σημαία WebGL** — εδώ δεν υπάρχει χάρτης, μόνο DOM.
-      - name: 🌐 Install chromium
-        run: pnpm exec playwright install --with-deps chromium
 
       - name: 🚀 Start dev server
         run: pnpm run dev > /tmp/dev-server.log 2>&1 &

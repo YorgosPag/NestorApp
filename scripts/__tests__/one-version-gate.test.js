@@ -570,3 +570,116 @@ describe('Ζ — κάτοχοι καθολικής στοίβας', () => {
     expect(cli.affects(path.join('scripts', 'lib', 'one-version', 'singletons.js'))).toBe(true);
   });
 });
+
+// =============================================================================
+// Η — ΕΙΚΟΝΕΣ CI: η ετικέτα της εικόνας ΠΡΟΒΑΛΛΕΙ το lockfile (ADR-775 §11.1)
+// =============================================================================
+
+describe('Η — εικόνες CI', () => {
+  const ciImages = require('../lib/one-version/ci-images.js');
+  const IMAGE = 'mcr.microsoft.com/playwright';
+  const FLOWS = [
+    'address-field-width-gate', 'camera-motion-gate', 'public-floorplan-pixels-gate',
+    'public-reflow-gate', 'ui-contrast-ratchet',
+  ];
+  const REAL_LOCK = () => fs.readFileSync(path.join(REPO_ROOT, 'pnpm-lock.yaml'), 'utf8');
+  const realFlow = (f) => fs.readFileSync(path.join(REPO_ROOT, `.github/workflows/${f}.yml`), 'utf8');
+  const wf = (body) => `jobs:\n  t:\n    runs-on: ubuntu-latest\n${body}\n    steps:\n      - run: echo ok\n`;
+
+  /** Κρίνει ΜΟΝΟ το κατάστιχο Η πάνω σε lockfile + αρχεία CI — ορθογώνιο στα Α-Ζ. */
+  function judge(files, lockText = REAL_LOCK(), images) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'onever-h-'));
+    for (const [rel, text] of Object.entries({ 'pnpm-lock.yaml': lockText, ...files })) {
+      fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+      fs.writeFileSync(path.join(root, rel), text);
+    }
+    const rows = [];
+    ciImages.judgeCiImages(root, (state, id, detail) => rows.push({ state, id, detail }), images);
+    return rows;
+  }
+  const statesOf = (rows) => rows.map((r) => r.state);
+
+  it('Η1: το ΠΡΑΓΜΑΤΙΚΟ δέντρο — οι 5 ροές με browser καρφωμένες στην έκδοση του lockfile, μηδέν παραβάσεις', () => {
+    const { ledgers, rows } = sweep(REPO_ROOT);
+    const tally = ledgers.ciImages.tally;
+    expect(tally[S.CI_IMAGE_DRIFT] + tally[S.CI_IMAGE_UNPINNED] + tally[S.CI_IMAGE_AUTHORITY_BROKEN] + tally[S.CI_IMAGE_BYPASS]).toBe(0);
+    const pinned = rows
+      .filter((r) => r.state === S.CI_IMAGE_PINNED)
+      .map((r) => r.id.replace(/^\.github\/workflows\/|\.yml:\d+$/g, ''));
+    expect(pinned.sort()).toEqual(FLOWS);
+  });
+
+  it('Η2: 🔴 ΒΑΘΜΟΝΟΜΗΣΗ — ετικέτα που έμεινε πίσω από το lockfile ⇒ version-drift, ΜΟΝΟ στη μεταλλαγμένη ροή', () => {
+    const files = Object.fromEntries(FLOWS.map((f) => [`.github/workflows/${f}.yml`, realFlow(f)]));
+    const key = '.github/workflows/public-reflow-gate.yml';
+    files[key] = replaceOnce(files[key], /playwright:v1\.57\.0-noble/, 'playwright:v1.56.1-noble');
+    const rows = judge(files);
+    expect(rows.filter((r) => r.state === S.CI_IMAGE_DRIFT).map((r) => r.id)).toEqual([
+      expect.stringMatching(/^\.github\/workflows\/public-reflow-gate\.yml:\d+$/),
+    ]);
+    // Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: οι άλλες τέσσερις μένουν πράσινες.
+    expect(statesOf(rows).filter((s) => s === S.CI_IMAGE_PINNED)).toHaveLength(4);
+  });
+
+  it('Η3: χωρίς ακριβή έκδοση ⇒ unpinned — σκέτο όνομα, latest, μισή έκδοση, σκέτη σύνοψη', () => {
+    for (const ref of [IMAGE, `${IMAGE}:latest`, `${IMAGE}:v1.57-noble`, `${IMAGE}:next-noble`, `${IMAGE}@sha256:abc123`]) {
+      const rows = judge({ '.github/workflows/x.yml': wf(`    container:\n      image: ${ref}`) });
+      expect({ ref, states: statesOf(rows) }).toEqual({ ref, states: [S.CI_IMAGE_UNPINNED] });
+    }
+  });
+
+  it('Η4: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — σχόλιο δεν είναι εικόνα · άλλο προϊόν (/python) δεν είναι η ίδια εικόνα · σύνοψη μετά από σωστή ετικέτα περνά', () => {
+    const body = [`    # παλιά: ${IMAGE}:v1.40.0-jammy`, `    container:\n      image: ${IMAGE}/python:v1.40.0-jammy`].join('\n');
+    expect(judge({ '.github/workflows/x.yml': wf(body) })).toEqual([]);
+    const digest = judge({ '.github/workflows/y.yml': wf(`    container:\n      image: ${IMAGE}:v1.57.0-noble@sha256:abc123`) });
+    expect(statesOf(digest)).toEqual([S.CI_IMAGE_PINNED]);
+  });
+
+  it('Η5: `docker run` με την εικόνα ΚΡΙΝΕΤΑΙ ίδια με το `container.image`', () => {
+    const rows = judge({ '.github/workflows/x.yml': wf(`      - run: docker run --rm ${IMAGE}:v1.50.0-noble npx playwright test`) });
+    expect(statesOf(rows)).toEqual([S.CI_IMAGE_DRIFT]);
+  });
+
+  it('Η6: FAIL-CLOSED — lockfile με ΔΥΟ ή ΚΑΜΙΑ έκδοση του playwright-core ⇒ authority-broken (ποτέ σιωπηλό)', () => {
+    const files = { '.github/workflows/x.yml': wf(`    container:\n      image: ${IMAGE}:v1.57.0-noble`) };
+    const two = replaceOnce(REAL_LOCK(), /\n {2}playwright-core@1\.57\.0:\n/, '\n  playwright-core@1.57.0:\n\n  playwright-core@1.56.1:\n');
+    const none = REAL_LOCK().split('playwright-core@').join('playwright-kore@');
+    expect(none).not.toBe(REAL_LOCK()); // η μετάλλαξη ΕΓΙΝΕ
+    for (const lock of [two, none]) expect(statesOf(judge(files, lock))).toEqual([S.CI_IMAGE_AUTHORITY_BROKEN]);
+  });
+
+  it('Η7: δήλωση εικόνας ΧΩΡΙΣ λόγο ⇒ authority-broken', () => {
+    const images = { [IMAGE]: { ...ciImages.CI_IMAGES[IMAGE], reason: 'ok' } };
+    const files = { '.github/workflows/x.yml': wf(`    container:\n      image: ${IMAGE}:v1.57.0-noble`) };
+    expect(statesOf(judge(files, REAL_LOCK(), images))).toEqual([S.CI_IMAGE_AUTHORITY_BROKEN]);
+  });
+
+  it('Η8: η αυθεντία ΕΙΝΑΙ η έκδοση που εγκαθιστά η ρίζα — playwright-core == @playwright/test == playwright', () => {
+    const root = lockfile.readLockfile(REPO_ROOT).importers['.'];
+    const core = [...singletons.resolvedVersions(REPO_ROOT).get('playwright-core')];
+    expect(core).toHaveLength(1);
+    expect(lockfile.bareVersion(root['@playwright/test'].version)).toBe(core[0]);
+    expect(lockfile.bareVersion(root.playwright.version)).toBe(core[0]);
+  });
+
+  it('Η10: 🔴 ΒΑΘΜΟΝΟΜΗΣΗ — οι 5 ροές όπως ήταν ΠΡΙΝ την εικόνα (καρφωμένο bffd72ca) ⇒ ΑΚΡΙΒΩΣ 5 bypass', () => {
+    const PRE_IMAGE = 'bffd72ca';
+    const files = Object.fromEntries(FLOWS.map((f) => [`.github/workflows/${f}.yml`, gitShow(PRE_IMAGE, `.github/workflows/${f}.yml`)]));
+    const rows = judge(files);
+    const bypass = rows.filter((r) => r.state === S.CI_IMAGE_BYPASS).map((r) => r.id.replace(/^\.github\/workflows\/|\.yml:\d+$/g, ''));
+    expect(bypass.sort()).toEqual(FLOWS);
+    expect(statesOf(rows).filter((s) => s !== S.CI_IMAGE_BYPASS)).toEqual([]);
+  });
+
+  it('Η11: ο ΠΑΡΟΝΟΜΑΣΤΗΣ του bypass — σχόλιο που ΑΝΑΦΕΡΕΙ το install δεν είναι εντολή · `npx playwright install` πιάνεται', () => {
+    expect(judge({ '.github/workflows/x.yml': wf('    # παλιά: pnpm exec playwright install --with-deps chromium') })).toEqual([]);
+    const rows = judge({ '.github/workflows/x.yml': wf('      - run: npx playwright install chromium') });
+    expect(statesOf(rows)).toEqual([S.CI_IMAGE_BYPASS]);
+  });
+
+  it('Η9: η σκανδάλη — το κατάστιχο, ένα workflow και το lockfile ΞΥΠΝΟΥΝ την πύλη', () => {
+    for (const f of [path.join('scripts', 'lib', 'one-version', 'ci-images.js'), '.github/workflows/x.yml', 'pnpm-lock.yaml']) {
+      expect(cli.affects(f)).toBe(true);
+    }
+  });
+});

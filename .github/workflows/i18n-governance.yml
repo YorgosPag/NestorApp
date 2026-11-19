@@ -13,10 +13,17 @@ name: T2 🌐 i18n Governance (ADR-279)
 #
 # It is intentionally narrow: ONLY i18n governance checks run here so that it
 # stays fast (~30s) and does not get disabled under time pressure the way the
-# broader quality-gates.yml / unit.yml workflows have been in the past. Every
-# step must be dependency-free pure Node.js — that is what lets this workflow
-# skip `pnpm install` entirely. Anything needing a build or a typecheck belongs
-# in its own workflow (see ts-error-gate.yml), not here.
+# broader quality-gates.yml / unit.yml workflows have been in the past. Anything
+# needing a build or a typecheck belongs in its own workflow (see
+# ts-error-gate.yml), not here.
+#
+# ⚠️ 2026-11-19: αυτό το σχόλιο υποσχόταν «κάθε βήμα είναι καθαρό Node, χωρίς
+# `pnpm install`». Από το `76e55cd0` το CHECK 3.13 διαβάζει τον γράφο εισαγωγών
+# με τον parser του `typescript` (`scripts/lib/module-graph`, AST parse-only,
+# ΠΟΤΕ tsc — N.17) και το job έσκαγε με `Cannot find module 'typescript'` σε
+# κάθε push (run 44382268685). Η εγκατάσταση είναι `--ignore-scripts`, όπως στο
+# job `i18n-plural` παρακάτω: ένας χειρόγραφος parser για να τη γλιτώσουμε θα
+# ήταν δεύτερη μηχανή που διαφωνεί με την πρώτη (ADR-749).
 #
 # Regression that motivated this workflow
 # ---------------------------------------
@@ -83,16 +90,20 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v5
 
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+
       - name: 📦 Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: '20'
-          # setup-node@v5: χωρίς αυτό ενεργοποιεί σιωπηρά pnpm cache (packageManager) — εδώ δεν υπάρχει pnpm
-          package-manager-cache: false
+          cache: 'pnpm'
 
-      # We do not need a full dependency install — every governance script is
-      # pure Node.js (no runtime deps) that walks the repo filesystem. This
-      # keeps the workflow under 30s and independent of pnpm-lock churn.
+      # Μόνο για το `typescript` του CHECK 3.13 (βλ. κεφαλίδα). `--ignore-scripts`:
+      # κανένα postinstall build, κανένας browser — μόνο τα πακέτα.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       # ADR-727 — CHECK 3.33. src/types/i18n.ts is generated from the el locale
       # JSONs and went four months stale (+39.920/−16.368 lines) while every
@@ -224,7 +235,7 @@ jobs:
 
   # CHECK 3.115 — ΠΥΛΗ ΤΟΥ ΠΛΗΘΥΝΤΙΚΟΥ (ADR-932). «Λέει αυτό το μήνυμα "1 παραγγελίες";»
   # Άνευ όρων (~0,8s, 264 αρχεία): η δήλωση αμετάβλητου ζει σε ΑΛΛΟ αρχείο από το μήνυμα.
-  # ⚠️ Η ΜΟΝΗ ΕΞΑΙΡΕΣΗ στο «χωρίς εγκατάσταση» αυτού του workflow, ΚΑΙ ΕΙΝΑΙ ΕΠΙΤΗΔΕΣ: η πύλη αναλύει
+  # ⚠️ Εγκατάσταση ΕΠΙΤΗΔΕΣ (όπως πλέον και στο job `governance`): η πύλη αναλύει
   # με τον parser του ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ (`@formatjs/icu-messageformat-parser`, ίδια έκδοση με αυτόν
   # του `i18next-icu`). Ένας χειρόγραφος tokenizer, για να γλιτώσει την εγκατάσταση, θα ήταν δεύτερη
   # μηχανή που διαφωνεί με την πρώτη (ADR-749).
