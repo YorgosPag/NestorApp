@@ -65,6 +65,7 @@
 ### 🏭 **SMART FACTORIES**
 - **[📋 Overview](smart-factories/index.md)** - Smart factory architecture & guidelines
 - **[📑 Tabs Factory](smart-factories/tabs-factory.md)** - Dynamic tab configuration generation
+- **[🧭 Section List-Detail Layout (ADR-946)](reference/adrs/ADR-946-section-list-detail-layout.md)** - `SectionListDetail` + `SectionNavList` + `useUrlSection`: λίστα ενοτήτων με σύνοψη/μετρητή → ενότητα → πλαϊνό, για σελίδα ΜΙΑΣ εγγραφής (όχι καρτέλες· `?section=` στη διεύθυνση, drill-down στο κινητό)
 - **[🧭 Navigation Factory](smart-factories/navigation-factory.md)** - Dynamic menu generation
 - **[📖 Usage Guidelines](smart-factories/guidelines.md)** - When to use/avoid smart factories
 

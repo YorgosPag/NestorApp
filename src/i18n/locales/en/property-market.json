@@ -797,6 +797,30 @@
       "error": "The property could not be loaded. Please try again shortly.",
       "edit": "Edit"
     },
+    "sections": {
+      "navLabel": "Property sections",
+      "asideLabel": "Listing actions and status",
+      "actionsLabel": "Listing actions",
+      "back": "All sections",
+      "overview": {
+        "title": "Overview",
+        "summary": "Card, performance and demand",
+        "views": "{count, plural, one {# view} other {# views}}"
+      },
+      "mandate": {
+        "title": "Mandate & marketing",
+        "none": "No agency mandate",
+        "live": "{count, plural, one {# active mandate} other {# active mandates}}"
+      },
+      "documents": {
+        "title": "Documents & obligations",
+        "summary": "Ownership verification and standing obligations"
+      },
+      "history": {
+        "title": "History",
+        "summary": "What changed and when"
+      }
+    },
     "card": {
       "noPlace": "No stated location",
       "typeUnknown": "Unknown type — needs correction",

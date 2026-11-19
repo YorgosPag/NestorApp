@@ -262,11 +262,26 @@ export function replaceUrlSearchParams(mutate: (params: URLSearchParams) => void
  *
  * 🔴 ΜΕΤΡΗΜΕΝΟ (ADR-327, 2026-10-28): η σελίδα RFQ άλλαζε καρτέλα με `router.push('?tab=…')` ⇒ **γύρος RSC 3,5 s**
  * στον dev ανά κλικ (σε απασχολημένο server: «πάγωμα» της καρτέλας). Ο App Router δεν έχει shallow routing.
+ *
+ * @param marker - Προαιρετικά κλειδιά που απλώνονται στο `history.state` της **νέας** καταχώρισης (όπως το
+ *   {@link pushHistoryMarker}) — ώστε ο καταναλωτής να ξέρει αργότερα ότι **αυτός** την έσπρωξε και μπορεί να την
+ *   ξετυλίξει με `history.back()` αντί να γράψει δεύτερη (ADR-946).
  */
-export function pushUrlSearchParams(mutate: (params: URLSearchParams) => void): void {
+export function pushUrlSearchParams(
+  mutate: (params: URLSearchParams) => void,
+  marker?: Readonly<Record<string, true>>,
+): void {
   if (typeof window === 'undefined') return;
 
   const params = currentSearchParams();
   mutate(params);
-  window.history.pushState(window.history.state, '', sameDocumentUrl(params.toString()));
+  const state = marker === undefined ? window.history.state : { ...window.history.state, ...marker };
+  window.history.pushState(state, '', sameDocumentUrl(params.toString()));
+}
+
+/** Φέρει το `history.state` της **τρέχουσας** καταχώρισης τον δείκτη `key`; (ζεύγος του `marker` παραπάνω) */
+export function currentHistoryHasMarker(key: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const state: unknown = window.history.state;
+  return typeof state === 'object' && state !== null && Reflect.get(state, key) === true;
 }

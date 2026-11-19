@@ -92,7 +92,7 @@
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "73fda44762c96c57da71ce042617e5b51ecea89deb30ef26d920e64beaa6d5bf",
-    "src/i18n/generated/routes/offers__offerId.el.json": "9e6c4487f5945352783716f30ec0e44a644c08a186ba862a1c34af6ab58627cb",
+    "src/i18n/generated/routes/offers__offerId.el.json": "9e310942148be6759450547694c541c9ec7797b9a1a67926404a4d9129b5eb8b",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "bfddc6394c00d7e5f4b2835153253ff9713022d528faa576b0066ccc0d8b246e",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "79404df51702f429c162cf02769911fcf19592603974a6fc3dd75dc1125d8f11",
+  "inputsSha256": "714297b10ae14d8327e9225a7952724da697f822eee9a28cec359acdbb94f742",
   "languages": [
     "el"
   ],
@@ -37182,6 +37182,20 @@
             "offer.publish.unmarked",
             "offer.publish.view",
             "offer.publish.withdrawn",
+            "offer.sections.actionsLabel",
+            "offer.sections.asideLabel",
+            "offer.sections.back",
+            "offer.sections.documents.summary",
+            "offer.sections.documents.title",
+            "offer.sections.history.summary",
+            "offer.sections.history.title",
+            "offer.sections.mandate.live",
+            "offer.sections.mandate.none",
+            "offer.sections.mandate.title",
+            "offer.sections.navLabel",
+            "offer.sections.overview.summary",
+            "offer.sections.overview.title",
+            "offer.sections.overview.views",
             "offer.stayCalendar.open",
             "offer.tour.open",
             "photoCaptureSpots.needsFloorplan",
@@ -41211,7 +41225,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1359647
+    "sliceBytes": 1360766
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

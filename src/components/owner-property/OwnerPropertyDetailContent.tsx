@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Η ΜΙΑ ΑΓΓΕΛΙΑ** — θέαση, επεξεργασία, απόσυρση, και **ο δρόμος προς τον κόσμο**.
- * @related ADR-777 §7 (Α5 · Α14 · Α22) · §8.16 · lib/listings/listing-routes.ts
+ * @related ADR-777 §7 (Α5 · Α14 · Α22) · §8.16 · ADR-946 (διάταξη list-detail) · lib/listings/listing-routes.ts
  * @module components/owner-property/OwnerPropertyDetailContent
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -12,31 +12,20 @@
  * > *«Αν ένας ιδιώτης δεν μπορεί να ανεβάσει το διαμέρισμά του και **να το δει να
  * > εμφανίζεται στα αποτελέσματα**, δεν έχει τελειώσει.»*
  *
- * Ο σύνδεσμος προς τη **δημόσια** αγγελία (`listingDetailHref`) είναι το σημείο όπου
- * ο κύκλος κλείνει και γίνεται **επαληθεύσιμος από τον ίδιο τον άνθρωπο** — όχι από
- * εμάς. Και εμφανίζεται **μόνο** όταν η αγγελία είναι πραγματικά δημοσιευμένη, γιατί
- * ένας σύνδεσμος προς κενή σελίδα είναι χειρότερος από κανέναν.
+ * Ο σύνδεσμος προς τη **δημόσια** αγγελία (`listingDetailHref`, στο πλαϊνό πάνελ) είναι το σημείο όπου ο κύκλος κλείνει
+ * και γίνεται **επαληθεύσιμος από τον ίδιο τον άνθρωπο**. Εμφανίζεται **μόνο** όταν η αγγελία είναι πραγματικά
+ * δημοσιευμένη — ένας σύνδεσμος προς κενή σελίδα είναι χειρότερος από κανέναν.
  *
- * 🔑 **Ο ίδιος κριτής με τον διακομιστή**, όπως και στην κάρτα: η σύνθεση
- * `projectableFromOwnerProperty` → `isPubliclyListed`. Καμία δεύτερη ανάγνωση, κανένα
- * δεύτερο κατηγόρημα.
- *
- * ⚠️ **Η απόσυρση ΔΕΝ διαγράφει** (`lifecycle: 'withdrawn'`), και το λέει η ίδια η
- * οθόνη: η αγγελία φεύγει από τον χάρτη και **μένει στον κατάλογό του**. Ένα κουμπί
- * «διαγραφή» θα ήταν μη αναστρέψιμη πράξη πάνω στη δουλειά του ανθρώπου, για ανάγκη
- * που το `lifecycle` καλύπτει πλήρως.
+ * 🧭 **ADR-946 — LIST-DETAIL, ΟΧΙ ΜΙΑ ΣΤΗΛΗ ΔΕΚΑΤΕΣΣΑΡΩΝ ΜΠΛΟΚ.** Η σελίδα ήταν 80ch (μέτρο πρόζας) και ~14 μπλοκ σε
+ * σειρά, με τις ενέργειες στη μέση. Τώρα: λίστα ενοτήτων με ζωντανή σύνοψη · η ενότητα · πλαϊνό πάνελ με ενέργειες και
+ * «τι λείπει». Τα μπλοκ **δεν άλλαξαν** — μόνο η θέση τους (`OwnerPropertySections`).
  */
 
 import React from 'react';
-import dynamic from 'next/dynamic';
-import { Link, useRouter } from '@/lib/workspace/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { COLOR_BRIDGE } from '@/design-system/color-bridge';
-import { cn } from '@/lib/utils';
-import { isAppFeatureEnabled } from '@/config/feature-flags';
-import { OwnerIssuanceSurfaces } from './owner-issuance-surfaces';
-import { listingDetailHref } from '@/lib/listings/listing-routes';
+import { SectionListDetail } from '@/core/layouts';
 import { nowISO } from '@/lib/date-local';
 import {
   ownerListingVisibility,
@@ -45,33 +34,16 @@ import {
 } from '@/lib/owner-property/owner-property-projection';
 import { isOffered, projectListingShape } from '@/services/listings/public-listing-projection';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
-import { MY_OFFERS_ROUTE, offerStayCalendarHref, offerTourHref } from '@/lib/owner-property/owner-property-routes';
-import {
-  setOwnerListingAudience,
-  setOwnerListingLifecycle,
-} from '@/services/owner-property/owner-property.service';
-import {
-  MarketingAudienceControl,
-  type AudienceChangeOutcome,
-} from '@/components/listings/MarketingAudienceControl';
+import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
-import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
-
+import type { OwnerProperty } from '@/types/owner-property';
 import { ownerMandateViews } from '@/lib/mandate/owner-mandate-view';
-
-import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
-import { isLandProperty } from '@/constants/property-classification';
-import { isUnitLevelUndeclared } from '@/lib/owner-property/owner-property-unit-form';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
 import { listingStatsStateOf, useOwnerPortfolioStats } from '@/hooks/owner-property/useOwnerPortfolioStats';
-import { OwnerListingCompletion } from './OwnerListingCompletion';
-import { OwnerMandatePanel } from './OwnerMandatePanel';
-import { ListingMapSnapshotProvider } from '@/components/listing-map-snapshot/ListingMapSnapshotProvider';
-import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
-import { OwnerPropertyHistory } from './OwnerPropertyHistory';
-import { StatsPanelPending } from './owner-property-stats-pending';
-import { PrivateMarketingOwnerSection } from './PrivateMarketingOwnerSection';
+import { OwnerPropertyAside } from './OwnerPropertyAside';
+import { OwnerPropertySectionContent, type OwnerSectionData } from './OwnerPropertySections';
+import { useOwnerPropertySectionEntries } from './owner-property-sections';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/offers/[offerId]` (ADR-777 §8.39).
 //
@@ -90,316 +62,81 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
 
-/**
- * 💬 ADR-867 Β7 — **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ** (CHECK 3.34 Κ2): οι συνομιλίες με τα γραφεία είναι νησίδα **μόνο για
- * συνδεδεμένους** (στον διακομιστή δεν υπάρχει χρήστης ⇒ δεν αποδίδουν τίποτα), με δικό τους namespace που
- * φορτώνεται όταν ανοίξουν. ⚠️ Όχι `ssr: false` — ίδιο ιδίωμα με το `PrivateMarketingAgencySection`.
- */
-const OwnerMandateThreads = dynamic(() =>
-  import('@/components/network-messaging/OwnerMandateThreads').then((mod) => mod.OwnerMandateThreads),
-);
-
-/**
- * 📊 ADR-777 §8.72 — **ΟΡΙΟ ΚΛΕΙΣΤΟΤΗΤΑΣ** (CHECK 3.34 Κ2): ο πίνακας γεμίζει **μόνο** στον πελάτη, άρα
- * δείκτες, γράφημα και εξέλιξη τιμής δεν ανήκουν στο route slice. ⚠️ Όχι `ssr: false` (ADR-744 §14.3).
- */
-/**
- * ADR-900 §3.8 — η κάρτα επαλήθευσης ιδιοκτησίας, πίσω από **όριο**: τα κείμενά της (πώς εκδίδεται το ΠΚΑ,
- * λόγοι ελέγχου, αρνήσεις) δεν χρειάζονται στην πρώτη απόδοση — ο route slice της σελίδας μένει στο ταβάνι του.
- */
-const OwnershipVerificationPanel = dynamic(() =>
-  import('./OwnershipVerificationPanel').then((mod) => mod.OwnershipVerificationPanel),
-);
-
-/**
- * 📋 ADR-915 §37 (Β2) — **«Μόνιμες υποχρεώσεις του ακινήτου»**: ο ιδιώτης χωρίς μεσίτη αποφασίζει ο ίδιος (ο νόμος τον
- * βαραίνει — ΥΑ 101195/2021). Η ΙΔΙΑ ενότητα, το ΙΔΙΟ `GET`/`PUT` με την καρτέλα ακινήτου και τη σελίδα εντολής· τον
- * κρίνει ο ΕΝΑΣ κριτής θεματοφυλακής (`mayAdminister`). `ssr: false`: εκτός route slice (3.34), ιδίωμα `DocumentsTab`.
- */
-const PropertyUpkeepSection = dynamic(
-  () => import('@/components/document-registry/PropertyUpkeepSection').then((mod) => mod.PropertyUpkeepSection),
-  { ssr: false },
-);
-
-const OwnerPropertyStatsPanel = dynamic(
-  () => import('./OwnerPropertyStatsPanel').then((mod) => mod.OwnerPropertyStatsPanel),
-  { loading: StatsPanelPending },
-);
-
 const NS = 'property-market';
 const K = `${NS}:offer`;
 
-/** Οι τρεις καταστάσεις του κουμπιού κύκλου ζωής. **Ποτέ** `boolean` + `string`. */
-type LifecycleState = 'idle' | 'busy' | 'failed';
-
 /**
- * **Αποτέλεσμα πύλης → αποτέλεσμα πράξης κοινού** (ADR-864 Α21): η άρνηση συναίνεσης φτάνει
- * **ονομασμένη** στην οθόνη — ποτέ ως γενικό «απέτυχε».
- */
-function audienceOutcomeOf(result: Awaited<ReturnType<typeof setOwnerListingAudience>>): AudienceChangeOutcome {
-  if (result.kind === 'saved') return { kind: 'saved' };
-  if (result.kind === 'invalid' && result.violations.includes('private-marketing-consent-missing')) {
-    return { kind: 'refused', reason: 'private-marketing-consent-missing' };
-  }
-  return { kind: 'failed' };
-}
-
-/**
- * **Απόσυρση / επαναφορά** — ένα κουμπί, δύο κατευθύνσεις.
+ * Ό,τι χρειάζονται ενότητες **και** πλαϊνό, υπολογισμένο **μία** φορά.
  *
- * ⚠️ **Δεν είναι αισιόδοξο, σε αντίθεση με το «ψάχνω ακόμη» της ζήτησης.** Εκεί η
- * πράξη αγγίζει **ένα πεδίο** και η αναμονή είναι θόρυβος· εδώ αλλάζει **τι βλέπει ο
- * κόσμος**. Μια όψη που λέει «αποσύρθηκε» ενώ η αγγελία είναι ακόμη στον χάρτη είναι
- * το χειρότερο δυνατό ψέμα προς τον ιδιοκτήτη — και δεν υπάρχει τρόπος να το
- * ανακαλύψει από τη δική του οθόνη.
+ * ⚠️ **ΕΝΑ ρολόι για ΟΛΗ την όψη**, διαβασμένο μία φορά: με δύο κλήσεις, ο κριτής δημοσίευσης και ο ταξινομητής της
+ *    εντολής μπορούν να πέσουν σε **διαφορετική μέρα** — και η οθόνη θα έλεγε «στον χάρτη» για εντολή που μόλις έληξε.
+ * 🔴 **Ο ΕΝΑΣ κριτής, ο ίδιος με την κάρτα**: *«**έφτασε**;»*, όχι *«**δικαιούται**;»* (`ownerListingVisibility`).
+ * 📊 ADR-777 §8.72 — **ΕΝΑ** fetch στατιστικών για κάρτα, πίνακα **και** τη σύνοψη της λίστας.
+ * 🏆 ADR-842 Φ5 — `projectListingShape` (όχι `buildPublicListing`): το σχήμα **χωρίς την πύλη**, ώστε ο δείκτης
+ *    πληρότητας να υπάρχει **και πριν** τη δημοσίευση. ⛔ Εφήμερο — δεν γράφεται πουθενά.
+ * ⚠️ Οι hooks στην **κορυφή**, ποτέ μέσα σε JSX υπό όρους.
  */
-function LifecycleButton({ property }: { property: OwnerProperty }): React.ReactElement {
-  const { t } = useTranslation([NS]);
-  const [state, setState] = React.useState<LifecycleState>('idle');
-
-  const next = property.lifecycle === 'listed' ? 'withdrawn' : 'listed';
-
-  async function handleClick(): Promise<void> {
-    setState('busy');
-    const outcome = await setOwnerListingLifecycle(property.id, next);
-    // Η ζωντανή ανάγνωση (`useMyOwnerProperty`) φέρνει τη νέα κατάσταση μόνη της —
-    // καμία τοπική αντιγραφή, **μία** πηγή.
-    setState(outcome.kind === 'saved' ? 'idle' : 'failed');
-  }
-
-  return (
-    <div className="flex flex-col gap-1">
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={state === 'busy'}
-        className={cn(
-          'self-start rounded-md px-3 py-1.5 text-sm font-medium disabled:opacity-50',
-          // ADR-770 §18 — η ΑΠΟΣΥΡΣΗ αλλάζει τι βλέπει ο κόσμος ⇒ μελάνι προσοχής· η
-          // ΕΠΑΝΑΦΟΡΑ είναι απλή δευτερεύουσα. Ίδιο βάρος στις δύο = καμία ιεραρχία.
-          next === 'withdrawn' ? COLOR_BRIDGE.action.caution : COLOR_BRIDGE.action.secondary,
-        )}
-      >
-        {t(next === 'withdrawn' ? `${K}.lifecycle.withdraw` : `${K}.lifecycle.restore`)}
-      </button>
-      <p className="text-sm text-muted-foreground">{t(`${K}.lifecycle.withdrawNote`)}</p>
-      {state === 'failed' && (
-        <p aria-live="polite" className="text-sm text-foreground">
-          {t(`${K}.lifecycle.failed`)}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** Η θέαση — περίληψη, δρόμος προς τον κόσμο, κύκλος ζωής. */
-function OwnerPropertyView({
-  property,
-  onEdit,
-}: {
-  property: OwnerProperty;
-  onEdit: () => void;
-}): React.ReactElement {
-  const { t } = useTranslation([NS]);
-  // 🔴 **Ο ΕΝΑΣ κριτής, ο ίδιος με την κάρτα.** Εδώ ζούσε `isPubliclyListed(...)`
-  //    σκέτο — δηλαδή *«**δικαιούται**;»*, όχι *«**έφτασε**;»*. Ο σύνδεσμος από κάτω
-  //    οδηγούσε σε **κενή σελίδα** κάθε φορά που ο γραφέας της προβολής είχε αποτύχει,
-  //    ακριβώς το «*χειρότερος από κανέναν*» που το ίδιο του το σχόλιο απαγορεύει.
-  // ⚠️ **ΕΝΑ ρολόι για ΟΛΗ την όψη**, διαβασμένο μία φορά: με δύο κλήσεις, ο κριτής
-  //    δημοσίευσης και ο ταξινομητής της εντολής μπορούν να πέσουν σε **διαφορετική
-  //    μέρα** — και η οθόνη θα έλεγε «στον χάρτη» για εντολή που μόλις έληξε.
+function useOwnerPropertyViewData(property: OwnerProperty, onEdit: () => void) {
   const atISO = nowISO();
   const visibility = ownerListingVisibility(property, atISO);
-  const onMap = visibility === 'published';
-  // 🏆 **ADR-834 — Η ΠΡΩΤΗ ΠΡΟΒΟΛΗ ΤΗΣ ΑΚΜΗΣ.** Η σχέση **ήδη ταξιδεύει** μέσα στο
-  //    έγγραφο· μέχρι σήμερα καμία γραμμή δεν τη ζωγράφιζε. Ο ταξινομητής είναι **ο
-  //    ίδιος** με του καταλόγου του γραφείου — αλλάζουν μόνο τα κείμενα.
-  const mandateViews = ownerMandateViews(property, atISO);
-  // ⚠️ Στην **κορυφή** του component, ποτέ μέσα στο JSX: ένας hook που ζει σε έκφραση
-  // γνωρίσματος διαβάζεται ως υπό όρους από τον επόμενο αναγνώστη, ακόμη κι όταν δεν
-  // είναι — και η πρώτη φορά που κάποιος τον τυλίξει σε `{onMap && …}` σπάει σιωπηλά.
   const interest = usePlaceInterest(property.id);
-  // 📊 ADR-777 §8.72 — **ΕΝΑ** fetch για κάρτα ΚΑΙ πίνακα (η ίδια διαδρομή με τη λίστα· κανένα
-  //    `propertyId` στο σύρμα — ο διακομιστής βρίσκει μόνος του τα ακίνητα του κατόχου).
   const stats = listingStatsStateOf(useOwnerPortfolioStats(), property.id);
-  // 🏆 **ADR-842 Φ5 — Η ΙΔΙΑ ΠΡΟΒΟΛΗ ΠΟΥ ΒΛΕΠΕΙ Ο ΑΓΟΡΑΣΤΗΣ, ΩΣ ΚΑΘΡΕΦΤΗΣ ΓΙΑ ΤΟΝ ΚΑΤΟΧΟ.**
-  //    `projectListingShape` και **όχι** `buildPublicListing`: το σχήμα **χωρίς την
-  //    πύλη**, ώστε ο δείκτης να υπάρχει **και πριν** τη δημοσίευση — εκεί που το
-  //    κίνητρο έχει τη μεγαλύτερη αξία. Είναι ο **δεύτερος** καταναλωτής αυτής
-  //    ακριβώς της διάσπασης, ο πρώτος ήταν το δόλωμα του §12.6 (δες εκεί το «γιατί»).
-  // ⛔ **ΕΦΗΜΕΡΟ, στη μνήμη του φυλλομετρητή** — δεν γράφεται πουθενά (ίδιος κανόνας).
-  const projectedListing = projectListingShape(
-    projectableFromOwnerProperty(property, atISO),
-    placeKnowledgeFromOwnerProperty(property, atISO),
-    atISO,
-  );
+  const projectable = projectableFromOwnerProperty(property, atISO);
+  const data: OwnerSectionData = {
+    property,
+    onMap: visibility === 'published',
+    unpublished: visibility === 'failed',
+    offered: isOffered(projectable),
+    mandateViews: ownerMandateViews(property, atISO),
+    interest,
+    stats,
+    onEdit,
+  };
+  const projectedListing = projectListingShape(projectable, placeKnowledgeFromOwnerProperty(property, atISO), atISO);
+  return { data, projectedListing };
+}
+
+/**
+ * Η σελίδα του ακινήτου — λίστα ενοτήτων · ενότητα · πλαϊνό. 🔑 **Η επεξεργασία ανοίγει στη θέση της ενότητας**: λίστα
+ * και πλαϊνό μένουν ορατά (πριν, η φόρμα αντικαθιστούσε ολόκληρη τη σελίδα). Επιλογή άλλης ενότητας κλείνει τη φόρμα —
+ * το πρόχειρο το κρατά η μνήμη της φόρμας (`RestoredDraftNotice`).
+ */
+function OwnerPropertyView({ property }: { property: OwnerProperty }): React.ReactElement {
+  const { t } = useTranslation([NS]);
+  const [editing, setEditing] = React.useState(false);
+  const { data, projectedListing } = useOwnerPropertyViewData(property, () => setEditing(true));
+  const sections = useOwnerPropertySectionEntries({ mandateViews: data.mandateViews, stats: data.stats });
 
   return (
-    <div className="flex flex-col gap-4">
-      <ListingMapSnapshotProvider>
-        <OwnerPropertyCard property={property} priority stats={stats} ownPage={{ onAddPhotos: onEdit }} />
-      </ListingMapSnapshotProvider>
-
-      {/*
-        🏆 **ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΚΑΡΤΑ, ΚΑΙ ΠΡΙΝ ΤΟ ΔΟΛΩΜΑ** — σειρά-συμβόλαιο: *«ποιος
-        διαχειρίζεται αυτό το σπίτι και με ποιους όρους»* προηγείται του *«N άνθρωποι
-        ψάχνουν κάτι σαν το δικό σας»*. Ο άνθρωπος που έχει δώσει αποκλειστική εντολή
-        οφείλει να το δει **πριν** του προταθεί οποιαδήποτε επόμενη κίνηση.
-
-        ⚠️ Χωρίς εντολή, το πλαίσιο **δεν αποδίδεται καθόλου** — ο ιδιώτης χωρίς
-        μεσίτη δεν έχει λόγο να διαβάσει για μεσιτεία στη σελίδα του σπιτιού του.
-      */}
-      <OwnerMandatePanel views={mandateViews} />
-
-      {/*
-        💬 **ADR-867 Β7 — Η ΣΥΝΟΜΙΛΙΑ ΜΕ ΤΟ ΓΡΑΦΕΙΟ, ΑΜΕΣΩΣ ΚΑΤΩ ΑΠΟ ΤΗΝ ΕΝΤΟΛΗ ΤΟΥ.** Ένα νήμα ανά εντολή με
-        ακμή (ο ίδιος κριτής με τον διακομιστή). Χωρίς ακμή ⇒ τίποτα — κανένα κενό πάνελ.
-      */}
-      <OwnerMandateThreads record={{ propertyId: property.id, mandates: property.mandates }} />
-
-      {/*
-        🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6, ADR-777 Ε2** — «N άνθρωποι ψάχνουν κάτι σαν το δικό
-        σας». Στέκεται **πάνω** από το κουμπί επεξεργασίας και **πριν** τον σύνδεσμο
-        δημοσίευσης, επίτηδες: είναι ο **λόγος** να πατήσει κάποιο από τα δύο.
-
-        🔑 **Εμφανίζεται ΚΑΙ όταν η αγγελία δεν είναι δημοσιευμένη** — εκεί έχει τη
-        μεγαλύτερη αξία. Το §12.6 το λέει: *«πολύ ισχυρότερο κάλεσμα από “ανεβάστε
-        αγγελία”»*, δηλαδή απευθύνεται **εξ ορισμού** σε όποιον δεν έχει ανεβάσει.
-      */}
-      {/*
-        📊 **ADR-777 §8.72 — «ΠΩΣ ΠΑΕΙ Η ΑΓΓΕΛΙΑ ΜΟΥ», ΠΡΙΝ ΤΟ «ΠΟΣΟΙ ΨΑΧΝΟΥΝ».** Η σειρά είναι
-        συμβόλαιο: πρώτα η απόδοση της **δικής** του αγγελίας, μετά η ζήτηση της περιοχής, μετά
-        τι λείπει. Μόνο για αγγελία **στην αγορά** — εκτός αγοράς οι μηδενικές ημέρες δεν
-        σημαίνουν «κανείς δεν ήρθε», σημαίνουν «δεν ήταν εκεί».
-      */}
-      {onMap && (
-        <OwnerPropertyStatsPanel stats={stats} listedAt={property.listedAt} priceHistory={property.priceHistory} />
-      )}
-
-      <PlaceInterestPanel
-        interest={interest}
-        audience={property.marketingAudience}
-        unitIncomplete={isUnitLevelUndeclared(property, isLandProperty(property.type))}
-      />
-
-      {/*
-        🔑 **ADR-900 §3.8 — ΑΜΕΣΩΣ ΚΑΤΩ ΑΠΟ ΤΟΝ ΑΡΙΘΜΟ ΠΟΥ ΞΕΚΛΕΙΔΩΝΕΙ.** Ο δηλωμένος ιδιοκτήτης βλέπει
-        «τουλάχιστον N»· η κάρτα λέει πώς γίνεται ακριβής (ΠΚΑ). Μόνο σε ιδιωτική αγγελία — το γραφείο
-        μένει δηλωμένο (απόφαση Giorgio 2026-10-02).
-      */}
-      {property.authorCompanyId === null && (
-        <OwnershipVerificationPanel
-          ownerPropertyId={property.id}
-          dossier={
-            property.dossierId === undefined
-              ? null
-              : { id: property.dossierId, userId: property.authorUserId, label: property.title }
-          }
+    <SectionListDetail
+      sections={sections}
+      navLabel={t(`${K}.sections.navLabel`)}
+      backLabel={t(`${K}.sections.back`)}
+      asideLabel={t(`${K}.sections.asideLabel`)}
+      onSelect={() => setEditing(false)}
+      aside={(
+        <OwnerPropertyAside
+          property={property}
+          onMap={data.onMap}
+          projectedListing={projectedListing}
+          editing={editing}
+          onEdit={() => setEditing(true)}
         />
       )}
-
-      {/*
-        🎯 **ΤΟ ΚΙΝΗΤΡΟ, ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΕΠΙΘΥΜΙΑ (ADR-842 Φ5).** Η σειρά είναι
-        συμβόλαιο: το δόλωμα λέει *«N άνθρωποι ψάχνουν κάτι σαν το δικό σας»*, ο
-        δείκτης λέει *«να τι λείπει για να το βρουν»*. Ανάποδα, οι προτάσεις θα ήταν
-        αγγαρεία χωρίς λόγο· έτσι, είναι η **επόμενη κίνηση**.
-
-        🔑 **Και πριν το κουμπί επεξεργασίας**, γιατί είναι ο λόγος να το πατήσει.
-      */}
-      <OwnerListingCompletion listing={projectedListing} improveOfferId={onMap ? property.id : null} />
-
-      {/*
-        📋 ADR-915 §37 (Β2) — **η μόνιμη υποχρέωση (ΥΔΕ), μετά το «τι λείπει» της αγγελίας**: εκείνο αφορά το κοινό,
-        αυτό τον νόμο. Η εφαρμογή **προτείνει με λόγο**, ο ιδιοκτήτης αποφασίζει με ίχνος· ξένο/αποσυρμένο ⇒ σιωπή.
-      */}
-      <PropertyUpkeepSection propertyId={property.id} />
-
-      {/*
-        📋 ADR-945 §7.6 — **«Εκδόσεις εγγράφων»**: αίτημα προσφορών σε έως 3 επαγγελματίες του `/pro`. Επιφάνεια του
-        εργοστασίου (κώδικας + κείμενα ένα αίτημα, εκτός route slice, 3.34). ⛔ **Μόνο** με ανοιχτό
-        `OWNER_ISSUANCE_REQUESTS` ⇒ κλειστός διακόπτης = ούτε κώδικας κατεβαίνει, ούτε κλήση δικτύου γίνεται.
-      */}
-      {isAppFeatureEnabled('OWNER_ISSUANCE_REQUESTS') && <OwnerIssuanceSurfaces.OwnerIssuanceRequestSection propertyId={property.id} />}
-
-      {/*
-        🔴 **Ο σύνδεσμος που κλείνει τον κύκλο της Α14.** Εμφανίζεται μόνο όταν η
-        αγγελία είναι πραγματικά δημοσιευμένη — ένας σύνδεσμος προς κενή σελίδα είναι
-        χειρότερος από κανέναν.
-      */}
-      {/*
-        🎯 ADR-770 §18 — **ΜΙΑ γραμμή ενεργειών, ΜΙΑ κύρια.** Ήταν δύο ξεχωριστά, ίδια
-        κουμπιά με περίγραμμα: ο άνθρωπος δεν έβλεπε ποια είναι η επόμενη κίνηση. Η κύρια
-        είναι η **επεξεργασία** — ο δείκτης πληρότητας από πάνω είναι ο λόγος να πατηθεί.
-      */}
-      <nav className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={onEdit}
-          className={cn('rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.primary)}
-        >
-          {t(`${K}.detail.edit`)}
-        </button>
-        {onMap && (
-          <Link
-            href={listingDetailHref(property.id)}
-            className={cn('inline-block rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}
-          >
-            {t(`${K}.publish.view`)}
-          </Link>
-        )}
-        {/* ADR-835 §20 — το ημερολόγιο υπάρχει ΜΟΝΟ για ζωντανή βραχυχρόνια διάθεση. */}
-        {ownerPropertyOfferKinds(property).includes('leaseShort') && (
-          <Link
-            href={offerStayCalendarHref(property.id)}
-            className={cn('inline-block rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}
-          >
-            {t('property-market:offer.stayCalendar.open')}
-          </Link>
-        )}
-        {/*
-          📷 ADR-884 Κ3α — η **περιήγηση 360°** (φωτογράφοι + εισερχόμενα λήψεων) σε ΔΙΚΗ της σελίδα: ίδιο δόγμα με
-          το ημερολόγιο — το slice αυτής της καρτέλας δεν κουβαλά το λεξιλόγιο της περιήγησης (ADR-744 §20).
-        */}
-        <Link
-          href={offerTourHref(property.id)}
-          className={cn('inline-block rounded-md px-4 py-2 font-medium', COLOR_BRIDGE.action.secondary)}
-        >
-          {t('property-market:offer.tour.open')}
-        </Link>
-      </nav>
-
-      {/*
-        🔑 **ADR-864 Ε-10 — ΔΙΠΛΑ ΣΤΗΝ ΑΠΟΣΥΡΣΗ, ΟΧΙ ΣΤΗ ΦΟΡΜΑ.** Και τα δύο απαντούν
-        «ποιος βλέπει / υπάρχει», όχι «τι είναι το ακίνητο» — η φόρμα των 8 μένει
-        αμετάβλητη (ADR-777 Α2).
-      */}
-      <MarketingAudienceControl
-        audience={property.marketingAudience}
-        offered={isOffered(projectableFromOwnerProperty(property, atISO))}
-        // 🔑 Ν11 — ο ίδιος κριτής με την κάρτα από πάνω: «δικαιούται» ≠ «έφτασε».
-        unpublished={visibility === 'failed'}
-        onChange={async (next) => audienceOutcomeOf(await setOwnerListingAudience(property.id, next))}
-      />
-
-      {/*
-        🏆 ADR-864 §18 — **ακριβώς κάτω από τον έλεγχο κοινού**: εκεί λέγεται «χρειάζεται συναίνεση», εδώ δίνεται.
-        Εκκρεμές αίτημα γραφείου φαίνεται **και** χωρίς να πατήσει κανείς τίποτα (§18.5 #2).
-      */}
-      <PrivateMarketingOwnerSection
-        ownerPropertyId={property.id}
-        marketingAudience={property.marketingAudience}
-        revision={property.updatedAt}
-      />
-
-      <LifecycleButton property={property} />
-
-      {/*
-        📜 **ADR-864 Φ1β — ΤΟ ΙΣΤΟΡΙΚΟ, ΤΕΛΕΥΤΑΙΟ.** Κάτω από τις δύο πράξεις που αφήνουν ίχνος
-        (κοινό · απόσυρση), ώστε η συνέπεια κάθε κλικ να φαίνεται ακριβώς από κάτω του. Το
-        βιβλίο το αποφασίζει η θεματοφυλακή, όχι αυτή η οθόνη (`OwnerPropertyHistory`).
-      */}
-      <OwnerPropertyHistory property={property} />
-    </div>
+    >
+      {(sectionId) => (editing ? (
+        // 🔑 ADR-866 Φ1.3β — ο φάκελος **της αποθηκευμένης αγγελίας**, ποτέ νέος· παλιά αγγελία ⇒ `null`.
+        <OwnerPropertyFormContent
+          initialValues={ownerPropertyFormFrom(property)}
+          editingId={property.id}
+          previousOffers={property.offers}
+          existingDossierId={property.dossierId ?? null}
+          onClose={() => setEditing(false)}
+        />
+      ) : (
+        <OwnerPropertySectionContent sectionId={sectionId} data={data} />
+      ))}
+    </SectionListDetail>
   );
 }
 
@@ -411,23 +148,13 @@ export function OwnerPropertyDetailContent({
   const { t } = useTranslation([NS]);
   const router = useRouter();
   const { user } = useAuth();
-  const [editing, setEditing] = React.useState(false);
   const lookup = useMyOwnerProperty(ownerPropertyId, user?.uid ?? null);
 
   return (
-    <main className="flex w-full flex-col gap-6">
-      {/*
-        ⚠️ ΚΑΝΕΝΑ `mx-auto max-w-3xl p-6` εδώ (ADR-797 ΦΑΣΗ Β). Και τα τρία τα κατέχει
-        πλέον ο ΕΝΑΣ ιδιοκτήτης, το `ShellSurface` του `PrivateSpaceShell`:
-          · ο **διάδρομος** ρευστά από το πλάτος της επιφάνειας (16→32px),
-          · το **μέτρο** ως ρόλος `wide` = **80ch** — ⚠️ **ΟΧΙ «80 χαρακτήρες»**:
-            το `ch` είναι το πλάτος του γλύφου «0», και μετρημένο στο corpus της
-            εφαρμογής δίνει **91** ελληνικούς / **101** αγγλικούς (ADR-797 §Β.11),
-          · το **κεντράρισμα** δωρεάν από τις δύο `1fr` στήλες του grid.
-        Το παλιό `max-w-3xl` + `p-6` έδινε **720px**· ο ρόλος δίνει **719px**. Το
-        κέρδος **δεν** είναι το πλάτος — είναι ότι η τιμή γράφεται **μία** φορά αντί
-        για τέσσερις, και κλιμακώνεται με το zoom του χρήστη (WCAG 1.4.4).
-      */}
+    // 🧭 ADR-946 — `data-shell-span="full"`: η σελίδα είναι πίνακας ελέγχου, όχι πρόζα ⇒ όλο το πλάτος της επιφάνειας,
+    //    με τον διάδρομο του κελύφους (ADR-797, `shell-surface.css` · ίδιο σχήμα με `NetworkThreadScreen`). ⚠️ ΚΑΝΕΝΑ
+    //    `mx-auto max-w-* p-*` εδώ (CHECK 3.63) — οι στήλες ζουν στο πλέγμα του `SectionListDetail`.
+    <main data-shell-span="full" className="flex w-full flex-col gap-6">
       <nav>
         <button
           type="button"
@@ -438,42 +165,11 @@ export function OwnerPropertyDetailContent({
         </button>
       </nav>
 
-      {lookup.state === 'loading' && (
-        <p className="text-muted-foreground">{t(`${K}.detail.loading`)}</p>
-      )}
-      {lookup.state === 'anonymous' && (
-        <p className="text-foreground">{t(`${NS}:demand.space.signInNeeded`)}</p>
-      )}
-      {lookup.state === 'absent' && (
-        <p className="text-foreground">{t(`${K}.detail.absent`)}</p>
-      )}
-      {lookup.state === 'error' && (
-        <p className="text-foreground">{t(`${K}.detail.error`)}</p>
-      )}
-
-      {lookup.state === 'found' &&
-        (editing ? (
-          /*
-            🔑 **Η ίδια φόρμα, επί τόπου, σε κάθε πλάτος.** Εδώ ο άνθρωπος βρίσκεται ήδη
-            στη σελίδα του ακινήτου του και ζητά ρητά επεξεργασία. *(Η πύλη Α8 που
-            εξαιρούσε τη δημιουργία στο κινητό καταργήθηκε 2026-10-02, ADR-900 §8 #3 —
-            η επεξεργασία δεν την είχε ποτέ.)*
-          */
-          <OwnerPropertyFormContent
-            initialValues={ownerPropertyFormFrom(lookup.property)}
-            editingId={lookup.property.id}
-            previousOffers={lookup.property.offers}
-            // 🔑 ADR-866 Φ1.3β — ο φάκελος **της αποθηκευμένης αγγελίας**, ποτέ νέος: η φόρμα δείχνει τα αρχεία
-            //    του και ξαναδηλώνει από αυτά. Παλιά αγγελία (χωρίς φάκελο) ⇒ `null` ⇒ το `media[]` αυτούσιο.
-            existingDossierId={lookup.property.dossierId ?? null}
-            onClose={() => setEditing(false)}
-          />
-        ) : (
-          <OwnerPropertyView
-            property={lookup.property}
-            onEdit={() => setEditing(true)}
-          />
-        ))}
+      {lookup.state === 'loading' && <p className="text-muted-foreground">{t(`${K}.detail.loading`)}</p>}
+      {lookup.state === 'anonymous' && <p className="text-foreground">{t(`${NS}:demand.space.signInNeeded`)}</p>}
+      {lookup.state === 'absent' && <p className="text-foreground">{t(`${K}.detail.absent`)}</p>}
+      {lookup.state === 'error' && <p className="text-foreground">{t(`${K}.detail.error`)}</p>}
+      {lookup.state === 'found' && <OwnerPropertyView property={lookup.property} />}
     </main>
   );
 }

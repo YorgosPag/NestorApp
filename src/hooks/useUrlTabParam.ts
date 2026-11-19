@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
 import { useUrlQuery } from '@/hooks/useUrlQuery';
-import { replaceUrlSearchParams } from '@/lib/url-query-state';
+import { currentHistoryHasMarker, pushUrlSearchParams, replaceUrlSearchParams } from '@/lib/url-query-state';
 
 export interface UrlTabParam {
   /** Η ωμή τιμή της διεύθυνσης — `null` όταν λείπει. */
@@ -84,4 +84,54 @@ export function useActiveUrlTab(
   const setActiveTab = useCallback((tabId: string) => write(tabId, tabId === defaultTab), [write, defaultTab]);
 
   return { activeTab, setActiveTab };
+}
+
+/** Ο δείκτης ιστορικού που λέει «αυτή την καταχώριση την έσπρωξε το άνοιγμα ενότητας» (ADR-946). */
+const SECTION_PUSH_MARKER = 'urlSectionPushed';
+
+export interface UrlSection {
+  /** Η ενότητα που **ζητά** η διεύθυνση — μόνο αν υπάρχει· `null` ⇒ καμία (στο κινητό: η λίστα ενοτήτων). */
+  readonly requested: string | null;
+  /**
+   * Ανοίγει ενότητα. `push` = **προορισμός** (κινητό: drill-down, το «πίσω» γυρίζει στη λίστα)· `replace` = κατάσταση
+   * θέασης (φαρδύ: λίστα και ενότητα φαίνονται μαζί, κανένα μολυσμένο ιστορικό). Στο `replace` η προεπιλογή (πρώτη)
+   * δεν γράφεται — μία οθόνη, μία διεύθυνση.
+   */
+  readonly open: (sectionId: string, history: 'push' | 'replace') => void;
+  /** Κλείνει την ενότητα: ξετυλίγει το δικό της `push` αν υπάρχει, αλλιώς σβήνει την παράμετρο (βαθύς σύνδεσμος). */
+  readonly close: () => void;
+}
+
+/**
+ * 🧭 **Η ενότητα μιας σελίδας list-detail ζει στη διεύθυνση** (ADR-946) — ο ίδιος αναγνώστης με τις καρτέλες, με μία
+ * διαφορά που η καρτέλα δεν έχει: στο **κινητό** η ενότητα είναι **προορισμός** (Material 3 list-detail / Apple HIG:
+ * *«collapses into a stack navigation»*) ⇒ `push`, και το «πίσω» της συσκευής γυρίζει στη λίστα. Το «‹ πίσω» της
+ * οθόνης κάνει **το ίδιο** (`history.back()`) όταν την καταχώριση την έσπρωξε αυτό εδώ — αλλιώς (βαθύς σύνδεσμος)
+ * θα έφευγε από τη σελίδα, οπότε σβήνει απλώς την παράμετρο.
+ */
+export function useUrlSection(param: string, sectionIds: readonly string[]): UrlSection {
+  const { raw } = useUrlTabParam(param);
+  const requested = raw !== null && sectionIds.includes(raw) ? raw : null;
+  const defaultSection = sectionIds[0];
+
+  const open = useCallback((sectionId: string, history: 'push' | 'replace') => {
+    if (history === 'push') {
+      pushUrlSearchParams((params) => params.set(param, sectionId), { [SECTION_PUSH_MARKER]: true });
+      return;
+    }
+    replaceUrlSearchParams((params) => {
+      if (sectionId === defaultSection) params.delete(param);
+      else params.set(param, sectionId);
+    });
+  }, [param, defaultSection]);
+
+  const close = useCallback(() => {
+    if (currentHistoryHasMarker(SECTION_PUSH_MARKER)) {
+      window.history.back();
+      return;
+    }
+    replaceUrlSearchParams((params) => params.delete(param));
+  }, [param]);
+
+  return { requested, open, close };
 }

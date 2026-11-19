@@ -16,6 +16,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 
 import { validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
+import { mockViewport } from '@/test-utils/viewport';
 
 jest.mock('@/lib/workspace/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn() }),
@@ -78,6 +79,13 @@ jest.mock('@/components/owner-property/OwnerPropertyFormContent', () => ({
   ),
 }));
 
+// 🧭 ADR-946 — η σελίδα είναι list-detail: ενέργειες στο πλαϊνό (`RecordActionLead` ⇒ ρωτά το πλάτος). Φαρδιά οθόνη ⇒
+//    όλα επιτόπου. Η ενότητα ζει στη διεύθυνση ⇒ κάθε test ξεκινά από καθαρό URL.
+beforeEach(() => {
+  mockViewport(false);
+  window.history.replaceState(null, '', '/');
+});
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { OwnerPropertyDetailContent } =
   require('@/components/owner-property/OwnerPropertyDetailContent') as typeof import('@/components/owner-property/OwnerPropertyDetailContent');
@@ -103,6 +111,8 @@ describe('🔴 Σ — η σελίδα του ακινήτου κλείνει τ�
   });
 
   it('§37 — «Μόνιμες υποχρεώσεις»: ο ιδιώτης χωρίς μεσίτη τις βλέπει για ΤΟ ακίνητο της σελίδας', async () => {
+    // ADR-946 — ζουν στην ενότητα «Έγγραφα & υποχρεώσεις» ⇒ βαθύς σύνδεσμος σε αυτήν.
+    window.history.replaceState(null, '', '/?section=documents');
     render(<OwnerPropertyDetailContent ownerPropertyId={validOwnerProperty().id} />);
     await waitFor(() => expect(upkeepProps).toHaveBeenCalled());
     expect(upkeepProps).toHaveBeenLastCalledWith({ propertyId: validOwnerProperty().id });
