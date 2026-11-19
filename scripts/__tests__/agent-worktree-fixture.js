@@ -15,6 +15,16 @@ const { createWorkspace } = require('../lib/agent-worktree/lifecycle');
 
 const write = (dir, name, text) => fs.writeFileSync(path.join(dir, name), text);
 
+/**
+ * Git hook = αρχείο **εκτελέσιμο**. Σε Linux το git **παρακάμπτει σιωπηλά** hook χωρίς exec bit
+ * (στα Windows δεν ελέγχεται) ⇒ στο CI το hook δεν έτρεχε ποτέ και οι άγκυρες της ένταξης
+ * κοκκίνιζαν για λόγο άσχετο με τον κώδικα (ADR-783). Κάθε hook των tests γράφεται από εδώ.
+ */
+function writeHook(dir, name, text) {
+  write(dir, name, text);
+  fs.chmodSync(path.join(dir, name), 0o755);
+}
+
 function commitIn(dir, name, text, message = `add ${name}`) {
   write(dir, name, text);
   git(dir, ['add', name]);
@@ -51,7 +61,7 @@ function installStampingHook({ sandbox, primary }) {
   const seen = path.join(sandbox, 'stamp-seen.txt');
   const recorder = posix(path.resolve(__dirname, '../lib/agent-worktree/verified-trees.js'));
   fs.mkdirSync(hooks, { recursive: true });
-  write(hooks, 'pre-commit', `#!/bin/sh\ngit diff --cached --name-only >> "${posix(seen)}"\nnode "${recorder}"\n`);
+  writeHook(hooks, 'pre-commit', `#!/bin/sh\ngit diff --cached --name-only >> "${posix(seen)}"\nnode "${recorder}"\n`);
   git(primary, ['config', 'core.hooksPath', posix(hooks)]);
   return { seen };
 }
@@ -61,4 +71,4 @@ const removeSandbox = ({ sandbox }) => fs.rmSync(sandbox, { recursive: true, for
 const openWorkspace = ({ primary, env }, task) =>
   createWorkspace(task, { cwd: primary, env, minimumFree: 0, install: fakeInstall });
 
-module.exports = { commitIn, createSandbox, fakeInstall, installStampingHook, openWorkspace, removeSandbox, write };
+module.exports = { commitIn, createSandbox, fakeInstall, installStampingHook, openWorkspace, removeSandbox, write, writeHook };

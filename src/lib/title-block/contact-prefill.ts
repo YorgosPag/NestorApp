@@ -30,6 +30,7 @@
  */
 
 import { getBridgeEntry, resolveRoleFromProfession } from '@/config/profession-bridge.config';
+import { emptyContactHq } from '@/components/contacts/dynamic/contact-hq-state';
 import { ensureHttpUrl } from '@/lib/validation/email-validation';
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
 import { splitGreekPersonName, type GreekNameOrderSignal } from '@/utils/greek-name-order';
@@ -198,7 +199,9 @@ export function buildContactPrefill(
       // εξομαλυμένη ετικέτα του ρόλου: το «Τ.Ε.» είναι πληροφορία που η γέφυρα δεν κουβαλά.
       profession: person.professionText,
       ...escoFields(role),
-      ...(person.officeSeat ? { city: person.officeSeat } : {}),
+      // ADR-332 §D30 Φάση 2: η έδρα ζει ΜΟΝΟ στη θέση 0 του `companyAddresses` — ένα `city` στη ρίζα το
+      // έκοβε σιωπηλά το σύνορο του saver, και η πόλη της πινακίδας χανόταν.
+      ...(person.officeSeat ? { companyAddresses: [{ ...emptyContactHq(CONTACT_TYPE), city: person.officeSeat }] } : {}),
       phones: toPhones(person.phones, officePhones),
       emails: toEmails(person.emails, officeEmails),
       websites: toWebsites(person.websites),

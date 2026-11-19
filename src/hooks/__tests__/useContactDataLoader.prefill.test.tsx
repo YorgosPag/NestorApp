@@ -55,7 +55,7 @@ function useHarness(
 const SEED: Partial<ContactFormData> = {
   firstName: 'ΙΩΑΝΝΗΣ',
   lastName: 'ΝΙΚΟΛΑΟΥ',
-  city: 'ΝΕΟΧΩΡΟΥΔΑ',
+  companyAddresses: [{ type: 'home', street: '', number: '', postalCode: '', city: 'ΝΕΟΧΩΡΟΥΔΑ' }],
   emails: [{ email: 'info@nikolaou.com.gr', type: 'work', isPrimary: true }],
 };
 
@@ -65,7 +65,7 @@ describe('🔴 ο σπόρος επιβιώνει του reset', () => {
 
     expect(result.current.formData.firstName).toBe('ΙΩΑΝΝΗΣ');
     expect(result.current.formData.lastName).toBe('ΝΙΚΟΛΑΟΥ');
-    expect(result.current.formData.city).toBe('ΝΕΟΧΩΡΟΥΔΑ');
+    expect(result.current.formData.companyAddresses?.[0]?.city).toBe('ΝΕΟΧΩΡΟΥΔΑ');
     expect(result.current.formData.emails).toHaveLength(1);
   });
 
@@ -73,7 +73,7 @@ describe('🔴 ο σπόρος επιβιώνει του reset', () => {
     // Χωρίς αυτό, το προηγούμενο test θα περνούσε ακόμη κι αν η φόρμα γεννιόταν συμπληρωμένη.
     const { result } = renderHook(() => useHarness(undefined));
     expect(result.current.formData.firstName).toBe('');
-    expect(result.current.formData.city).toBe('');
+    expect(result.current.formData.companyAddresses ?? []).toEqual([]);
   });
 
   it('τα υπόλοιπα πεδία μένουν στις προεπιλογές — ο σπόρος είναι ΜΕΡΙΚΟΣ', () => {

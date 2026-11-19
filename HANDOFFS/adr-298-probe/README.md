@@ -25,6 +25,13 @@
 `crmDirectMatrix()` / `attendanceEventMatrix()` καλούν τη **module-local**
 `tenantDirectMatrix()`, οπότε ένα shim στο `coverage-matrices` **δεν** θα τα άγγιζε.
 
+## Γιατί `*.probe.ts` και όχι `*.test.ts` *(ADR-783, 2026-11-19)*
+
+Ως `*.test.ts` τα διεκδικούσε **και** το default `jest.config.js` ⇒ έτρεχαν στη σουίτα του CI
+χωρίς το shim και με απόλυτες διαδρομές Windows ⇒ 3 κόκκινα που δεν έλεγαν τίποτα. Η εξαίρεση
+του φακέλου θα τα άφηνε `unowned` (CHECK 3.47). Με άλλο σχήμα ονόματος **δεν** είναι test της
+σουίτας· τρέχουν **μόνο** με ρητό `--config` από κάτω.
+
 ## Εντολές
 
 Πρώτα ο emulator σε άλλο παράθυρο:

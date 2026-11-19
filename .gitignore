@@ -35,6 +35,9 @@ f661kuiq*.l
 # ...αλλά ΠΟΤΕ τα assets της εφαρμογής: ένα `*.jpg` στο `public/` που αγνοείται = εικόνα που
 # λείπει στην παραγωγή, σιωπηλά (ADR-777 §8.79: το `hero.jpg` της αρχικής).
 !public/**/*.jpg
+# ...ούτε τα fixtures των tests: ένα αγνοημένο fixture = σουίτα που περνά μόνο στο μηχάνημα που
+# το έχει (ADR-783 — `face-portrait-nasa-*.jpg`: πράσινο τοπικά, «Input file is missing» στο CI).
+!src/**/__tests__/fixtures/*.jpg
 
 # SSoT ratchet (generated intermediary)
 

@@ -49,7 +49,9 @@ describe('buildContactPrefill — τι γνωρίζει το σχέδιο για
     expect(formData.firstName).toBe('ΙΩΑΝΝΗΣ');
     // Η **ωμή** ειδικότητα: το «Τ.Ε.» είναι πληροφορία που η γέφυρα ρόλων δεν κουβαλά.
     expect(formData.profession).toBe('ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ Τ.Ε.');
-    expect(formData.city).toBe('ΝΕΟΧΩΡΟΥΔΑ');
+    // ADR-332 §D30 Φάση 2: η έδρα στη θέση 0 του ΕΝΟΣ δοχείου — ποτέ `city` στη ρίζα (το έκοβε ο saver).
+    expect(formData.companyAddresses?.[0]?.city).toBe('ΝΕΟΧΩΡΟΥΔΑ');
+    expect(formData).not.toHaveProperty('city');
     expect(formData.phones?.map((p) => p.number)).toEqual(['2310-788493', '6949727121']);
     expect(formData.emails?.map((e) => e.email)).toEqual(['info@nikolaou.com.gr']);
   });

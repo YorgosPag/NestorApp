@@ -574,6 +574,24 @@ be mounted`)*. Το πρώτο σφάλμα **έκρυβε** το δεύτερο
 
 ## 12. Changelog
 
+- **2026-11-19** — **ΟΜΑΔΑ Γ — 18 ΚΟΚΚΙΝΑ ΠΟΥ ΗΤΑΝ ΤΟΥ ΠΕΡΙΒΑΛΛΟΝΤΟΣ, ΟΧΙ ΤΟΥ ΚΩΔΙΚΑ** (run
+  `44566553459`). Κάθε αιτία **επαληθεύτηκε στο log**, όχι στο handoff — και το log διόρθωσε
+  τρεις φορές την πρόβλεψη. Κοινό σχήμα: *πράσινο τοπικά, κόκκινο στον runner*.
+  (1) **functions ×9** (όχι 7): `Cannot find module 'firebase-functions/v1'` — το `functions/` είναι
+  ξεχωριστό πακέτο npm ⇒ βήμα `npm --prefix functions ci` στο `jest-suite.yml` (ίδιο με το
+  `functions-integration.yml`)· **δεν** χρειάστηκε ξεχωριστό jest project. (2) **`tour-face-scan`,
+  `tour-tileset-baker`**: το fixture `.jpg` δεν δεσμεύτηκε ποτέ (`.gitignore` `*.jpg`) ⇒ εξαίρεση
+  `!src/**/__tests__/fixtures/*.jpg` + το αρχείο (δημόσιος τομέας, `fixtures/README.md`).
+  (3) **3 × `*-term-day`**: σε UTC αρνούνται επίτηδες ⇒ `TZ=Europe/Athens` στο `jest.global-setup.js`,
+  πριν γεννηθούν οι workers. (4) **`agent-worktree` ×3** (όχι 1): σε Linux το git **παρακάμπτει
+  σιωπηλά** hook χωρίς exec bit ⇒ βοηθός `writeHook` στο fixture, **ένας** για όλα τα hooks.
+  (5) **`sales-grid-details`**: `window.matchMedia is not a function` ⇒ το υπάρχον SSoT
+  `@/test-utils/viewport` (όπως το αδελφό `list-details-split`), **όχι** καθολικό polyfill.
+  (6) **`listing-stay-booking-question-url`**: καρφωμένες νύχτες 10/2026 ⇒ παγωμένο **μόνο** το `Date`.
+  (7) **`HANDOFFS/adr-298-probe` ×3**: η «εξαίρεση του φακέλου» **απορρίφθηκε** — θα τα άφηνε
+  `unowned` (CHECK 3.47, μηδενική ανοχή). ⇒ μετονομασία `*.test.ts` → `*.probe.ts`: εργαλείο με δικό
+  του `--config`, όχι test της σουίτας.
+
 - **2026-09-02** — **ΦΑΣΗ Γ — Η SUITE ΠΟΥ ΔΕΝ ΦΟΡΤΩΝΕΙ.** Η ΦΑΣΗ Α ρώτησε *«έχει κάτι που
   μπορεί να κοκκινίσει;»*, η Β *«κοκκινίζει όντως;»* — **καμία δεν βλέπει το αρχείο που δεν
   φτάνει ποτέ στο πρώτο του `it`**. Το `desktop-only-exit.test.tsx` ήταν `Test suite failed to

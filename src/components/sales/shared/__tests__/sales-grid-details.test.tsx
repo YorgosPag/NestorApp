@@ -16,6 +16,7 @@ import { render, screen } from '@testing-library/react';
 import { Package } from 'lucide-react';
 import { SalesListPageShell, type SalesListPageChrome } from '../sales-list-page-shell';
 import { SalesSpaceSidebar } from '../SalesSpaceSidebar';
+import { mockViewport } from '@/test-utils/viewport';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -103,7 +104,11 @@ const peekPanel = () => document.querySelector('[data-details-peek]');
 const sheet = () => document.querySelector('[role="dialog"] [data-details-sheet]');
 
 describe('Π2/Π3 — πλέγμα + επιλογή ⇒ οι λεπτομέρειες ΑΝΟΙΓΟΥΝ', () => {
-  beforeEach(() => { mobile = false; });
+  beforeEach(() => {
+    mobile = false;
+    // Οι κεφαλίδες/το φύλλο ρωτούν το πλάτος μόνα τους (`useViewportClass`, ADR-912 §12.21)· ίδια απάντηση με το `useIsMobile`.
+    mockViewport(false);
+  });
 
   it('Π2 — desktop: το πλέγμα στη θέση της λίστας και side peek με τις λεπτομέρειες', () => {
     renderSidebar(ITEM, <section aria-label="πλέγμα" />);
@@ -120,6 +125,7 @@ describe('Π2/Π3 — πλέγμα + επιλογή ⇒ οι λεπτομέρε�
 
   it('Π3 — κινητό: φύλλο λεπτομερειών', () => {
     mobile = true;
+    mockViewport(true);
     renderSidebar(ITEM, <section aria-label="πλέγμα" />);
     expect(sheet()).not.toBeNull();
     expect(screen.getByText('πάνελ-στοιχείων')).toBeTruthy();

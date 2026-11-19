@@ -11,7 +11,7 @@ const { assertDiskRoom, assertTask, locate } = require('../lib/agent-worktree/co
 const { git } = require('../lib/agent-worktree/git');
 const { clearResidue, createWorkspace, listWorkspaces, removeWorkspace } = require('../lib/agent-worktree/lifecycle');
 const { composeLandMessage, land } = require('../lib/agent-worktree/land');
-const { commitIn, createSandbox, fakeInstall, installStampingHook, openWorkspace, removeSandbox, write } = require('./agent-worktree-fixture');
+const { commitIn, createSandbox, fakeInstall, installStampingHook, openWorkspace, removeSandbox, write, writeHook } = require('./agent-worktree-fixture');
 
 jest.setTimeout(60000);
 
@@ -348,7 +348,7 @@ describe('ένταξη', () => {
     const hooks = path.join(sandbox, 'hooks');
     fs.mkdirSync(hooks);
     const seen = path.join(sandbox, 'seen.txt').replace(/\\/g, '/');
-    write(hooks, 'pre-commit', `#!/bin/sh\ngit diff --cached --name-only > "${seen}"\nexit 1\n`);
+    writeHook(hooks, 'pre-commit', `#!/bin/sh\ngit diff --cached --name-only > "${seen}"\nexit 1\n`);
     git(primary, ['config', 'core.hooksPath', hooks.replace(/\\/g, '/')]);
     const before = git(primary, ['rev-parse', 'main']);
     expect(() => land('task-one', options())).toThrow('απέρριψαν');

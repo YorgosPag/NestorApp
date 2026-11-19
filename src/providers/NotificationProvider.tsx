@@ -4,7 +4,7 @@ import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { useInterval } from '@/hooks/useInterval';
 import { toast, Toaster } from 'sonner';
-import { useTheme } from 'next-themes';
+import { useHydratedTheme } from '@/lib/appearance/useHydratedTheme';
 import { CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n';
@@ -49,7 +49,8 @@ export function NotificationProvider({
   const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   // ADR-866 §2.10 Β3 — το toast ακολουθεί το ΙΔΙΟ θέμα με την εφαρμογή (χωρίς αυτό το sonner αποδίδει φωτεινό)
-  const { resolvedTheme } = useTheme();
+  //    Μέσω του ΕΝΟΣ ασφαλούς αναγνώστη: `undefined` πριν την ενυδάτωση ⇒ `system` (ίδιο με τον server).
+  const { resolvedTheme } = useHydratedTheme();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [settings, setSettings] = useState<{
     defaultDuration: number;

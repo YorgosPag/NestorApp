@@ -91,6 +91,13 @@ jobs:
       - name: 📦 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Τα tests κάτω από `functions/src/**` τα τρέχει ΑΥΤΟ το default config, αλλά το `functions/`
+      # είναι ξεχωριστό πακέτο npm (δικό του lockfile, εκτός pnpm workspace). Χωρίς αυτό το βήμα το
+      # `firebase-functions` δεν λύνεται ⇒ «Cannot find module 'firebase-functions/v1'» σε 9 σουίτες,
+      # ενώ τοπικά (όπου υπάρχει `functions/node_modules`) περνούν. Ίδιο βήμα με το functions-integration.yml.
+      - name: 📥 Install functions dependencies
+        run: npm --prefix functions ci
+
       # 🔑 Η ΚΛΗΣΗ ΤΟΥ JEST ΕΙΝΑΙ ΕΔΩ, ΟΡΑΤΗ — ΟΧΙ ΜΕΣΑ ΣΕ SCRIPT.
       # Το CHECK 3.54 διαβάζει τις εντολές `run:` των workflows· μια κλήση κρυμμένη μέσα σε
       # `node scripts/…` του είναι ΑΟΡΑΤΗ. Μετρήθηκε: με τη «βολική» εκδοχή η πύλη ανέφερε

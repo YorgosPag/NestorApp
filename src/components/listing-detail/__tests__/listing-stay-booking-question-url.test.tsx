@@ -102,6 +102,26 @@ function calendarSelection(): unknown {
   return JSON.parse(screen.getByTestId('calendar').getAttribute('data-selection') ?? 'null');
 }
 
+/**
+ * 🔑 Οι νύχτες είναι καρφωμένες (10–14/10/2026), και το ημερολόγιο **δεν ανοίγει ποτέ σε παρελθόν**
+ * (`initialMonthKey`). Χωρίς παγωμένο «σήμερα» η σουίτα είχε ημερομηνία λήξης: από 1/11/2026 άνοιγε
+ * στον τρέχοντα μήνα. Παγώνει **ΜΟΝΟ** το `Date` — οι χρονοδιακόπτες/microtasks μένουν αληθινοί (`act`, `settle`).
+ */
+const MEASURED_ON = new Date('2026-09-22T12:00:00');
+beforeAll(() => {
+  jest.useFakeTimers({
+    now: MEASURED_ON,
+    doNotFake: [
+      'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+      'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval',
+      'clearInterval', 'setTimeout', 'clearTimeout',
+    ],
+  });
+});
+afterAll(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => {
   mockUseStayAnswers.mockReset().mockReturnValue(IDLE);
   mockRequestProps.mockReset();

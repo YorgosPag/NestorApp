@@ -200,6 +200,14 @@ export interface RasterizedPdfPage {
 
 const MM_PER_INCH = 25.4;
 
+/** Ανοχή στρογγύλευσης κινητής υποδιαστολής: πολύ μικρότερη από ένα pixel, πολύ μεγαλύτερη από το σφάλμα ενός γινομένου. */
+const PX_EPSILON = 1e-6;
+
+/** Ακέραια pixels που καλύπτουν τη διάσταση — `ceil` που αγνοεί το θόρυβο του float (`1000.0000000001` ⇒ 1000). */
+function ceilPx(value: number): number {
+  return Math.ceil(value - PX_EPSILON);
+}
+
 function affineOf([a, b, c, d, e, f]: readonly number[]): Affine2x3 {
   return { a, b, c, d, e, f };
 }
@@ -218,7 +226,10 @@ async function renderPage(
   const scale = baseScale * widthCap;
   const viewport = page.getViewport({ scale });
 
-  const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+  // Το ταβάνι είναι ΑΚΕΡΑΙΟ όριο: `maxWidthPx / width · width` δίνει `1000.0000000001`, και ένα σκέτο `ceil`
+  // το έκανε 1001 — ταβάνι που ξεπερνιέται, και DPI που δεν ταιριάζει πια με τα pixels.
+  const widthPx = Math.min(limits.maxWidthPx, ceilPx(viewport.width));
+  const canvas = createCanvas(widthPx, ceilPx(viewport.height));
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
