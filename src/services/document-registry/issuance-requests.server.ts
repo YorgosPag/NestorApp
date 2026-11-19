@@ -15,7 +15,8 @@ import type { DocumentReference, Firestore, Transaction } from 'firebase-admin/f
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { DocumentKind } from '@/config/document-validity/document-validity';
-import { issuanceStateOf, visibleIssuanceStage, type IssuanceAssignmentRecord, type IssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import { issuanceStateOf, visibleIssuanceStage } from '@/lib/document-validity/issuance-assignment';
+import type { IssuanceBiddingView, IssuanceBidView } from '@/lib/document-validity/issuance-bidding-request';
 import type { IssuanceRequestRecord } from '@/lib/document-validity/issuance-bidding';
 import { createModuleLogger } from '@/lib/telemetry';
 import { custodyOnly, isOwnedByCustody, type CustodyScope } from '@/lib/workspace/custody-scope';
@@ -74,21 +75,8 @@ export function writeIssuanceRequestInTx(
   tx.set(ref, stored);
 }
 
-/** Μία προσφορά όπως τη βλέπει η οθόνη — το στάδιο κρίνεται με τον ΙΔΙΟ πυρήνα (`issuanceStateOf`). */
-export interface IssuanceBidView {
-  readonly bidId: string;
-  /** `null` = κλειστή (απορρίφθηκε · ακυρώθηκε · ολοκληρώθηκε) ή δεν γράφτηκε ακόμη. */
-  readonly stage: IssuanceStage | null;
-  readonly record: IssuanceAssignmentRecord | null;
-}
-
-export interface IssuanceRequestView {
-  readonly request: IssuanceRequestRecord | null;
-  readonly bids: readonly IssuanceBidView[];
-}
-
 /** Το αίτημα και οι προσφορές του **τρέχοντος** κύκλου, σε ένα `getAll` — για την οθόνη και το GET. */
-export async function readIssuanceRequestView(db: Firestore, target: IssuanceRequestTarget, latestIssuedOn: string | null): Promise<IssuanceRequestView> {
+export async function readIssuanceRequestView(db: Firestore, target: IssuanceRequestTarget, latestIssuedOn: string | null): Promise<IssuanceBiddingView> {
   const ref = issuanceRequestRefOf(db, target);
   const request = ownedRequestOf((await ref.get()).data(), target, ref.id);
   if (request === null || request.bids.length === 0) return { request, bids: [] };

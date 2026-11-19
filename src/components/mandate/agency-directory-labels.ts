@@ -468,3 +468,19 @@ export const OCCUPATION_FAMILY_KEYS: Record<OccupationFamilyId, string> = {
   roofer: `${D}.occupationFamily.roofer`,
   landscaper: `${D}.occupationFamily.landscaper`,
 };
+
+/**
+ * ADR-945 §7.6 — ο κατάλογος ανοιχτός **για** ένα ακίνητο του ιδιώτη: η λωρίδα πλαισίου και το «Ζήτησε προσφορά» της
+ * κάρτας. ⚠️ Φορτώνονται με `next/dynamic` ⇒ εκτός route slice (3.34), και μόνο με ανοιχτό `OWNER_ISSUANCE_REQUESTS`.
+ */
+export const ISSUANCE_QUOTE_KEYS = {
+  contextTitle: `${D}.issuanceQuote.contextTitle`,
+  contextHint: `${D}.issuanceQuote.contextHint`,
+  backToProperty: `${D}.issuanceQuote.backToProperty`,
+  request: `${D}.issuanceQuote.request`,
+  signIn: `${D}.issuanceQuote.signIn`,
+  saving: `${D}.issuanceQuote.saving`,
+  invited: `${D}.issuanceQuote.invited`,
+  limitReached: `${D}.issuanceQuote.limitReached`,
+  alreadyAwarded: `${D}.issuanceQuote.alreadyAwarded`,
+} as const;

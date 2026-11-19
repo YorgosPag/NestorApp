@@ -17,7 +17,7 @@
  * ακίνητα ⇒ σιωπή. Ακίνητο χωρίς αποδείξιμη περιοχή ⇒ **απενεργοποιημένη** επιλογή με τον λόγο — ποτέ εξαφάνιση.
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 
 import { useAuthOptional } from '@/auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +28,7 @@ import { ownerPropertyWhere } from '@/lib/agency/owner-property-where';
 import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
 import { isAdministrativeWhere, type ShowcaseWhere } from '@/types/agency-coverage';
 
+import { useAgencyIssuanceQuote } from './agency-issuance-quote-context';
 import { AGENCY_PUBLIC_NS, DIRECTORY_MY_PROPERTY_KEYS } from './agency-directory-labels';
 
 interface PropertyChoice {
@@ -57,6 +58,35 @@ function usePropertyChoices(): readonly PropertyChoice[] {
   }, [state, entries, findById]);
 }
 
+/**
+ * 📋 ADR-945 §7.6 — **ο κατάλογος ανοιχτός «για» ένα ακίνητο ξεκινά στην περιοχή του** (Thumbtack · Angi: το αίτημα
+ * κουβαλά τον ταχ. κώδικα του έργου). Ο ίδιος κριτής με την επιλογή «Το ακίνητό μου» (`ownerPropertyWhere`) και ο
+ * ίδιος δρόμος (`onPick`) ⇒ ο επιλογέας δείχνει **ποιο** ακίνητο φιλτράρει, και το σημάδι αφαίρεσης δουλεύει.
+ *
+ * 🔒 Η θέση **δεν** μπαίνει στη διεύθυνση του αιτήματος — μόνο η ταυτότητα περιοχής, όπως σε κάθε επιλογή εδώ.
+ * 🔑 **Μία φορά**: ρητή περιοχή στη διεύθυνση νικά· ο άνθρωπος που την αφαιρεί δεν τη βλέπει να ξαναγυρίζει.
+ *    Ακίνητο χωρίς αποδείξιμη περιοχή ⇒ ο κατάλογος μένει χωρίς περιοχή — ποτέ μαντεψιά.
+ */
+function useIssuancePropertyDefault(
+  choices: readonly PropertyChoice[],
+  where: ShowcaseWhere | null,
+  onPick: (where: ShowcaseWhere) => void,
+): void {
+  const propertyId = useAgencyIssuanceQuote()?.context.propertyId ?? null;
+  const settled = useRef(false);
+  useEffect(() => {
+    if (settled.current || propertyId === null) return;
+    if (where !== null) {
+      settled.current = true;
+      return;
+    }
+    const preferred = choices.find((choice) => choice.id === propertyId)?.where ?? null;
+    if (preferred === null) return;
+    settled.current = true;
+    onPick(preferred);
+  }, [choices, where, propertyId, onPick]);
+}
+
 export interface MyPropertyFilterProps {
   readonly where: ShowcaseWhere | null;
   readonly onPick: (where: ShowcaseWhere) => void;
@@ -65,6 +95,7 @@ export interface MyPropertyFilterProps {
 export function MyPropertyFilter({ where, onPick }: MyPropertyFilterProps): React.ReactElement | null {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const choices = usePropertyChoices();
+  useIssuancePropertyDefault(choices, where, onPick);
   const fieldId = React.useId();
   if (choices.length === 0) return null;
 

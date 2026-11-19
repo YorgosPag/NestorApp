@@ -51,12 +51,16 @@
 import { Suspense } from 'react';
 
 import { AgencyDirectoryContent } from '@/components/mandate/AgencyDirectoryContent';
+import { AgencyIssuanceQuoteProvider } from '@/components/mandate/agency-issuance-quote-context';
 import { StaticPageLoading } from '@/core/states';
 
 export default function AgencyDirectoryPage() {
   return (
     <Suspense fallback={<StaticPageLoading />}>
-      <AgencyDirectoryContent />
+      {/* ADR-945 §7.6 — ο κατάλογος «για» ένα ακίνητο: ΜΙΑ ανάγνωση του αιτήματος για όλες τις κάρτες (κλειστός διακόπτης ⇒ σκέτα παιδιά). */}
+      <AgencyIssuanceQuoteProvider>
+        <AgencyDirectoryContent />
+      </AgencyIssuanceQuoteProvider>
     </Suspense>
   );
 }

@@ -28,7 +28,7 @@ import {
   type IssuanceRequestContext,
   type IssuanceRequestRecord,
 } from '@/lib/document-validity/issuance-bidding';
-import type { IssuanceRequestBody, IssuanceRequestServiceRefusal } from '@/lib/document-validity/issuance-bidding-request';
+import type { IssuanceBiddingView, IssuanceRequestBody, IssuanceRequestServiceRefusal } from '@/lib/document-validity/issuance-bidding-request';
 import { professionalReferenceOf, type IssuanceProfessional } from '@/lib/document-validity/issuance-professional';
 import { showcaseIssuanceCredential } from '@/lib/document-validity/issuance-showcase-credential';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
@@ -43,7 +43,6 @@ import {
   readIssuanceRequestView,
   writeIssuanceRequestInTx,
   type IssuanceRequestTarget,
-  type IssuanceRequestView,
 } from './issuance-requests.server';
 import { readUpkeepSubject } from './upkeep-subject.server';
 
@@ -54,7 +53,7 @@ export interface IssuanceRequestActor extends ListingActor {
 
 type Refused = { readonly ok: false; readonly refusal: IssuanceRequestServiceRefusal };
 export type IssuanceRequestResult = { readonly ok: true; readonly outcome: 'changed' | 'unchanged'; readonly cycle: number } | Refused;
-export type IssuanceRequestReading = { readonly ok: true; readonly view: IssuanceRequestView } | Refused;
+export type IssuanceRequestReading = { readonly ok: true; readonly view: IssuanceBiddingView } | Refused;
 
 const refused = (refusal: IssuanceRequestServiceRefusal): Refused => ({ ok: false, refusal });
 

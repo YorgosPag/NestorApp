@@ -82,6 +82,8 @@ import routeSlice from '@/i18n/generated/routes/pro.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 // ADR-827 §9.15 — η δημόσια διεύθυνση ζει σε ουδέτερο module: τη ρωτά και ο διακομιστής.
 import { agencyDirectoryHref } from './agency-directory-route';
+import { parseIssuanceContext, withIssuanceContext } from '@/lib/agency/issuance-context-query';
+import { IssuanceQuoteSurfaces } from './issuance-quote-surfaces';
 import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
 import { useCircleAnchorName } from '@/hooks/useCircleAnchorName';
 import { showcaseWhereVoice } from '@/lib/agency/showcase-where-voice';
@@ -112,6 +114,12 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   const locale = showcaseLocale(i18n.language);
   const filters = React.useMemo(
     () => parseShowcaseFilters(new URLSearchParams(params.toString())),
+    [params],
+  );
+  // ADR-945 §7.6 — ο κατάλογος ανοιχτός **για** ένα ακίνητο: υπόδειξη, που επιβιώνει κάθε αλλαγής φίλτρου (`apply`).
+  //    Ο πάροχος (`AgencyIssuanceQuoteProvider`, στη σελίδα) διαβάζει την ΙΔΙΑ διεύθυνση με τον ΙΔΙΟ αναγνώστη.
+  const issuanceContext = React.useMemo(
+    () => parseIssuanceContext(new URLSearchParams(params.toString())),
     [params],
   );
 
@@ -164,11 +172,11 @@ export function AgencyDirectoryContent(): React.JSX.Element {
       // ⚠️ **`replace`, ΟΧΙ `push`**: η αλλαγή φίλτρου δεν είναι πλοήγηση. Με
       //    `push`, το «πίσω» θα ξετύλιγε κάθε πάτημα του επισκέπτη αντί να τον
       //    βγάλει από τον κατάλογο.
-      router.replace(agencyDirectoryHref(serializeShowcaseFilters(next).toString()), {
+      router.replace(agencyDirectoryHref(withIssuanceContext(serializeShowcaseFilters(next), issuanceContext).toString()), {
         scroll: false,
       });
     },
-    [router],
+    [router, issuanceContext],
   );
 
   // 🔴 **Φ3 — ΤΟ ΦΙΛΤΡΑΡΙΣΜΕΝΟ ΕΙΝΑΙ ΥΠΑΚΟΛΟΥΘΙΑ ΤΟΥ ΤΑΞΙΝΟΜΗΜΕΝΟΥ.** Ο
@@ -282,6 +290,9 @@ export function AgencyDirectoryContent(): React.JSX.Element {
         🔑 **Και είναι η προϋπόθεση της εστίασης**: η περιοχή **επιβιώνει** της αφαίρεσης
         του σημαδιού, άρα υπάρχει γείτονας να δεχτεί την εστίαση. Δες `DirectoryQueryState`.
       */}
+      {/* ADR-945 §7.6 — «Ζητάς προσφορά για: …»: επιφάνεια (εκτός slice, 3.34)· `null` χωρίς ενεργό πάροχο (κλειστός διακόπτης). */}
+      {issuanceContext !== null && <IssuanceQuoteSurfaces.AgencyIssuanceQuote slot="context-bar" />}
+
       {/* ADR-896 §7Α.7 — και όσο φορτώνει: η γραμμή κρατά τη θέση της (`pending`), αλλιώς η άφιξή της σπρώχνει τη λίστα. */}
       {(loading || (error === null && agencies.length > 0)) && (
         <DirectoryQueryState

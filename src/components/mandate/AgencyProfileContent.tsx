@@ -102,6 +102,9 @@ function mandateRequestHref(alias: string): string {
 import routeSlice from '@/i18n/generated/routes/pro__alias.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 import { SavedListingsProvider } from '@/components/listings/SavedListingsProvider';
+import { isAppFeatureEnabled } from '@/config/feature-flags';
+// ADR-945 §7.6 — «Ζήτησε προσφορά» όταν ο ιδιώτης ήρθε από ακίνητο: ο πάροχος (χωρίς κείμενα) + το κουμπί ως επιφάνεια.
+import { AgencyProfileQuoteSlot } from './AgencyProfileQuoteSlot';
 
 registerRouteSlice(routeSlice);
 
@@ -373,6 +376,8 @@ function ShowcaseView({
           <ShowcaseShareDialog alias={profile.alias} displayName={profile.displayName} />
         </span>
       </header>
+
+      {isAppFeatureEnabled('OWNER_ISSUANCE_REQUESTS') && <AgencyProfileQuoteSlot showcase={profile} />}
 
       <dl className="m-0 flex flex-col gap-4">
         {/*

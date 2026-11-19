@@ -53,6 +53,9 @@ import { CredibilityStatement } from './CredibilityStatement';
 import { LicenceStatement } from './LicenceStatement';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { agencyProfileRoute } from './agency-directory-route';
+import { useAgencyIssuanceQuote } from './agency-issuance-quote-context';
+import { IssuanceQuoteSurfaces } from './issuance-quote-surfaces';
+
 import { ShowcaseMarkView, showcaseMarkSubjectOf } from './ShowcaseMarkView';
 import { MARK_CARD_SLOT } from './showcase-mark-box';
 import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
@@ -127,6 +130,7 @@ export function AgencyCard({
   onHover,
 }: AgencyCardProps): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  const issuance = useAgencyIssuanceQuote();
   const Heading = (headingLevel === 3 ? 'h3' : 'h2') as 'h2' | 'h3';
   const look = () => onHover?.(profile.companyId);
   const lookAway = () => onHover?.(null);
@@ -220,11 +224,13 @@ export function AgencyCard({
           */}
           <CoverageLine coverage={profile.coverage} evidence={profile} where={where} />
           <Link
-            href={agencyProfileRoute(profile.alias)}
+            href={agencyProfileRoute(profile.alias, issuance?.context ?? null)}
             className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
           >
             {t(DIRECTORY_KEYS.open)}
           </Link>
+          {/* ADR-945 §7.6 — μόνο «για» ακίνητο με ανοιχτό διακόπτη (ο πάροχος αλλιώς δίνει `null`)· επιφάνεια ⇒ εκτός slice (3.34). */}
+          {issuance === null ? null : <IssuanceQuoteSurfaces.AgencyIssuanceQuote slot="request-button" showcase={profile} />}
         </div>
       </article>
     </li>

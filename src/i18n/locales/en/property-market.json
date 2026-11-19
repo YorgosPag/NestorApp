@@ -1729,6 +1729,17 @@
       }
     },
     "directory": {
+      "issuanceQuote": {
+        "contextTitle": "Requesting a quote for: {document}",
+        "contextHint": "Pick up to {max} professionals. The request and the prices appear on your property page.",
+        "backToProperty": "Back to the property",
+        "request": "Request a quote",
+        "signIn": "Sign in to request a quote",
+        "saving": "Sending…",
+        "invited": "Quote requested",
+        "limitReached": "You already requested {max} quotes",
+        "alreadyAwarded": "You have already selected a professional"
+      },
       "title": "Professionals",
       "lead": "Professionals who chose, themselves, to be found here. The nearest come first — and those almost equally close, equally. If we do not know where you are, everyone is equal: no ranking, no rating, no paid placement.",
       "loading": "Loading directory…",

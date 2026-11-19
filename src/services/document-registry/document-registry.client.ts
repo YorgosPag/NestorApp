@@ -18,6 +18,7 @@ import type { FactsDeclarationBody } from '@/lib/document-validity/facts-declara
 import type { UpkeepDeclarationBody } from '@/lib/document-validity/upkeep-declaration-request';
 import type { UpkeepItem } from '@/lib/document-validity/property-upkeep';
 import type { IssuanceAssignmentBody, IssuanceSendBody } from '@/lib/document-validity/issuance-request';
+import type { IssuanceBiddingResponse, IssuanceRequestBody } from '@/lib/document-validity/issuance-bidding-request';
 import type { IssuanceDelivery } from '@/lib/document-validity/issuance-delivery';
 import type { IssuanceOpenItemsResponse } from '@/lib/document-validity/issuance-open-item';
 import type { IssuancePreview } from '@/types/issuance-invitation';
@@ -136,6 +137,38 @@ export const ISSUANCE_ASSIGNMENTS_URL = `${DOCUMENT_REGISTRY_URL}/issuance-assig
 /** **Μία πράξη** στην ανάθεση (πρόταση · απόφαση · ενημέρωση · απάντηση · ακύρωση). */
 export async function saveIssuanceAction(request: IssuanceAssignmentBody): Promise<ObligorDesignationSave> {
   return putRegistryAction(ISSUANCE_ASSIGNMENTS_URL, request, 'Η πράξη ανάθεσης δεν αποθηκεύτηκε', { action: request.action });
+}
+
+/** ADR-945 §7.5 — το αίτημα προσφορών έκδοσης του ιδιώτη: ΕΝΑ σημείο για τη διαδρομή. */
+export const ISSUANCE_REQUESTS_URL = `${DOCUMENT_REGISTRY_URL}/issuance-requests`;
+
+/**
+ * ADR-945 §7.6 — τι έφερε η ανάγνωση του αιτήματος. `unavailable` = ονομασμένη άρνηση (ακίνητο ξένο · αποσυρμένο ·
+ * υπό γραφείο): η ενότητα **σιωπά**, όπως το upkeep (§36). `failed` = βλάβη — η ενότητα το λέει.
+ */
+export type IssuanceBiddingLoad =
+  | ({ readonly kind: 'ready' } & IssuanceBiddingResponse)
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'failed' };
+
+/** **Φέρε** το αίτημα προσφορών ενός (ακινήτου, είδους) — αίτημα, προσφορές του κύκλου, και «μπορώ να πράξω;». */
+export async function fetchIssuanceRequest(propertyId: string, documentKind: DocumentKind): Promise<IssuanceBiddingLoad> {
+  try {
+    const url = `${ISSUANCE_REQUESTS_URL}?propertyId=${encodeURIComponent(propertyId)}&documentKind=${encodeURIComponent(documentKind)}`;
+    const { request, bids, canAct } = await apiClient.get<IssuanceBiddingResponse>(url);
+    return { kind: 'ready', request, bids, canAct };
+  } catch (cause) {
+    logActionFailure('Το αίτημα προσφορών δεν φορτώθηκε', cause, { propertyId, documentKind });
+    return isClientRefusal(cause) ? { kind: 'unavailable' } : { kind: 'failed' };
+  }
+}
+
+/** **Μία πράξη** στο αίτημα (πρόσκληση · ανάθεση · ακύρωση) — ο διακομιστής κρίνει με CAS, η οθόνη δεν μαντεύει. */
+export async function saveIssuanceRequestAction(body: IssuanceRequestBody): Promise<ObligorDesignationSave> {
+  return putRegistryAction(ISSUANCE_REQUESTS_URL, body, 'Η πράξη στο αίτημα προσφορών δεν αποθηκεύτηκε', {
+    action: body.action,
+    documentKind: body.documentKind,
+  });
 }
 
 /** ADR-915 §28 — προεπισκόπηση και αποστολή μηνύματος με σύνδεσμο: ΕΝΑ σημείο για τη διαδρομή. */

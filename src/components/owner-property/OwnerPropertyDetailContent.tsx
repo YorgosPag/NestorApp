@@ -34,6 +34,8 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { cn } from '@/lib/utils';
+import { isAppFeatureEnabled } from '@/config/feature-flags';
+import { OwnerIssuanceSurfaces } from './owner-issuance-surfaces';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { nowISO } from '@/lib/date-local';
 import {
@@ -311,6 +313,13 @@ function OwnerPropertyView({
         αυτό τον νόμο. Η εφαρμογή **προτείνει με λόγο**, ο ιδιοκτήτης αποφασίζει με ίχνος· ξένο/αποσυρμένο ⇒ σιωπή.
       */}
       <PropertyUpkeepSection propertyId={property.id} />
+
+      {/*
+        📋 ADR-945 §7.6 — **«Εκδόσεις εγγράφων»**: αίτημα προσφορών σε έως 3 επαγγελματίες του `/pro`. Επιφάνεια του
+        εργοστασίου (κώδικας + κείμενα ένα αίτημα, εκτός route slice, 3.34). ⛔ **Μόνο** με ανοιχτό
+        `OWNER_ISSUANCE_REQUESTS` ⇒ κλειστός διακόπτης = ούτε κώδικας κατεβαίνει, ούτε κλήση δικτύου γίνεται.
+      */}
+      {isAppFeatureEnabled('OWNER_ISSUANCE_REQUESTS') && <OwnerIssuanceSurfaces.OwnerIssuanceRequestSection propertyId={property.id} />}
 
       {/*
         🔴 **Ο σύνδεσμος που κλείνει τον κύκλο της Α14.** Εμφανίζεται μόνο όταν η

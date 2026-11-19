@@ -7,20 +7,28 @@
  * @related lib/document-validity/issuance-advance.ts (`advanceTimelineOf` — η μία πηγή) · issuance-advance-labels.ts
  *   (`advanceTimelineText`) · app/(auth)/document-request/DocumentRequestAdvanceTimeline.tsx
  * @module components/document-registry/IssuanceAdvanceTimelineList
+ *
+ * 🔑 ADR-945 §7.6 — **γενικό** πάνω σε κάθε χρονολόγιο `{kind, at}`: το ίδιο συστατικό δείχνει και τα στάδια μιας
+ *    προσφοράς (`bidTimelineOf`) — ποτέ δεύτερη λίστα χρόνου.
  */
 
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { AdvanceTimelineEntry } from '@/lib/document-validity/issuance-advance';
 import { formatOperatorDateTime } from '@/lib/operator-time-format';
 
-interface TimelineListProps {
-  readonly timeline: readonly AdvanceTimelineEntry[];
-  readonly textOf: (entry: AdvanceTimelineEntry) => string;
+/** Ό,τι χρειάζεται μια γραμμή χρονολογίου — το `kind` + `at` είναι και η ταυτότητά της. */
+export interface TimelineEntryBase {
+  readonly kind: string;
+  readonly at: string;
 }
 
-export function IssuanceAdvanceTimelineList({ timeline, textOf }: TimelineListProps): React.ReactElement | null {
+interface TimelineListProps<E extends TimelineEntryBase> {
+  readonly timeline: readonly E[];
+  readonly textOf: (entry: E) => string;
+}
+
+export function IssuanceAdvanceTimelineList<E extends TimelineEntryBase>({ timeline, textOf }: TimelineListProps<E>): React.ReactElement | null {
   const { i18n } = useTranslation();
   if (timeline.length === 0) return null;
   return (

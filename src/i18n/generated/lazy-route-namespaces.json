@@ -423,6 +423,22 @@
   "AdminSupplierVerifications": [
     "admin"
   ],
+  "AgencyIssuanceQuote": [
+    "common",
+    "common-account",
+    "common-actions",
+    "common-empty-states",
+    "common-navigation",
+    "common-photos",
+    "common-sales",
+    "common-shared",
+    "common-status",
+    "common-validation",
+    "conveyance",
+    "document-registry",
+    "legality",
+    "property-market"
+  ],
   "Buildings": [
     "accounting",
     "accounting-setup",
@@ -1219,6 +1235,21 @@
     "common-status",
     "common-validation",
     "obligations"
+  ],
+  "OwnerIssuanceRequestSection": [
+    "common",
+    "common-account",
+    "common-actions",
+    "common-empty-states",
+    "common-navigation",
+    "common-photos",
+    "common-sales",
+    "common-shared",
+    "common-status",
+    "common-validation",
+    "conveyance",
+    "document-registry",
+    "legality"
   ],
   "PhotoShare": [
     "common",

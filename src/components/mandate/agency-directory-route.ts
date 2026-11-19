@@ -26,6 +26,7 @@
  */
 
 import type { DocumentKind } from '@/config/document-validity/document-validity';
+import { withIssuanceContext, type IssuanceContext } from '@/lib/agency/issuance-context-query';
 import { documentToken } from '@/lib/agency/occupation-query';
 import { serializeShowcaseFilters } from '@/lib/agency/showcase-filter';
 import { typedHref } from '@/lib/workspace/route-worlds';
@@ -65,13 +66,16 @@ export function agencyDirectoryHref(query?: string | null) {
  *    (`serializeShowcaseFilters` ⇄ `parseShowcaseFilters`) και το διακριτικό του εγγράφου από τον ίδιο κριτή
  *    (`documentToken`). Άγκυρα κύκλου στο `document-next-step.test.ts`.
  * ⚠️ `adminId === null` = «η περιοχή δεν αποδεικνύεται» ⇒ ο κατάλογος **χωρίς** περιοχή, ποτέ μαντεψιά.
+ * 🔑 ADR-945 §7.6 — `forProperty`: ο κατάλογος ανοίγει **για** ένα ακίνητο του ιδιώτη (το έγγραφο είναι το `kind`),
+ *    ώστε η κάρτα να προσφέρει «Ζήτησε προσφορά». Επέκταση του **ίδιου** δημιουργού — ποτέ δεύτερη γραφή του `/pro`.
  */
-export function documentIssuerSearchHref(kind: DocumentKind, adminId: string | null) {
+export function documentIssuerSearchHref(kind: DocumentKind, adminId: string | null, forProperty: string | null = null) {
   const query = serializeShowcaseFilters({
     occupation: documentToken(kind),
     where: adminId === null ? null : { adminId },
   });
-  return agencyDirectoryHref(query.toString());
+  const context: IssuanceContext | null = forProperty === null ? null : { propertyId: forProperty, documentKind: kind };
+  return agencyDirectoryHref(withIssuanceContext(query, context).toString());
 }
 
 /**
@@ -104,6 +108,9 @@ export function documentIssuerSearchHref(kind: DocumentKind, adminId: string | n
  * πληρώθηκε ήδη μία φορά *(η σελίδα εντολής ξαναέγραψε `'/pro'` **χωρίς**
  * `encodeURIComponent`)*. Ένας δρόμος, δύο γραμματικές, **ένας** κριτής.
  */
-export function agencyProfileRoute(segment: string): string {
-  return `${AGENCY_DIRECTORY_ROUTE}/${encodeURIComponent(segment)}`;
+export function agencyProfileRoute(segment: string, issuance: IssuanceContext | null = null): string {
+  const route = `${AGENCY_DIRECTORY_ROUTE}/${encodeURIComponent(segment)}`;
+  // ADR-945 §7.6 — από κατάλογο ανοιχτό «για» ακίνητο, το προφίλ κρατά το ΙΔΙΟ πλαίσιο (ίδιος σειριοποιητής).
+  const query = issuance === null ? '' : withIssuanceContext(new URLSearchParams(), issuance).toString();
+  return query === '' ? route : `${route}?${query}`;
 }

@@ -21,8 +21,9 @@
 import { z } from 'zod';
 
 import { DOCUMENT_KINDS } from '@/config/document-validity/document-validity';
-import { ISSUANCE_REQUEST_POLICY } from './issuance-bidding';
-import { ISSUANCE_STAGES } from './issuance-stage';
+import type { IssuanceAssignmentRecord } from './issuance-assignment';
+import { ISSUANCE_REQUEST_POLICY, type IssuanceRequestRecord } from './issuance-bidding';
+import { ISSUANCE_STAGES, type IssuanceStage } from './issuance-stage';
 
 const nonEmpty = z.string().trim().min(1);
 
@@ -54,6 +55,31 @@ export const issuanceRequestBody = z.discriminatedUnion('action', [
 export type IssuanceRequestBody = z.infer<typeof issuanceRequestBody>;
 
 export const issuanceRequestQuery = z.object(target);
+
+/**
+ * Μία προσφορά όπως τη βλέπει η οθόνη — το στάδιο το κρίνει ο διακομιστής με τον ΙΔΙΟ πυρήνα (`issuanceStateOf`).
+ * Ζει **εδώ**, στο σύρμα, ώστε ο διακομιστής που τη γράφει και η οθόνη που τη διαβάζει να μοιράζονται **έναν** ορισμό.
+ */
+export interface IssuanceBidView {
+  readonly bidId: string;
+  /** `null` = κλειστή (απορρίφθηκε · ακυρώθηκε · ολοκληρώθηκε) ή δεν γράφτηκε ακόμη. */
+  readonly stage: IssuanceStage | null;
+  readonly record: IssuanceAssignmentRecord | null;
+}
+
+/** Το αίτημα και οι προσφορές του **τρέχοντος** κύκλου (`null` = κανένα αίτημα ακόμη). */
+export interface IssuanceBiddingView {
+  readonly request: IssuanceRequestRecord | null;
+  readonly bids: readonly IssuanceBidView[];
+}
+
+/**
+ * Η απόκριση του `GET` — `canAct` = ο διακομιστής λέει αν το `PUT` θα επιτραπεί, με τον ΙΔΙΟ κανόνα (Google Drive
+ * `capabilities`)· η οθόνη δεν το κρίνει.
+ */
+export interface IssuanceBiddingResponse extends IssuanceBiddingView {
+  readonly canAct: boolean;
+}
 
 /**
  * Κάθε άρνηση λέει στον άνθρωπο κάτι διαφορετικό — **κλειστό** σύνολο, χωρίς `default` πουθενά:
@@ -93,3 +119,8 @@ export const ISSUANCE_REQUEST_ERROR_CODES: Readonly<Record<IssuanceRequestServic
   'terms-refused': [409, 'TERMS_REFUSED'],
   'receipt-mismatch': [422, 'RECEIPT_MISMATCH'],
 };
+
+/** Ο κωδικός της απόκρισης → η άρνηση· άγνωστος κωδικός ή δίκτυο ⇒ `null` («δεν ολοκληρώθηκε»). Ιδίωμα `upkeep`. */
+export function issuanceRequestRefusalOfCode(code: string | null): IssuanceRequestServiceRefusal | null {
+  return ISSUANCE_REQUEST_REFUSALS.find((refusal) => ISSUANCE_REQUEST_ERROR_CODES[refusal][1] === code) ?? null;
+}

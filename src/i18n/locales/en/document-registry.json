@@ -886,5 +886,86 @@
       "empty": "No assignment has passed its delivery deadline.",
       "emptyHint": "Issuance assignments that were not delivered by the date the professional committed to appear here."
     }
+  },
+  "ownerIssuance": {
+    "title": "Document issuance",
+    "lead": "Request quotes from up to {max} professionals in the directory and pick one. The others are told they were not selected.",
+    "loadFailed": "Quote requests could not be loaded. Try again shortly.",
+    "readOnly": "Read only — actions are taken by whoever manages the property.",
+    "noRequest": "You have not requested a quote.",
+    "findProfessional": "Find a professional",
+    "bidsCount": "{count, plural, one {# quote} other {# quotes}} of {max}",
+    "inviteMore": "Ask someone else too",
+    "limitReached": "You already requested {max} quotes — the maximum for this request.",
+    "closed": "The previous round has closed. You can request new quotes.",
+    "requestAgain": "Request new quotes",
+    "awaitingQuote": "Waiting for the professional to price it.",
+    "bidClosed": "Closed",
+    "award": "Select",
+    "cancelRequest": "Cancel request",
+    "saving": "Saving…",
+    "professionalUnavailable": "Professional without a public profile",
+    "viewProfile": "Profile",
+    "timeline": "History",
+    "awardedBadge": "Selected",
+    "stage": {
+      "proposed": "Requested — the professional will be notified",
+      "ownerApproved": "Approved — waiting for the professional",
+      "ownerRejected": "You declined the price",
+      "sent": "Quote requested — waiting for a price",
+      "quoted": "Price received — decide if it suits you",
+      "accepted": "Hired — waiting for the new document",
+      "declined": "The professional declined — ask someone else",
+      "cancelled": "Closed"
+    },
+    "done": {
+      "invited": "Quote request recorded.",
+      "awarded": "You selected a professional.",
+      "cancelled": "The request was cancelled."
+    },
+    "confirm": {
+      "awardTitle": "Select this quote?",
+      "awardDescription": "You approve the price shown. The other quotes of this request close as “not selected”.",
+      "awardConfirm": "Select",
+      "cancelTitle": "Cancel the request?",
+      "cancelDescription": "All quotes of this request close. You can request new ones later.",
+      "cancelConfirm": "Cancel request",
+      "keep": "No, keep it"
+    },
+    "ball": {
+      "owner": "Your move",
+      "professional": "Professional's move"
+    },
+    "timelineEntry": {
+      "requested": "Quote requested",
+      "sent": "Professional notified",
+      "quoted": "Price given",
+      "revised": "Price revised",
+      "approved": "Price approved",
+      "rejected": "Price rejected",
+      "accepted": "Professional took it on",
+      "declined": "Professional declined",
+      "cancelled": "Cancelled",
+      "notAwarded": "Not selected"
+    },
+    "error": {
+      "failed": "The action did not complete. Try again.",
+      "absent": "The property was not found.",
+      "retired": "The property is archived — no actions on it.",
+      "notAssignable": "This document does not call for an assignment on this property.",
+      "officeLedger": "An office manages this property — the assignment is made there.",
+      "unavailable": "Something the decision needs could not be read right now. Try again shortly.",
+      "professionalUnavailable": "The professional no longer has a public profile.",
+      "unqualified": "The professional has not declared a qualification for this document.",
+      "stale": "Something changed in the meantime — check the current state and try again.",
+      "bidLimit": "You reached the maximum number of quotes for this request.",
+      "alreadyAwarded": "You have already selected a professional.",
+      "unknownBid": "The quote no longer belongs to this request.",
+      "requestClosed": "The request is closed.",
+      "transitionRefused": "This action is not allowed at this stage.",
+      "actorRefused": "You cannot take this action.",
+      "termsRefused": "The quote terms are not valid.",
+      "receiptMismatch": "The receipt does not match the quote."
+    }
   }
 }

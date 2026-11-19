@@ -46,7 +46,8 @@
 
 **Δ3 — Ο ιδιώτης είναι ταυτόχρονα «γραφείο» και «ιδιοκτήτης».** Η πρόταση του ιδιώτη **είναι** η έγκριση του ιδιοκτήτη:
 γεγονός `self-approved` στην ίδια πράξη ⇒ `proposed → sent` χωρίς βήμα έγκρισης· κανένας «υπεύθυνος»
-(`obligorLead`) — ο υπεύθυνος είναι ο ίδιος. Η «μπάλα» `office` λύνεται σε `owner` στην όψη.
+(`obligorLead`) — ο υπεύθυνος είναι ο ίδιος. Η «μπάλα» του ιδιώτη είναι **δικός της** ολικός πίνακας (`OWNER_BALL`, §7.6 (β)): «Σειρά σου» μόνο
+όπου υπάρχει πράξη — το `proposed` είναι της πλατφόρμας, όχι του ιδιώτη.
 
 **Δ4 — Επαγγελματίας χωρίς βιβλίο επαφών.** `professional: {kind:'contact', contactId} | {kind:'account', uid}`
 (διακριτή ένωση). Ο ιδιώτης διαλέγει από το `/pro` (λογαριασμός επαγγελματία, ADR-915 §40)· κάρτα επαγγελματία
@@ -230,6 +231,62 @@
   μπάλα ιδιώτη, όριο από τον **ίδιο** πυρήνα) · hooks **όχι αισιόδοξα** (CAS, ο server αποφασίζει — όπως το
   `useUpkeepDeclaration`) · ενότητα κάτω από το `PropertyUpkeepSection` · πλαίσιο `/pro` ως **υπόδειξη** (ο server
   ξανακρίνει κατοχή) με επέκταση του `documentIssuerSearchHref`, όχι δεύτερο δημιουργό URL.
+- **Υλοποίηση Βημάτων 2–7 (2026-11-19, διακόπτης ΚΛΕΙΣΤΟΣ)**:
+  - **Σύρμα**: οι τύποι όψης μετακόμισαν από το `issuance-requests.server.ts` στο `issuance-bidding-request.ts`
+    (`IssuanceBidView` · `IssuanceBiddingView` · `IssuanceBiddingResponse` = όψη + `canAct`): ένας ορισμός για τον διακομιστή
+    που γράφει και την οθόνη που διαβάζει. Μετονομασία `IssuanceRequestView` ⇒ `IssuanceBiddingView`, γιατί το όνομα το είχε
+    ήδη άλλος τύπος (`types/issuance-document-request.ts`, αιτήματα εγγράφων ADR-942). `issuanceRequestRefusalOfCode` = ιδίωμα upkeep.
+  - **Client**: `ISSUANCE_REQUESTS_URL` · `fetchIssuanceRequest` (`ready | unavailable | failed`) · `saveIssuanceRequestAction`
+    μέσω του `putRegistryAction` (`Idempotency-Key` από το `apiClient.put`, CHECK 3.92).
+  - **Μοντέλο όψης** `lib/document-validity/issuance-request-view-model.ts`: `requestPhaseOf` · `expectedCycleOf` ·
+    `expectedStagesOf` · `ownerBallOf` · `canAwardBid` · `canCancelRequest` · `inviteVerdictOf` / `canInviteMore` (ρωτούν τον
+    **ίδιο** `reduceIssuanceRequest`, κανένα δεύτερο όριο) · `bidTimelineOf` (χρονολόγιο από τα γεγονότα, «δεν επιλέχθηκε» ≠
+    «ακυρώθηκε») · `ISSUANCE_REQUEST_KINDS` (**παράγεται** από τον κατάλογο: ό,τι εκδίδει επαγγελματίας).
+  - **Hooks**: `useIssuanceRequest` (πρότυπο `usePropertyUpkeep`) · `useIssuanceRequestAction` (όχι αισιόδοξα, πρότυπο
+    `useUpkeepDeclaration`· άρνηση με κωδικό ⇒ ξαναδιάβασμα, ώστε ο άνθρωπος να ξανακρίνει τον νέο κόσμο).
+  - **`/me`** `OwnerIssuanceRequestSection` + `OwnerIssuanceBidList` + `owner-issuance-labels.ts`: **ένας** πίνακας για όλα τα
+    είδη (Thumbtack «Projects» · Block: ένα σημείο για όλα τα αιτήματα), μία γραμμή ανά είδος. Επιβεβαίωση (`ConfirmDialog`)
+    πριν από «Επιλογή» και «Ακύρωση αιτήματος», γιατί κλείνουν άλλες προσφορές. Η επωνυμία βγαίνει από το `usePublicAgency`
+    (ένα έγγραφο κατά ταυτότητα). Το `IssuanceAdvanceTimelineList` έγινε **γενικό** (`{kind, at}`): το ίδιο συστατικό και για τα
+    στάδια. Mount με `dynamic()` μετά το `PropertyUpkeepSection`, φραγμένο με `isAppFeatureEnabled('OWNER_ISSUANCE_REQUESTS')`.
+  - **`/pro`**: `lib/agency/issuance-context-query.ts` (`forProperty` · `forDocument`, υπόδειξη, και τα δύο ή κανένα)·
+    `documentIssuerSearchHref(kind, adminId, forProperty)` και `agencyProfileRoute(segment, issuance)` **επεκτάθηκαν**, δεν
+    γράφτηκε δεύτερος δημιουργός· το `apply` του καταλόγου κρατά το πλαίσιο σε κάθε αλλαγή φίλτρου. Ο πάροχος
+    `AgencyIssuanceQuoteProvider` (στο `pro/page.tsx` και στο `AgencyProfileQuoteSlot`) κάνει **μία** ανάγνωση για όλες τις
+    κάρτες· κλειστός διακόπτης ή χωρίς πλαίσιο ⇒ σκέτα παιδιά, καμία κλήση. `AgencyRequestQuoteButton` (`dynamic`): εμφανίζεται
+    μόνο αν το `showcaseIssuanceCredential` (ο **ίδιος** κριτής με την πρόσκληση) βρίσκει προσόν· λέει «Ζητήθηκε» / «έφτασες
+    τις 3» **πριν** το πάτημα· ανώνυμος ⇒ `loginHrefForCurrentLocation`· επιτυχία ⇒ πίσω στο ακίνητο. Λωρίδα
+    `AgencyIssuanceContextBar` («Ζητάς προσφορά για: …» + πόσες έχεις + επιστροφή).
+  - **i18n**: `document-registry:ownerIssuance.*` · `property-market:mandate.directory.issuanceQuote.*` (el + en, ICU πληθυντικός
+    στο `bidsCount`).
+  - ✅ **Αποφάσεις (2026-11-19, πρακτική Thumbtack · Angi · Procore — ο Giorgio ανέθεσε την επιλογή)**:
+    (α) **Φωνή ιδιώτη**: `OWNER_STAGE_KEYS` (`document-registry:ownerIssuance.stage.*`), ολικός χάρτης πάνω στο
+    `IssuanceStage` — ίδια μηχανή καταστάσεων, άλλος ομιλητής (Procore: η ίδια κατάσταση γράφεται ανά ρόλο). Οι λέξεις του
+    γραφείου έλεγαν στον ίδιο τον ιδιοκτήτη «αναμένει έγκριση του ιδιοκτήτη».
+    (β) **Μπάλα ιδιώτη = δικός της ολικός πίνακας** (`OWNER_BALL`), όχι `office ⇒ owner`: «Σειρά σου» **μόνο** όπου υπάρχει
+    πράξη (`quoted` ⇒ «Επιλογή» · `declined` ⇒ «ζήτησε από άλλον»). Το `proposed` (και το παλιό `ownerApproved`) ⇒
+    `professional`: στον ιδιώτη η πρόταση **είναι** η έγκριση (Δ3) και την ειδοποίηση τη στέλνει η πλατφόρμα (Φ3) — κάλεσμα
+    χωρίς κουμπί θα ήταν αδιέξοδο. **Διορθώνει** τη φράση του Δ3 «η μπάλα `office` λύνεται σε `owner`».
+    (γ) **Περιοχή από το ακίνητο, στο `/pro`**: όταν ο κατάλογος ανοίγει «για» ακίνητο, το `MyPropertyFilter` προεπιλέγει
+    **μία φορά** την περιοχή του με τον **ίδιο** κριτή (`ownerPropertyWhere`) και τον ίδιο δρόμο (`onPick`) — ρητή περιοχή
+    στη διεύθυνση νικά, η αφαίρεση δεν ξαναγυρίζει, ακίνητο χωρίς αποδείξιμη περιοχή ⇒ χωρίς περιοχή. Καμία αλλαγή server,
+    η θέση δεν μπαίνει στη διεύθυνση, η καρτέλα ακινήτου δεν κατεβάζει ευρετήριο ορίων.
+    (δ) Ο πάροχος εισάγεται στατικά στο `/pro` ⇒ αναπαραγωγή route slices `pro` / `pro__alias` και `src/types/i18n.ts`
+    (CHECK 3.33 / 3.34).
+  - ✅ **Επιφάνειες αντί για τοπικό `next/dynamic` (2026-11-19, CHECK 3.34 · ADR-744 §27)**: ο γεννήτορας αρνήθηκε το αρχικό
+    σχέδιο (χρέος εισδοχής 330 → 359: καρέ με ωμά κλειδιά). Τώρα: **μία** επιφάνεια `AgencyIssuanceQuote`
+    (`mandate/issuance-quote-surfaces.tsx` → `AgencyIssuanceQuoteSurface`, `slot` = `context-bar` | `request-button`) και
+    **μία** `OwnerIssuanceRequestSection` (`owner-property/owner-issuance-surfaces.tsx`), δηλωμένες στο `lazyRouteRegistries`.
+    Ο πάροχος `AgencyIssuanceQuoteProvider` έγινε **χωρίς κανένα namespace** (εκθέτει `revalidate`· η πράξη
+    `useIssuanceRequestAction` ζει στο κουμπί — ο διακομιστής κρίνει όριο/CAS, κανένα κοινό φρένο δεν χρειάζεται) και το hook
+    πράξης ζητά μόνο `document-registry`. Το `AgencyProfileQuoteSlot` εισάγεται στατικά, με δικό του όριο `<Suspense>`
+    (`useSearchParams`, CHECK 3.55). Κατάστιχο `lazyRouteMountNamespaces` +7, σφράγιση 110 → 117 με γραμμένο λόγο· χρέος
+    εισδοχής 330 (αμετάβλητο).
+  - Άγκυρες: `owner-issuance-request-section.test.tsx` (Ε1–Ε6: σύνδεσμος καταλόγου · μόνο ανάγνωση · επιβεβαίωση + CAS
+    στην επιλογή/ακύρωση · `proposed` χωρίς «Σειρά σου» · άρνηση · βλάβη φόρτωσης) · `issuance-quote-directory.test.tsx`
+    (Π1–Π3: διακόπτης κλειστός ⇒ καμία ανάγνωση · μισό πλαίσιο ⇒ τίποτα · Ζ1–Ζ3: προεπιλογή περιοχής μία φορά, η αφαίρεση δεν
+    ξαναγυρίζει, ρητή περιοχή νικά). Μετάλλαξη 2/2 (μπάλα `proposed` · φρένο «μία φορά») ⇒ 4 κόκκινα.
+  - Άγκυρες (**δεν έτρεξαν**, εντολή Giorgio): `issuance-request-view-model.test.ts` · `issuance-context-query.test.ts`.
 
 ## Changelog
 
@@ -241,3 +298,6 @@
 | 2026-11-18 | §7.4 **Φ1β μέρος 1**: ταυτότητες `disr`/`dibd` + συλλογή `document_issuance_requests` (deny-all, σουίτα κανόνων) · `requestId`/`cycle`/`cancellation.reason` · καθαρός πυρήνας `issuance-bidding.ts` · actor `owner` + βάση `owner-self` (`ownerContactId` μόνο στις βάσεις γραφείου). Διόρθωση σχεδίου: καμία γραμμή tenant-config. tsc/jest **αναμένουν** τον Giorgio. |
 | 2026-11-18 | §7.5 **Φ1β μέρος 2**: writer `owner` · κριτής υποκειμένου = `readUpkeepSubject` όπως είναι (Φ1 μόνο βιβλίο ιδιώτη, `office-ledger`) · `latestIssuedOn` ιδιώτη από δήλωση + φάκελο (`files_personal`) με τους ΙΔΙΟΥΣ κριτές του μητρώου · προσόν από τη βιτρίνα (ίδιος κριτής με το `/pro`) · `issuance-request.service.ts` (invite · award ατομικό · cancel) · route `issuance-requests` · tests. tsc/jest/πύλες **αναμένουν** τον Giorgio. |
 | 2026-11-18 | **Φ1β ενταγμένη** (`main` `ec82ec17`, squash μαζί με Φ1α + acc-030 από το ίδιο κλαδί). **Άγκυρες που προϋπήρχαν κόκκινες, διορθωμένες με εντολή Giorgio** — καμία αλλαγή κώδικα παραγωγής: (α) `personal-scope-consumers.test.ts`: 28 αδήλωτες διαδρομές του `withPersonalOrOrgAuth` δηλώθηκαν, η καθεμία με λόγο από **ανάγνωση του κριτή της** (καμία δεν ανοίγει σε πολίτη ξένα/εταιρικά δεδομένα· η `places/declarable-areas` δεν έχει κριτή κατοχής **επίτηδες** — μόνο δημόσια όρια)· +3 καταναλωτές `withFileCustodyAuth` (`capture-facts` · `focal-point` · `publish-raster`) και +1 `withNetworkDoor` (`threads/[threadId]`)· παρονομαστής 28 ⇒ 77 (το +1 είναι η δική μας `issuance-requests`). (β) `enterprise-id.service.test.ts`: 4 ντετερμινιστικοί χωρίς δήλωση (`cdp` ADR-942 · `ipay`/`pevt` ADR-ACC-030 · `ppye` ADR-943) ⇒ `DETERMINISTIC_ONLY` + χρυσά δείγματα από τους ίδιους τους γεννήτορες. (γ) `rules-liveness-gate.test.js`: 883 ⇒ **899** (+2 δικά μας, +14 προϋπάρχοντα μη αποδοσμένα ανά commit). |
+| 2026-11-19 | §7.6 **Φ2 Βήματα 2–7** (διακόπτης `OWNER_ISSUANCE_REQUESTS` κλειστός): τύποι όψης στο σύρμα · client · μοντέλο όψης (ίδιος μειωτής για «κι άλλον;») · hooks όχι αισιόδοξα · ενότητα «Εκδόσεις εγγράφων» στο `/me` · πλαίσιο `/pro` (`forProperty`/`forDocument`) με επέκταση των δύο δημιουργών URL · ένας πάροχος ανά σελίδα · «Ζήτησε προσφορά» στην κάρτα και στο προφίλ · i18n el+en · δύο άγκυρες. tsc/jest/πύλες/slices **αναμένουν** τον Giorgio. |
+| 2026-11-19 | §7.6 **ανοιχτά (α)–(γ) κλειστά** (πρακτική Thumbtack · Angi · Procore): φωνή ιδιώτη για τα στάδια (`OWNER_STAGE_KEYS`) · μπάλα ιδιώτη = ολικός πίνακας `OWNER_BALL` («Σειρά σου» μόνο με πράξη· `proposed` ⇒ πλατφόρμα — διόρθωση της φράσης του Δ3) · `/pro` «για» ακίνητο ⇒ το `MyPropertyFilter` προεπιλέγει μία φορά την περιοχή του (ίδιος κριτής `ownerPropertyWhere`, καμία αλλαγή server). |
+| 2026-11-19 | §7.6 **επιφάνειες** αντί για τοπικό `next/dynamic` (`AgencyIssuanceQuote` · `OwnerIssuanceRequestSection`), πάροχος `/pro` χωρίς namespaces, κατάστιχο +7 / σφράγιση 110 → 117 · tests Ε1–Ε6 / Π1–Π3 / Ζ1–Ζ3 · αναπαραγωγή slices + `src/types/i18n.ts`. Jest / jscpd / γεννήτορες πράσινα. |

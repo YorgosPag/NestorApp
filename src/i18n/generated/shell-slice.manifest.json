@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "06a56c63bef88f0360e2f7cdef37eb431b321024d08c7451e545eff03ddcb746",
+    "src/i18n/generated/lazy-route-namespaces.json": "b25b44ae2aa53d7c342e80ef683a3d6c2cb08df49d85b85efec47f5254ce9e38",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -138,7 +138,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "ea809d3dd5036454f9723797b38acf84a96410a2cf8d926571c41a507acb0063",
-      "lazyRouteRegistries": "e939cab9c0f8e5dd0c7a8e52614b7188312da1ee292b8a374352a88775d737b2",
+      "lazyRouteRegistries": "2ca896682078e66a28f50378f6c2c45e85d2283a0234d51ead599020b7bdaee9",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "3463fd9666b61d2a3e504b0560c1e2c1bd9a491651a34eb68fd035adda7836af",
@@ -150,7 +150,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "9cc201fcf9c4f0d9ec2cc4f30bfb55e652718202ae30660f08370af6a88fe566",
+      "registries": "41ce188e6655caf8573d0225bb5d72bb03bc066410a9712a051008308f979f30",
       "supportedNamespaces": "b3dec606cde1f3d914e3206109aa7c4447c6c17882103a096a8fe306e756a38f"
     },
     "namespaceBundles": {
@@ -165,7 +165,7 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "4d7aea351f65ad8b1ecf40ed8e6c2d55991cb260154053bf8908319daad8c7c9",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "697840bd2ae05d11517211c16b186921eee3757a4fc3a72fb00850d7c4378965",
+      "scripts/lib/i18n-shell-slice/config.js": "a9064d3d88e88070d7921aa2a3b2c894838020e7e97fda94ee92e10695871373",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2fef23d404e260e8a8d649c97f44b9e0786ffa70e53dd5eaba36039c5df5e4b3",
+  "inputsSha256": "a12c92c92f9c0b7e3b002cd2dbc17b959f9ca94bf3313d05d5d673ad85360c01",
   "languages": [
     "el"
   ],
@@ -38290,6 +38290,23 @@
             "issuer.qualification.surveyor-engineer",
             "issuer.registered",
             "kind.electrical-installation"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "floors": {
+          "keys": [
+            "label.attic",
+            "label.basement",
+            "label.foundation",
+            "label.ground",
+            "label.mezzanine",
+            "label.pilotis",
+            "label.raisedGround",
+            "label.roof",
+            "label.semiBasement",
+            "label.stairPenthouse",
+            "label.standard"
           ],
           "prefixes": [],
           "whole": false
