@@ -49,10 +49,18 @@ export function isQuoteDeliveryBusinessDays(value: number | null): value is numb
 /** Ο ΜΑΡΚ του myDATA: 15 ψηφία. */
 export const MYDATA_MARK_PATTERN = /^\d{15}$/;
 
-/** Ποιος καταχώρισε την προσφορά — ο ίδιος με τον σύνδεσμό του, ή το γραφείο που την έλαβε. */
+/**
+ * Ποιος καταχώρισε την προσφορά — ο ίδιος με τον σύνδεσμό του, το γραφείο που την έλαβε, ή (ADR-945 Φ3α) **μέλος του
+ * γραφείου βιτρίνας**, συνδεδεμένο, για λογαριασμό του γραφείου (Upwork Agency: ο business manager προσφέρει, και ορίζει
+ * **ποιο** μέλος κάνει τη δουλειά).
+ * 🔑 `signerUid` = το μέλος που **υπογράφει** το έγγραφο. Ζει στην **προσφορά**, όχι στην πρόσκληση: η πρόσκληση πάει στο
+ *    γραφείο (`professional: {kind:'workspace'}`)· ποιος υπογράφει είναι όρος της προσφοράς, και μια αναθεώρηση μπορεί να
+ *    τον αλλάξει. Την ιδιότητα μέλους την κρίνει ο διακομιστής πριν από τον μειωτή.
+ */
 export type QuoteSubmission =
   | { readonly by: 'professional-link'; readonly invitationId: string }
-  | { readonly by: 'recorded'; readonly recordedByUid: string };
+  | { readonly by: 'recorded'; readonly recordedByUid: string }
+  | { readonly by: 'workspace-member'; readonly uid: string; readonly companyId: string; readonly signerUid: string };
 
 /** Οι όροι της προσφοράς — ό,τι στέλνει ο επαγγελματίας (ή καταγράφει το γραφείο). */
 export interface QuoteTerms {

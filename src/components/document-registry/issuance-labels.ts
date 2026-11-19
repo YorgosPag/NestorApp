@@ -11,6 +11,7 @@ import type {
   BallInCourtParty,
   InstructionChannel,
   IssuanceStage,
+  NoticeChannel,
 } from '@/lib/document-validity/issuance-assignment';
 import type { IssuanceDeliveryOutcome } from '@/lib/document-validity/issuance-delivery';
 import type { IssuanceSpaceStatus } from '@/lib/document-validity/issuance-space';
@@ -78,12 +79,16 @@ export const BALL_IN_COURT_KEYS: Readonly<Record<BallInCourtParty, string>> = {
   professional: `${K}issuance.party.professional`,
 };
 
-/** Ένας χάρτης για τα δύο κανάλια: τα κανάλια ενημέρωσης είναι υποσύνολο των καναλιών εντολής. */
-export const CHANNEL_KEYS: Readonly<Record<InstructionChannel, string>> = {
+/**
+ * Ένας χάρτης για τα δύο κανάλια: τα κανάλια ενημέρωσης είναι υποσύνολο των καναλιών εντολής — συν (ADR-945 Φ3α) το
+ * κανάλι της πλατφόρμας, που δεν το καταγράφει ποτέ άνθρωπος.
+ */
+export const CHANNEL_KEYS: Readonly<Record<InstructionChannel | NoticeChannel, string>> = {
   'in-person': `${K}issuance.channel.in-person`,
   phone: `${K}issuance.channel.phone`,
   email: `${K}issuance.channel.email`,
   written: `${K}issuance.channel.written`,
+  'nestor-inbox': `${K}issuance.channel.nestor-inbox`,
 };
 
 export const PROPOSE_KEYS = {

@@ -35,6 +35,7 @@ import {
   recordIssuanceReminder,
   type IssuanceMessageTarget,
 } from '@/services/document-registry/issuance-assignments.server';
+import { officeLedger } from '@/services/document-registry/issuance-ledger';
 import type { DocumentIssuanceAssignment } from '@/services/document-registry/issuance-assignment-schema';
 import { buildIssuanceEmail } from '@/services/email-templates/issuance-invitation-email';
 import { DEFAULT_NOTIFICATION_TIMEZONE } from '@/services/user-notification-settings/user-notification-settings.types';
@@ -116,7 +117,7 @@ async function deliverReminder(link: ResolvedLink, message: DueMessage, token: s
 /** Ένα μήνυμα: κρίση → απόσυρση, αναμονή ή υπενθύμιση. Πετά μόνο σε βλάβη βάσης (η σάρωση το μετρά). */
 async function settle(db: Firestore, assignment: DocumentIssuanceAssignment, message: DueMessage, now: Date): Promise<Settled> {
   const nowIso = now.toISOString();
-  const target: IssuanceMessageTarget = { companyId: assignment.companyId, propertyId: assignment.propertyId, documentKind: assignment.documentKind, invitationId: message.invitationId };
+  const target: IssuanceMessageTarget = { ledger: officeLedger(assignment.companyId), propertyId: assignment.propertyId, documentKind: assignment.documentKind, invitationId: message.invitationId };
   const retire = async (): Promise<Settled> => { await recordIssuanceReminder(db, target, { kind: 'retired', dueAt: message.reminders.dueAt }); return 'retired'; };
   const invitation = await invitationOf(db, assignment, message.invitationId);
   const link = await openLinkOf(db, invitation, now);

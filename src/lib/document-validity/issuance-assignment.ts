@@ -30,7 +30,7 @@ import { documentKindSpec, type DocumentKind } from '@/config/document-validity/
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 
 import {
-  actorMayAct, decisionBasisOf, quoteSubmissionOf, responseBasisOf,
+  PLATFORM_NOTICE_CHANNEL, actorMayAct, decisionBasisOf, platformNoticeOf, quoteSubmissionOf, responseBasisOf,
   type InstructionChannel, type IssuanceActor, type IssuanceDecisionBasis, type IssuanceResponseBasis, type LinkVerification,
 } from './issuance-actor';
 import { advanceCollectedMinor, advanceStateOf, isAdvanceTermsValid, type AdvanceEvent } from './issuance-advance';
@@ -62,13 +62,16 @@ export {
   type BallInCourtParty, type IssuanceCancellationReason, type IssuanceStage,
 } from './issuance-stage';
 export {
-  INSTRUCTION_CHANNELS, LINK_VERIFICATIONS, decisionOwnerContactIdOf, linkVerificationSatisfies,
+  INSTRUCTION_CHANNELS, LINK_VERIFICATIONS, PLATFORM_NOTICE_CHANNEL, decisionOwnerContactIdOf, linkVerificationSatisfies,
   type InstructionChannel, type IssuanceActor, type IssuanceDecisionBasis, type IssuanceResponseBasis, type LinkVerification,
 } from './issuance-actor';
 
-/** Πώς ενημερώθηκε ο επαγγελματίας. */
+/** Πώς ενημερώθηκε ο επαγγελματίας — ό,τι **καταγράφει** άνθρωπος του γραφείου (το μενού του). */
 export const NOTICE_CHANNELS = ['phone', 'email', 'in-person'] as const;
-export type NoticeChannel = (typeof NOTICE_CHANNELS)[number];
+export type RecordableNoticeChannel = (typeof NOTICE_CHANNELS)[number];
+/** ADR-945 Φ3α — ό,τι **αποθηκεύεται**: και το κανάλι της πλατφόρμας, που το γράφει μόνο ο μειωτής (ποτέ στο μενού). */
+export const STORED_NOTICE_CHANNELS = [...NOTICE_CHANNELS, PLATFORM_NOTICE_CHANNEL] as const;
+export type NoticeChannel = (typeof STORED_NOTICE_CHANNELS)[number];
 
 /** Το μέγιστο μήκος σημείωσης απόφασης / αριθμού μητρώου — αμυντικά, όχι πολιτική. */
 export const ISSUANCE_NOTE_MAX = 500;
@@ -229,11 +232,14 @@ export type IssuanceAction =
       readonly ownerAttestation: IssuanceOwnerAttestation | null;
     }
   /** `invitationId` ≠ `null` ⇔ στάλθηκε μήνυμα με σύνδεσμο (επιτρέπεται και ξανά, από `sent`). */
-  | { readonly kind: 'notify'; readonly channel: NoticeChannel; readonly invitationId: string | null; readonly note: string | null; readonly verification: LinkVerification | null }
+  | { readonly kind: 'notify'; readonly channel: RecordableNoticeChannel; readonly invitationId: string | null; readonly note: string | null; readonly verification: LinkVerification | null }
   /** `accepted` μόνο σε παλιά ανάθεση (§27)· στη ροή §42 «δεν δίνω προσφορά» ή «αποσύρομαι» = `declined`. */
   | { readonly kind: 'respond'; readonly outcome: 'accepted' | 'declined'; readonly note: string | null }
-  /** §42 — προσφορά (από `sent`) ή η μία αναθεώρηση μετά την αυτοψία (από `accepted`). */
-  | { readonly kind: 'quote'; readonly terms: QuoteTerms }
+  /**
+   * §42 — προσφορά (από `sent`) ή η μία αναθεώρηση μετά την αυτοψία (από `accepted`). ADR-945 Φ3α — `signerUid`: το μέλος
+   * που υπογράφει· **μόνο** όταν προσφέρει μέλος γραφείου βιτρίνας (αλλιώς απόν).
+   */
+  | { readonly kind: 'quote'; readonly terms: QuoteTerms; readonly signerUid?: string }
   /** §42 — το παραστατικό της εγκεκριμένης τιμής· μόνο το γραφείο, μόνο ίδιο σύνολο. */
   | { readonly kind: 'record-receipt'; readonly mark: string; readonly issuedOn: string; readonly totalMinor: number }
   /** §45 Φ2 — ορισμός ή αλλαγή (με αιτιολογία) της προθεσμίας παράδοσης· μόνο το γραφείο, μόνο μετά την ανάθεση. */
@@ -282,7 +288,8 @@ export type IssuanceReduction =
   | { readonly ok: false; readonly refusal: IssuanceRefusalReason };
 
 /** Νέα πρόταση· ο υπεύθυνος αυτοψίας του ίδιου ανοιχτού κύκλου μένει (γεγονός του ακινήτου, όχι του επαγγελματία). */
-function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: string, nowIso: string, inspectionContacts: readonly IssuanceInspectionContactEntry[]): IssuanceAssignmentRecord {
+function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, actor: Extract<IssuanceActor, { kind: 'owner' | 'office' }>, inspectionContacts: readonly IssuanceInspectionContactEntry[]): IssuanceAssignmentRecord {
+  const { uid, nowIso } = actor;
   return {
     professional: action.professional,
     credential: action.credential,
@@ -290,7 +297,7 @@ function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: str
     proposedByUid: uid,
     approvalRequest: null,
     decision: null,
-    notice: null,
+    notice: platformNoticeOf(actor),
     response: null,
     quote: null,
     receipt: null,
@@ -305,7 +312,10 @@ function proposed(action: Extract<IssuanceAction, { kind: 'propose' }>, uid: str
 }
 
 function sameProposal(state: IssuanceState, action: Extract<IssuanceAction, { kind: 'propose' }>): boolean {
-  if (state.kind !== 'open' || state.stage !== 'proposed') return false;
+  // ADR-945 Φ3α — η πρόταση του ιδιώτη φτάνει ήδη στο `sent` (μήνυμα της πλατφόρμας)· η ίδια πρόσκληση ξανά = ιδεμποτής.
+  const unsent = state.kind === 'open'
+    && (state.stage === 'proposed' || (state.stage === 'sent' && state.record.notice?.channel === PLATFORM_NOTICE_CHANNEL));
+  if (!unsent) return false;
   const { professional, credential } = state.record;
   return sameProfessional(professional, action.professional)
     && credential.qualification === action.credential.qualification
@@ -352,7 +362,7 @@ function quoted(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: 
   const revising = stage === 'accepted';
   if (revising && (record.quote === null || !canReviseQuote(record.quote))) return { ok: false, refusal: 'terms-refused' };
   if (!termsAccepted(action.terms, actor.nowIso)) return { ok: false, refusal: 'terms-refused' };
-  const submission = quoteSubmissionOf(record.notice, actor);
+  const submission = quoteSubmissionOf(record, actor, action.signerUid ?? null);
   if (submission === null) return { ok: false, refusal: 'actor-refused' };
   return { ok: true, record: { ...record, quote: nextQuoteOf(record.quote, action.terms, submission, actor.nowIso) }, changed: true };
 }
@@ -361,7 +371,7 @@ function quoted(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: 
 function responded(record: IssuanceAssignmentRecord, stage: IssuanceStage, action: Extract<AdvancingAction, { kind: 'respond' }>, actor: IssuanceActor): IssuanceReduction {
   const legacy = isLegacyIssuance(record);
   if (legacy ? stage !== 'sent' : action.outcome === 'accepted') return { ok: false, refusal: 'transition-refused' };
-  const basis = responseBasisOf(record.notice, actor);
+  const basis = responseBasisOf(record, actor);
   if (basis === null) return { ok: false, refusal: 'actor-refused' };
   return { ok: true, record: { ...record, response: { ...basis, outcome: action.outcome, note: action.note, at: actor.nowIso } }, changed: true };
 }
@@ -465,11 +475,13 @@ export function reduceIssuance(
   const state = issuanceStateOf(current, latestIssuedOn);
   if (action.kind === 'propose') {
     if (actor.kind !== 'office' && actor.kind !== 'owner') return { ok: false, refusal: 'actor-refused' };
+    // ADR-945 Δ4: ο ιδιώτης δεν έχει βιβλίο επαφών — προσκαλεί **μόνο** γραφείο βιτρίνας (το κανάλι του είναι η πλατφόρμα).
+    if (actor.kind === 'owner' && action.professional.kind !== 'workspace') return { ok: false, refusal: 'actor-refused' };
     if (!qualifiesFor(kind, action.credential.qualification)) return { ok: false, refusal: 'unqualified' };
     if (sameProposal(state, action) && current !== null) return { ok: true, record: current, changed: false };
     if (!canProposeIssuance(state)) return { ok: false, refusal: 'transition-refused' };
     const carried = state.kind === 'open' ? state.record.inspectionContacts : [];
-    return { ok: true, record: proposed(action, actor.uid, actor.nowIso, carried), changed: true };
+    return { ok: true, record: proposed(action, actor, carried), changed: true };
   }
   if (isIssuanceAdvanceAction(action)) return reduceIssuanceAdvance(current, action, actor); // ADR-943
   // «Ποιος» πριν από «από πού»: ο σύνδεσμος δεν κάνει πράξη του γραφείου, η συμμετοχή μόνο αίτημα — σε **κανένα** στάδιο.

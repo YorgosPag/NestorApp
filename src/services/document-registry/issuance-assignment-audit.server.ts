@@ -131,7 +131,7 @@ function performerOf(writer: IssuanceWriter): string {
     case 'link': return `issuance-link:${writer.invitationId}`;
     // ADR-943 §5.9 — ο δράστης ενός γεγονότος χρημάτων είναι ο πάροχος (`provider:everypay`), όπως στο τιμολόγιο.
     case 'system': return `provider:${writer.provider}`;
-    case 'office': case 'engagement': case 'owner': return writer.uid;
+    case 'office': case 'engagement': case 'owner': case 'workspace-member': return writer.uid;
   }
 }
 

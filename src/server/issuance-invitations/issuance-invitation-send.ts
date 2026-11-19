@@ -184,6 +184,6 @@ export async function sendIssuanceMessage(db: Firestore, sender: IssuanceSender,
   const delivery = await deliverAll(draft, minted.invitation, minted.token);
   // §31 — οι υπενθυμίσεις ξεκινούν στην ίδια εγγραφή με την παράδοση, και μόνο αν το μήνυμα έφυγε (ο γραφέας το κρίνει).
   const reminders = body.sendReminders ? { expiresAt: minted.invitation.expiresAt } : null;
-  await recordIssuanceDelivery(db, { companyId: sender.companyId, propertyId: body.propertyId, documentKind: body.documentKind, invitationId: minted.invitation.id }, delivery, reminders);
+  await recordIssuanceDelivery(db, { ledger: officeLedger(sender.companyId), propertyId: body.propertyId, documentKind: body.documentKind, invitationId: minted.invitation.id }, delivery, reminders);
   return { ok: true, stage: outcome.stage, delivery, accessCode: minted.accessCode };
 }

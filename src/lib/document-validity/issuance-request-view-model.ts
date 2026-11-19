@@ -20,6 +20,7 @@
 
 import { DOCUMENT_KINDS, documentKindSpec, type DocumentKind } from '@/config/document-validity/document-validity';
 
+import { PLATFORM_NOTICE_CHANNEL } from './issuance-actor';
 import type { IssuanceAssignmentRecord } from './issuance-assignment';
 import { reduceIssuanceRequest, type IssuanceRequestRefusal } from './issuance-bidding';
 import type { IssuanceBiddingView, IssuanceBidView } from './issuance-bidding-request';
@@ -166,7 +167,8 @@ function quoteEntry(record: IssuanceAssignmentRecord): BidTimelineEntry | null {
 export function bidTimelineOf(record: IssuanceAssignmentRecord): readonly BidTimelineEntry[] {
   const entries: (BidTimelineEntry | null)[] = [
     { kind: 'requested', at: record.proposedAt },
-    record.notice === null ? null : { kind: 'sent', at: record.notice.at },
+    // ADR-945 Φ3α — στο κανάλι της πλατφόρμας η πρόταση **είναι** η αποστολή: μία γραμμή, όχι δύο ταυτόχρονες.
+    record.notice === null || record.notice.channel === PLATFORM_NOTICE_CHANNEL ? null : { kind: 'sent', at: record.notice.at },
     quoteEntry(record),
     decisionEntry(record),
     record.response === null ? null : { kind: record.response.outcome, at: record.response.at },

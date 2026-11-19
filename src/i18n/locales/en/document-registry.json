@@ -299,7 +299,8 @@
       "in-person": "in person",
       "phone": "by phone",
       "email": "by email",
-      "written": "in writing (signed)"
+      "written": "in writing (signed)",
+      "nestor-inbox": "in the Nestor App inbox"
     },
     "fit": {
       "covers": "{scope}: {grade} — covers this property",

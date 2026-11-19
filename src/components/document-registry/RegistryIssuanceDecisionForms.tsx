@@ -22,7 +22,7 @@ import {
   ISSUANCE_NOTE_MAX,
   NOTICE_CHANNELS,
   type InstructionChannel,
-  type NoticeChannel,
+  type RecordableNoticeChannel,
 } from '@/lib/document-validity/issuance-assignment';
 import { conveyanceToday } from '@/lib/conveyance/conveyance-calendar';
 import { deliveryDueFromApproval, deliveryMissesSigning } from '@/lib/document-validity/issuance-delivery-due';
@@ -115,7 +115,7 @@ export function DecisionForm({ view, close, professionalName, leadId, quoteRevis
 export function NoticeForm({ view, close }: IssuanceFormProps): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const actions = useIssuanceAssignmentActions();
-  const [channel, setChannel] = useState<NoticeChannel | null>(null);
+  const [channel, setChannel] = useState<RecordableNoticeChannel | null>(null);
   const submit = () => {
     if (actions === null || channel === null) return;
     close();

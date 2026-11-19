@@ -35,9 +35,12 @@ function step(record: IssuanceAssignmentRecord | null, action: IssuanceAction, a
   return reduced.record;
 }
 
-/** Ως το `quoted`: η ενημέρωση και η προσφορά καταγράφονται εδώ από γραφείο — η πρόσκληση του ιδιώτη έρχεται στη Φ3. */
+/** ADR-945 Φ3α — ο προσκεκλημένος γραφείου βιτρίνας: μέλος του, συνδεδεμένο. */
+const MEMBER: IssuanceActor = { kind: 'workspace-member', uid: 'uid_member', companyId: 'comp_pro', nowIso: NOW };
+
+/** Ως το `quoted`: η πρόσκληση του ιδιώτη φτάνει στο `sent` (πλατφόρμα) και προσφέρει μέλος του γραφείου βιτρίνας. */
 function quoted(): IssuanceAssignmentRecord {
-  return step(step(step(null, PROPOSE, OWNER), NOTIFY, OFFICE), QUOTE, OFFICE);
+  return step(step(null, PROPOSE, OWNER), { kind: 'quote', terms: TERMS, signerUid: 'uid_engineer' }, MEMBER);
 }
 
 function refusalOf(record: IssuanceAssignmentRecord | null, action: IssuanceAction, actor: IssuanceActor): string | null {

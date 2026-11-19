@@ -46,6 +46,7 @@ import { readDocumentRegistry } from '@/services/document-registry/document-regi
 import type { DocumentRegistryResponse } from '@/services/document-registry/document-registry.types';
 import type { DocumentIssuanceAssignment } from '@/services/document-registry/issuance-assignment-schema';
 import { readDueDeliveryReminders, recordDeliveryReminder } from '@/services/document-registry/issuance-assignments.server';
+import { officeLedger } from '@/services/document-registry/issuance-ledger';
 import { buildIssuanceEmail } from '@/services/email-templates/issuance-invitation-email';
 import { DEFAULT_NOTIFICATION_TIMEZONE } from '@/services/user-notification-settings/user-notification-settings.types';
 
@@ -123,7 +124,7 @@ async function deliverDeliveryReminder(db: Firestore, subject: ReminderSubject):
 }
 
 function targetOf(assignment: DocumentIssuanceAssignment) {
-  return { companyId: assignment.companyId, propertyId: assignment.propertyId, documentKind: assignment.documentKind };
+  return { ledger: officeLedger(assignment.companyId), propertyId: assignment.propertyId, documentKind: assignment.documentKind };
 }
 
 /** Μία ανάθεση: κρίση → απόσυρση, αναμονή ή υπενθύμιση. Πετά μόνο σε βλάβη βάσης (η σάρωση το μετρά). */

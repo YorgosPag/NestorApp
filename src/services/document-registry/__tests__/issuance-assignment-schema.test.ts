@@ -105,3 +105,31 @@ describe('ADR-945 §7.2 — η προσφορά αιτήματος στο σύν
     expect(parseOwnedIssuanceAssignment({ ...OWNED, decision: orphan })).toBeNull();
   });
 });
+
+describe('ADR-945 Φ3α — το γραφείο βιτρίνας στο σύνορο του δίσκου', () => {
+  const SHOWCASE_BID = { ...BASE, userId: 'uid_private', professional: { kind: 'workspace', companyId: 'comp_pro' }, requestId: 'disr_1', cycle: 1 };
+  const NOTICE = {
+    channel: 'nestor-inbox', at: BASE.updatedAt, byUid: 'uid_private', invitationId: null, verification: null,
+    note: null, delivery: null, reminders: null,
+  };
+  const TERMS = {
+    basis: 'firm', amountMinor: 12_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31',
+    scope: ['issuance'], note: null, deliveryBusinessDays: 5, advance: null,
+  };
+
+  it('Β1 μήνυμα της πλατφόρμας + προσφορά μέλους (με υπογράφοντα) διαβάζονται όπως γράφτηκαν', () => {
+    const submission = { by: 'workspace-member', uid: 'uid_member', companyId: 'comp_pro', signerUid: 'uid_engineer' };
+    const quote = { ...TERMS, revision: 1, at: BASE.updatedAt, submission, previous: null };
+    const parsed = parseOwnedIssuanceAssignment({ ...SHOWCASE_BID, notice: NOTICE, quote });
+    expect(parsed?.notice?.channel).toBe('nestor-inbox');
+    expect(parsed?.quote?.submission).toEqual(submission);
+  });
+
+  it('Β2 άρνηση μέλους διαβάζεται · 🔴 προσφορά μέλους ΧΩΡΙΣ υπογράφοντα ⇒ `null` (fail-closed)', () => {
+    const response = { basis: 'workspace-member', uid: 'uid_member', companyId: 'comp_pro', outcome: 'declined', note: null, at: BASE.updatedAt };
+    expect(parseOwnedIssuanceAssignment({ ...SHOWCASE_BID, notice: NOTICE, response })?.response).toMatchObject({ basis: 'workspace-member' });
+    const submission = { by: 'workspace-member', uid: 'uid_member', companyId: 'comp_pro' };
+    const unsigned = { ...TERMS, revision: 1, at: BASE.updatedAt, submission, previous: null };
+    expect(parseOwnedIssuanceAssignment({ ...SHOWCASE_BID, notice: NOTICE, quote: unsigned })).toBeNull();
+  });
+});

@@ -64,25 +64,20 @@ const QUOTE_TERMS: QuoteTermsBody = {
 };
 
 /**
- * Φέρνει μια προσφορά στο `quoted` μέσα από τον ΕΝΑ γραφέα — η προσφορά με σύνδεσμο του επαγγελματία είναι Φ3· εδώ
- * μας ενδιαφέρει μόνο ότι η ανάθεση βρίσκει νικήτρια σε `quoted`.
+ * Φέρνει μια προσφορά στο `quoted` μέσα από τον ΕΝΑ γραφέα — ADR-945 Φ3α: η πρόσκληση του ιδιώτη φτάνει ήδη στο `sent`
+ * (κανάλι της πλατφόρμας) και προσφέρει **μέλος του γραφείου βιτρίνας**, με το μέλος που υπογράφει.
  */
-async function toQuoted(bidId: string): Promise<void> {
-  const base = {
+async function toQuoted(companyId: string): Promise<void> {
+  const bidId = bidOf(companyId);
+  const quoted = await writeIssuanceAction(db(), {
     ledger: { kind: 'owned', owner: OWNER_LEDGER, assignmentId: bidId, requestId: REQUEST_ID, cycle: 1 },
     property: { id: 'ownp_me', scope: 'owner-property', name: 'Το σπίτι μου' },
     documentKind: PEA, latestIssuedOn: null, names: {}, nowIso: NOW.toISOString(),
-  } as const;
-  const notified = await writeIssuanceAction(db(), {
-    ...base, writer: { kind: 'office', uid: 'user_pro', name: null, expectedStage: 'proposed' },
-    action: { kind: 'notify', channel: 'phone', invitationId: null, note: null, verification: null },
-  });
-  expect(notified).toMatchObject({ ok: true, stage: 'sent' });
-  const quoted = await writeIssuanceAction(db(), {
-    ...base, writer: { kind: 'office', uid: 'user_pro', name: null, expectedStage: 'sent' },
-    action: { kind: 'quote', terms: quoteTermsOf(QUOTE_TERMS, null) },
+    writer: { kind: 'workspace-member', uid: 'user_pro', companyId, name: null, expectedStage: 'sent' },
+    action: { kind: 'quote', terms: quoteTermsOf(QUOTE_TERMS, null), signerUid: 'user_engineer' },
   });
   expect(quoted).toMatchObject({ ok: true, stage: 'quoted' });
+  expect(assignments()[bidId]).toMatchObject({ quote: { submission: { by: 'workspace-member', uid: 'user_pro', companyId, signerUid: 'user_engineer' } } });
 }
 
 beforeEach(() => {
@@ -165,10 +160,10 @@ describe('award — ΑΤΟΜΙΚΗ: νικήτρια + «δεν επιλέχθη
     await invite('comp_pro1');
     await invite('comp_pro2', 1);
     await invite('comp_pro3', 1);
-    await toQuoted(bidOf('comp_pro1'));
+    await toQuoted('comp_pro1');
   }
   const stages = (over: Readonly<Record<string, IssuanceStage | null>> = {}) => ({
-    [bidOf('comp_pro1')]: 'quoted' as const, [bidOf('comp_pro2')]: 'proposed' as const, [bidOf('comp_pro3')]: 'proposed' as const, ...over,
+    [bidOf('comp_pro1')]: 'quoted' as const, [bidOf('comp_pro2')]: 'sent' as const, [bidOf('comp_pro3')]: 'sent' as const, ...over,
   });
   const award = (expectedStages = stages()) =>
     act({ action: 'award', ...TARGET, bidId: bidOf('comp_pro1'), expectedCycle: 1, quoteRevision: 1, expectedStages });
@@ -187,7 +182,7 @@ describe('award — ΑΤΟΜΙΚΗ: νικήτρια + «δεν επιλέχθη
   it('🔑 μία προσφορά άλλαξε από ό,τι είδε ⇒ `stale`, και ΚΑΜΙΑ από τις τρεις δεν γράφτηκε (all-or-nothing)', async () => {
     await threeBids();
     const before = JSON.stringify([assignments(), requests()]);
-    expect(await award(stages({ [bidOf('comp_pro3')]: 'sent' }))).toEqual({ ok: false, refusal: 'stale' });
+    expect(await award(stages({ [bidOf('comp_pro3')]: 'proposed' }))).toEqual({ ok: false, refusal: 'stale' });
     expect(JSON.stringify([assignments(), requests()])).toBe(before);
   });
 
@@ -200,7 +195,7 @@ describe('award — ΑΤΟΜΙΚΗ: νικήτρια + «δεν επιλέχθη
   it('νικήτρια που δεν είναι σε `quoted` ⇒ άρνηση του μειωτή, τίποτα δεν γράφεται', async () => {
     await invite('comp_pro1');
     await invite('comp_pro2', 1);
-    const expectedStages = { [bidOf('comp_pro1')]: 'proposed' as const, [bidOf('comp_pro2')]: 'proposed' as const };
+    const expectedStages = { [bidOf('comp_pro1')]: 'sent' as const, [bidOf('comp_pro2')]: 'sent' as const };
     expect(await act({ action: 'award', ...TARGET, bidId: bidOf('comp_pro1'), expectedCycle: 1, quoteRevision: 1, expectedStages }))
       .toEqual({ ok: false, refusal: 'transition-refused' });
     expect(requests()[REQUEST_ID]).toMatchObject({ award: null });
@@ -222,7 +217,8 @@ describe('readIssuanceRequest — ο ΙΔΙΟΣ κριτής με την πρά�
     const reading = await readIssuanceRequest(db(), OWNER, 'ownp_me', PEA, NOW);
     expect(reading).toMatchObject({
       ok: true,
-      view: { request: { cycle: 1 }, bids: [{ bidId: bidOf('comp_pro1'), stage: 'proposed' }] },
+      // ADR-945 Φ3α — η πρόσκληση του ιδιώτη ΕΙΝΑΙ η αποστολή (κανάλι της πλατφόρμας).
+      view: { request: { cycle: 1 }, bids: [{ bidId: bidOf('comp_pro1'), stage: 'sent' }] },
     });
   });
 });

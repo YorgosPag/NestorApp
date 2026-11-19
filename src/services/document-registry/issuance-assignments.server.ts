@@ -111,6 +111,11 @@ export type IssuanceWriter =
    */
   | { readonly kind: 'owner'; readonly uid: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null }
   /**
+   * ADR-945 Φ3α — μέλος του γραφείου βιτρίνας, για λογαριασμό του γραφείου του. Την ιδιότητα **ενεργού μέλους** την
+   * αποδεικνύει ο καλών πριν από εδώ· ότι η προσφορά απευθύνεται σε **αυτό** το γραφείο την κρίνει ο μειωτής. CAS όπως το γραφείο.
+   */
+  | { readonly kind: 'workspace-member'; readonly uid: string; readonly companyId: string; readonly name: string | null; readonly expectedStage: IssuanceStage | null }
+  /**
    * ADR-943 §5.9 — ο διακομιστής, **αφού** διάβασε την αλήθεια στο API του παρόχου (Κ-8). **Καμία CAS**: η δέσμευσή του
    * είναι η αναφορά του παρόχου, που την κρίνει ο μειωτής (ιδεμποτία · ποσό · στάδιο). `provider` = ο δράστης στο ίχνος.
    */
@@ -186,7 +191,7 @@ export interface StagedIssuanceWrite {
 
 const NOTHING_TO_WRITE = { commit: (): void => undefined, audit: async (): Promise<void> => undefined };
 
-/** Η CAS του γραφείου, της συμμετοχής και του ιδιώτη — ο σύνδεσμος και το σύστημα δεσμεύονται αλλού (στον μειωτή). */
+/** Η CAS του γραφείου, της συμμετοχής, του ιδιώτη και του μέλους βιτρίνας — ο σύνδεσμος και το σύστημα δεσμεύονται αλλού (στον μειωτή). */
 function casHolds(writer: IssuanceWriter, previousStage: IssuanceStage | null): boolean {
   return writer.kind === 'link' || writer.kind === 'system' || previousStage === writer.expectedStage;
 }
@@ -197,6 +202,7 @@ function actorOf(writer: IssuanceWriter, nowIso: string): IssuanceActor {
     case 'link': return { kind: 'link', invitationId: writer.invitationId, verifiedBy: writer.verifiedBy, nowIso };
     case 'engagement': return { kind: 'engagement', engagementId: writer.engagementId, uid: writer.uid, nowIso };
     case 'owner': return { kind: 'owner', uid: writer.uid, nowIso };
+    case 'workspace-member': return { kind: 'workspace-member', uid: writer.uid, companyId: writer.companyId, nowIso };
     case 'system': return { kind: 'system', source: writer.source, nowIso };
   }
 }
@@ -240,9 +246,12 @@ export async function writeIssuanceAction(db: Firestore, write: IssuanceWrite): 
   return staged.outcome;
 }
 
-/** Ποια ανάθεση — (γραφείο, ακίνητο, είδος): η ΜΙΑ ταυτότητα. */
+/**
+ * Ποια ανάθεση — (βιβλίο, ακίνητο, είδος): η ΜΙΑ ταυτότητα, ίδια με τον γραφέα (`ledgerAssignmentIdOf`).
+ * ADR-945 Φ3 — ήταν (γραφείο, ακίνητο, είδος) ⇒ δομικά τυφλή στις προσφορές του προσωπικού βιβλίου (§7.3, δηλωμένη απόκλιση).
+ */
 export interface IssuanceAssignmentTarget {
-  readonly companyId: string;
+  readonly ledger: IssuanceLedger;
   readonly propertyId: string;
   readonly documentKind: DocumentKind;
 }
@@ -257,13 +266,17 @@ export interface IssuanceMessageTarget extends IssuanceAssignmentTarget {
  * τον μειωτή και **δεν** γράφει ιστορικό: δεν αλλάζει στάδιο ούτε μπάλα. `update` ⇒ `null` = τίποτα να γραφτεί. Πετά σε βλάβη.
  */
 async function updateMessageTelemetry(db: Firestore, target: IssuanceAssignmentTarget, update: (record: IssuanceAssignmentRecord) => IssuanceAssignmentRecord | null): Promise<boolean> {
-  const ref = assignmentRefOf(db, target.companyId, target.propertyId, target.documentKind);
+  const ref = assignmentsCollection(db).doc(ledgerAssignmentIdOf(target.ledger, target.propertyId, target.documentKind));
+  const owner = ledgerOwnerOf(target.ledger);
   return db.runTransaction(async (tx) => {
-    const stored = parseIssuanceAssignment((await tx.get(ref)).data());
-    if (stored === null || !isOwnedByCompany(stored, target.companyId)) return false;
+    const stored = parseOwnedIssuanceAssignment((await tx.get(ref)).data());
+    if (stored === null || !isOwnedByCustody(custodyOnly(stored.owner), owner)) return false;
     const next = update(issuanceRecordOf(stored));
     if (next === null) return false;
-    tx.set(ref, { ...stored, ...next });
+    // Το σχήμα του δίσκου (`StoredIssuanceAssignment`): ο κάτοχος ως επίπεδο πεδίο, όπως τον γράφει ο γραφέας.
+    const { owner: storedOwner, ...identity } = stored;
+    const document: StoredIssuanceAssignment = { ...identity, ...next, ...custodyOnly(storedOwner) };
+    tx.set(ref, document);
     return true;
   });
 }

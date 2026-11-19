@@ -20,8 +20,8 @@ import {
   ISSUANCE_CANCELLATION_REASONS,
   ISSUANCE_NOTE_MAX,
   LINK_VERIFICATIONS,
-  NOTICE_CHANNELS,
   REGISTRY_NUMBER_MAX,
+  STORED_NOTICE_CHANNELS,
   type IssuanceAssignmentRecord,
 } from '@/lib/document-validity/issuance-assignment';
 import { ISSUANCE_DELIVERY_OUTCOMES } from '@/lib/document-validity/issuance-delivery';
@@ -123,6 +123,8 @@ const quoteRevisionSchema = z.object({
   submission: z.discriminatedUnion('by', [
     z.object({ by: z.literal('professional-link'), invitationId: nonEmpty }),
     z.object({ by: z.literal('recorded'), recordedByUid: nonEmpty }),
+    // ADR-945 Φ3α — μέλος του γραφείου βιτρίνας, με το μέλος που υπογράφει.
+    z.object({ by: z.literal('workspace-member'), uid: nonEmpty, companyId: nonEmpty, signerUid: nonEmpty }),
   ]),
 });
 
@@ -179,6 +181,7 @@ const inspectionContactsSchema = z.array(z.object({
 const responseSchema = z.discriminatedUnion('basis', [
   z.object({ basis: z.literal('recorded'), recordedByUid: nonEmpty }),
   z.object({ basis: z.literal('professional-link'), invitationId: nonEmpty, verifiedBy: verification }),
+  z.object({ basis: z.literal('workspace-member'), uid: nonEmpty, companyId: nonEmpty }),
 ]).and(z.object({ outcome: z.enum(['accepted', 'declined']), note, at: nonEmpty }));
 
 /** §45.20 Φ6γ — έγγραφα πριν από τη Φ6γ δεν είχαν αιτήματα αλλαγής προθεσμίας: «κανένα», που ήταν και η αλήθεια τους. */
@@ -220,7 +223,7 @@ const assignmentSchema = z.object({
   }).nullable(),
   decision: decisionSchema.nullable(),
   notice: z.object({
-    channel: z.enum(NOTICE_CHANNELS), at: nonEmpty, byUid: nonEmpty, invitationId: nonEmpty.nullable(),
+    channel: z.enum(STORED_NOTICE_CHANNELS), at: nonEmpty, byUid: nonEmpty, invitationId: nonEmpty.nullable(),
     verification: z.enum(LINK_VERIFICATIONS).nullable().default(null), note, delivery: deliverySchema,
     reminders: remindersSchema,
   }).nullable(),
