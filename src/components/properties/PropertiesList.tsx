@@ -8,6 +8,12 @@ import { PropertiesListHeader } from './list/PropertiesListHeader';
 import { PropertyListCard } from '@/domain';
 import { CompactToolbar, propertiesConfig, type SortField } from '@/components/core/CompactToolbar';
 import { PropertyTypeQuickFilters } from './PropertyTypeQuickFilters';
+import { ListingPresenceQuickFilters } from './ListingPresenceQuickFilters';
+import {
+  countListingPresences,
+  listingPresenceOf,
+  type ListingPresence,
+} from '@/lib/listings/listing-presence';
 import type { Property } from '@/types/property-viewer';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
@@ -55,6 +61,10 @@ export function PropertiesList({
 
   // 🏢 ENTERPRISE: Quick filter state for unit types (local_4.log - list-scoped filtering)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  // ADR-777 §8.103 — «δημοσιεύθηκε;» ως φίλτρο της λίστας, από τον ΕΝΑ κριτή παρουσίας.
+  const [selectedPresence, setSelectedPresence] = useState<ListingPresence | null>(null);
+  // Οι μετρητές μετρούν **όλη** τη λίστα (όχι τη φιλτραρισμένη): ο αριθμός δίπλα σε κάθε επιλογή λέει πόσα θα δεις.
+  const presenceCounts = useMemo(() => countListingPresences(units), [units]);
 
   const toggleFavorite = (propertyId: string) => {
     setFavorites(prev => 
@@ -67,6 +77,8 @@ export function PropertiesList({
   // 🏢 ENTERPRISE: Filter units using centralized search
   const filteredUnits = useMemo(() => {
     return units.filter(unit => {
+      if (selectedPresence !== null && listingPresenceOf(unit) !== selectedPresence) return false;
+
       // Type filter (quick filters - list-scoped)
       if (selectedTypes.length > 0) {
         const propertyType = (unit.type || '').toLowerCase();
@@ -107,7 +119,7 @@ export function PropertiesList({
         searchTerm
       );
     });
-  }, [units, selectedTypes, searchTerm]);
+  }, [units, selectedTypes, selectedPresence, searchTerm]);
 
   // Η τιμή της στήλης ανά ακίνητο· η ΣΥΓΚΡΙΣΗ ανήκει στο `compareSortValues` (κενά τελευταία, ελληνική σειρά).
   // ❌ Η τιμή πώλησης ΔΕΝ είναι στήλη εδώ (εμπορικό δεδομένο — διαχωρισμός τομέων, PR1 Units List Cleanup).
@@ -178,6 +190,13 @@ export function PropertiesList({
         selectedTypes={selectedTypes}
         onTypeChange={setSelectedTypes}
         compact
+      />
+
+      <ListingPresenceQuickFilters
+        selected={selectedPresence}
+        onChange={setSelectedPresence}
+        counts={presenceCounts}
+        total={units.length}
       />
 
       <ScrollArea className="flex-1">

@@ -377,6 +377,18 @@
     "network": "Κλειστή — επαγγελματικό δίκτυο",
     "public": "Δημόσια"
   },
+  "listingPresence": {
+    "public": "Στο κοινό",
+    "network": "Μόνο στο δίκτυο",
+    "custodians": "Μόνο διαχειριστές",
+    "unlisted": "Εκτός αγγελίας",
+    "settled": "Αγγελία έκλεισε",
+    "filter": {
+      "ariaLabel": "Φίλτρο παρουσίας αγγελίας",
+      "all": "Όλα",
+      "allTooltip": "Όλα τα ακίνητα, με ή χωρίς αγγελία"
+    }
+  },
   "privateMarketingStanding": {
     "absent": "Χωρίς συναίνεση",
     "requested": "Αίτημα γραφείου",

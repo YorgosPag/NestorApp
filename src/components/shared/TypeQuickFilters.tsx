@@ -85,6 +85,17 @@ export interface TypeQuickFiltersProps {
   label?: string;
   /** Aria label for accessibility */
   ariaLabel?: string;
+  /**
+   * Πόσα στοιχεία ανήκουν σε κάθε επιλογή (κλειδί = `option.value`, και `all` για το σύνολο) — πρότυπο Shopify /
+   * Gmail: ο μετρητής απαντά «πόσα;» **πριν** το κλικ. Επιλογή χωρίς γραμμή ⇒ κανένας μετρητής (ποτέ «0» από εικασία).
+   */
+  counts?: Readonly<Record<string, number>>;
+  /**
+   * Ο μεταφραστής των ετικετών των επιλογών, όταν ζουν **έξω** από τα κοινά namespaces. Ο καλών τον παίρνει από το
+   * **δικό του** `useTranslation(<στατική λίστα>)` — έτσι το namespace δηλώνεται εκεί όπου χρειάζεται (CHECK 3.36
+   * §8.1) και καμία κλήση `useTranslation` εδώ δεν γίνεται μη στατική (CHECK 3.34). Λείπει ⇒ οι κοινοί, όπως πάντα.
+   */
+  translateOption?: (key: string) => string;
 }
 
 // =============================================================================
@@ -157,6 +168,8 @@ export function TypeQuickFilters({
   compact = false,
   label,
   ariaLabel
+  counts,
+  translateOption,
 }: TypeQuickFiltersProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(COMMON_NAMESPACES);
@@ -214,8 +227,13 @@ export function TypeQuickFilters({
         const Icon = option.icon;
         const active = isActive(option.value);
         // 🏢 ENTERPRISE: Translate labels and tooltips via i18n
-        const translatedLabel = t(option.label);
-        const translatedTooltip = t(option.tooltip);
+        // ⚠️ Η κλήση `t(option.…)` μένει ΟΡΑΤΗ εδώ: ο εξαγωγέας του shell slice (CHECK 3.34) τη διαβάζει ως
+        //    δυναμικό κλειδί και κρατά τα κοινά namespaces στις διαδρομές που τη χρησιμοποιούν. Με ψευδώνυμο
+        //    (`const tOption = translateOption ?? t`) έπεφταν σιωπηλά από 7 διαδρομές προμηθειών (μετρημένο).
+        const translatedLabel = translateOption ? translateOption(option.label) : t(option.label);
+        const translatedTooltip = translateOption ? translateOption(option.tooltip) : t(option.tooltip);
+        const count = counts?.[option.value];
+        const countSuffix = count === undefined ? '' : ` (${count})`;
 
         return (
           <Tooltip key={option.value}>
@@ -236,7 +254,7 @@ export function TypeQuickFilters({
                         'border-muted-foreground/20'
                       )
                 )}
-                aria-label={`${t('filters.filterBy')} ${translatedTooltip}`}
+                aria-label={`${t('filters.filterBy')} ${translatedTooltip}${countSuffix}`}
               >
                 <Icon
                   className={cn(
@@ -250,10 +268,15 @@ export function TypeQuickFilters({
                 {compact && option.value === 'all' && (
                   <span className="ml-1">{t('filters.all')}</span>
                 )}
+                {count !== undefined && (
+                  <span aria-hidden="true" className={cn('ml-1 tabular-nums', colors.text.muted)}>
+                    {count}
+                  </span>
+                )}
               </ToggleButton>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              {translatedTooltip}
+              {translatedTooltip}{countSuffix}
             </TooltipContent>
           </Tooltip>
         );

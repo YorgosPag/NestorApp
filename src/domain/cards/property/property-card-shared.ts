@@ -27,8 +27,7 @@ import {
   type PriceRole,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
-import type { MarketingAudience } from '@/constants/marketing-audiences';
-import { offeredAudienceOf } from '@/services/listings/public-listing-projection';
+import { listingPresenceOf, listingPresenceSpec } from '@/lib/listings/listing-presence';
 import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
 import { badgeFromSpec, commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import { resolveCommercialStatus } from '@/constants/commercial-statuses';
@@ -55,8 +54,8 @@ const RETIRED_BADGE: Readonly<Record<RetiredKind, { labelKey: string; variant: G
 
 /**
  * Assemble the Property badge list: primary status badge (resolved per view) +
- * the ONE commercial status badge (`buildPropertyStatusBadge`) + optional audience badge
- * (`buildListingAudienceBadge`).
+ * the ONE commercial status badge (`buildPropertyStatusBadge`), led by the listing-presence badge
+ * (`buildListingPresenceBadge`).
  * Shared so Grid/List badge memos stay tiny.
  *
  * 🔴 **Αποσυρμένο ακίνητο ΔΕΝ είναι προσφορά.** Όσο είναι σε κάδο ή αρχείο, προηγείται η ετικέτα
@@ -78,9 +77,12 @@ export function buildPropertyBadges(
   // Το εμπορικό σήμα **είναι** το σήμα της κεφαλίδας (`buildPropertyStatusBadge`, και οι επτά καταστάσεις).
   // Ως τις 2026-10-08 ένας δεύτερος κατασκευαστής εδώ έκοβε με `isEditorCommercialStatus`, και κρατημένο /
   // πωλημένο / ενοικιασμένο ακίνητο έγραφε μόνο τη φυσική του κατάσταση (Ν7 · ADR-329 §3.9).
-  // Το σήμα κοινού ακολουθεί το ακίνητο σε κάθε επιφάνεια του γραφείου (ADR-777 §8.87.8): η γραμμή της λίστας
-  // λέει ό,τι και η κεφαλίδα της σελίδας, από τον **ίδιο** κατασκευαστή — `null` όταν το ακίνητο δεν διατίθεται.
-  return [primary, buildPropertyStatusBadge(property, t), buildListingAudienceBadge(property, t)].filter(
+  // Το σήμα παρουσίας ακολουθεί το ακίνητο σε κάθε επιφάνεια του γραφείου (ADR-777 §8.87.8): η γραμμή της λίστας
+  // λέει ό,τι και η κεφαλίδα της σελίδας, από τον **ίδιο** κατασκευαστή.
+  // 🔑 **ΠΡΩΤΟ, επίτηδες** (ADR-777 §8.103): η γραμμή σημάτων της λίστας κόβει σε «+N» ό,τι δεν χωρά, κρατώντας
+  //    εγγυημένα **μόνο** το πρώτο. Τελευταίο, το «δημοσιεύθηκε;» ήταν το πρώτο που χανόταν σε στενή στήλη· πρώτο,
+  //    έχει **σταθερή θέση** σε κάθε κάρτα — η ερώτηση που κάνει ο άνθρωπος σαρώνοντας τη λίστα.
+  return [buildListingPresenceBadge(property, t), primary, buildPropertyStatusBadge(property, t)].filter(
     (badge): badge is GridCardBadge => badge !== null,
   );
 }
@@ -115,26 +117,25 @@ export function buildPropertyStatusBadge(property: Property, t: TFn): GridCardBa
   return spec ? badgeFromSpec(spec, t) : null;
 }
 
-/** Απόχρωση ανά κοινό. `Record<MarketingAudience, …>`: τέταρτο κοινό δεν μεταγλωττίζεται χωρίς απόχρωση. */
-const AUDIENCE_BADGE_VARIANT: Readonly<Record<MarketingAudience, GridCardBadgeVariant>> = {
-  public: 'success',
-  network: 'outline',
-  custodians: 'outline',
-};
-
 /**
- * **Το σήμα κοινού** — «Δημόσια» / «Κλειστή — …», δίπλα στο σήμα κατάστασης (ADR-777 §8.87.3 · ADR-864 §5.1).
+ * **Το σήμα παρουσίας της αγγελίας** — «Στο κοινό» · «Μόνο στο δίκτυο» · «Μόνο διαχειριστές» · «Εκτός αγγελίας» ·
+ * «Αγγελία έκλεισε» (ADR-777 §8.103 · ADR-864 §5.1).
  *
- * 🔴 **`null` όταν το ακίνητο ΔΕΝ διατίθεται**: τότε δεν υπάρχει αγγελία σε κανένα κοινό, και το «γιατί» το λέει
- * ήδη το σήμα κατάστασης. Την ετυμηγορία τη δίνει ο ΕΝΑΣ κριτής (`offeredAudienceOf` — ο ίδιος με την πύλη
- * προβολής και την καρτέλα «Αγγελία»)· ετικέτα από τον ΕΝΑ κατάλογο (`properties-enums:marketingAudience`).
+ * 🔴 **Η απουσία ΟΝΟΜΑΖΕΤΑΙ.** Ως τις 2026-11-19 αυτό ήταν το «σήμα κοινού» και έδινε `null` όταν το ακίνητο δεν
+ * διατίθεται ⇒ ο άνθρωπος **δεν ξεχώριζε** με μια ματιά τα δημοσιευμένα από τα αδημοσίευτα (η απουσία σήματος δεν
+ * τραβά το μάτι). Πλέον **κάθε** ζωντανό ακίνητο έχει παρουσία, από τον ΕΝΑ κριτή (`listingPresenceOf` →
+ * `offeredAudienceOf`, ο ίδιος με την πύλη προβολής και την καρτέλα «Αγγελία»).
+ *
+ * ⚠️ `null` **μόνο** για αποσυρμένη εγγραφή (κάδος / αρχείο): εκεί το λέει ήδη η ετικέτα κύκλου ζωής.
  */
-export function buildListingAudienceBadge(property: Property, t: TFn): GridCardBadge | null {
-  const audience = offeredAudienceOf(property);
-  if (audience === null) return null;
+export function buildListingPresenceBadge(property: Property, t: TFn): GridCardBadge | null {
+  if (retiredKindOf(property) !== null) return null;
+  const spec = listingPresenceSpec(listingPresenceOf(property));
   return {
-    label: t(`marketingAudience.${audience}`, { ns: UNIT_STATUS_NAMESPACE }),
-    variant: AUDIENCE_BADGE_VARIANT[audience],
+    label: t(spec.labelKey, { ns: UNIT_STATUS_NAMESPACE }),
+    variant: spec.variant,
+    icon: spec.icon,
+    ...(spec.className ? { className: spec.className } : {}),
   };
 }
 

@@ -118,35 +118,41 @@ describe('Υ4 — `identity="full"`: κεφαλίδα σελίδας εγγρα�
 });
 
 /**
- * Υ5 — **ΤΟ ΣΗΜΑ ΚΟΙΝΟΥ ΡΩΤΑ ΤΟΝ ΚΡΙΤΗ ΤΗΣ ΔΙΑΘΕΣΗΣ** (ADR-777 §8.87.3 · ADR-864 §5.1).
+ * Υ5 — **ΤΟ ΣΗΜΑ ΠΑΡΟΥΣΙΑΣ ΡΩΤΑ ΤΟΝ ΚΡΙΤΗ ΤΗΣ ΔΙΑΘΕΣΗΣ** (ADR-777 §8.87.3 · §8.103 · ADR-864 §5.1).
  *
  * 🔴 Η παγίδα: έγγραφο **χωρίς** `marketingAudience` ερμηνεύεται `public` (Α3). Σήμα που ρωτούσε μόνο το κοινό θα
- * έγραφε «Δημόσια» πάνω σε ακίνητο εκτός αγοράς ή πουλημένο — δηλαδή για αγγελία που **δεν υπάρχει**.
+ * έγραφε «Στο κοινό» πάνω σε ακίνητο εκτός αγοράς ή πουλημένο — δηλαδή για αγγελία που **δεν υπάρχει**.
+ * Από τις 2026-11-19 η απουσία **ονομάζεται** («Εκτός αγγελίας» / «Αγγελία έκλεισε») αντί να σωπαίνει.
  */
-describe('Υ5 — σήμα κοινού στην κεφαλίδα σελίδας', () => {
-  const AUDIENCE = /^marketingAudience\./;
+describe('Υ5 — σήμα παρουσίας στην κεφαλίδα σελίδας', () => {
+  const AUDIENCE = /^listingPresence\./;
   function mountWith(facts: Record<string, unknown>, identity: 'full' | 'compact' = 'full') {
     const property = { ...PROPERTY, type: 'apartment', ...facts } as unknown as Property;
     return render(<PropertyDetailsHeader property={property} identity={identity} />);
   }
 
-  it('✅ παρονομαστής: διατίθεται, χωρίς πεδίο κοινού ⇒ «Δημόσια» (Α3)', () => {
+  it('✅ παρονομαστής: διατίθεται, χωρίς πεδίο κοινού ⇒ «Στο κοινό» (Α3)', () => {
     mountWith({ commercialStatus: 'for-sale' });
-    expect(screen.getByText('marketingAudience.public')).toBeInTheDocument();
+    expect(screen.getByText('listingPresence.public')).toBeInTheDocument();
   });
 
   it('✅ διατίθεται σε κλειστό κοινό ⇒ το λέει με το όνομά του', () => {
     mountWith({ commercialStatus: 'for-sale', marketingAudience: 'custodians' });
-    expect(screen.getByText('marketingAudience.custodians')).toBeInTheDocument();
-    expect(screen.queryByText('marketingAudience.public')).toBeNull();
+    expect(screen.getByText('listingPresence.custodians')).toBeInTheDocument();
+    expect(screen.queryByText('listingPresence.public')).toBeNull();
   });
 
   it.each([
-    ['εκτός αγοράς', { commercialStatus: 'unavailable' }],
-    ['πουλημένο', { commercialStatus: 'sold', marketingAudience: 'public' }],
-    ['στον κάδο', { commercialStatus: 'for-sale', status: 'deleted' }],
-  ])('🔴 %s ⇒ ΚΑΝΕΝΑ σήμα κοινού, ό,τι κι αν λέει το πεδίο', (_label, facts) => {
+    ['εκτός αγοράς', { commercialStatus: 'unavailable' }, 'listingPresence.unlisted'],
+    ['πουλημένο', { commercialStatus: 'sold', marketingAudience: 'public' }, 'listingPresence.settled'],
+  ])('🔴 %s ⇒ η απουσία ΟΝΟΜΑΖΕΤΑΙ, ποτέ «Στο κοινό», ό,τι κι αν λέει το πεδίο', (_label, facts, expected) => {
     mountWith(facts);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.queryByText('listingPresence.public')).toBeNull();
+  });
+
+  it('🔴 στον κάδο ⇒ ΚΑΝΕΝΑ σήμα παρουσίας (το λέει η ετικέτα κύκλου ζωής)', () => {
+    mountWith({ commercialStatus: 'for-sale', status: 'deleted' });
     expect(screen.queryByText(AUDIENCE)).toBeNull();
   });
 

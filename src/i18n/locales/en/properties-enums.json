@@ -377,6 +377,18 @@
     "network": "Private — professional network",
     "public": "Public"
   },
+  "listingPresence": {
+    "public": "Live to public",
+    "network": "Network only",
+    "custodians": "Managers only",
+    "unlisted": "Not listed",
+    "settled": "Listing closed",
+    "filter": {
+      "ariaLabel": "Listing presence filter",
+      "all": "All",
+      "allTooltip": "All properties, listed or not"
+    }
+  },
   "privateMarketingStanding": {
     "absent": "No consent",
     "requested": "Agency request",

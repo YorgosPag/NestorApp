@@ -33,7 +33,7 @@ import { CardBadges } from '@/design-system/primitives/Card/CardBadges';
 import {
   MISSING_PRICE_LABEL_KEYS,
   buildCardPriceText,
-  buildListingAudienceBadge,
+  buildListingPresenceBadge,
   buildPropertyStatusBadge,
 } from '@/domain/cards/property/property-card-shared';
 import type { GridCardBadge } from '@/design-system/components/GridCard/GridCard.types';
@@ -78,17 +78,17 @@ export function usePropertyIdentityLine(property: Property | null): string {
 }
 
 /**
- * **Τα σήματα** δίπλα στον τίτλο: κατάσταση (ίδιο SSoT με την κάρτα πλέγματος) + **κοινό** της αγγελίας.
+ * **Τα σήματα** δίπλα στον τίτλο: **παρουσία** της αγγελίας + κατάσταση (ίδιο SSoT και ίδια σειρά με την κάρτα).
  *
- * 🔑 Το κοινό διαβάζεται από κάθε καρτέλα, όχι μόνο από την «Αγγελία» (§8.87.3) — και **σιωπά** όταν το ακίνητο
- * δεν διατίθεται (`buildListingAudienceBadge` ⇒ `null`): «Δημόσια» πάνω σε ακίνητο εκτός αγοράς θα ήταν ψέμα.
+ * 🔑 Η παρουσία διαβάζεται από κάθε καρτέλα, όχι μόνο από την «Αγγελία» (§8.87.3), και **ονομάζει και την
+ * απουσία** («Εκτός αγγελίας», ADR-777 §8.103) — ποτέ «Στο κοινό» πάνω σε ακίνητο εκτός αγοράς (ίδιος κριτής).
  */
 export function PropertyIdentityStatus({ property }: { readonly property: Property }): React.ReactElement | null {
   // ⚠️ Τα namespaces του σήματος δηλώνονται **ρητά**: η εμπορική ετικέτα ζει στο `properties-enums`, η ετικέτα
   // κύκλου ζωής στο `trash` (`buildPropertyStatusBadge`). Αλλιώς θα δούλευε **επειδή κάποιος άλλος** τα έχει
   // φορτώσει — εξάρτηση από τη σειρά φόρτωσης, όχι από δήλωση (CHECK 3.36 §8.1).
   const { t } = useTranslation(['properties', 'trash']);
-  const badges = [buildPropertyStatusBadge(property, t), buildListingAudienceBadge(property, t)].filter(
+  const badges = [buildListingPresenceBadge(property, t), buildPropertyStatusBadge(property, t)].filter(
     (badge): badge is GridCardBadge => badge !== null,
   );
   if (badges.length === 0) return null;

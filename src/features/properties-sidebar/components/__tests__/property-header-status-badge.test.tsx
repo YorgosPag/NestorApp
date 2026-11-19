@@ -92,15 +92,16 @@ describe('Κ-ΚΕΦ — το σήμα κατάστασης στην κεφαλί
     expect(screen.getByRole('heading', { level: 1, name: 'Δοκιμή' })).toBeInTheDocument();
   });
 
-  it('✅ το σήμα ζει στη ΓΡΑΜΜΗ ΤΟΥ ΤΙΤΛΟΥ, και η κατάσταση προηγείται του κοινού', () => {
+  // ADR-777 §8.103 — ίδια σειρά με την κάρτα της λίστας: πρώτα «δημοσιεύθηκε;», μετά η κατάσταση.
+  it('✅ το σήμα ζει στη ΓΡΑΜΜΗ ΤΟΥ ΤΙΤΛΟΥ, και η παρουσία προηγείται της κατάστασης', () => {
     mountWith({ commercialStatus: 'for-sale' });
 
     const status = screen.getByText('commercialStatus.for-sale');
-    const audience = screen.getByText('marketingAudience.public');
+    const presence = screen.getByText('listingPresence.public');
     const titleRow = screen.getByRole('heading', { level: 1, name: 'Δοκιμή' }).parentElement;
 
     expect(titleRow).toContainElement(status);
-    expect(status.compareDocumentPosition(audience) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(presence.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('🔴 τα namespaces του σήματος ΔΗΛΩΝΟΝΤΑΙ — εμπορική ετικέτα και ετικέτα κύκλου ζωής στην ίδια δήλωση', () => {
