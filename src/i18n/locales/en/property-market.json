@@ -682,7 +682,9 @@
       },
       "placeRelaxed": {
         "broader": "Found by postal code {postalCode}. \"{locality}\" is the wider area that contains it.",
-        "dropped": "Found by postal code {postalCode} only — the area \"{locality}\" did not match the address, so the point on the map needs checking."
+        "dropped": "Found by postal code {postalCode} only — the area \"{locality}\" did not match the address, so the point on the map needs checking.",
+        "streetDropped": "The street was not found on the map — the point shows the settlement. Drag the pin to the right spot.",
+        "postcodeOnly": "Only the postal code area {postalCode} was found — drag the pin to the right spot."
       },
       "coverageReach": {
         "title": "Outside your declared areas",

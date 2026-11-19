@@ -51,6 +51,9 @@ const VARIANT_I18N_KEYS: Record<GeocodingVariant, string> = {
   7: 'addresses.geocoding.attempts.globalFreeform',
   8: 'addresses.geocoding.attempts.cityOnlyGlobal',
   9: 'addresses.geocoding.attempts.postcodeAnchored',
+  10: 'addresses.geocoding.attempts.settlementAnchored',
+  11: 'addresses.geocoding.attempts.settlementAnchoredAlternate',
+  12: 'addresses.geocoding.attempts.postcodeOnly',
 };
 
 export interface NominatimFetchOutcome {

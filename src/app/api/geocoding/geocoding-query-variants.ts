@@ -77,6 +77,35 @@ export function toPostcodeAnchoredQuery(params: GeocodingRequestBody): string | 
   return `${street}, ${params.postalCode}`;
 }
 
+/**
+ * **Ο οικισμός που ρωτά η βαθμίδα οικισμού** (ADR-332 D31) — η `city` πρώτα, γιατί αυτή έρχεται από
+ * το μητρώο ΕΛΣΤΑΤ· η `neighborhood` είναι ελεύθερο κείμενο.
+ *
+ * 🔴 **Γιατί ΟΧΙ `neighborhood || city` όπως οι άλλες βαθμίδες — μετρημένο 2026-11-19**: η «Περιοχή»
+ * «ΒΙ.ΠΕ. Ωραιοκάστρου» + 570 13 επιστρέφει «ΕΤΒΑ ΒΙ.ΠΕ. Α.Ε.» στην **Καλλιθέα** (574 00). Ο πάτος
+ * της σκάλας πρέπει να στηρίζεται στο **αυθεντικό** τοπωνύμιο, όχι στο πιο ελεύθερο.
+ */
+export function settlementOf(params: GeocodingRequestBody): string | undefined {
+  return params.city || params.neighborhood;
+}
+
+/**
+ * **Οικισμός (+ Τ.Κ.) — χωρίς οδό** (βαθμίδες 10/11). `form` = η μορφή του οικισμού που ρωτάμε.
+ *
+ * `null` όταν δεν υπάρχει οικισμός, ή όταν το ερώτημα θα ήταν **ταυτόσημο** με της παραλλαγής 1
+ * (π.χ. ο άνθρωπος έγραψε μόνο πόλη + Τ.Κ.): αίτημα με γνωστή απάντηση παραβιάζει την πολιτική OSMF.
+ */
+export function toSettlementQuery(params: GeocodingRequestBody, form: string): string | null {
+  const query = [form, params.postalCode].filter(Boolean).join(', ');
+  return query && query !== toOsmStyleQuery(params) ? query : null;
+}
+
+/** **Μόνο ο Τ.Κ.** (βαθμίδα 12) — `null` όταν λείπει ή όταν είναι ήδη όλο το ερώτημα της παραλλαγής 1. */
+export function toPostcodeOnlyQuery(params: GeocodingRequestBody): string | null {
+  const postalCode = params.postalCode?.trim();
+  return postalCode && postalCode !== toOsmStyleQuery(params) ? postalCode : null;
+}
+
 export function createAccentStrippedVariant(params: GeocodingRequestBody): GeocodingRequestBody {
   const n = (v: string | undefined) => v ? normalizeGreekText(v) : undefined;
   return {

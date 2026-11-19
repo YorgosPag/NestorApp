@@ -57,9 +57,19 @@ const WIDER_THAN: Partial<Record<ComparableAddressField, readonly ComparableAddr
   city: ['county', 'region'],
 };
 
+/**
+ * Τα **τοπωνύμια** — συγκρίνονται με την ίδια αρχή που κρίνει το «ευρύτερο» (`samePlaceName`).
+ *
+ * 🔴 ADR-332 D31 (μετρημένο 2026-11-19): η ευθεία σύγκριση ήταν σκέτο `normalizeGreekText`, οπότε ο
+ * οικισμός ΕΛΣΤΑΤ «Ωραιόκαστρον» απέναντι στο «Ωραιόκαστρο» του χάρτη έβγαινε **«Ασυμφωνία»** — για
+ * ~21% των οικισμών του μητρώου, που είναι σε καθαρεύουσα.
+ */
+const PLACE_NAME_FIELDS: ReadonlySet<ComparableAddressField> = new Set(['neighborhood', 'city', 'county', 'region']);
+
 function sameValue(field: ComparableAddressField, a: string, b: string): boolean {
   if (field === 'postalCode') return toCanonicalGreekPostalCode(a) === toCanonicalGreekPostalCode(b);
-  return normalizeGreekText(a) === normalizeGreekText(b);
+  if (normalizeGreekText(a) === normalizeGreekText(b)) return true;
+  return PLACE_NAME_FIELDS.has(field) && samePlaceName(a, b);
 }
 
 /** Είναι το δηλωμένο όνομα κάποια **ευρύτερη** περιοχή της ίδιας απάντησης; */

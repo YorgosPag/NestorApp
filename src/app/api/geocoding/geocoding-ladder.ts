@@ -20,13 +20,26 @@
  * ────────────────────────────────────────────────────────────────────────────
  *
  * `1–6` πλήρης διεύθυνση σε αναδιατυπώσεις → **`9` χαλάρωση τοπωνυμίου με άγκυρα τον Τ.Κ.** →
- * `7–8` χαλάρωση χώρας. Το ίδιο δόγμα με το Pelias: **εξάντλησε το συγκεκριμένο πριν ρίξεις
- * πεδίο**, και ρίξε πρώτα το λιγότερο αξιόπιστο. Η χώρα φεύγει τελευταία γιατί η απώλειά της
- * έχει μετρηθεί να φέρνει Ουισκόνσιν για ελληνική διεύθυνση (D12).
+ * **`10–11` οικισμός (σε δημοτική) χωρίς οδό** → **`12` μόνο Τ.Κ.** → `7–8` χαλάρωση χώρας. Το ίδιο
+ * δόγμα με το Pelias: **εξάντλησε το συγκεκριμένο πριν ρίξεις πεδίο**, και ρίξε πρώτα το λιγότερο
+ * αξιόπιστο. Η χώρα φεύγει τελευταία γιατί η απώλειά της έχει μετρηθεί να φέρνει Ουισκόνσιν για
+ * ελληνική διεύθυνση (D12).
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔑 Ο ΠΑΤΟΣ — «ΠΟΤΕ "ΔΕΝ ΒΡΕΘΗΚΕ" ΜΕ ΕΓΚΥΡΟ Τ.Κ.» (ADR-332 D31)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Η Google επιστρέφει `partial_match` με τύπο `postal_code`/`locality` όταν δεν βρίσκει την οδό· το
+ * Pelias πέφτει σε `fallback` προς οικισμό. Εμείς ως τις 19/11 επιστρέφαμε `404` — και ο χάρτης
+ * έδειχνε την **Αθήνα**. Το βήμα πέρα από αυτούς: **καμία βαθμίδα του πάτου δεν δέχεται τυφλά**. Η
+ * 10/11 θέλει **ίδιο τόπο** και Τ.Κ. που δεν διαψεύδει· η 12 θέλει **ίδιο Τ.Κ.**. Και κάθε απάντηση
+ * του πάτου φέρει `relaxation` — η οθόνη **λέει** ότι η οδός δεν βρέθηκε.
  */
 
 import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
+import { demoticPlaceNameForms, samePlaceName } from '@/utils/address/place-name';
 import type {
+  GeocodingDroppedField,
   GeocodingLocalityField,
   GeocodingRelaxation,
   GeocodingRequestBody,
@@ -37,9 +50,12 @@ import { buildFreeformUrl, buildStructuredUrl } from './geocoding-nominatim-clie
 import {
   createAccentStrippedVariant,
   createGreeklishVariant,
+  settlementOf,
   toFreeformQuery,
   toOsmStyleQuery,
   toPostcodeAnchoredQuery,
+  toPostcodeOnlyQuery,
+  toSettlementQuery,
 } from './geocoding-query-variants';
 
 export interface LadderStep {
@@ -63,6 +79,8 @@ export function buildGeocodingLadder(
   return [
     ...fullAddressSteps(params, countryCode),
     postcodeAnchoredStep(params, countryCode),
+    ...settlementSteps(params, countryCode),
+    postcodeOnlyStep(params, countryCode),
     ...countryRelaxedSteps(params, countryCode),
   ];
 }
@@ -137,6 +155,77 @@ const LOCALITY_FIELDS: readonly GeocodingLocalityField[] = [
 
 function droppedLocalities(params: GeocodingRequestBody): readonly GeocodingLocalityField[] {
   return LOCALITY_FIELDS.filter((field) => Boolean(params[field]));
+}
+
+/** Ό,τι δηλώθηκε **και δεν ρωτήθηκε** — `kept` = το πεδίο του οικισμού που κρατήθηκε (αν κρατήθηκε). */
+function droppedFields(params: GeocodingRequestBody, kept?: GeocodingLocalityField): readonly GeocodingDroppedField[] {
+  const localities = droppedLocalities(params).filter((field) => field !== kept);
+  return params.street ? ['street', ...localities] : localities;
+}
+
+/** Η χαλάρωση — `undefined` όταν **δεν** αφαιρέθηκε τίποτα (π.χ. μόνο εκσυγχρονίστηκε το όνομα). */
+function relaxationOf(
+  dropped: readonly GeocodingDroppedField[],
+  anchor: GeocodingRelaxation['anchor'],
+): GeocodingRelaxation | undefined {
+  return dropped.length > 0 ? { dropped, anchor } : undefined;
+}
+
+/** Τα ονόματα τόπου που φέρει ένας υποψήφιος — το δικό του και της ιεραρχίας του. */
+function candidatePlaceNames(candidate: NominatimResult): readonly string[] {
+  const a = candidate.address;
+  return [candidate.name, a?.village, a?.town, a?.city, a?.hamlet, a?.suburb, a?.municipality]
+    .filter((name): name is string => typeof name === 'string' && name.trim() !== '');
+}
+
+/**
+ * **Είναι ο υποψήφιος ο δηλωμένος οικισμός;** — ίδιος τόπος (`samePlaceName`: πρόθεμα, τόνος, πτώση,
+ * **καθαρεύουσα**) **και** Τ.Κ. που δεν διαψεύδει.
+ *
+ * ⚠️ Απών Τ.Κ. στον υποψήφιο **δεν** διαψεύδει (ο κόμβος ενός χωριού συχνά δεν τον φέρει) — αλλά
+ * **διαφορετικός** διαψεύδει: δύο «Ωραιόκαστρα» υπάρχουν στο μητρώο (Θεσσαλονίκη · Πρέβεζα).
+ */
+function provesSettlement(candidate: NominatimResult, settlement: string, declaredPostal: string | undefined): boolean {
+  const resolvedPostal = candidate.address?.postcode;
+  if (declaredPostal && resolvedPostal && !provesPostalCode(candidate, declaredPostal)) return false;
+  return candidatePlaceNames(candidate).some((name) => samePlaceName(name, settlement));
+}
+
+/**
+ * **`10`/`11` — Ο ΟΙΚΙΣΜΟΣ, ΣΤΗ ΜΟΡΦΗ ΠΟΥ ΞΕΡΕΙ Ο ΧΑΡΤΗΣ** (ADR-332 D31).
+ *
+ * 🔴 Μετρημένο: ~21% των οικισμών ΕΛΣΤΑΤ είναι σε καθαρεύουσα, και το OSM τους ξέρει σε δημοτική.
+ * Η 10 ρωτά την **πιθανότερη** δημοτική μορφή (ή το όνομα αυτούσιο, αν δεν είναι καθαρεύουσα)· η 11
+ * τη **δεύτερη** («-ιο») — μόνο όταν υπάρχει. Ποτέ περισσότερα από δύο αιτήματα.
+ */
+function settlementSteps(params: GeocodingRequestBody, cc: string | null): LadderStep[] {
+  const settlement = settlementOf(params);
+  if (!settlement) return [{ variant: 10, url: null }, { variant: 11, url: null }];
+  const [primary, secondary] = demoticPlaceNameForms(settlement);
+  const kept: GeocodingLocalityField = params.city ? 'city' : 'neighborhood';
+  const step = (variant: GeocodingVariant, form: string | undefined): LadderStep => {
+    const query = form ? toSettlementQuery(params, form) : null;
+    if (query === null) return { variant, url: null };
+    return {
+      variant,
+      url: buildFreeformUrl(query, cc),
+      accept: (candidate) => provesSettlement(candidate, settlement, params.postalCode),
+      relaxation: relaxationOf(droppedFields(params, kept), 'locality'),
+    };
+  };
+  return [step(10, primary ?? settlement), step(11, secondary)];
+}
+
+/** **`12` — ΜΟΝΟ Ο Τ.Κ.**: ό,τι μένει όταν ούτε ο οικισμός βρέθηκε· δεκτός μόνο υποψήφιος με τον **ίδιο**. */
+function postcodeOnlyStep(params: GeocodingRequestBody, cc: string | null): LadderStep {
+  const query = toPostcodeOnlyQuery(params);
+  if (query === null) return { variant: 12, url: null };
+  return {
+    variant: 12,
+    url: buildFreeformUrl(query, cc),
+    accept: (candidate) => provesPostalCode(candidate, params.postalCode),
+    relaxation: relaxationOf(droppedFields(params), 'postalCode'),
+  };
 }
 
 /** `7–8` — χωρίς περιορισμό χώρας· μόνο όταν ο άνθρωπος **δήλωσε** χώρα που αναγνωρίζουμε. */

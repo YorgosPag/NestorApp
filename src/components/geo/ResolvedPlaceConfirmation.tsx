@@ -63,15 +63,30 @@ export function ResolvedPlaceConfirmation({ place, className }: ResolvedPlaceCon
  */
 function RelaxationLine({ place }: { readonly place: ResolvedPlace }): React.ReactElement | null {
   const { t } = useTranslation([NS]);
-  if (!place.relaxation) return null;
+  const message = relaxationMessage(place);
+  if (message === null) return null;
 
-  const broader = place.localityMatch === 'broader';
   const params = { postalCode: place.declaredPostalCode ?? '', locality: place.declaredLocality ?? '' };
   return (
-    <span className={broader ? 'text-muted-foreground' : 'text-foreground'}>
-      {t(`${K}.placeRelaxed.${broader ? 'broader' : 'dropped'}`, params)}
+    <span className={message === 'broader' ? 'text-muted-foreground' : 'text-foreground'}>
+      {t(`${K}.placeRelaxed.${message}`, params)}
     </span>
   );
+}
+
+type RelaxationMessage = 'broader' | 'dropped' | 'streetDropped' | 'postcodeOnly';
+
+/**
+ * **Ποια αλήθεια λέμε** — μία συνάρτηση, γιατί η ίδια σημαία `relaxation` σημαίνει πλέον **τρία**
+ * διαφορετικά πράγματα (ADR-332 D31): η 9 έριξε την περιοχή · η 10/11 έριξε την **οδό** και κράτησε
+ * τον οικισμό · η 12 κράτησε **μόνο** τον Τ.Κ. Το «η περιοχή δεν ταίριαξε» για τη 10 θα ήταν ψέμα.
+ */
+function relaxationMessage(place: ResolvedPlace): RelaxationMessage | null {
+  const relaxation = place.relaxation;
+  if (!relaxation) return null;
+  if (relaxation.anchor === 'locality') return 'streetDropped';
+  if (relaxation.dropped.includes('street')) return 'postcodeOnly';
+  return place.localityMatch === 'broader' ? 'broader' : 'dropped';
 }
 
 /**

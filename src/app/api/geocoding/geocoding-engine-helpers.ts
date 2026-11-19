@@ -55,6 +55,11 @@ export interface NominatimResult {
   lat: string;
   lon: string;
   display_name: string;
+  /**
+   * Το όνομα του **ίδιου** του αντικειμένου (π.χ. «Ωραιόκαστρο» για `place/city`). Το στέλνει το
+   * `format=json`· το διαβάζει η απόδειξη τόπου της βαθμίδας οικισμού (ADR-332 D31).
+   */
+  name?: string;
   type?: string;
   class?: string;
   importance?: number;

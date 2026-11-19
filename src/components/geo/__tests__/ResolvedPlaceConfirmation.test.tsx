@@ -68,6 +68,32 @@ describe('ResolvedPlaceConfirmation — τι κατάλαβε ο πάροχος'
     expect(text()).toContain(`${K}.placeRelaxed.dropped`);
   });
 
+  it('🔴 D31 — ο οικισμός βρέθηκε ΧΩΡΙΣ την οδό ⇒ «η οδός δεν εντοπίστηκε», ΠΟΤΕ «η περιοχή δεν ταίριαξε»', () => {
+    render(
+      <ResolvedPlaceConfirmation
+        place={{ ...BASE, relaxation: { dropped: ['street', 'neighborhood'], anchor: 'locality' }, localityMatch: 'match' }}
+      />,
+    );
+    expect(text()).toContain(`${K}.placeRelaxed.streetDropped`);
+    expect(text()).not.toContain('placeRelaxed.dropped');
+  });
+
+  it('🔴 D31 — βρέθηκε ΜΟΝΟ ο Τ.Κ. ⇒ η πρόταση του Τ.Κ., με τον Τ.Κ.', () => {
+    render(
+      <ResolvedPlaceConfirmation
+        place={{
+          ...BASE,
+          relaxation: { dropped: ['street', 'city'], anchor: 'postalCode' },
+          localityMatch: 'broader',
+          declaredPostalCode: '570 13',
+        }}
+      />,
+    );
+    expect(text()).toContain(`${K}.placeRelaxed.postcodeOnly`);
+    expect(text()).toContain('570 13');
+    expect(text()).not.toContain('placeRelaxed.broader');
+  });
+
   it('χωρίς χαλάρωση ⇒ καμία γραμμή περιοχής (ακόμη κι αν η περιοχή είναι ευρύτερη)', () => {
     render(<ResolvedPlaceConfirmation place={{ ...BASE, localityMatch: 'broader' }} />);
     expect(text()).not.toContain('placeRelaxed');

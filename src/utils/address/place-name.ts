@@ -214,9 +214,93 @@ function differsByPair(a: string, b: string, [left, right]: readonly [string, st
   return stem.length >= MIN_PLACE_STEM && stem === b.slice(0, -right.length);
 }
 
+/**
+ * **ΚΑΘΑΡΕΥΟΥΣΑ → ΔΗΜΟΤΙΚΗ ΣΤΗΝ ΚΑΤΑΛΗΞΗ ΤΟΠΩΝΥΜΙΟΥ** — ο **ένας** πίνακας (ADR-332 D31).
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 **ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ — ΜΕΤΡΗΜΕΝΟ 2026-11-19**: η έδρα με οικισμό «Ωραιόκαστρον» (ΕΛΣΤΑΤ) έπεφτε σε
+ * «δεν βρέθηκε». Το OSM ξέρει «Ωραιόκαστρο»: `«Ωραιόκαστρο, 570 13»` ⇒ `place/city`,
+ * `«Ωραιόκαστρον, 570 13»` ⇒ **0**. Και δεν είναι μεμονωμένο: από τους **13.272** οικισμούς του
+ * μητρώου, **~2.800 (21%)** λήγουν σε «-ον/-όν» και **197** σε «-αι».
+ *
+ * 🔑 **Η σειρά των μορφών είναι ΜΕΤΡΗΜΕΝΗ, όχι γλωσσική διαίσθηση** (36 οικισμοί, ζωντανό Nominatim):
+ * «-ιον → -ι» **12/12** ενώ «-ιο» **2/12** (Προσήλιο, Αγρίδιο) — άρα «-ι» πρώτο, «-ιο» δεύτερο·
+ * «-ον → -ο» **12/12** · «-αι → -ες» **8/12**, και οι 4 αστοχίες ήταν πολυλεκτικά ονόματα όπου ο
+ * κανόνας **δεν** εφαρμόστηκε σε κάθε λέξη («Νέαι Κυδωνίαι» → «Νέες Κυδωνίες») — γι' αυτό εφαρμόζεται
+ * **ανά λέξη**. Η **αρχική** μορφή βρέθηκε μόνο σε **5/36**.
+ *
+ * 🔴 **ΜΕΤΑ ΑΠΟ ΔΙΦΘΟΓΓΟ το «-ιον» ΔΕΝ γίνεται «-ι»** (μετρημένο, ίδια μέρα): «Λατομείον, Γηροκομείον,
+ * Κηπουρείον…» → «-είο» **5/5**, «-εί» **0/6** · «Νυμφαίον, Αμύνταιον, Σπήλαιον, Ωραίον, Μεσαίον» →
+ * «-αίο» **5/5**, «Νυμφαί» **0**. Το «ι» εκεί ανήκει στη δίφθογγο, δεν είναι η κατάληξη «-ι».
+ *
+ * ⚠️ **Οι μακρύτερες καταλήξεις πριν από τις συντομότερες** — αλλιώς το «-ιον» θα διαβαζόταν ως «-ον»
+ * και θα έβγαινε «Μεσοχώριο» αντί για «Μεσοχώρι», και το «-είον» ως «-ίον» («Λατομεί»).
+ * ⚠️ **Κλειστός πίνακας**: κάθε γραμμή διευρύνει και το τι ταυτίζει το {@link samePlaceName} (οι
+ * διπλωμένες μορφές του **παράγονται** από εδώ) — προσθήκη μόνο με μέτρηση και αρνητική άγκυρα.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+const KATHAREVOUSA_ENDINGS: readonly { readonly archaic: string; readonly modern: readonly string[] }[] = [
+  // Δίφθογγος + «ιον» ⇒ ΜΟΝΟ «-ιο» (Λατομείον → Λατομείο · Νυμφαίον → Νυμφαίο · Αμύνταιον → Αμύνταιο).
+  ...['αί', 'εί', 'οί', 'αι', 'ει', 'οι'].map((diphthong) => ({
+    archaic: `${diphthong}ον`,
+    modern: [`${diphthong}ο`],
+  })),
+  { archaic: 'ίον', modern: ['ί', 'ίο'] },
+  { archaic: 'ιον', modern: ['ι', 'ιο'] }, // Μεσοχώριον → Μεσοχώρι · Προσήλιον → Προσήλιο
+  { archaic: 'όν', modern: ['ό'] }, // Λουτρόν → Λουτρό · Μικρόν → Μικρό
+  { archaic: 'ον', modern: ['ο'] }, // Ωραιόκαστρον → Ωραιόκαστρο · Νέον → Νέο
+  { archaic: 'αί', modern: ['ές'] },
+  { archaic: 'αι', modern: ['ες'] }, // Θερμοπύλαι → Θερμοπύλες · Νέαι → Νέες
+];
+
+/** Ρίζα κάτω από αυτό δεν εκσυγχρονίζεται — αλλά **2**, όχι 3: το «Νέον → Νέο» είναι μετρημένη ανάγκη. */
+const MIN_ARCHAIC_STEM = 2;
+
+/** Οι μορφές μιας λέξης, η **πιθανότερη πρώτη** — `[λέξη]` όταν δεν είναι καθαρεύουσα. */
+function modernWordForms(word: string): readonly string[] {
+  const lower = word.toLowerCase();
+  const upper = word.length > 1 && word === word.toUpperCase() && word !== lower;
+  for (const { archaic, modern } of KATHAREVOUSA_ENDINGS) {
+    if (!lower.endsWith(archaic) || lower.length - archaic.length < MIN_ARCHAIC_STEM) continue;
+    const stem = word.slice(0, -archaic.length);
+    return modern.map((ending) => stem + (upper ? ending.toUpperCase() : ending));
+  }
+  return [word];
+}
+
+/**
+ * **ΟΙ ΔΗΜΟΤΙΚΕΣ ΜΟΡΦΕΣ ΕΝΟΣ ΤΟΠΩΝΥΜΙΟΥ** — `[]` όταν δεν είναι καθαρεύουσα (ADR-332 D31).
+ *
+ * Το πολύ **δύο**, με σειρά πιθανότητας: η πρώτη παίρνει σε **κάθε** λέξη την πρώτη μορφή της, η
+ * δεύτερη την τελευταία. Ποτέ ο συνδυαστικός πολλαπλασιασμός — κάθε μορφή κοστίζει **ένα αίτημα** στον
+ * πάροχο, και η πολιτική OSMF επιτρέπει ένα το δευτερόλεπτο.
+ *
+ * ⚠️ Μορφή **ερωτήματος**, όχι αποθήκευσης: ό,τι έγραψε ο άνθρωπος ή η ΕΛΣΤΑΤ μένει αυτούσιο.
+ */
+export function demoticPlaceNameForms(name: string): readonly string[] {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const perWord = words.map(modernWordForms);
+  const primary = perWord.map((forms) => forms[0]).join(' ');
+  const secondary = perWord.map((forms) => forms[forms.length - 1]).join(' ');
+  const original = words.join(' ');
+  return [...new Set([primary, secondary])].filter((form) => form !== original);
+}
+
+/** Οι ίδιες γραμμές, **διπλωμένες** για σύγκριση — παράγωγο, ποτέ δεύτερο χειρόγραφο λεξιλόγιο. */
+const KATHAREVOUSA_PAIRS: readonly (readonly [string, string])[] = KATHAREVOUSA_ENDINGS.flatMap(
+  ({ archaic, modern }) => modern.map((ending) => [foldPlaceIdentity(archaic), foldPlaceIdentity(ending)] as const),
+);
+
+function differsByArchaicEnding(a: string, b: string, [archaic, modern]: readonly [string, string]): boolean {
+  if (!a.endsWith(archaic) || !b.endsWith(modern)) return false;
+  const stem = a.slice(0, -archaic.length);
+  return stem.length >= MIN_ARCHAIC_STEM && stem === b.slice(0, -modern.length);
+}
+
 function sameDeclinedWord(a: string, b: string): boolean {
   if (a === b) return true;
-  return DECLENSION_PAIRS.some((pair) => differsByPair(a, b, pair) || differsByPair(b, a, pair));
+  if (DECLENSION_PAIRS.some((pair) => differsByPair(a, b, pair) || differsByPair(b, a, pair))) return true;
+  return KATHAREVOUSA_PAIRS.some((pair) => differsByArchaicEnding(a, b, pair) || differsByArchaicEnding(b, a, pair));
 }
 
 /**

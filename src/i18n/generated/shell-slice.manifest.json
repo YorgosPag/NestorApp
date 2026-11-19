@@ -28,7 +28,7 @@
     "src/i18n/generated/routes/handover-protocol__versions.el.json": "b5985d2511b93344b355342677c84641c2bc629c80ca0b367778c17afd7800b7",
     "src/i18n/generated/routes/handover-protocol__versions__version.el.json": "0b0f52262c8ead9f7c4c7a282fee6c540b128f8a9a5c78716d351fd4681a6db4",
     "src/i18n/generated/routes/hours-question__token.el.json": "86ba92b35d6e4e4ba43e09267d5749b0ae21774b4dba41d9a4989d48872d0a72",
-    "src/i18n/generated/routes/interest-check.el.json": "d0002364331595d2870077e92bf3218896f97dbb2ee2924845b755f5b98fdc94",
+    "src/i18n/generated/routes/interest-check.el.json": "3690e1efa38a016b5eaf7b7a367d3e79643c656d5a1af4df1019a85a15e243de",
     "src/i18n/generated/routes/invite__token.el.json": "14d659a231e6bc8a89c08a3c83b19103a9c6c14cab339d7b9fe0e876d91528bf",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "a9197cd5e46c7ac5b2d0ca7f5816202339baf94a2b826d1d402d3e59e274d36c",
@@ -55,7 +55,7 @@
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "7ac6dda62ce61ab652a36f385a4e5c303144133bae6c98c65d02b1272049d002",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
-    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "a19c529391a1d697f5756a80db37d565038ac951337c4e5d30ed8d9b3590cc49",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "7f6e3c296608f5682b3c8ada1ea8153b86b533dd6b808f4d9e4d7f3d9cb9fa91",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__procurement.el.json": "d5d58fa34feb73a2fdfc6e96648fbdedcaa3359341aa24c30ebbed729f489ef3",
@@ -91,8 +91,8 @@
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
-    "src/i18n/generated/routes/offers__new.el.json": "d8d7c20a5a8b2afc8eb821f48bbb590b03e99df5c58764d4950283b89a299762",
-    "src/i18n/generated/routes/offers__offerId.el.json": "485ab353ed4eada9148558484b36fbec6dc73ca66ec9320e10b9c5259d6541b5",
+    "src/i18n/generated/routes/offers__new.el.json": "73fda44762c96c57da71ce042617e5b51ecea89deb30ef26d920e64beaa6d5bf",
+    "src/i18n/generated/routes/offers__offerId.el.json": "9e6c4487f5945352783716f30ec0e44a644c08a186ba862a1c34af6ab58627cb",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "bfddc6394c00d7e5f4b2835153253ff9713022d528faa576b0066ccc0d8b246e",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a12c92c92f9c0b7e3b002cd2dbc17b959f9ca94bf3313d05d5d673ad85360c01",
+  "inputsSha256": "79404df51702f429c162cf02769911fcf19592603974a6fc3dd75dc1125d8f11",
   "languages": [
     "el"
   ],
@@ -41211,7 +41211,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1358143
+    "sliceBytes": 1359647
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

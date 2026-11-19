@@ -156,7 +156,8 @@ describe('Α — βαθμίδα 9: χαλάρωση τοπωνυμίου με ά
     }) as unknown as typeof fetch;
     const hitAt8 = await geocode({ ...QUERY, country: 'Ελλάδα' });
 
-    expect(hitAt8?.reasoning.attemptsLog.map((a) => a.variant)).toEqual([1, 2, 3, 4, 5, 6, 9, 7, 8]);
+    // ADR-332 D31: ο πάτος (10–12) μπήκε ανάμεσα — η χώρα εξακολουθεί να φεύγει ΤΕΛΕΥΤΑΙΑ.
+    expect(hitAt8?.reasoning.attemptsLog.map((a) => a.variant)).toEqual([1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 7, 8]);
   });
 
   it('Α7 — φιλτράρονται ΟΛΟΙ οι υποψήφιοι, όχι μόνο ο πρώτος', async () => {

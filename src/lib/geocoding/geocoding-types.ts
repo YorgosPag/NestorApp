@@ -259,11 +259,23 @@ export interface GeocodingReasoning {
 /** Τα πεδία τοπωνυμίου μιας διεύθυνσης — από το στενότερο στο ευρύτερο. */
 export type GeocodingLocalityField = 'neighborhood' | 'city' | 'municipality' | 'county' | 'region';
 
-/** Μια χαλάρωση ερωτήματος και η απόδειξη που την επέτρεψε (ADR-332 D28). */
+/**
+ * Ό,τι μπορεί να **αφαιρεθεί** από ένα ερώτημα: τα τοπωνύμια (D28) **και η οδός** (D31 — ο πάτος
+ * της σκάλας: «η οδός δεν υπάρχει στον χάρτη, ο οικισμός/ο Τ.Κ. όμως ναι»).
+ */
+export type GeocodingDroppedField = 'street' | GeocodingLocalityField;
+
+/**
+ * Μια χαλάρωση ερωτήματος και η απόδειξη που την επέτρεψε (ADR-332 D28 · D31).
+ *
+ * - `postalCode` — κρατήθηκε **μόνο** ο Τ.Κ. και ο υποψήφιος φέρει τον **ίδιο** (βαθμίδες 9 · 12).
+ * - `locality` — κρατήθηκε ο **οικισμός** και ο υποψήφιος είναι ο **ίδιος τόπος**· αν δηλώθηκε Τ.Κ.,
+ *   δεν τον διαψεύδει (βαθμίδες 10 · 11). Είναι το `partial_match` της Google με τύπο `locality`.
+ */
 export interface GeocodingRelaxation {
-  readonly dropped: readonly GeocodingLocalityField[];
+  readonly dropped: readonly GeocodingDroppedField[];
   /** Το πεδίο που **κρατήθηκε** και **επιβεβαιώθηκε** στην απάντηση. */
-  readonly anchor: 'postalCode';
+  readonly anchor: 'postalCode' | 'locality';
 }
 
 export type FieldMatchKind =
@@ -302,11 +314,13 @@ export interface ConfidenceBreakdown {
 /**
  * Variant identity in the engine's multi-strategy search.
  *
- * ⚠️ **Ταυτότητα, όχι σειρά** (ADR-332 D28): η 9 εκτελείται **πριν** από τις 7/8. Ο αριθμός
- * αποθηκεύεται στο `geocodingMetadata.variantUsed`, άρα **ποτέ επαναρίθμηση**. Η σειρά ζει στο
- * `app/api/geocoding/geocoding-ladder.ts`.
+ * ⚠️ **Ταυτότητα, όχι σειρά** (ADR-332 D28 · D31): οι 9–12 εκτελούνται **πριν** από τις 7/8. Ο
+ * αριθμός αποθηκεύεται στο `geocodingMetadata.variantUsed`, άρα **ποτέ επαναρίθμηση**. Η σειρά ζει
+ * στο `app/api/geocoding/geocoding-ladder.ts`.
+ *
+ * `10` οικισμός (+ Τ.Κ.) σε δημοτική μορφή · `11` η δεύτερη δημοτική μορφή («-ιο») · `12` μόνο Τ.Κ.
  */
-export type GeocodingVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type GeocodingVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
 /** Outcome of a single variant attempt. */
 export type GeocodingAttemptStatus = 'success' | 'no-results' | 'error' | 'skipped';
