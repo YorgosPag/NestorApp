@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { BrainCircuit, Pencil, Undo2, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { Input } from '@/components/ui/input';
 import { corroborationsOf } from '@/subapps/catalog/import/proposal-values';
 import { primaryOptionIndex } from '@/subapps/catalog/import/supplier-memory-core';
@@ -100,7 +101,7 @@ function MemoryChoices({ hint, label, readOnly, onEdit }: { readonly hint: Impor
       <BrainCircuit className="h-3 w-3 text-muted-foreground" aria-hidden />
       <span className="text-muted-foreground">{t(hint.verdict === 'conflict' ? 'review.memoryConflict' : 'review.memoryKnows')}</span>
       {hint.options.map((option, index) => (
-        <Button key={option.text} type="button" size="sm" variant={index === primary ? 'default' : 'outline'} disabled={readOnly || !option.usable} onClick={() => onEdit(option.text)}>
+        <Button key={option.text} type="button" size="sm" variant="outline" className={COLOR_BRIDGE.action[index === primary ? 'primary' : 'secondary']} disabled={readOnly || !option.usable} onClick={() => onEdit(option.text)}>
           {t(option.usable ? (option.suggested ? 'review.memorySuggested' : 'review.memoryOption') : 'review.memoryStale', { value: option.text, count: option.count })}
         </Button>
       ))}

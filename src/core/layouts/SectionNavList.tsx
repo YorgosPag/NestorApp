@@ -9,7 +9,7 @@
  * 🔑 **Γιατί όχι οι καρτέλες του έργου** (`base-tabs` · `tabs-rail` · `UniversalTabsRenderer`): όλες είναι **οριζόντιες**
  *   και το μόνο «σήμα» τους είναι ένα boolean `warningDot`. Η αντίρρηση του NN/g για τις καρτέλες (*«critical content in a
  *   non-default tab is missed»*) απαντιέται μόνο αν το στοιχείο λίστας **λέει** τι έχει μέσα — γραμμή σύνοψης + αριθμός.
- * 🔑 Στο κινητό τα ίδια στοιχεία είναι **κάρτες** με βέλος (drill-down)· από το `md` και πάνω, λίστα πλοήγησης δίπλα στην
+ * 🔑 Στο κινητό τα ίδια στοιχεία είναι **κάρτες** με βέλος (drill-down)· από τη βαθμίδα `pane-split` (διαθέσιμος χώρος, `constants/pane-tiers`) και πάνω, λίστα πλοήγησης δίπλα στην
  *   ενότητα. Ένα component, γεωμετρία μόνο με CSS — σωστό από το πρώτο καρέ.
  */
 
@@ -42,9 +42,9 @@ interface SectionNavListProps {
 const ITEM = cn(
   'flex min-h-11 w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
   'bg-card hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-  'md:border-transparent md:bg-transparent md:px-3 md:py-2',
+  'pane-split:border-transparent pane-split:bg-transparent pane-split:px-3 pane-split:py-2',
 );
-const CURRENT = 'md:border-border md:bg-accent';
+const CURRENT = 'pane-split:border-border pane-split:bg-accent';
 
 function SectionNavItem({
   entry,
@@ -74,7 +74,7 @@ function SectionNavItem({
         </span>
         {entry.summary !== undefined && <span className="text-sm text-muted-foreground">{entry.summary}</span>}
       </span>
-      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground md:hidden" />
+      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground pane-split:hidden" />
     </button>
   );
 }
@@ -82,7 +82,7 @@ function SectionNavItem({
 export function SectionNavList({ sections, currentId, onSelect, ariaLabel, className }: SectionNavListProps) {
   return (
     <nav aria-label={ariaLabel} className={className}>
-      <ul className="flex flex-col gap-2 md:gap-1">
+      <ul className="flex flex-col gap-2 pane-split:gap-1">
         {sections.map((entry) => (
           <li key={entry.id}>
             <SectionNavItem entry={entry} current={entry.id === currentId} onSelect={onSelect} />

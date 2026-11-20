@@ -17,6 +17,7 @@ import React from 'react';
 import { BrainCircuit, Check } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import type { ImportLineDecision } from '@/subapps/catalog/types/catalog-import';
 import { primaryOptionIndex } from '@/subapps/catalog/import/supplier-memory-core';
 import type { ImportMemoryHint } from '@/subapps/catalog/types/catalog-import-requests';
@@ -48,7 +49,7 @@ export function MemoryHintNote({ hint, disabled, onAccept }: MemoryHintNoteProps
               {option.suggested ? <strong className="ml-1">{t('review.memory.suggested')}</strong> : null}
             </span>
             {option.usable && decisionText.known(option.decision) ? (
-              <Button type="button" size="sm" variant={index === primary ? 'default' : 'outline'} disabled={disabled} onClick={() => onAccept(option.decision)}>
+              <Button type="button" size="sm" variant="outline" className={COLOR_BRIDGE.action[index === primary ? 'primary' : 'secondary']} disabled={disabled} onClick={() => onAccept(option.decision)}>
                 <Check className="mr-1 h-3 w-3" aria-hidden />{t('review.memory.accept')}
               </Button>
             ) : <span className="text-muted-foreground">{t('review.memory.unusable')}</span>}

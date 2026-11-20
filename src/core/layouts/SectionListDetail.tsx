@@ -6,14 +6,17 @@
  * @related ADR-946 · ADR-797 (ο καταναλωτής δηλώνει `data-shell-span="full"`) · `useUrlSection` · `record-action-bar`
  * @module core/layouts/SectionListDetail
  *
- * | Πλάτος | Τι φαίνεται |
+ * | Διαθέσιμος χώρος (παράθυρο − μπάρα) | Τι φαίνεται |
  * |---|---|
- * | `<md` | **ή** πλαϊνό (σύνοψη) + λίστα ως κάρτες, **ή** η ενότητα με «‹ πίσω» — drill-down (Material 3 · Apple HIG) |
- * | `md`–`xl` | λίστα (sticky) · πλαϊνό στην κορυφή της στήλης ενότητας · ενότητα |
- * | `≥xl` | λίστα (sticky) · ενότητα · πλαϊνό **sticky** — το πάνελ ιδιοτήτων του Revit/Figma, πάντα ορατό |
+ * | `< pane-split` (840px) | **ή** πλαϊνό (σύνοψη) + λίστα ως κάρτες, **ή** η ενότητα με «‹ πίσω» — drill-down (Material 3 · Apple HIG) |
+ * | `pane-split`–`pane-wide` | λίστα (sticky) · πλαϊνό στην κορυφή της στήλης ενότητας · ενότητα |
+ * | `≥ pane-wide` (88rem) | λίστα (sticky) · ενότητα · πλαϊνό **sticky** — το πάνελ ιδιοτήτων του Revit/Figma, πάντα ορατό |
+ *
+ * 🔴 **ΟΧΙ `md:` / `xl:`** — ρωτούν το **παράθυρο**, όχι τον χώρο δίπλα στην μπάρα (ADR-946 §3.1, `constants/pane-tiers`).
  *
  * 🔑 **«Ποια ενότητα» = διεύθυνση, «πόσες στήλες» = CSS** — το δόγμα του `read-only-viewer/viewer-panes.ts`. Καμία
- *   γεωμετρία δεν ρωτά το `useViewportClass`· μόνο η **συμπεριφορά ιστορικού** (`push` στο κινητό, `replace` στο φαρδύ).
+ *   γεωμετρία δεν ρωτά το JS· η **συμπεριφορά ιστορικού** (`push` σε ένα pane, `replace` σε δύο) διαβάζει τη στιγμή του
+ *   κλικ πόσες στήλες ζωγράφισε ο browser (`isSinglePane`).
  * 🔑 **Ένα αντίτυπο, ποτέ δύο** (κανόνας `ListDetailsSplit`, ADR-912): ενότητα και πλαϊνό αποδίδονται **μία** φορά· τα
  *   πλάτη τα μετακινούν μόνο με τοποθέτηση στο πλέγμα. Η σειρά DOM (λίστα → πλαϊνό → ενότητα) είναι η οπτική σειρά στο
  *   `md`· στο `xl` το πλαϊνό πάει δεξιά (πάνελ επιθεωρητή, όπως στο `ListingDetailContent`).
@@ -22,10 +25,10 @@
  * ⚠️ **Κανένα `@container`** — σπάει το `sticky` των παιδιών (ADR-797, `shell-surface.css`).
  */
 
-import { useId, useMemo, type ReactNode } from 'react';
+import { useId, useMemo, useRef, type ReactNode } from 'react';
 import { ChevronLeft } from 'lucide-react';
 
-import { useViewportClass } from '@/hooks/media/useViewportClass';
+import { useViewportClass, type ViewportClass } from '@/hooks/media/useViewportClass';
 import { useUrlSection } from '@/hooks/useUrlTabParam';
 import { cn } from '@/lib/utils';
 
@@ -47,19 +50,36 @@ interface SectionListDetailProps {
   readonly onSelect?: (sectionId: string) => void;
 }
 
-/** Μία στήλη στο κινητό · 2 από το `md` · 3 από το `xl`. Το κενό ζει **εδώ**, όχι στο μέτρο του κελύφους (Φ.Κ6). */
+/** Μία στήλη · 2 από το `pane-split` · 3 από το `pane-wide`. Το κενό ζει **εδώ**, όχι στο μέτρο του κελύφους (Φ.Κ6). */
 const GRID = cn(
   'grid grid-cols-1 gap-6',
-  'md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]',
-  'xl:grid-cols-[minmax(0,16rem)_minmax(0,1fr)_minmax(0,20rem)]',
+  'pane-split:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]',
+  'pane-wide:grid-cols-[minmax(0,16rem)_minmax(0,1fr)_minmax(0,20rem)]',
 );
-const NAV = 'row-start-2 md:sticky md:top-4 md:col-start-1 md:row-span-2 md:row-start-1 md:self-start xl:row-span-1';
+const NAV = cn(
+  'row-start-2 pane-split:sticky pane-split:top-4 pane-split:col-start-1 pane-split:row-span-2',
+  'pane-split:row-start-1 pane-split:self-start pane-wide:row-span-1',
+);
 const ASIDE = cn(
-  'row-start-1 flex min-w-0 flex-col gap-4 md:col-start-2 md:row-start-1',
+  'row-start-1 flex min-w-0 flex-col gap-4 pane-split:col-start-2 pane-split:row-start-1',
   // Sticky πάνελ ψηλότερο από την οθόνη = περιεχόμενο που δεν φτάνεται ποτέ ⇒ δική του κύλιση.
-  'xl:sticky xl:top-4 xl:col-start-3 xl:max-h-[calc(100dvh-2rem)] xl:self-start xl:overflow-y-auto',
+  'pane-wide:sticky pane-wide:top-4 pane-wide:col-start-3 pane-wide:max-h-[calc(100dvh-2rem)] pane-wide:self-start',
+  'pane-wide:overflow-y-auto',
 );
-const DETAIL = 'flex min-w-0 flex-col gap-4 md:col-start-2 md:row-start-2 xl:row-start-1';
+const DETAIL = 'flex min-w-0 flex-col gap-4 pane-split:col-start-2 pane-split:row-start-2 pane-wide:row-start-1';
+/** Κρυφό σε ένα pane, ορατό μόλις χωρούν δύο. */
+const SPLIT_ONLY_BLOCK = 'hidden pane-split:block';
+const SPLIT_ONLY_FLEX = 'hidden pane-split:flex';
+
+/**
+ * **Event-time**: πόσες στήλες ζωγράφισε **ο browser** — η αυθεντία είναι το CSS, όχι δεύτερο κατώφλι στο JS.
+ * Χωρίς διάταξη (jsdom, CSS που δεν φορτώθηκε) ⇒ εφεδρεία στο παράθυρο.
+ */
+function isSinglePane(grid: HTMLElement | null, viewport: ViewportClass): boolean {
+  const tracks = grid === null ? '' : getComputedStyle(grid).gridTemplateColumns.trim();
+  if (tracks === '' || tracks === 'none') return viewport === 'narrow';
+  return tracks.split(/\s+/).length === 1;
+}
 
 /** Η στήλη της ενότητας: «‹ πίσω» (μόνο κινητό) · τίτλος · περιεχόμενο. Κρυφή στο κινητό όσο δεν ζητήθηκε ενότητα. */
 function SectionPane({
@@ -77,11 +97,11 @@ function SectionPane({
 }) {
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className={cn(DETAIL, !drilled && 'max-md:hidden')}>
+    <section aria-labelledby={headingId} className={cn(DETAIL, !drilled && SPLIT_ONLY_FLEX)}>
       <button
         type="button"
         onClick={onBack}
-        className="flex min-h-11 items-center gap-1 self-start text-sm font-medium text-foreground underline md:hidden"
+        className="flex min-h-11 items-center gap-1 self-start text-sm font-medium text-foreground underline pane-split:hidden"
       >
         <ChevronLeft aria-hidden className="size-4" />
         {backLabel}
@@ -107,23 +127,24 @@ export function SectionListDetail({
   const viewport = useViewportClass();
   const activeId = requested ?? ids[0] ?? '';
   const drilled = requested !== null;
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const select = (sectionId: string): void => {
-    open(sectionId, viewport === 'narrow' ? 'push' : 'replace');
+    open(sectionId, isSinglePane(gridRef.current, viewport) ? 'push' : 'replace');
     onSelect?.(sectionId);
   };
 
   return (
     <RecordActionBarProvider>
-      <div data-section-pane={drilled ? 'section' : 'list'} className={GRID}>
+      <div ref={gridRef} data-section-pane={drilled ? 'section' : 'list'} className={GRID}>
         <SectionNavList
           sections={sections}
           currentId={activeId}
           onSelect={select}
           ariaLabel={navLabel}
-          className={cn(NAV, drilled && 'max-md:hidden')}
+          className={cn(NAV, drilled && SPLIT_ONLY_BLOCK)}
         />
-        <aside aria-label={asideLabel} className={cn(ASIDE, drilled && 'max-md:hidden')}>
+        <aside aria-label={asideLabel} className={cn(ASIDE, drilled && SPLIT_ONLY_FLEX)}>
           {aside}
         </aside>
         <SectionPane

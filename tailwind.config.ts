@@ -1,4 +1,7 @@
 import type { Config } from 'tailwindcss';
+import plugin from 'tailwindcss/plugin';
+
+import { paneTierVariant } from './src/constants/pane-tiers';
 
 export default {
   darkMode: ['class'],
@@ -271,5 +274,12 @@ export default {
       }
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [
+    require('tailwindcss-animate'),
+    // ADR-946 §3.1 — βαθμίδες ΔΙΑΘΕΣΙΜΟΥ χώρου (παράθυρο − μπάρα), όχι παραθύρου. Σειρά: split πριν από wide.
+    plugin(({ addVariant }) => {
+      addVariant('pane-split', paneTierVariant('split'));
+      addVariant('pane-wide', paneTierVariant('wide'));
+    }),
+  ],
 } satisfies Config;

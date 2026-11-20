@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { useIsMobile } from "@/hooks/useMobile"
 import { cn } from "@/lib/utils"
+import { SIDEBAR_WIDTH_ICON_REM, SIDEBAR_WIDTH_REM } from "@/constants/pane-tiers"
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip"
@@ -17,9 +18,9 @@ const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 /** Μετάβαση κατάστασης στήλης στο ίδιο έγγραφο — ώστε η επαναφορά να μάθει την εγγραφή. */
 const SIDEBAR_COOKIE_EVENT = "sidebar-cookie-change"
-export const SIDEBAR_WIDTH = "16rem"
+export const SIDEBAR_WIDTH = `${SIDEBAR_WIDTH_REM}rem`
 export const SIDEBAR_WIDTH_MOBILE = "18rem"
-export const SIDEBAR_WIDTH_ICON = "3rem"
+export const SIDEBAR_WIDTH_ICON = `${SIDEBAR_WIDTH_ICON_REM}rem`
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContextType = {
