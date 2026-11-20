@@ -197,6 +197,9 @@ const DEFAULTS = Object.freeze({
     'src/components/mandate/issuance-quote-surfaces.tsx',
     // ADR-945 §7.6 — «Εκδόσεις εγγράφων» στην καρτέλα ακινήτου του ιδιώτη: μόνο με ανοιχτό διακόπτη, με τα κείμενά της στο chunk.
     'src/components/owner-property/owner-issuance-surfaces.tsx',
+    // ADR-946 · ADR-842 Φ4 — «τι βλέπει ο αγοραστής» στο πλαϊνό της «Βελτίωσε την αγγελία σου»: τα components της
+    // σελίδας αγγελίας, με το `listing-detail` στο chunk — όχι στο slice της φόρμας (μετρημένο 19,8 → 28,8 KB στατικά).
+    'src/components/owner-property/improve/improve-surfaces.tsx',
   ],
 
   /**

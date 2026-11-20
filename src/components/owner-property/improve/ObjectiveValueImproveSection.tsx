@@ -59,7 +59,7 @@ function Body({ state, zone, onAnswer }: {
   const { levelBasis } = improvement;
   return (
     <>
-      <ObjectiveValueBeforeAfter bounds={improvement.bounds} />
+      <ObjectiveValueBeforeAfter bounds={improvement.bounds} baseline={state.baseline ?? improvement.bounds} />
       {/* ADR-898 Φ3β-3β — δεν απαντιέται εδώ: το εμβαδόν ανά επίπεδο ζει στα στοιχεία του ακινήτου (ADR-236). */}
       {levelBasis.kind === 'missing' && (
         <p className="m-0 text-sm text-foreground">{t(`${I}.levelsMissing`, { count: levelBasis.count })}</p>
@@ -75,9 +75,17 @@ function Body({ state, zone, onAnswer }: {
   );
 }
 
-export function ObjectiveValueImproveSection({ subject }: { readonly subject: ObjectiveValueImproveSubject }) {
+interface SectionViewProps {
+  readonly subject: ObjectiveValueImproveSubject;
+  /** Η κατάσταση — από τον κάτοχό της (η σελίδα «Βελτίωσε» τη μοιράζεται με τη λίστα ενοτήτων και το πλαϊνό). */
+  readonly state: ObjectiveValueImproveState;
+  /** `false` ⇒ η προεπισκόπηση αγοραστή ζει στο πλαϊνό της σελίδας, όχι εδώ (ένα αντίτυπο). */
+  readonly preview?: boolean;
+}
+
+/** Η ενότητα, για καλούντα που **ήδη** κρατά την κατάσταση (ADR-946: λίστα · ενότητα · πλαϊνό διαβάζουν την ίδια). */
+export function ObjectiveValueImproveSectionView({ subject, state, preview = true }: SectionViewProps) {
   const { t } = useTranslation([NS]);
-  const state = useObjectiveValueImprove(subject);
   const [localRejection, setLocalRejection] = useState<readonly ObjectiveValuePatchViolation[]>([]);
   const { zone, save, declarations, today, prefill } = state;
   // ΕΝΑΣ δρόμος επιστροφής για τους δύο συνδέσμους προς τον υπολογιστή (ενότητα + προεπισκόπηση αγοραστή).
@@ -98,7 +106,13 @@ export function ObjectiveValueImproveSection({ subject }: { readonly subject: Ob
       ))}
       {zone.kind === 'answered' ? <Body state={state} zone={zone} onAnswer={onAnswer} /> : <ZoneMessage zone={zone} />}
       {zone.kind === 'answered' && zone.buyerView.kind !== 'no-zone' && (
-        <ObjectiveValueVisibility display={declarations.display} buyerView={zone.buyerView} onAnswer={onAnswer} back={back} />
+        <ObjectiveValueVisibility
+          display={declarations.display}
+          buyerView={zone.buyerView}
+          onAnswer={onAnswer}
+          back={back}
+          preview={preview}
+        />
       )}
       {prefill !== null && (
         <ObjectiveValueLink className="self-start text-sm" prefillQuery={serializeObjectiveValuePrefill(prefill, back)}>
@@ -107,4 +121,10 @@ export function ObjectiveValueImproveSection({ subject }: { readonly subject: Ob
       )}
     </>
   );
+}
+
+/** Η ενότητα **αυτόνομη** — κρατά μόνη της την κατάσταση (καρτέλα ακινήτου του γραφείου, `PropertyObjectiveValuePanel`). */
+export function ObjectiveValueImproveSection({ subject }: { readonly subject: ObjectiveValueImproveSubject }) {
+  const state = useObjectiveValueImprove(subject);
+  return <ObjectiveValueImproveSectionView subject={subject} state={state} />;
 }

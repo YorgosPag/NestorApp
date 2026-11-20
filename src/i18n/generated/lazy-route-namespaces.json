@@ -1251,6 +1251,24 @@
     "document-registry",
     "legality"
   ],
+  "OwnerListingBuyerPreview": [
+    "common",
+    "common-account",
+    "common-actions",
+    "common-empty-states",
+    "common-navigation",
+    "common-photos",
+    "common-sales",
+    "common-shared",
+    "common-status",
+    "common-validation",
+    "listing-detail",
+    "navigation",
+    "navigation-entities",
+    "objective-value",
+    "properties-enums",
+    "search-results"
+  ],
   "PhotoShare": [
     "common",
     "common-account",

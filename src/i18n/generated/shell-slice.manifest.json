@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "b25b44ae2aa53d7c342e80ef683a3d6c2cb08df49d85b85efec47f5254ce9e38",
+    "src/i18n/generated/lazy-route-namespaces.json": "0ec046520200f462ce082d362868cc73d39157d2f65f29f6ddd3af35545660a4",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -94,7 +94,7 @@
     "src/i18n/generated/routes/offers__new.el.json": "73fda44762c96c57da71ce042617e5b51ecea89deb30ef26d920e64beaa6d5bf",
     "src/i18n/generated/routes/offers__offerId.el.json": "e683a6cbea3f2469b0778bd4e714b6516299271d7fc1789fb405c16457aa0a2c",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
-    "src/i18n/generated/routes/offers__offerId__improve.el.json": "4d28bae57c9a93cfa68f30eec51515a117c2f1a764ab206a39f413b2c4fc4b0e",
+    "src/i18n/generated/routes/offers__offerId__improve.el.json": "f343ed711991a7d84a7c199c61a779b8ffa6e576432e4b251b8aa5485283d6a3",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -138,7 +138,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "ea809d3dd5036454f9723797b38acf84a96410a2cf8d926571c41a507acb0063",
-      "lazyRouteRegistries": "2ca896682078e66a28f50378f6c2c45e85d2283a0234d51ead599020b7bdaee9",
+      "lazyRouteRegistries": "bf5d49aaa7f799eb9400c40f01e3ef21d3215c371e49ad7f5c5a950ab5c462c5",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "3463fd9666b61d2a3e504b0560c1e2c1bd9a491651a34eb68fd035adda7836af",
@@ -150,7 +150,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "41ce188e6655caf8573d0225bb5d72bb03bc066410a9712a051008308f979f30",
+      "registries": "17564915fa6e4b84d2801c57acbde3f88afad22f035a19e13e23a393ad701751",
       "supportedNamespaces": "b3dec606cde1f3d914e3206109aa7c4447c6c17882103a096a8fe306e756a38f"
     },
     "namespaceBundles": {
@@ -165,7 +165,7 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "4d7aea351f65ad8b1ecf40ed8e6c2d55991cb260154053bf8908319daad8c7c9",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "a9064d3d88e88070d7921aa2a3b2c894838020e7e97fda94ee92e10695871373",
+      "scripts/lib/i18n-shell-slice/config.js": "85995c237607bfa4fb2463214b71dece03891aab6c628bec071c89a549219aba",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "92dfb473399768e887076c450813a22f8e157edb9b0bfcdf5230ab2a164bb9a2",
+  "inputsSha256": "89d43e10c6512dd97652649db06dfb4ee0affd423639205627ae586de2114cd5",
   "languages": [
     "el"
   ],
@@ -37476,7 +37476,20 @@
             "autoSave.saving",
             "buttons.cancel",
             "buttons.close",
-            "buttons.confirm"
+            "buttons.confirm",
+            "priceAmount.nightly",
+            "priceAmount.rent",
+            "priceAmount.sale",
+            "priceAmount.stayTotal",
+            "pricePerArea.nightly",
+            "pricePerArea.rent",
+            "pricePerArea.sale",
+            "priceSection.nightly",
+            "priceSection.rent",
+            "priceSection.sale",
+            "priceSection.unpriced",
+            "priceStanding.offMarket",
+            "priceStanding.retired"
           ],
           "prefixes": [],
           "whole": false
@@ -37622,6 +37635,12 @@
             "improve.absent",
             "improve.areaIncludesCommon.help",
             "improve.areaIncludesCommon.label",
+            "improve.aside.buyerLead",
+            "improve.aside.buyerTitle",
+            "improve.aside.failed",
+            "improve.aside.label",
+            "improve.aside.loading",
+            "improve.aside.openListing",
             "improve.back",
             "improve.beforeAfter.before",
             "improve.beforeAfter.now",
@@ -37637,6 +37656,8 @@
             "improve.levelsMissing",
             "improve.loading",
             "improve.more",
+            "improve.nav.back",
+            "improve.nav.label",
             "improve.notPublished",
             "improve.nothingOpen",
             "improve.pageTitle",
@@ -37649,6 +37670,14 @@
             "improve.sections.terrain.loading",
             "improve.signInNeeded",
             "improve.suggested",
+            "improve.summary.commonChargesNone",
+            "improve.summary.commonChargesUndeclared",
+            "improve.summary.energyClass",
+            "improve.summary.energyUndeclared",
+            "improve.summary.loading",
+            "improve.summary.terrainMissing",
+            "improve.summary.terrainPublished",
+            "improve.summary.unavailable",
             "improve.visibility.frontageStays",
             "improve.visibility.help",
             "improve.visibility.hiddenPreview",
@@ -37712,6 +37741,22 @@
             "result.factors",
             "result.missing",
             "result.problems"
+          ],
+          "whole": false
+        },
+        "properties": {
+          "keys": [
+            "completion.aria",
+            "completion.breakdown.allComplete",
+            "completion.breakdown.heading",
+            "completion.bucket.amber",
+            "completion.bucket.green",
+            "completion.bucket.red",
+            "completion.improveLink",
+            "completion.title"
+          ],
+          "prefixes": [
+            "completion.fields"
           ],
           "whole": false
         },
@@ -37804,6 +37849,16 @@
           "prefixes": [
             "frontage"
           ],
+          "whole": false
+        },
+        "search-results": {
+          "keys": [
+            "listing.priceMissing.nightlyRateMissing",
+            "listing.priceMissing.notListed",
+            "listing.priceMissing.rentPriceMissing",
+            "listing.priceMissing.salePriceMissing"
+          ],
+          "prefixes": [],
           "whole": false
         }
       }
@@ -41255,7 +41310,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1364095
+    "sliceBytes": 1367163
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

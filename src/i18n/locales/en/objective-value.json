@@ -344,7 +344,29 @@
     "retry": "Try again",
     "dismiss": "Close",
     "locked": "The property has been sold or rented: its details are locked (contracts, land registry) and the objective value cannot be changed here.",
-    "notApplicable": "No objective value is calculated here for this type of property."
+    "notApplicable": "No objective value is calculated here for this type of property.",
+    "nav": {
+      "label": "Improvement sections",
+      "back": "All sections"
+    },
+    "aside": {
+      "label": "Your listing now",
+      "buyerTitle": "What the buyer sees",
+      "buyerLead": "Exactly as on the public listing. It changes with every saved answer.",
+      "loading": "Loading the preview…",
+      "failed": "The preview did not load. Your answers are still being saved.",
+      "openListing": "Open the public listing"
+    },
+    "summary": {
+      "loading": "Loading…",
+      "unavailable": "Not calculated for this listing",
+      "energyClass": "Class {energyClass}",
+      "terrainPublished": "Published on the listing",
+      "terrainMissing": "No topographic survey uploaded",
+      "commonChargesUndeclared": "Not declared",
+      "commonChargesNone": "No common charges",
+      "energyUndeclared": "No class declared"
+    }
   },
   "stages": {
     "fieldLabel": "Stage under POL.1149/1994 (optional)",

@@ -33,18 +33,34 @@ interface VisibilityProps {
   readonly onAnswer: (patch: ObjectiveValueDeclarationsPatch) => void;
   /** Ο δρόμος επιστροφής από τον υπολογιστή (ADR-947 Φ1β) — ίδιος με τον σύνδεσμο της ενότητας. */
   readonly back: ObjectiveValueReturn | null;
+  /**
+   * `false` ⇒ μόνο ο διακόπτης: η προεπισκόπηση ζει ήδη αλλού στην ίδια οθόνη (το πλαϊνό της «Βελτίωσε», ADR-946) —
+   * **ένα** αντίτυπο, ποτέ δύο. Προεπιλογή `true` (η καρτέλα ακινήτου του γραφείου δεν έχει πλαϊνό).
+   */
+  readonly preview?: boolean;
 }
 
-export function ObjectiveValueVisibility({ display, buyerView, onAnswer, back }: VisibilityProps) {
+/** **Η αντικειμενική όπως τη βλέπει ο αγοραστής** — κρυμμένη ⇒ η εξήγηση, αλλιώς το ΙΔΙΟ component της αγγελίας. */
+export function ObjectiveValueBuyerPreview({ buyerView, back }: Pick<VisibilityProps, 'buyerView' | 'back'>) {
+  const { t } = useTranslation([NS]);
+  return buyerView.kind === 'hidden' ? (
+    <p className="m-0 text-sm text-muted-foreground">{t(`${I}.hiddenPreview`)}</p>
+  ) : (
+    <ListingObjectiveValue value={buyerView} back={back} />
+  );
+}
+
+export function ObjectiveValueVisibility({ display, buyerView, onAnswer, back, preview = true }: VisibilityProps) {
   const { t } = useTranslation([NS]);
   const switchId = useId();
   const helpId = useId();
   const previewId = useId();
+  const labelId = useId();
   return (
     <Card asChild className="flex flex-col gap-3 p-4">
-      <section aria-labelledby={previewId}>
+      <section aria-labelledby={preview ? previewId : labelId}>
         <p className="m-0 flex items-center justify-between gap-3">
-          <Label htmlFor={switchId}>{t(`${I}.label`)}</Label>
+          <Label id={labelId} htmlFor={switchId}>{t(`${I}.label`)}</Label>
           <Switch
             id={switchId}
             aria-describedby={helpId}
@@ -55,11 +71,11 @@ export function ObjectiveValueVisibility({ display, buyerView, onAnswer, back }:
         <p id={helpId} className="m-0 text-xs text-muted-foreground">
           {t(`${I}.help`)} {t(`${I}.frontageStays`)}
         </p>
-        <h3 id={previewId} className="m-0 text-sm font-semibold text-foreground">{t(`${I}.previewTitle`)}</h3>
-        {buyerView.kind === 'hidden' ? (
-          <p className="m-0 text-sm text-muted-foreground">{t(`${I}.hiddenPreview`)}</p>
-        ) : (
-          <ListingObjectiveValue value={buyerView} back={back} />
+        {preview && (
+          <>
+            <h3 id={previewId} className="m-0 text-sm font-semibold text-foreground">{t(`${I}.previewTitle`)}</h3>
+            <ObjectiveValueBuyerPreview buyerView={buyerView} back={back} />
+          </>
         )}
       </section>
     </Card>

@@ -15,22 +15,32 @@
  * ⚠️ **Στατικές εισαγωγές, επίτηδες.** Το slice i18n της διαδρομής βγαίνει από τη **στατική** κλειστότητα εισαγωγών·
  * ένα `next/dynamic` εδώ θα έβγαζε τις ερωτήσεις από το slice και θα ζωγράφιζε ωμά κλειδιά ώσπου να φορτώσει ο
  * χώρος ονομάτων (ADR-744 §18). Όταν μια ενότητα γίνει βαριά, το όριο μπαίνει **μέσα** της, όχι εδώ.
+ *
+ * 🔑 **Κάθε ενότητα λέει και την ΚΑΤΑΣΤΑΣΗ της** (`status`, ADR-946 · λίστα ενοτήτων με σύνοψη): τι έχει απαντηθεί και
+ * αν ζητά προσοχή — καθαρή συνάρτηση πάνω στα δεδομένα που η σελίδα **ήδη** κρατά, κανένα νέο fetch. Ολικό `Record`
+ * ⇒ νέα ενότητα χωρίς κατάσταση δεν μεταγλωττίζεται. Τη λέξη τη βάζει το `improve-section-entries.ts`.
  */
 
 import { createElement, type ReactElement } from 'react';
 
+import type { EnergyClass } from '@/constants/energy-classes';
+import { readCommonCharges } from '@/lib/common-charges/common-charges';
 import type { CommonChargesImproveSubject } from '@/lib/common-charges/common-charges-improve-subject';
+import { readEnergyCertificate, type EnergyCertificateAbsence } from '@/lib/energy-certificate/energy-certificate';
 import type { EnergyCertificateImproveSubject } from '@/lib/energy-certificate/energy-certificate-improve-subject';
 import { isLandProperty } from '@/constants/property-classification';
+import type { ObjectiveValueBounds } from '@/lib/objective-value/objective-value-bounds';
 import { objectiveValueFormOf } from '@/lib/objective-value/objective-value-form-of-type';
 import type { ObjectiveValueImproveSubject } from '@/lib/objective-value/objective-value-improve-subject';
 import type { TerrainImproveSubject } from '@/lib/terrain/publication/terrain-improve-subject';
+import type { PublicListingLookup } from '@/services/realtime/hooks/usePublicListings';
 import type { PublicListing } from '@/types/public-listing';
 
 import { CommonChargesImproveSection } from './CommonChargesImproveSection';
 import { EnergyCertificateImproveSection } from './EnergyCertificateImproveSection';
-import { ObjectiveValueImproveSection } from './ObjectiveValueImproveSection';
-import { TerrainImproveSection } from './TerrainImproveSection';
+import { ObjectiveValueImproveSectionView } from './ObjectiveValueImproveSection';
+import { publishedTerrainOf, TerrainImproveSection } from './TerrainImproveSection';
+import type { ObjectiveValueImproveState } from './useObjectiveValueImprove';
 
 /** Η σειρά της λίστας = η σειρά στην οθόνη. Τα κοινόχρηστα πρώτα: μία απάντηση, και φαίνεται δίπλα στην τιμή. */
 export const IMPROVE_SECTION_IDS = ['commonCharges', 'energyCertificate', 'terrain', 'objectiveValue'] as const;
@@ -45,6 +55,25 @@ export interface ImproveSubjects {
 }
 
 /**
+ * **Ό,τι κρατά η σελίδα, μία φορά**, για όλες τις ενότητες: οι κάτοχοι · η κατάσταση της αντικειμενικής (την
+ * μοιράζονται ενότητα, λίστα και πλαϊνό) · η ζωντανή δημόσια αγγελία (το τοπογραφικό που δημοσιεύεται τώρα).
+ */
+export interface ImproveContext {
+  readonly subjects: ImproveSubjects;
+  readonly objectiveValue: ObjectiveValueImproveState;
+  readonly publicListing: PublicListingLookup;
+}
+
+/** Η κατάσταση μιας ενότητας — δεδομένα, όχι λέξεις (τις βάζει το `improve-section-entries.ts`). */
+export type ImproveSectionStatus =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'commonCharges'; readonly monthlyAmount: number | null }
+  | { readonly kind: 'energyCertificate'; readonly energyClass: EnergyClass | null; readonly absence: EnergyCertificateAbsence | null }
+  | { readonly kind: 'terrain'; readonly published: boolean }
+  | { readonly kind: 'objectiveValue'; readonly bounds: ObjectiveValueBounds; readonly openQuestions: number };
+
+/**
  * Ο τίτλος κάθε ενότητας ζει στο `objective-value:improve.sections.<id>.title` — κλειδί από το **αναγνωριστικό**, όχι
  * πεδίο εδώ: ο γεννήτορας του slice λύνει το template ως πρόθεμα, ενώ κλειδί μέσα σε πίνακα θα έμενε ανεπίλυτο.
  */
@@ -52,30 +81,57 @@ export interface ImproveSectionDefinition {
   /** Έχει νόημα η ενότητα για ΑΥΤΗ την αγγελία; (κρίνεται πάνω στη δημόσια προβολή — ό,τι βλέπει ο αγοραστής) */
   readonly isApplicable: (listing: PublicListing) => boolean;
   /** Η ενότητα, δεμένη στον **δικό της** κάτοχο από τη δέσμη. */
-  readonly render: (subjects: ImproveSubjects) => ReactElement;
+  readonly render: (context: ImproveContext) => ReactElement;
+  /** Τι έχει απαντηθεί — για τη λίστα ενοτήτων. */
+  readonly status: (context: ImproveContext) => ImproveSectionStatus;
+}
+
+/** Η αντικειμενική: ποσό ή εύρος μόλις απαντήσει η μηχανή· «δεν υπολογίζεται» όταν η θέση ή το είδος δεν το επιτρέπουν. */
+function objectiveValueStatus({ zone }: ObjectiveValueImproveState): ImproveSectionStatus {
+  if (zone.kind === 'idle' || zone.kind === 'loading') return { kind: 'loading' };
+  if (zone.kind === 'failed' || zone.improvement.kind !== 'ready') return { kind: 'unavailable' };
+  const { bounds, questions } = zone.improvement;
+  return { kind: 'objectiveValue', bounds, openQuestions: questions.length };
 }
 
 export const IMPROVE_SECTIONS: Readonly<Record<ImproveSectionId, ImproveSectionDefinition>> = {
   commonCharges: {
     // Το «τίθεται η ερώτηση;» το έχει ήδη κρίνει η προβολή, με τον ΕΝΑΝ κριτή: κουτί `null` ⇒ καμία ενότητα.
     isApplicable: (listing) => listing.commonCharges !== null,
-    render: (subjects) => createElement(CommonChargesImproveSection, { subject: subjects.commonCharges }),
+    render: ({ subjects }) => createElement(CommonChargesImproveSection, { subject: subjects.commonCharges }),
+    // Ο ΙΔΙΟΣ αναγνώστης με την ενότητα και τον server (η αισιόδοξη επικάλυψη φαίνεται μόλις επιβεβαιωθεί).
+    status: ({ subjects }) => ({
+      kind: 'commonCharges',
+      monthlyAmount: readCommonCharges(subjects.commonCharges.charges).monthlyAmount,
+    }),
   },
   energyCertificate: {
     // ADR-777 §8.94 — ίδιο σχήμα: το «σηκώνει η διάθεση ΠΕΑ;» το έκρινε η προβολή (`LEGALITY_OFFER_MATRIX`, όχι γη).
     isApplicable: (listing) => listing.energyCertificate !== null,
-    render: (subjects) => createElement(EnergyCertificateImproveSection, { subject: subjects.energyCertificate }),
+    render: ({ subjects }) => createElement(EnergyCertificateImproveSection, { subject: subjects.energyCertificate }),
+    status: ({ subjects }) => {
+      const certificate = readEnergyCertificate(subjects.energyCertificate.certificate);
+      return { kind: 'energyCertificate', energyClass: certificate.class, absence: certificate.absence };
+    },
   },
   terrain: {
     // ADR-920 Β4.9 — Δ1: ανάγλυφο μόνο σε γη (οικόπεδο · αγροτεμάχιο), ο ΕΝΑΣ κριτής του τύπου. Μετά το ΠΕΑ (που η γη
     // δεν έχει) και πριν την αντικειμενική: για οικόπεδο, το έδαφος είναι το πιο ουσιώδες που λείπει από την αγγελία.
     isApplicable: (listing) => isLandProperty(listing.type),
-    render: (subjects) => createElement(TerrainImproveSection, { subject: subjects.terrain }),
+    render: ({ subjects, publicListing }) =>
+      createElement(TerrainImproveSection, { subject: subjects.terrain, lookup: publicListing }),
+    status: ({ publicListing }) =>
+      publicListing.state === 'loading'
+        ? { kind: 'loading' }
+        : { kind: 'terrain', published: publishedTerrainOf(publicListing) !== null },
   },
   objectiveValue: {
     // Ποια είδη αποτιμώνται το λέει ο ΕΝΑΣ πίνακας εντύπων — καμία δεύτερη λίστα ειδών εδώ.
     isApplicable: (listing) => objectiveValueFormOf(listing.type) !== null,
-    render: (subjects) => createElement(ObjectiveValueImproveSection, { subject: subjects.objectiveValue }),
+    // `preview: false` — η προεπισκόπηση αγοραστή ζει στο πλαϊνό της σελίδας (ένα αντίτυπο, ADR-946).
+    render: ({ subjects, objectiveValue }) =>
+      createElement(ObjectiveValueImproveSectionView, { subject: subjects.objectiveValue, state: objectiveValue, preview: false }),
+    status: ({ objectiveValue }) => objectiveValueStatus(objectiveValue),
   },
 };
 

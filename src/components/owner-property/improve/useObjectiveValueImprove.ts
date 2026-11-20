@@ -18,7 +18,7 @@
  * εύρος. Για το γραφείο ο τόπος θέλει αναγνώσεις κτιρίου/έργου — αδύνατο στον browser.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useListingPreview, type ListingPreviewState } from '@/hooks/listings/useListingPreview';
 import { useValueZoneAt, type ValueZoneLookup } from '@/hooks/market/useValueZoneAt';
@@ -36,6 +36,7 @@ import {
   type ObjectiveValueDeclarations,
   type ObjectiveValueDeclarationsPatch,
 } from '@/lib/objective-value/objective-value-declarations';
+import type { ObjectiveValueBounds } from '@/lib/objective-value/objective-value-bounds';
 import { objectiveValueImprovement, type ObjectiveValueImprovement } from '@/lib/objective-value/objective-value-improve';
 import type { ObjectiveValuePrefill } from '@/lib/objective-value/objective-value-prefill';
 import type {
@@ -69,6 +70,23 @@ export interface ObjectiveValueImproveState {
    * ανεξάρτητα από τη ζώνη. `null` όσο φορτώνει η βάση ή όταν το είδος είναι εκτός εντύπων.
    */
   readonly prefill: ObjectiveValuePrefill | null;
+  /**
+   * **Η αγγελία όπως τη βλέπει ο αγοραστής** (προβολή server + δηλώσεις, σέβεται την απόκρυψη) — η ΙΔΙΑ ανάγνωση που
+   * τρέφει την ενότητα τρέφει και την προεπισκόπηση του πλαϊνού: ένα fetch, μία αλήθεια. `null` όσο φορτώνει/απέτυχε.
+   */
+  readonly buyerListing: PublicListing | null;
+  /** Η κατάσταση της βάσης από τον server — για να ξεχωρίζει το πλαϊνό «φορτώνει» από «απέτυχε». */
+  readonly previewKind: ListingPreviewState['kind'];
+  /**
+   * Τα όρια της **πρώτης** απάντησης της μηχανής σε αυτή την επίσκεψη (το «Πριν» του «Πριν → Τώρα»). Ζει εδώ, όχι στο
+   * component: η ενότητα αποδίδεται ξανά κάθε φορά που ο άνθρωπος την ξανανοίγει από τη λίστα, η επίσκεψη όχι.
+   */
+  readonly baseline: ObjectiveValueBounds | null;
+}
+
+export interface ObjectiveValueImproveOptions {
+  /** `false` ⇒ καμία αναζήτηση ζώνης (το είδος δεν αποτιμάται)· η βάση από τον server φορτώνει πάντα (την θέλει το πλαϊνό). */
+  readonly zoneEnabled?: boolean;
 }
 
 /**
@@ -102,7 +120,22 @@ function lookupOf(preview: ListingPreviewState, listing: PublicListing | null, z
   return valueZonePointOf(listing.position) === null ? IMPRECISE : zone;
 }
 
-export function useObjectiveValueImprove(subject: ObjectiveValueImproveSubject): ObjectiveValueImproveState {
+/** Τα όρια, όταν η μηχανή έδωσε απάντηση (`ready`)· αλλιώς `null`. */
+function boundsOf(zone: ImproveZone): ObjectiveValueBounds | null {
+  return zone.kind === 'answered' && zone.improvement.kind === 'ready' ? zone.improvement.bounds : null;
+}
+
+/** Η πρώτη απάντηση της επίσκεψης — κρατιέται με το μοτίβο «παράγωγη κατάσταση κατά την απόδοση» της React. */
+function useVisitBaseline(bounds: ObjectiveValueBounds | null): ObjectiveValueBounds | null {
+  const [baseline, setBaseline] = useState<ObjectiveValueBounds | null>(null);
+  if (baseline === null && bounds !== null) setBaseline(bounds);
+  return baseline ?? bounds;
+}
+
+export function useObjectiveValueImprove(
+  subject: ObjectiveValueImproveSubject,
+  { zoneEnabled = true }: ObjectiveValueImproveOptions = {},
+): ObjectiveValueImproveState {
   const today = marketDayOf(Date.now());
   const save: ImproveSave = useFieldPatchQueue(subject.write, subject.revision);
   const { overlay } = save;
@@ -119,12 +152,13 @@ export function useObjectiveValueImprove(subject: ObjectiveValueImproveSubject):
     () => (preview.kind === 'ready' ? withObjectiveValueDeclarations(preview.listing, { ...declarations, display: 'shown' }) : null),
     [preview, declarations],
   );
-  const zoneLookup = useValueZoneAt(listing === null ? null : valueZonePointOf(listing.position));
+  const zoneLookup = useValueZoneAt(listing === null || !zoneEnabled ? null : valueZonePointOf(listing.position));
   const resolved = lookupOf(preview, listing, zoneLookup);
   const zone = useMemo(
     () => (listing === null || owner === null ? resolved : zoneOf(resolved, { listing, owner }, today)),
     [resolved, listing, owner, today],
   );
   const prefill = useMemo(() => (owner === null ? null : listingObjectiveValuePrefill(owner)), [owner]);
-  return { declarations, zone, save, today, prefill };
+  const baseline = useVisitBaseline(boundsOf(zone));
+  return { declarations, zone, save, today, prefill, buyerListing: listing, previewKind: preview.kind, baseline };
 }

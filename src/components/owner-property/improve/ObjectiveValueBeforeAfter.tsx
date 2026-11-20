@@ -6,9 +6,11 @@
  *
  * 🔑 **Αφετηρία = η πρώτη απάντηση της μηχανής σε αυτή την επίσκεψη**, όχι η τελευταία αποθήκευση: μετά από κάθε
  *   «αποθηκεύτηκε» το «πριν» θα γινόταν ίσο με το «τώρα» και ο άνθρωπος δεν θα έβλεπε ποτέ τι κέρδισε.
+ * 🔑 **Η αφετηρία την κρατά το hook** (`useObjectiveValueImprove` → `baseline`), όχι αυτό το component: στη διάταξη
+ *   λίστα → ενότητα (ADR-946) η ενότητα αποδίδεται ξανά όταν ξανανοίγει, και ένα τοπικό `useState` θα ξεχνούσε το «πριν».
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 
 import { useObjectiveValueAmountText } from '@/components/objective-value/ObjectiveValueEvaluated';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -17,9 +19,11 @@ import type { ObjectiveValueBounds } from '@/lib/objective-value/objective-value
 const NS = 'objective-value';
 const I = `${NS}:improve.beforeAfter`;
 
-export function ObjectiveValueBeforeAfter({ bounds }: { readonly bounds: ObjectiveValueBounds }) {
+export function ObjectiveValueBeforeAfter({ bounds, baseline }: {
+  readonly bounds: ObjectiveValueBounds;
+  readonly baseline: ObjectiveValueBounds;
+}) {
   const { t } = useTranslation([NS]);
-  const [baseline] = useState(bounds);
   const labelOf = useObjectiveValueAmountText();
   const before = labelOf(baseline);
   const now = labelOf(bounds);

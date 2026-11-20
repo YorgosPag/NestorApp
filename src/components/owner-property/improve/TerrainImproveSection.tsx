@@ -19,9 +19,17 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TerrainImproveSubject } from '@/lib/terrain/publication/terrain-improve-subject';
-import { usePublicListing } from '@/services/realtime/hooks/usePublicListings';
+import type { PublicListingLookup } from '@/services/realtime/hooks/usePublicListings';
 
 const NS = 'objective-value';
+
+/**
+ * **Τι δημοσιεύεται τώρα** — ο ΕΝΑΣ αναγνώστης για την ενότητα **και** τη σύνοψή της στη λίστα ενοτήτων. Η ζωντανή
+ * ανάγνωση (`usePublicListing`) τη κρατά η σελίδα, μία φορά: δύο listeners στο ίδιο έγγραφο θα ήταν δύο αλήθειες.
+ */
+export function publishedTerrainOf(lookup: PublicListingLookup) {
+  return lookup.state === 'found' ? lookup.listing.terrain?.value ?? null : null;
+}
 
 /** Όσο φορτώνει το πάνελ (κώδικας ή χώροι ονομάτων) — μία πρόταση κατάστασης, ποτέ κενό. */
 function TerrainPanelPending() {
@@ -34,10 +42,13 @@ const TerrainSurveyImportPanel = dynamic(
   { loading: () => <TerrainPanelPending /> },
 );
 
-export function TerrainImproveSection({ subject }: { readonly subject: TerrainImproveSubject }) {
+export function TerrainImproveSection({ subject, lookup }: {
+  readonly subject: TerrainImproveSubject;
+  /** Η δημόσια αγγελία, ζωντανά — από τη σελίδα (`usePublicListing(subject.listingId)`). */
+  readonly lookup: PublicListingLookup;
+}) {
   const { t } = useTranslation([NS]);
-  const lookup = usePublicListing(subject.listingId);
-  const published = lookup.state === 'found' ? lookup.listing.terrain?.value ?? null : null;
+  const published = publishedTerrainOf(lookup);
   return (
     <>
       <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:improve.sections.terrain.lead`)}</p>
