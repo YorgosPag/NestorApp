@@ -219,8 +219,11 @@ describe('🔑 ΤΙ παραδίδεται στη φόρμα', () => {
       type: 'individual',
       lastName: 'ΜΑΥΡΟΜΙΧΑΛΗΣ',
       firstName: 'ΚΩΝ/ΝΟΣ',
-      city: 'ΝΕΟΧΩΡΟΥΔΑ',
+      // ADR-332 §D30 Φάση 2: η έδρα ζει ΜΟΝΟ στη θέση 0 του `companyAddresses` — ένα `city` στη ρίζα
+      // το έκοβε σιωπηλά ο saver και η πόλη της πινακίδας χανόταν.
+      companyAddresses: [expect.objectContaining({ city: 'ΝΕΟΧΩΡΟΥΔΑ' })],
     });
+    expect(props.prefill).not.toHaveProperty('city');
     expect(props.prefill?.websites?.[0].url).toBe('https://www.nikolaou.com.gr');
   });
 
