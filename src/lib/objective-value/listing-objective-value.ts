@@ -68,7 +68,27 @@ export const CENTRAL_HEATING_OF: Readonly<Record<HeatingType, boolean | null>> =
 const PERMIT_BEFORE_CONSTRUCTION_YEARS = 2;
 const MID_YEAR = '07-01';
 
-export type ListingObjectiveValueAssumption =
+/**
+ * **ΤΟ ΕΝΑ λεξιλόγιο υποθέσεων της αντικειμενικής** (ADR-947 Δ2, Φ1β) — αγγελία, κτίριο **και** υπολογιστής.
+ *
+ * 🔑 Αυτή η ένωση είναι η πηγή· η αγγελία δένει τη διακριτή της ένωση σε αυτήν ({@link ListingObjectiveValueAssumption},
+ * `BoundToAssumptionKinds` παρακάτω) χωρίς να αναγκάζεται να **παράγει** κάθε μέλος: το `commercialityUnknown` («δεν ξέρω
+ * τον ΣΕ» ⇒ 1,0) συμβαίνει **μόνο** στον υπολογιστή — η αγγελία με άγνωστο ΣΕ δίνει **όρια**, ποτέ υπόθεση.
+ * (Μόνο τύπος: καμία λογική δεν απαριθμεί τις υποθέσεις σε χρόνο εκτέλεσης.)
+ */
+export type ObjectiveValueAssumptionKind =
+  | 'ageFromConstructionYear'
+  | 'areaWithoutCommon'
+  | 'declaredByLister'
+  | 'parkingDefaultArea'
+  | 'storageNotCounted'
+  | 'quantityDeclared'
+  | 'commercialityUnknown';
+
+/** Δέσμευση στο λεξιλόγιο: ένα σκέλος με άγνωστο `kind` (τυπογραφικό λάθος, νέο είδος χωρίς γραμμή στη λίστα) δεν μεταγλωττίζεται. */
+type BoundToAssumptionKinds<U extends { readonly kind: ObjectiveValueAssumptionKind }> = U;
+
+export type ListingObjectiveValueAssumption = BoundToAssumptionKinds<
   | { readonly kind: 'ageFromConstructionYear'; readonly year: number; readonly provenance: AttributeProvenance }
   /** Το μικτό εμβαδόν λογίστηκε **χωρίς** κοινόχρηστους (άρθ. 2 §17 — η κανονική περίπτωση· ADR-898 §8). */
   | { readonly kind: 'areaWithoutCommon' }
@@ -79,7 +99,8 @@ export type ListingObjectiveValueAssumption =
   /** Ισόγεια αποθήκη λογίστηκε **εκτός** συντελεστή δόμησης — αλλιώς είναι χώρος κύριας χρήσης (άρθ. 6 §4α). */
   | { readonly kind: 'storageNotCounted' }
   /** Η σύνδεση με τη μονάδα δηλώνει πλήθος > 1 για **ένα** έγγραφο χώρου ⇒ αποτιμάται μία φορά (απόφαση Giorgio, §19). */
-  | { readonly kind: 'quantityDeclared'; readonly quantity: number };
+  | { readonly kind: 'quantityDeclared'; readonly quantity: number }
+>;
 
 export type ListingObjectiveValue =
   /** Ο αγγελιοδότης επέλεξε απόκρυψη (ADR-898 Φ3β · πρότυπο NAR IDX): **κανένας** υπολογισμός, κανένα ποσό. */

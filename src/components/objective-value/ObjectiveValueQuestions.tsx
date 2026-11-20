@@ -8,6 +8,9 @@
  *
  * 🔑 **ΣΕ «δεν τον ξέρω» = 1,0 ΜΕ ρητή σήμανση** — η υπόθεση φαίνεται και στο αποτέλεσμα, ποτέ σιωπηλά. Η ερώτηση
  * εμφανίζεται μόνο όταν η πηγή των ζωνών **δεν** δίνει αριθμό (ADR-898 Φ5)· με πίνακα ΣΕ σε PDF, δείχνει τον σύνδεσμο.
+ *
+ * 🔑 **Σήμα προέλευσης ως υποδοχή** (`renderProvenance`, ADR-947 Φ1β): αυτό το αρχείο το εισάγουν και η οθόνη «Βελτίωσε
+ * την αγγελία σου» και ο πίνακας κτιρίου· στατική εισαγωγή του σήματος θα έβαζε τα κείμενά του στο i18n slice τους.
  */
 
 import React, { useId } from 'react';
@@ -174,7 +177,13 @@ export function ObjectiveValueQuestion({ question, ...props }: ObjectiveValueQue
   }
 }
 
-export function ObjectiveValueQuestions({ questions, ...props }: ObjectiveValueQuestionProps & { readonly questions: readonly ConditionalQuestion[] }) {
+interface ObjectiveValueQuestionsProps extends ObjectiveValueQuestionProps {
+  readonly questions: readonly ConditionalQuestion[];
+  /** Ό,τι αποδίδεται κάτω από κάθε ερώτηση — το σήμα προέλευσης του υπολογιστή. */
+  readonly renderProvenance?: (question: ConditionalQuestion) => React.ReactNode;
+}
+
+export function ObjectiveValueQuestions({ questions, renderProvenance, ...props }: ObjectiveValueQuestionsProps) {
   const { t } = useTranslation([NS]);
   return (
     <CalculatorStep title={t(`${NS}:questions.title`)}>
@@ -185,6 +194,7 @@ export function ObjectiveValueQuestions({ questions, ...props }: ObjectiveValueQ
           {questions.map((question) => (
             <li key={question} className="flex flex-col gap-1">
               <ObjectiveValueQuestion question={question} {...props} />
+              {renderProvenance?.(question)}
             </li>
           ))}
         </ul>

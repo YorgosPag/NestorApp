@@ -12,6 +12,9 @@
  * 🔑 **ΣΕ από την πηγή ⇒ καμία ερώτηση** (ADR-898 Φ5): όταν τα δεδομένα ζωνών δίνουν αριθμό για την επιλεγμένη τιμή
  * (ζώνη ή δηλωμένο μέτωπο), μπαίνει αυτός και η ερώτηση φεύγει — το αποτέλεσμα λέει από πού ήρθε. Πίνακας PDF ή κενό ⇒
  * η ερώτηση μένει (με σύνδεσμο στον πίνακα).
+ *
+ * 🔑 **Προέλευση ανά είσοδο** (ADR-947 Φ1β): κι αυτή **παράγωγο** — πρόχειρο ↔ ό,τι εφάρμοσε η προσυμπλήρωση ↔ θέση
+ * (`deriveInputProvenance`). Τη μοιράζει ΕΝΑ πλαίσιο (`ObjectiveValueProvenanceProvider`) σε κάθε σήμα.
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -20,12 +23,20 @@ import { ShellSurface } from '@/core/containers/ShellSurface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { marketDayOf } from '@/lib/listings/listing-stats';
 import { computeObjectiveValue } from '@/lib/objective-value/compute-objective-value';
-import { draftToInput, INITIAL_DRAFT, relevantQuestions, type ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
+import { draftToInput, INITIAL_DRAFT, relevantQuestions, type ObjectiveValueDraft, type UpdateDraft } from '@/lib/objective-value/objective-value-draft';
+import { deriveInputProvenance } from '@/lib/objective-value/objective-value-input-provenance';
+import type { ObjectiveValueResult as EngineResult } from '@/lib/objective-value/objective-value-types';
 
 import { ObjectiveValueAdjustments } from './ObjectiveValueAdjustments';
 import { ObjectiveValueFaq } from './ObjectiveValueFaq';
 import { ObjectiveValueLocation } from './ObjectiveValueLocation';
 import { ObjectiveValueProperty } from './ObjectiveValueProperty';
+import {
+  ObjectiveValueOverrideSummary,
+  ObjectiveValueProvenanceBadge,
+  ObjectiveValueProvenanceProvider,
+  ObjectiveValueQuestionProvenance,
+} from './ObjectiveValueProvenanceBadge';
 import { ObjectiveValueQuestions } from './ObjectiveValueQuestions';
 import { ObjectiveValueResult } from './ObjectiveValueResult';
 import { useObjectiveValueLocation, type ObjectiveValueLocationState } from './useObjectiveValueLocation';
@@ -80,38 +91,78 @@ function useCalculatorEvaluation(draft: ObjectiveValueDraft, location: Objective
   };
 }
 
+interface ProvenanceArgs {
+  readonly draft: ObjectiveValueDraft;
+  readonly prefill: Partial<ObjectiveValueDraft> | null;
+  readonly location: ObjectiveValueLocationState;
+  readonly result: EngineResult;
+  readonly update: UpdateDraft;
+  readonly sourcedFactor: number | null;
+}
+
+/** Η προέλευση όλων των εισόδων + ό,τι χρειάζεται το σήμα — ένα αντικείμενο για το πλαίσιο, σταθερό ανάμεσα σε αποδόσεις. */
+function useCalculatorProvenance({ draft, prefill, location, result, update, sourcedFactor }: ProvenanceArgs) {
+  const { lookup, zonePrice } = location;
+  const zonePriceFromSource = lookup.kind === 'answered' && lookup.verdict.kind === 'ready';
+  const provenance = useMemo(
+    () =>
+      deriveInputProvenance({
+        draft,
+        prefill,
+        location: { zonePrice, zonePriceFromSource, sourcedCommercialityFactor: sourcedFactor },
+      }),
+    [draft, prefill, zonePrice, zonePriceFromSource, sourcedFactor],
+  );
+  return useMemo(
+    () => ({ provenance, result, update, sourcedCommercialityFactor: sourcedFactor }),
+    [provenance, result, update, sourcedFactor],
+  );
+}
+
 export function ObjectiveValueContent() {
   const [draft, setDraft] = useState<ObjectiveValueDraft>(INITIAL_DRAFT);
   const update = useCallback((patch: Partial<ObjectiveValueDraft>) => setDraft((current) => ({ ...current, ...patch })), []);
   const location = useObjectiveValueLocation();
   const today = useMemo(() => marketDayOf(Date.now()), []);
   // ADR-898 Φ3 — από αγγελία: ό,τι ξέρει ήδη η αγγελία, ώστε να μένουν μόνο οι ερωτήσεις που άφησε ανοιχτές.
-  useObjectiveValuePrefill(update, location.pick);
+  const prefill = useObjectiveValuePrefill(update, location.pick);
   // Η τιμή ζώνης ανήκει στη θέση (ζώνη · δηλωμένο μέτωπο · χειροκίνητη)· το πρόχειρο την παίρνει τη στιγμή του υπολογισμού.
   const { result, questions, commercialityAssumed, sourcedFactor } = useCalculatorEvaluation(draft, location, today);
+  const provenance = useCalculatorProvenance({ draft, prefill, location, result, update, sourcedFactor });
 
   // `busy={false}` ΡΗΤΑ (ADR-797 §Φ.Ρ.3): η σελίδα δεν φορτώνει αρχικά δεδομένα (η τιμή ζώνης ζητείται όταν ο
   // επισκέπτης δώσει θέση) — αλλά είναι στο εύρος του CHECK 3.94, που ζητά `aria-busy="false"` ως μάρτυρα ετοιμότητας.
   return (
-    <ShellSurface as="main" measure="wide" busy={false} className="gap-y-6 py-4">
-      <PageHeader />
-      {/* Πλέγμα διάταξης μόνο (καμία σημασιολογία): οι ενότητες με επικεφαλίδα είναι τα βήματα μέσα του. */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
-        <div className="flex min-w-0 flex-col gap-6">
-          <ObjectiveValueLocation location={location} />
-          <ObjectiveValueProperty draft={draft} update={update} />
-          <ObjectiveValueQuestions questions={questions} draft={draft} update={update} today={today} commerciality={location.commerciality} />
-          <ObjectiveValueAdjustments draft={draft} update={update} />
+    <ObjectiveValueProvenanceProvider value={provenance}>
+      <ShellSurface as="main" measure="wide" busy={false} className="gap-y-6 py-4">
+        <PageHeader />
+        {/* Πλέγμα διάταξης μόνο (καμία σημασιολογία): οι ενότητες με επικεφαλίδα είναι τα βήματα μέσα του. */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
+          <div className="flex min-w-0 flex-col gap-6">
+            <ObjectiveValueLocation location={location} />
+            <ObjectiveValueProperty draft={draft} update={update} />
+            <ObjectiveValueQuestions
+              questions={questions}
+              draft={draft}
+              update={update}
+              today={today}
+              commerciality={location.commerciality}
+              renderProvenance={(question) => <ObjectiveValueQuestionProvenance question={question} />}
+            />
+            <ObjectiveValueAdjustments draft={draft} update={update} />
+          </div>
+          <aside className="lg:sticky lg:top-4">
+            <ObjectiveValueResult
+              result={result}
+              commercialityAssumed={commercialityAssumed}
+              sourcedCommercialityFactor={sourcedFactor}
+              commercialityProvenance={<ObjectiveValueProvenanceBadge input="commercialityFactor" />}
+              overrides={<ObjectiveValueOverrideSummary />}
+            />
+          </aside>
         </div>
-        <aside className="lg:sticky lg:top-4">
-          <ObjectiveValueResult
-            result={result}
-            commercialityAssumed={commercialityAssumed}
-            sourcedCommercialityFactor={sourcedFactor}
-          />
-        </aside>
-      </div>
-      <ObjectiveValueFaq />
-    </ShellSurface>
+        <ObjectiveValueFaq />
+      </ShellSurface>
+    </ObjectiveValueProvenanceProvider>
   );
 }

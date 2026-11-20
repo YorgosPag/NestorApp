@@ -4,6 +4,9 @@
  * **Βήμα 2 — το ακίνητο** (ADR-898 Φ2): είδος (έντυπο 1 / 4 / 5), επίπεδα με όροφο και επιφάνεια (κατοικία, και
  * μεζονέτα), ή επιφάνεια και θέση (αποθήκη / θέση στάθμευσης). Αυτά ζητούνται **πάντα** — χωρίς αυτά η μηχανή δεν
  * ξέρει ούτε ποιες άλλες ερωτήσεις μετρούν.
+ *
+ * 🔑 **Σήμα προέλευσης** (ADR-947 Φ1β) σε είδος, όροφο και επιφάνεια: «από το ακίνητο» ή «αλλάξατε την τιμή», με την
+ * αρχική **στο λεξιλόγιο του πεδίου** (ο όροφος ως «2ος», όχι ως «2»).
  */
 
 import React, { useId } from 'react';
@@ -16,6 +19,7 @@ import type { LevelDraft, ObjectiveValueDraft, UpdateDraft } from '@/lib/objecti
 import { OBJECTIVE_VALUE_FORMS, PARKING_POSITIONS, STORAGE_POSITIONS } from '@/lib/objective-value/objective-value-types';
 
 import { CalculatorStep, ChoiceSelect, LabelledNumber } from './objective-value-inputs';
+import { ObjectiveValueProvenanceBadge } from './ObjectiveValueProvenanceBadge';
 
 const NS = 'objective-value';
 
@@ -39,6 +43,24 @@ function floorValueOf(floor: number | null): FloorValue | null {
   return String(Math.max(-1, Math.min(6, floor))) as FloorValue;
 }
 
+/** Η αρχική τιμή ορόφου στο λεξιλόγιο του πεδίου — ίδια ετικέτα με την επιλογή. */
+function useFloorOriginal(): (value: string | number | boolean) => string {
+  const { t } = useTranslation([NS]);
+  return (value) => {
+    const floor = typeof value === 'number' ? floorValueOf(value) : null;
+    return floor === null ? String(value) : t(`${NS}:property.floor.${FLOORS[floor]}`);
+  };
+}
+
+/** Η αρχική τιμή είδους — ίδια ετικέτα με το κουμπί του είδους. */
+function useFormOriginal(): (value: string | number | boolean) => string {
+  const { t } = useTranslation([NS]);
+  return (value) => {
+    const form = OBJECTIVE_VALUE_FORMS.find((candidate) => candidate === value);
+    return form === undefined ? String(value) : t(`${NS}:property.form.${form}`);
+  };
+}
+
 interface LevelProps {
   readonly level: LevelDraft;
   readonly index: number;
@@ -50,6 +72,7 @@ interface LevelProps {
 function LevelFields({ level, index, multi, onChange, onRemove }: LevelProps) {
   const { t } = useTranslation([NS]);
   const floorId = useId();
+  const floorOriginal = useFloorOriginal();
   const number = index + 1;
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
@@ -63,6 +86,7 @@ function LevelFields({ level, index, multi, onChange, onRemove }: LevelProps) {
         placeholder={t(`${NS}:property.floorPlaceholder`)}
         onChange={(value) => onChange({ ...level, floor: Number(value) })}
       />
+      <ObjectiveValueProvenanceBadge input="levelFloor" level={index} formatOriginal={floorOriginal} />
       <LabelledNumber
         label={t(`${NS}:property.areaLabel`)}
         help={t(`${NS}:property.areaHelp`)}
@@ -70,6 +94,7 @@ function LevelFields({ level, index, multi, onChange, onRemove }: LevelProps) {
         step={0.01}
         onChange={(area) => onChange({ ...level, area })}
       />
+      <ObjectiveValueProvenanceBadge input="levelArea" level={index} />
       {multi && index > 0 && (
         <Button type="button" variant="ghost" size="sm" className="self-start" onClick={onRemove}>
           {t(`${NS}:property.removeLevel`, { number })}
@@ -122,6 +147,7 @@ function AncillaryFields({ draft, update }: { readonly draft: ObjectiveValueDraf
         step={0.01}
         onChange={(area) => update({ area })}
       />
+      <ObjectiveValueProvenanceBadge input="area" />
       <Label htmlFor={positionId}>{t(`${NS}:property.positionLabel`)}</Label>
       {parking ? (
         <ChoiceSelect
@@ -148,6 +174,7 @@ function AncillaryFields({ draft, update }: { readonly draft: ObjectiveValueDraf
 
 export function ObjectiveValueProperty({ draft, update }: { readonly draft: ObjectiveValueDraft; readonly update: UpdateDraft }) {
   const { t } = useTranslation([NS]);
+  const formOriginal = useFormOriginal();
   return (
     <CalculatorStep title={t(`${NS}:property.title`)}>
       <SegmentedControl value={draft.form} onValueChange={(form) => update({ form })} aria-label={t(`${NS}:property.formLabel`)}>
@@ -155,6 +182,7 @@ export function ObjectiveValueProperty({ draft, update }: { readonly draft: Obje
           <SegmentedControlItem key={form} value={form}>{t(`${NS}:property.form.${form}`)}</SegmentedControlItem>
         ))}
       </SegmentedControl>
+      <ObjectiveValueProvenanceBadge input="form" formatOriginal={formOriginal} />
       {draft.form === 'residence' ? <ResidenceLevels draft={draft} update={update} /> : <AncillaryFields draft={draft} update={update} />}
     </CalculatorStep>
   );

@@ -25,6 +25,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { CalculatorStep, LabelledNumber } from './objective-value-inputs';
 import { frontKeyOf } from '@/lib/objective-value/objective-value-zone';
+import { ObjectiveValueProvenanceBadge } from './ObjectiveValueProvenanceBadge';
 import type { ObjectiveValueLocationState } from './useObjectiveValueLocation';
 
 /**
@@ -157,6 +158,9 @@ function ZoneAnswer({ location }: LocationProps) {
       <div role="status" className="flex flex-col gap-1">
         <ZoneStatus location={location} />
       </div>
+      {/* Το σήμα ΕΞΩ από την περιοχή `aria-live`: είναι χειριστήριο, όχι ανακοίνωση (ADR-947 Φ1β). Μία θέση για
+          τιμή από τα δεδομένα ζωνών και για χειροκίνητη. */}
+      {location.zonePrice !== null && <ObjectiveValueProvenanceBadge input="zonePrice" />}
       {ready !== null && <FrontQuestion verdict={ready} location={location} />}
       {ready === null && lookup.kind !== 'loading' && <ManualPrice location={location} />}
       {(ready !== null || (lookup.kind === 'answered' && lookup.verdict.kind === 'outside')) && (

@@ -525,5 +525,29 @@
       "bundleNote": "Excluding spaces in another building — they count there.",
       "locatedColumn": "Located in building"
     }
+  },
+  "provenance": {
+    "badge": {
+      "property": "From the property",
+      "openData": "Open data",
+      "assumption": "Assumption",
+      "user": "Your value",
+      "override": "You changed this"
+    },
+    "detail": {
+      "property": "Prefilled from the property details, as declared by the owner or the lister. Not confirmed by a professional.",
+      "zonePrice": "Zone price from the Ministry's objective value zone data for this location.",
+      "user": "You entered this value.",
+      "override": "The property value was {original}. You changed it.",
+      "revert": "Restore the property value"
+    },
+    "law": {
+      "applied": "Counts in the calculation: {ref} (coefficient {factor}).",
+      "neutral": "Counts in the calculation, but for this value the coefficient is 1 and does not change the amount."
+    },
+    "summary": {
+      "changed": "{count, plural, one {You changed # property detail.} other {You changed # property details.}}",
+      "revertAll": "Restore all to the property details"
+    }
   }
 }

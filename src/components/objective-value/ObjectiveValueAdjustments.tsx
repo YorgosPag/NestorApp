@@ -23,6 +23,7 @@ import {
 } from '@/lib/objective-value/objective-value-types';
 
 import { ChoiceSelect, LabelledNumber } from './objective-value-inputs';
+import { ObjectiveValueProvenanceBadge } from './ObjectiveValueProvenanceBadge';
 
 const NS = 'objective-value';
 const A = `${NS}:adjustments`;
@@ -41,10 +42,15 @@ function FlagField({ draft, update, flag }: Props & { readonly flag: Flag }) {
   const { t } = useTranslation([NS]);
   const id = useId();
   return (
-    <Label htmlFor={id} className="flex items-center gap-2 font-normal">
-      <Checkbox id={id} checked={draft[flag]} onCheckedChange={(checked) => update(flagPatch(flag, checked === true))} />
-      {t(`${A}.${flag}`)}
-    </Label>
+    <>
+      <Label htmlFor={id} className="flex items-center gap-2 font-normal">
+        <Checkbox id={id} checked={draft[flag]} onCheckedChange={(checked) => update(flagPatch(flag, checked === true))} />
+        {t(`${A}.${flag}`)}
+      </Label>
+      {/* ΕΞΩ από το `<label>`: ένα κλικ στο σήμα μέσα του θα άλλαζε και το κουτάκι (ADR-947 Φ1β). Μόνο η μικτή
+          επιφάνεια έχει προέλευση πέρα από τον άνθρωπο: δήλωση του ακινήτου ή η κανονική υπόθεση του νόμου. */}
+      {flag === 'areaIncludesCommon' && <ObjectiveValueProvenanceBadge input="areaIncludesCommon" />}
+    </>
   );
 }
 

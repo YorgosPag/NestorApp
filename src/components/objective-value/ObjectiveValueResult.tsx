@@ -6,6 +6,13 @@
  *
  * 🔑 **Πάντα «αντικειμενική (ενδεικτική)», ποτέ «αξία του ακινήτου»**, και πάντα η αποποίηση με τον σύνδεσμο στο
  * myPROPERTY: η φορολογητέα αξία οριστικοποιείται εκεί, και δεν είναι εκτίμηση αγοραίας αξίας (ADR-889 §7).
+ *
+ * 🔑 **Ο ΣΕ που δεν φαίνεται αλλού** (πηγή · υπόθεση 1,0) λέγεται εδώ **μαζί με το σήμα προέλευσής του** (ADR-947
+ * Φ1β): το ίδιο σύστημα με κάθε άλλη είσοδο, όχι δεύτερη διαδρομή. Εδώ ζει και η σύνοψη των παρακάμψεων.
+ *
+ * ⚠️ **Τα σήματα έρχονται ως υποδοχές**, όχι με εισαγωγή: αυτό το αρχείο το εισάγουν και η αγγελία
+ * (`ObjectiveValueEvaluated`) και ο πίνακας κτιρίου — μια στατική εισαγωγή του σήματος θα έβαζε τα κείμενά του στο
+ * i18n slice σελίδων που δεν το δείχνουν ποτέ (CHECK 3.34 · ADR-744 §18).
  */
 
 import React from 'react';
@@ -98,9 +105,19 @@ interface ObjectiveValueResultProps {
   readonly commercialityAssumed: boolean;
   /** Ο ΣΕ που έδωσαν τα δεδομένα ζωνών, όταν μετρά (ADR-898 Φ5) — `null` αλλιώς. */
   readonly sourcedCommercialityFactor?: number | null;
+  /** Το σήμα προέλευσης του ΣΕ (ADR-947 Φ1β) — υποδοχή, βλ. ⚠️ πάνω. */
+  readonly commercialityProvenance?: React.ReactNode;
+  /** Η σύνοψη των παρακάμψεων με «επαναφορά όλων» — υποδοχή. */
+  readonly overrides?: React.ReactNode;
 }
 
-export function ObjectiveValueResult({ result, commercialityAssumed, sourcedCommercialityFactor = null }: ObjectiveValueResultProps) {
+export function ObjectiveValueResult({
+  result,
+  commercialityAssumed,
+  sourcedCommercialityFactor = null,
+  commercialityProvenance = null,
+  overrides = null,
+}: ObjectiveValueResultProps) {
   const { t } = useTranslation([NS]);
   return (
     // Ίδιο σχήμα με το `CalculatorStep` (`section` με όνομα · `h2` · `gap-3`), πάνω στην ΕΠΙΦΑΝΕΙΑ: το μόνο βήμα με πλαίσιο.
@@ -117,13 +134,18 @@ export function ObjectiveValueResult({ result, commercialityAssumed, sourcedComm
         )}
       </div>
       {result.kind === 'computed' && commercialityAssumed && (
-        <p className="m-0 text-sm text-foreground">{t(`${NS}:questions.commercialityFactor.assumed`)}</p>
-      )}
-      {result.kind === 'computed' && sourcedCommercialityFactor !== null && (
-        <p className="m-0 text-sm text-muted-foreground">
-          {t(`${NS}:questions.commercialityFactor.fromSource`, { factor: formatCommercialityFactor(sourcedCommercialityFactor) })}
+        <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-foreground">
+          {t(`${NS}:questions.commercialityFactor.assumed`)}
+          {commercialityProvenance}
         </p>
       )}
+      {result.kind === 'computed' && sourcedCommercialityFactor !== null && (
+        <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          {t(`${NS}:questions.commercialityFactor.fromSource`, { factor: formatCommercialityFactor(sourcedCommercialityFactor) })}
+          {commercialityProvenance}
+        </p>
+      )}
+      {overrides}
       {result.kind === 'computed' && <ObjectiveValueBreakdown result={result} />}
       <p className="m-0 text-xs text-muted-foreground">{t(`${R}.disclaimer`)}</p>
       <a href={AADE_MYPROPERTY_URL} target="_blank" rel="noopener noreferrer" className={`self-start text-sm ${VISIBLE_LINK_CLASS}`}>
