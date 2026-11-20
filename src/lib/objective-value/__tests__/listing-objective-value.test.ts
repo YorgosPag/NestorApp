@@ -8,7 +8,7 @@ import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
 import type { PublicListing } from '@/types/public-listing';
 
-import { CENTRAL_HEATING_OF, listingObjectiveValue } from '../listing-objective-value';
+import { CENTRAL_HEATING_OF, listingObjectiveValue, listingObjectiveValuePrefill } from '../listing-objective-value';
 import { legalAgeYears } from '../objective-value-common';
 import { objectiveValueBounds } from '../objective-value-bounds';
 import {
@@ -273,5 +273,41 @@ describe('listingObjectiveValue — οι δηλώσεις του αγγελιο�
       TODAY,
     );
     expect(evaluated(value).assumptions).toEqual([{ kind: 'ageFromConstructionYear', year: 2000, provenance: 'declared' }]);
+  });
+});
+
+describe('listingObjectiveValuePrefill — ο υπολογιστής ανοίγει από το ακίνητο (ADR-947 Φ1α)', () => {
+  const prefillWith = (value: ReturnType<typeof listingObjectiveValue>) => {
+    if (value.kind !== 'evaluated') throw new Error(`αναμενόταν evaluated, ήρθε ${value.kind}`);
+    return value.prefill;
+  };
+
+  it.each([
+    ['ένα επίπεδο, χωρίς δηλώσεις', home()],
+    ['με δηλώσεις (άδεια · κοινόχρηστοι · θέρμανση)', home({
+      heatingType: null,
+      objectiveValueDeclarations: declared({ permitDate: '1990-03-15', areaIncludesCommon: true, hasCentralHeating: true }),
+    })],
+    ['αποθήκη', home({ type: 'storage', areaSqm: 12 })],
+  ])('%s ⇒ ΙΔΙΑ προσυμπλήρωση με την αγγελία (μία επίλυση, καμία δεύτερη αλήθεια)', (_label, subject) => {
+    expect(listingObjectiveValuePrefill(subject)).toEqual(prefillWith(listingObjectiveValue(subject, READY, TODAY)));
+  });
+
+  it('το μέτωπο δεν αλλάζει την προσυμπλήρωση — η διεύθυνση δεν το μεταφέρει', () => {
+    const fronted = home({ frontage: 'single', objectiveValueDeclarations: declared({ zoneFront: { kind: 'none' } }) });
+    expect(listingObjectiveValuePrefill(fronted)).toEqual(prefillWith(listingObjectiveValue(fronted, FRONTED, TODAY)));
+  });
+
+  it('ΧΩΡΙΣ ζώνη ⇒ υπάρχει προσυμπλήρωση (η αγγελία λέει no-zone, ο κάτοχος βάζει μόνο την πινέζα)', () => {
+    expect(listingObjectiveValue(home(), { kind: 'imprecise' }, TODAY)).toEqual({ kind: 'no-zone' });
+    expect(listingObjectiveValuePrefill(home())).toMatchObject({ form: 'residence', floor: 4, area: 90, hasElevator: true });
+  });
+
+  it('είδος εκτός εντύπων ⇒ null', () => {
+    expect(listingObjectiveValuePrefill(home({ type: 'shop' }))).toBeNull();
+  });
+
+  it('απόκρυψη ⇒ null (ο κάτοχος περνά την εμφανή εκδοχή — η κρυμμένη δεν κρατά καν τα στοιχεία)', () => {
+    expect(listingObjectiveValuePrefill(home({ objectiveValueDeclarations: { display: 'hidden' as const } }))).toBeNull();
   });
 });
