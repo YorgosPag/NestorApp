@@ -24,6 +24,7 @@ import type { AuditEntityType } from '@/types/audit-trail';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { buildAddressInfoListFromCompanyAddresses } from '@/utils/contacts/address-info-builder';
 import { authoritativeContactAddresses } from '@/utils/contacts/contact-addresses-reader';
+import { contactAddressPositionView } from '@/utils/contacts/contact-address-position-view';
 import type { ProjectAddressLike } from './address-place-writeback';
 
 /**
@@ -38,8 +39,17 @@ export interface AddressPositionContainer {
   /** Ο τύπος οντότητας στο ιστορικό (ADR-195) και στα logs. */
   readonly entityType: AuditEntityType;
   readonly history: AddressPositionHistory;
-  /** Οι διευθύνσεις όπως τις ταιριάζει ο γραφέας (με `id`). Άγνωστο σχήμα ⇒ `[]`, ποτέ μαντεψιά. */
+  /** Οι διευθύνσεις **όπως είναι αποθηκευμένες** (με `id`) — σε αυτές γράφεται η θέση. Άγνωστο σχήμα ⇒ `[]`. */
   read(data: DocumentData): ProjectAddressLike[];
+  /**
+   * **Η όψη κρίσης** μιας αποθηκευμένης διεύθυνσης — ό,τι βλέπει ο κριτής θέσης («κρίθηκε;», «τι ρωτάμε;»).
+   *
+   * 🔴 ADR-332 §D33.1 — η επαφή λέει την ιεραρχία `municipalityName`/`regionName`/`regionalUnitName`· ο κριτής
+   * ρωτά `municipality`/`region`/`regionalUnit`. Η αποθήκευση του ανθρώπου μεταφράζει (`contactAddressPositionView`)·
+   * η σάρωση **δεν** μετέφραζε ⇒ το `resolvedFor` του ανθρώπου «διέφερε», η μηχανή ξαναρωτούσε **χωρίς δήμο** και η
+   * κάρτα έδειχνε «Παλιά» (μετρημένο ζωντανά 2026-11-20, `cont_c4d79d09`). Μία όψη, και οι δύο διαδρομές.
+   */
+  view(address: ProjectAddressLike): ProjectAddressLike;
   /** Η γραφή των νέων διευθύνσεων **μαζί** με ό,τι παράγεται από αυτές. */
   patch(next: readonly ProjectAddressLike[]): Record<string, unknown>;
   /** Το όνομα της οντότητας για τη γραμμή ιστορικού (`writer`). */
@@ -53,6 +63,14 @@ function readText(data: DocumentData, field: string): string | null {
 
 function readRootAddresses(data: DocumentData): ProjectAddressLike[] {
   return Array.isArray(data.addresses) ? (data.addresses as ProjectAddressLike[]) : [];
+}
+
+/** Έργα · κτίρια: το αποθηκευμένο σχήμα **είναι** ήδη το λεξιλόγιο του κριτή. */
+const asStored = (address: ProjectAddressLike): ProjectAddressLike => address;
+
+/** Οι αποθηκευμένες διευθύνσεις του εγγράφου **στην όψη κρίσης** — η μία διατύπωση για ανακάλυψη και ερώτηση. */
+export function judgedAddresses(container: AddressPositionContainer, data: DocumentData): ProjectAddressLike[] {
+  return container.read(data).map((address) => container.view(address));
 }
 
 /**
@@ -81,6 +99,7 @@ export const PROJECT_ADDRESS_CONTAINER: AddressPositionContainer = {
   entityType: ENTITY_TYPES.PROJECT,
   history: 'writer',
   read: readRootAddresses,
+  view: asStored,
   patch: (next) => ({ addresses: next }),
   entityName: (data) => readText(data, 'name'),
 };
@@ -90,6 +109,7 @@ export const BUILDING_ADDRESS_CONTAINER: AddressPositionContainer = {
   entityType: ENTITY_TYPES.BUILDING,
   history: 'writer',
   read: readRootAddresses,
+  view: asStored,
   patch: (next) => ({ addresses: next, ...buildingPointFields(next) }),
   entityName: (data) => readText(data, 'name'),
 };
@@ -107,6 +127,10 @@ export const CONTACT_ADDRESS_CONTAINER: AddressPositionContainer = {
   entityType: ENTITY_TYPES.CONTACT,
   history: 'cdc',
   read: (data) => authoritativeContactAddresses(data.customFields as { companyAddresses?: unknown } | undefined) ?? [],
+  // §D33.1 — η ΙΔΙΑ όψη με την αποθήκευση του ανθρώπου (`resolveContactAddressPositions`). Χωρίς `id` δεν
+  // ταιριάζει με τίποτα ούτε εκεί (`contactAddressPositionViews`), άρα μένει αυτούσια και δεν ζητείται ποτέ.
+  view: (address) =>
+    address.id ? contactAddressPositionView({ ...(address as CompanyAddress), id: address.id }) : address,
   patch: (next) => {
     const companyAddresses = next as readonly CompanyAddress[];
     return {

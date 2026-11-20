@@ -16,7 +16,12 @@ import {
   BUILDING_ADDRESS_CONTAINER,
   CONTACT_ADDRESS_CONTAINER,
   PROJECT_ADDRESS_CONTAINER,
+  judgedAddresses,
 } from '../address-position-containers';
+import { toQuery } from '@/lib/geocoding/address-position-rules';
+import { unsettledAddressIds } from '@/lib/geocoding/position-work';
+import type { CompanyAddress } from '@/types/ContactFormTypes';
+import { contactAddressPositionView } from '@/utils/contacts/contact-address-position-view';
 import { geocodeWithVerdict } from '@/app/api/geocoding/geocoding-engine';
 import { EntityAuditService } from '@/services/entity-audit.service';
 
@@ -302,6 +307,60 @@ describe('§D33 — δοχείο επαφής: αυθεντία + κάτοπτρ
     expect(patch._lastModifiedBy).toBe('system:address-position');
     // Το ιστορικό το γράφει ο CDC της επαφής από τη σφραγίδα — δεύτερη γραμμή θα ήταν διπλή.
     expect(recordChange).not.toHaveBeenCalled();
+  });
+
+  /**
+   * §D33.1 — η έδρα του περιστατικού (`cont_c4d79d09`, 2026-11-20): η επαφή λέει την ιεραρχία
+   * `municipalityName`/`regionName`/`regionalUnitName`, ο κριτής `municipality`/`region`/`regionalUnit`.
+   */
+  const CONTACT_HQ: Address = {
+    id: 'addr_hq',
+    type: 'headquarters',
+    street: '6,5 χλμ Θεσσαλονίκης - Ωραιοκάστρου',
+    number: '',
+    city: 'Ωραιόκαστρον',
+    postalCode: '57013',
+    country: 'GR',
+    neighborhood: 'ΒΙ.ΠΕ. Ωραιοκάστρου',
+    communityName: 'Δημοτική Κοινότητα Ωραιοκάστρου',
+    municipalityName: 'Δήμος Ωραιοκάστρου',
+    regionalUnitName: 'Περιφερειακή Ενότητα Θεσσαλονίκης',
+    regionName: 'Περιφέρεια Κεντρικής Μακεδονίας',
+  };
+
+  it('Ε2 — ρωτά ΜΕ την ιεραρχία της επαφής (όψη κρίσης) και γράφει πάνω στην ΠΛΗΡΗ εγγραφή', async () => {
+    engine.mockResolvedValue(HIT);
+    const { db, patches } = fakeContactDb([CONTACT_HQ]);
+
+    await completePendingAddressPositions(db, {
+      container: CONTACT_ADDRESS_CONTAINER, docId: 'cont_1', pendingIds: ['addr_hq'],
+    });
+
+    const [written] = patches[0]['customFields.companyAddresses'] as Address[];
+    // 🔴 Η μετάλλαξη που φυλάει: χωρίς την όψη, το `resolvedFor` έβγαινε ΧΩΡΙΣ δήμο/Π.Ε./περιφέρεια.
+    expect((written.geocodingMetadata as { resolvedFor: Record<string, string> }).resolvedFor).toMatchObject({
+      municipality: 'Δήμος Ωραιοκάστρου',
+      regionalUnit: 'Περιφερειακή Ενότητα Θεσσαλονίκης',
+      region: 'Περιφέρεια Κεντρικής Μακεδονίας',
+    });
+    // Η όψη κρατά μόνο ταυτότητα + θέση· γραμμένη αυτούσια θα έσβηνε το υπόλοιπο κείμενο.
+    expect(written).toMatchObject({ type: 'headquarters', municipalityName: 'Δήμος Ωραιοκάστρου', communityName: 'Δημοτική Κοινότητα Ωραιοκάστρου' });
+  });
+
+  it('Ε3 — θέση που έγραψε η αποθήκευση του ΑΝΘΡΩΠΟΥ κρίνεται «κριμένη» από τη σάρωση (καμία ερώτηση, καμία «Παλιά»)', () => {
+    const humanResolvedFor = toQuery(contactAddressPositionView({ ...(CONTACT_HQ as CompanyAddress), id: 'addr_hq' }));
+    const stored = {
+      ...CONTACT_HQ,
+      coordinates: { lat: 40.7259058, lng: 22.9189694 },
+      source: 'geocoded',
+      verifiedAt: 1_795_122_275_597,
+      geocodingMetadata: { accuracy: 'center', confidence: 0.71, resolvedFor: humanResolvedFor },
+    };
+    const data = { customFields: { companyAddresses: [stored] } };
+
+    expect(unsettledAddressIds(judgedAddresses(CONTACT_ADDRESS_CONTAINER, data))).toEqual([]);
+    // Η ωμή εγγραφή (ό,τι διάβαζε η σάρωση πριν το §D33.1) την έκρινε μπαγιάτικη — το περιστατικό.
+    expect(unsettledAddressIds(CONTACT_ADDRESS_CONTAINER.read(data))).toEqual(['addr_hq']);
   });
 });
 

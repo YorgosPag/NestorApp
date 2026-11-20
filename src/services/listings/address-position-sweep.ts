@@ -39,6 +39,7 @@ import { completePendingAddressPositions } from './address-position-completion';
 import {
   ADDRESS_POSITION_CONTAINERS,
   addressPositionContainerFor,
+  judgedAddresses,
   type AddressPositionContainer,
 } from './address-position-containers';
 import {
@@ -116,7 +117,7 @@ async function discoverPage(
   for (const doc of snapshot.docs) {
     report.scanned += 1;
     const data = doc.data();
-    if (!isLive(data) || unsettledAddressIds(container.read(data)).length === 0) continue;
+    if (!isLive(data) || unsettledAddressIds(judgedAddresses(container, data)).length === 0) continue;
     const target = { collection: container.collection, docId: doc.id, companyId: companyIdOf(data) };
     if (await enqueueAddressPositionWork(deps.db, target, now)) report.discovered += 1;
   }
@@ -138,7 +139,7 @@ async function readUnsettled(
   docId: string,
 ): Promise<{ readonly ids: string[]; readonly data: DocumentData } | null> {
   const data = (await db.collection(container.collection).doc(docId).get()).data();
-  return isLive(data) ? { ids: unsettledAddressIds(container.read(data)), data } : null;
+  return isLive(data) ? { ids: unsettledAddressIds(judgedAddresses(container, data)), data } : null;
 }
 
 /** Μία οφειλόμενη εγγραφή: δοκιμή με τον έναν γραφέα, μετά κλείσιμο ή νέα αναμονή. */

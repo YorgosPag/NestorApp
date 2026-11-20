@@ -49,7 +49,7 @@ import type { StoredAddressPosition } from '@/types/address-position';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import type { AddressPositionBudget } from '@/lib/geocoding/address-position-types';
 import { resolveProjectAddressPositions, type ProjectAddressLike } from './address-place-writeback';
-import type { AddressPositionContainer } from './address-position-containers';
+import { judgedAddresses, type AddressPositionContainer } from './address-position-containers';
 
 const logger = createModuleLogger('AddressPositionCompletion');
 
@@ -140,11 +140,21 @@ async function decide(
   return decisions;
 }
 
-/** Η διεύθυνση όπως είναι **τώρα**, με τη θέση που αποφασίστηκε — ή αυτούσια αν δεν αφορά πια. */
-function applyDecision(current: ProjectAddressLike, decision: Decision | undefined): ProjectAddressLike {
+/**
+ * Η διεύθυνση όπως είναι **τώρα**, με τη θέση που αποφασίστηκε — ή αυτούσια αν δεν αφορά πια.
+ *
+ * 🔑 §D33.1 — η σύγκριση γίνεται στην **όψη κρίσης** (ό,τι ρωτήθηκε), η γραφή στην **αποθηκευμένη** εγγραφή:
+ * η όψη της επαφής κρατά μόνο ταυτότητα + θέση, άρα γραμμένη αυτούσια θα έσβηνε το υπόλοιπο κείμενο.
+ */
+function applyDecision(
+  current: ProjectAddressLike,
+  decision: Decision | undefined,
+  view: (address: ProjectAddressLike) => ProjectAddressLike,
+): ProjectAddressLike {
   if (!decision) return current;
   // Το κείμενο ή η πινέζα άλλαξαν στο μεταξύ: η απάντηση αφορά διεύθυνση που δεν υπάρχει πια.
-  if (addressIdentityChanged(decision.asked, current) || pointChanged(decision.asked, current)) {
+  const judged = view(current);
+  if (addressIdentityChanged(decision.asked, judged) || pointChanged(decision.asked, judged)) {
     return current;
   }
   return withStoredAddressPosition(current, decision.decided as Readonly<StoredAddressPosition>);
@@ -232,14 +242,16 @@ export async function completePendingAddressPositions(
 
   try {
     const snapshot = await ref.get();
-    const targets = container.read(snapshot.data() ?? {}).filter((address) => address.id && pending.has(address.id));
+    const targets = judgedAddresses(container, snapshot.data() ?? {}).filter((address) => address.id && pending.has(address.id));
     const decisions = await decide(targets, new Set(job.relocateIds ?? []), job.budget);
     if (decisions.size === 0) return { written: 0 };
 
     const outcome = await adminDb.runTransaction(async (tx): Promise<Written | null> => {
       const data = (await tx.get(ref)).data() ?? {};
       const current = container.read(data);
-      const next = current.map((address) => applyDecision(address, address.id ? decisions.get(address.id) : undefined));
+      const next = current.map((address) =>
+        applyDecision(address, address.id ? decisions.get(address.id) : undefined, (a) => container.view(a)),
+      );
       const moved = movedCount(current, next);
       if (moved === 0) return null;
       tx.update(ref, container.patch(next));
