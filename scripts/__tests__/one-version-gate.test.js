@@ -80,6 +80,13 @@ function replaceOnce(text, pattern, replacement) {
   return next;
 }
 
+/** Μετάλλαξη manifest ως JSON (ανεξάρτητη από σειρά κλειδιών και κόμματα). */
+const editManifest = (mutate) => (text) => {
+  const manifest = JSON.parse(text);
+  mutate(manifest);
+  return `${JSON.stringify(manifest, null, 2)}\n`;
+};
+
 /**
  * Μίνι-repo από **πραγματικά** αρχεία. `edits` = { relPath: (text) => text }
  * για μετάλλαξη, ή συμβολοσειρά για νέο αρχείο.
@@ -231,18 +238,28 @@ describe('Μ — μεταλλάξεις στις εισόδους', () => {
     expect(idsOf(sweep(root), S.VERSION_SPLIT)).toContain('polygon-clipping');
   });
 
+  /**
+   * ⚠️ Μ3/Μ4 μεταλλάσσουν το manifest ως **JSON**, όχι ως κείμενο. Η γραφή με regex
+   * έσπασε όταν το `e2dea909` μετέφερε το `polygon-clipping` από το subapp στη ρίζα
+   * (ADR-800): το Μ3 έψαχνε το κλειδί στο λάθος manifest, και το Μ4 ήθελε κόμμα μετά
+   * το `@formulajs` — που έμεινε τελευταίο. Η μετάλλαξη δεν εξαρτάται πια από σειρά ή κόμματα.
+   */
   it('Μ3: το manifest λέει άλλο εύρος από το lockfile ⇒ overridden-declaration', () => {
     const root = miniRepo({
-      'src/subapps/dxf-viewer/package.json': (s) =>
-        replaceOnce(s, '"polygon-clipping": "0.15.7"', '"polygon-clipping": "^0.15.0"'),
+      'package.json': editManifest((m) => {
+        if (m.dependencies['polygon-clipping'] !== '0.15.7') throw new Error('polygon-clipping: δεν είναι 0.15.7 στη ρίζα.');
+        m.dependencies['polygon-clipping'] = '^0.15.0';
+      }),
     });
-    expect(idsOf(sweep(root), S.OVERRIDDEN_DECLARATION)).toContain('src/subapps/dxf-viewer -> polygon-clipping');
+    expect(idsOf(sweep(root), S.OVERRIDDEN_DECLARATION)).toContain('. -> polygon-clipping');
   });
 
   it('Μ4: εξάρτηση σβήστηκε από το manifest χωρίς install ⇒ lockfile-desync', () => {
     const root = miniRepo({
-      'src/subapps/dxf-viewer/package.json': (s) =>
-        replaceOnce(s, /\n\s*"@formulajs\/formulajs": "4\.6\.1",/, ''),
+      'src/subapps/dxf-viewer/package.json': editManifest((m) => {
+        if (!('@formulajs/formulajs' in m.dependencies)) throw new Error('@formulajs/formulajs: λείπει από το subapp.');
+        delete m.dependencies['@formulajs/formulajs'];
+      }),
     });
     expect(idsOf(sweep(root), S.LOCKFILE_DESYNC)).toContain('src/subapps/dxf-viewer');
   });
