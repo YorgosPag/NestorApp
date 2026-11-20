@@ -6,6 +6,10 @@ import {
   countListingPresences,
   listingPresenceOf,
   listingPresenceSpec,
+  listingReachOf,
+  listingReachSpec,
+  type ListingObservation,
+  type ListingReach,
 } from '@/lib/listings/listing-presence';
 import { isPubliclyListed, type ProjectableProperty } from '@/services/listings/public-listing-projection';
 import { MARKETING_AUDIENCES } from '@/constants/marketing-audiences';
@@ -70,5 +74,33 @@ describe('countListingPresences', () => {
       facts({ commercialStatus: 'unavailable' }),
     ]);
     expect(counts).toEqual({ public: 2, network: 1, custodians: 0, unlisted: 1, settled: 0 });
+  });
+});
+
+/** ADR-777 §8.103.2 — πρόθεση ⇄ κόσμος: ΚΑΘΕ παρουσία × ΚΑΘΕ παρατήρηση, ο πίνακας ολόκληρος. */
+describe('listingReachOf — η απόσταση πρόθεσης και κόσμου', () => {
+  const expected = (presence: string, observed: ListingObservation): ListingReach => {
+    if (observed === 'unknown') return 'aligned';
+    if (presence === 'public') return observed === 'absent' ? 'missing' : 'aligned';
+    return observed === 'present' ? 'lingering' : 'aligned';
+  };
+  const OBSERVATIONS: readonly ListingObservation[] = ['present', 'absent', 'unknown'];
+
+  it.each(LISTING_PRESENCES.flatMap((presence) => OBSERVATIONS.map((observed) => [presence, observed] as const)))(
+    '%s + %s',
+    (presence, observed) => {
+      expect(listingReachOf(presence, observed)).toBe(expected(presence, observed));
+    },
+  );
+
+  it('🔴 «δεν ξέρω» δεν γίνεται ΠΟΤΕ ισχυρισμός', () => {
+    for (const presence of LISTING_PRESENCES) expect(listingReachOf(presence, 'unknown')).toBe('aligned');
+  });
+
+  it.each(['missing', 'lingering'] as const)('%s ⇒ προειδοποίηση με δικό της όνομα και εξήγηση', (reach) => {
+    const spec = listingReachSpec(reach);
+    expect(spec.variant).toBe('warning');
+    expect(spec.labelKey).toBe(`listingPresence.reach.${reach}`);
+    expect(spec.hintKey).toBe(`listingPresence.reach.${reach}Hint`);
   });
 });

@@ -383,6 +383,13 @@
     "custodians": "Managers only",
     "unlisted": "Not listed",
     "settled": "Listing closed",
+    "reach": {
+      "missing": "Didn't reach the public",
+      "missingHint": "The public page wasn't created. It will be retried automatically within 24 hours.",
+      "lingering": "Still public",
+      "lingeringHint": "The listing was withdrawn, but its public page still exists."
+    },
+    "openPublic": "{label} — open public listing in a new tab",
     "filter": {
       "ariaLabel": "Listing presence filter",
       "all": "All",

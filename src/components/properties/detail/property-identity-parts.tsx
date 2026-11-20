@@ -28,8 +28,15 @@
  */
 
 import React from 'react';
+import { ExternalLink } from 'lucide-react';
 
 import { CardBadges } from '@/design-system/primitives/Card/CardBadges';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useListingReach } from '@/hooks/listings/useListingReach';
+import { LISTING_OPEN_PUBLIC_KEY, listingReachSpec } from '@/lib/listings/listing-presence';
+import { listingDetailHref } from '@/lib/listings/listing-routes';
+import { UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
+import { Link } from '@/lib/workspace/navigation';
 import {
   MISSING_PRICE_LABEL_KEYS,
   buildCardPriceText,
@@ -88,14 +95,59 @@ export function PropertyIdentityStatus({ property }: { readonly property: Proper
   // κύκλου ζωής στο `trash` (`buildPropertyStatusBadge`). Αλλιώς θα δούλευε **επειδή κάποιος άλλος** τα έχει
   // φορτώσει — εξάρτηση από τη σειρά φόρτωσης, όχι από δήλωση (CHECK 3.36 §8.1).
   const { t } = useTranslation(['properties', 'trash']);
-  const badges = [buildListingPresenceBadge(property, t), buildPropertyStatusBadge(property, t)].filter(
-    (badge): badge is GridCardBadge => badge !== null,
-  );
-  if (badges.length === 0) return null;
+  const colors = useSemanticColors();
+  // ADR-777 §8.103.2 — πρόθεση ⇄ κόσμος: ο ΕΝΑΣ ακροατής του δημόσιου εγγράφου, μόνο εδώ (ποτέ στη λίστα).
+  const { reach, observed } = useListingReach(property);
+  const presence = buildListingPresenceBadge(property, t, reach);
+  const status = buildPropertyStatusBadge(property, t);
+  if (presence === null && status === null) return null;
+
   return (
     <span className="flex flex-wrap items-center gap-1.5">
-      <CardBadges badges={badges} max={badges.length} />
+      {presence !== null ? (
+        // 🔑 Σύνδεσμος **μόνο όταν η σελίδα υπάρχει** (`observed`, χωρίς καθίζηση) — ποτέ νεκρός σύνδεσμος. Ζει στην
+        //    κεφαλίδα και όχι στην κάρτα: σύνδεσμος μέσα σε κάρτα που πατιέται = εμφωλευμένο διαδραστικό (axe).
+        observed === 'present' ? (
+          <PublicListingLink propertyId={property.id} badge={presence} />
+        ) : (
+          <CardBadges badges={[presence]} max={1} />
+        )
+      ) : null}
+      {status !== null ? <CardBadges badges={[status]} max={1} keyPrefix="status-" /> : null}
+      {presence !== null && reach !== 'aligned' ? (
+        <span className={`text-xs ${colors.text.muted}`}>
+          {t(listingReachSpec(reach).hintKey, { ns: UNIT_STATUS_NAMESPACE })}
+        </span>
+      ) : null}
     </span>
+  );
+}
+
+/**
+ * **«Στο κοινό» ⇒ η σελίδα που βλέπει ο κόσμος** (ADR-777 §8.103.2 · πρότυπο Shopify «View on Online Store»).
+ * Νέα καρτέλα — ο άνθρωπος ελέγχει την αγγελία χωρίς να χάσει την εργασία του. Το προσβάσιμο όνομα λέει **και** την
+ * κατάσταση **και** ότι ανοίγει νέα καρτέλα· το εικονίδιο είναι πλεονασμός (`aria-hidden`), όχι `title=` (CHECK 3.23).
+ */
+function PublicListingLink({
+  propertyId,
+  badge,
+}: {
+  readonly propertyId: string;
+  readonly badge: GridCardBadge;
+}): React.ReactElement {
+  const { t } = useTranslation('properties');
+  const iconSizes = useIconSizes();
+  return (
+    <Link
+      href={listingDetailHref(propertyId)}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={t(LISTING_OPEN_PUBLIC_KEY, { ns: UNIT_STATUS_NAMESPACE, label: badge.label })}
+      className="inline-flex items-center gap-1 rounded-md hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <CardBadges badges={[badge]} max={1} />
+      <ExternalLink aria-hidden="true" className={`${iconSizes.xs} shrink-0 ${COLOR_BRIDGE.text.muted}`} />
+    </Link>
   );
 }
 

@@ -654,7 +654,7 @@
       "schedule": "From the schedule, approved on {date}"
     },
     "preview": "The public will see: “{promise}”",
-    "publish": "Publish",
+    "publish": "Publish date",
     "withdraw": "Withdraw",
     "saving": "Saving…",
     "saved": "Saved.",

@@ -28,7 +28,7 @@
  * @see services/listings/public-listing-projection (ο κριτής) · constants/marketing-audiences (η ρίζα του κοινού)
  */
 
-import { EyeOff, Flag, Globe, Lock, Network, type LucideIcon } from 'lucide-react';
+import { EyeOff, Flag, Globe, Lock, Network, TriangleAlert, type LucideIcon } from 'lucide-react';
 
 import { MARKETING_AUDIENCES, type MarketingAudience } from '@/constants/marketing-audiences';
 import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
@@ -104,6 +104,78 @@ export function listingPresenceLabelKey(presence: ListingPresence): string {
 export function listingPresenceSpec(presence: ListingPresence): ListingPresenceSpec {
   return { labelKey: listingPresenceLabelKey(presence), ...LISTING_PRESENCE_PRESENTATION[presence] };
 }
+
+// =============================================================================
+// ΠΡΟΘΕΣΗ ⇄ ΚΟΣΜΟΣ — «ΕΦΤΑΣΕ Η ΑΓΓΕΛΙΑ ΕΚΕΙ ΠΟΥ ΛΕΕΙ ΤΟ ΣΗΜΑ;» (ADR-777 §8.103.2)
+// =============================================================================
+
+/**
+ * **Τι είδαμε στον κόσμο**: υπάρχει το έγγραφο `public_listings/{id}`; `unknown` = δεν ξέρουμε ακόμη
+ * (φορτώνει) ή η ανάγνωση απέτυχε — και τότε **κανένας ισχυρισμός**.
+ */
+export type ListingObservation = 'present' | 'absent' | 'unknown';
+
+/**
+ * **Η απόσταση ανάμεσα στην πρόθεση και στον κόσμο.**
+ *
+ * | Πρόθεση (`listingPresenceOf`) | Κόσμος   | Ετυμηγορία  |
+ * |-------------------------------|----------|-------------|
+ * | `public`                      | `absent` | `missing`   — ο γραφέας απέτυχε· ο κόσμος **δεν** τη βλέπει |
+ * | οτιδήποτε άλλο                | `present`| `lingering` — η απόσυρση απέτυχε· ο κόσμος **ακόμη** τη βλέπει |
+ * | ό,τι άλλο, ή `unknown`        |          | `aligned`   |
+ *
+ * 🔑 **Παρατήρηση, όχι αποθηκευμένη έκβαση** (πρότυπο Zillow: την κατάσταση συνδιάθεσης την αναφέρει ο
+ * **προορισμός**). Το `PublishOutcome 'failed'` δεν γράφεται πουθενά, και δεν πρέπει: η εγγραφή της αποτυχίας
+ * θα αποτύγχανε στην ίδια διακοπή, θα ήταν δεύτερος γραφέας στο `properties`, και θα κατέγραφε την **απόπειρα**
+ * αντί για τον κόσμο. Η σύγκριση πιάνει **κάθε** δρόμο (επαγγελματίας · ιδιώτης · συμφιλίωση) χωρίς να τον ξέρει.
+ *
+ * ⚠️ Μόνο **ύπαρξη**: μπαγιάτικο περιεχόμενο σε έγγραφο που υπάρχει δεν κρίνεται εδώ.
+ */
+export type ListingReach = 'aligned' | 'missing' | 'lingering';
+
+/** Η ετυμηγορία — καθαρή, χωρίς χρόνο· την καθίζηση την κάνει ο καταναλωτής ({@link LISTING_REACH_SETTLE_MS}). */
+export function listingReachOf(presence: ListingPresence, observed: ListingObservation): ListingReach {
+  if (observed === 'unknown') return 'aligned';
+  const intendedPublic = presence === 'public';
+  if (intendedPublic && observed === 'absent') return 'missing';
+  if (!intendedPublic && observed === 'present') return 'lingering';
+  return 'aligned';
+}
+
+/**
+ * **Πόσο επιμένει μια απόκλιση πριν δηλωθεί.** Το ακίνητο ενημερώνεται **πριν** ο γραφέας γράψει το δημόσιο
+ * έγγραφο (μέσα στο ίδιο αίτημα αποθήκευσης), άρα κάθε αποθήκευση περνά στιγμιαία από απόκλιση. Χωρίς καθίζηση
+ * το σήμα θα αναβόσβηνε ψευδή προειδοποίηση· 30″ είναι ευρύ περιθώριο για γραφέα που τελειώνει σε δευτερόλεπτα.
+ */
+export const LISTING_REACH_SETTLE_MS = 30_000;
+
+type ListingReachGap = Exclude<ListingReach, 'aligned'>;
+
+/** Ένα σήμα απόκλισης: το σήμα παρουσίας **συν** η εξήγηση που διαβάζεται. */
+export interface ListingReachSpec extends ListingPresenceSpec {
+  readonly hintKey: string;
+}
+
+/**
+ * Απόκλιση → σήμα. Και οι δύο είναι **προειδοποίηση** (`warning` + τρίγωνο): το σήμα πρόθεσης που **δεν ισχύει**
+ * δεν εμφανίζεται ποτέ. Εξαντλητικό — τρίτη απόκλιση χωρίς γραμμή δεν μεταγλωττίζεται.
+ */
+const LISTING_REACH_PRESENTATION: Readonly<Record<ListingReachGap, Omit<ListingPresenceSpec, 'labelKey'>>> = {
+  missing: { variant: 'warning', icon: TriangleAlert },
+  lingering: { variant: 'warning', icon: TriangleAlert },
+};
+
+/** Το σήμα μιας απόκλισης. */
+export function listingReachSpec(reach: ListingReachGap): ListingReachSpec {
+  return {
+    labelKey: `listingPresence.reach.${reach}`,
+    hintKey: `listingPresence.reach.${reach}Hint`,
+    ...LISTING_REACH_PRESENTATION[reach],
+  };
+}
+
+/** Το κλειδί του προσβάσιμου ονόματος του σήματος-συνδέσμου προς τη δημόσια σελίδα (`{label}` = η ετικέτα του σήματος). */
+export const LISTING_OPEN_PUBLIC_KEY = 'listingPresence.openPublic';
 
 /** Πόσα ακίνητα βρίσκονται σε κάθε παρουσία — πάντα **όλες** οι παρουσίες, και το μηδέν ονομασμένο. */
 export function countListingPresences(

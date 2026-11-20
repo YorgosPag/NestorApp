@@ -13,9 +13,11 @@
  * στην οθόνη (το `resolvePropertyBadge` είχε δύο καταναλωτές και **κανένα** test απόδοσης).
  */
 
-/* global describe, it, expect, jest, beforeEach */
+/* global describe, it, expect, jest, beforeEach, afterEach */
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import type React from 'react';
+import { LISTING_REACH_SETTLE_MS } from '@/lib/listings/listing-presence';
 import { PropertyDetailsHeader } from '../PropertyDetailsHeader';
 import type { Property } from '@/types/property';
 import { getCompatNamespaces } from '@/i18n/namespace-compat';
@@ -43,6 +45,18 @@ jest.mock('@/components/properties/detail/PropertyHeaderGallery', () => ({
   PropertyHeaderGallery: () => <figure data-testid="identity-gallery" />,
 }));
 
+// ADR-777 §8.103.2 — ο κόσμος (το δημόσιο έγγραφο) ελέγχεται από το test· προεπιλογή «φορτώνει» = κανένας ισχυρισμός.
+const mockLookup: { value: { state: string; listing?: unknown } } = { value: { state: 'loading' } };
+jest.mock('@/services/realtime/hooks/usePublicListings', () => ({
+  usePublicListing: () => mockLookup.value,
+}));
+
+jest.mock('@/lib/workspace/navigation', () => ({
+  Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...rest}>{children}</a>
+  ),
+}));
+
 const STATUS = /^commercialStatus\./;
 const LIFECYCLE = /^trash:/;
 
@@ -53,6 +67,7 @@ function mountWith(facts: Record<string, unknown>, identity: 'full' | 'compact' 
 
 beforeEach(() => {
   requestedNamespaces.length = 0;
+  mockLookup.value = { state: 'loading' };
 });
 
 describe('Κ-ΚΕΦ — το σήμα κατάστασης στην κεφαλίδα σελίδας', () => {
@@ -121,5 +136,59 @@ describe('Κ-ΚΕΦ — το σήμα κατάστασης στην κεφαλί
     const status = screen.getByText(STATUS);
     const titleRow = screen.getByRole('heading', { level: 3, name: 'Δοκιμή' }).parentElement;
     expect(titleRow).toContainElement(status);
+  });
+});
+
+/**
+ * Κ-ΚΟΣΜ — **ΠΡΟΘΕΣΗ ⇄ ΚΟΣΜΟΣ** (ADR-777 §8.103.2). Το σήμα λέει ό,τι ισχύει **έξω**, όχι μόνο ό,τι αποφασίστηκε μέσα:
+ * σύνδεσμος μόνο προς σελίδα που υπάρχει· «Δεν έφτασε» / «Ακόμη στο κοινό» μόνο αφού η απόκλιση **επιμείνει**.
+ */
+describe('Κ-ΚΟΣΜ — η παρουσία απέναντι στο δημόσιο έγγραφο', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('✅ «Στο κοινό» + η σελίδα υπάρχει ⇒ σύνδεσμος προς /listing/<id>, σε ΝΕΑ καρτέλα', () => {
+    mockLookup.value = { state: 'found', listing: {} };
+    mountWith({ commercialStatus: 'for-sale' });
+
+    const link = screen.getByRole('link', { name: 'listingPresence.openPublic' });
+    expect(link).toHaveAttribute('href', '/listing/prop_1');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    expect(link).toContainElement(screen.getByText('listingPresence.public'));
+  });
+
+  it('🔴 όσο ο κόσμος είναι άγνωστος ⇒ κανένας σύνδεσμος, καμία προειδοποίηση', () => {
+    mountWith({ commercialStatus: 'for-sale' });
+
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByText('listingPresence.public')).toBeInTheDocument();
+  });
+
+  it('🔴 «Στο κοινό» χωρίς δημόσιο έγγραφο ⇒ «Δεν έφτασε στο κοινό» ΜΟΝΟ μετά την καθίζηση, χωρίς σύνδεσμο', () => {
+    mockLookup.value = { state: 'absent' };
+    mountWith({ commercialStatus: 'for-sale' });
+
+    // Μέσα στο παράθυρο: η αποθήκευση μόλις έγινε, ο γραφέας ίσως δεν έγραψε ακόμη — καμία ψευδής προειδοποίηση.
+    expect(screen.getByText('listingPresence.public')).toBeInTheDocument();
+    expect(screen.queryByText('listingPresence.reach.missing')).toBeNull();
+
+    act(() => { jest.advanceTimersByTime(LISTING_REACH_SETTLE_MS); });
+
+    expect(screen.getByText('listingPresence.reach.missing')).toBeInTheDocument();
+    expect(screen.getByText('listingPresence.reach.missingHint')).toBeInTheDocument();
+    expect(screen.queryByText('listingPresence.public')).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('🔴 «Εκτός αγγελίας» ενώ η δημόσια σελίδα ζει ⇒ «Ακόμη στο κοινό», με σύνδεσμο προς ό,τι βλέπει ο κόσμος', () => {
+    mockLookup.value = { state: 'found', listing: {} };
+    mountWith({ commercialStatus: 'unavailable', status: 'unavailable' });
+
+    act(() => { jest.advanceTimersByTime(LISTING_REACH_SETTLE_MS); });
+
+    expect(screen.getByText('listingPresence.reach.lingering')).toBeInTheDocument();
+    expect(screen.getByText('listingPresence.reach.lingeringHint')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'listingPresence.openPublic' })).toHaveAttribute('href', '/listing/prop_1');
   });
 });

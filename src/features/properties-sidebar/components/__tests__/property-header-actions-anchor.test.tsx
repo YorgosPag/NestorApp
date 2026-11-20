@@ -32,6 +32,11 @@ jest.mock('@/components/properties/detail/PropertyHeaderGallery', () => ({
   PropertyHeaderGallery: () => <figure data-testid="identity-gallery" />,
 }));
 
+// ADR-777 §8.103.2 — το σήμα παρουσίας ακούει το δημόσιο έγγραφο· εδώ ο κόσμος είναι «άγνωστος» (καμία Firestore).
+jest.mock('@/services/realtime/hooks/usePublicListings', () => ({
+  usePublicListing: () => ({ state: 'loading' }),
+}));
+
 const PROPERTY = { id: 'prop_1', name: 'Δοκιμή' } as unknown as Property;
 
 const NEW_ACTION = /navigation\.actions\.newUnit\.label/;

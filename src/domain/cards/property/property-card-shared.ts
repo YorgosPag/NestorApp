@@ -27,7 +27,13 @@ import {
   type PriceRole,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
-import { listingPresenceOf, listingPresenceSpec } from '@/lib/listings/listing-presence';
+import {
+  listingPresenceOf,
+  listingPresenceSpec,
+  listingReachSpec,
+  type ListingPresenceSpec,
+  type ListingReach,
+} from '@/lib/listings/listing-presence';
 import { retiredKindOf, type RetiredKind } from '@/lib/firestore/trashed-status';
 import { badgeFromSpec, commercialStatusBadge, UNIT_STATUS_NAMESPACE } from '@/lib/units/unit-status-badges';
 import { resolveCommercialStatus } from '@/constants/commercial-statuses';
@@ -127,10 +133,19 @@ export function buildPropertyStatusBadge(property: Property, t: TFn): GridCardBa
  * `offeredAudienceOf`, ο ίδιος με την πύλη προβολής και την καρτέλα «Αγγελία»).
  *
  * ⚠️ `null` **μόνο** για αποσυρμένη εγγραφή (κάδος / αρχείο): εκεί το λέει ήδη η ετικέτα κύκλου ζωής.
+ *
+ * 🔑 **`reach`** (ADR-777 §8.103.2): όταν ο κόσμος **διαφωνεί** με την πρόθεση («Δεν έφτασε στο κοινό» · «Ακόμη στο
+ * κοινό»), το σήμα πρόθεσης **αντικαθίσταται** — ένα «Στο κοινό» που δεν ισχύει δεν εμφανίζεται ποτέ. Η κάρτα της
+ * λίστας δεν το περνά (δείχνει την πρόθεση· κανένας ακροατής ανά κάρτα)· το περνά η κεφαλίδα (`useListingReach`).
  */
-export function buildListingPresenceBadge(property: Property, t: TFn): GridCardBadge | null {
+export function buildListingPresenceBadge(
+  property: Property,
+  t: TFn,
+  reach: ListingReach = 'aligned',
+): GridCardBadge | null {
   if (retiredKindOf(property) !== null) return null;
-  const spec = listingPresenceSpec(listingPresenceOf(property));
+  const spec: ListingPresenceSpec =
+    reach === 'aligned' ? listingPresenceSpec(listingPresenceOf(property)) : listingReachSpec(reach);
   return {
     label: t(spec.labelKey, { ns: UNIT_STATUS_NAMESPACE }),
     variant: spec.variant,
