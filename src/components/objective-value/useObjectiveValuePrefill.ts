@@ -19,7 +19,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
-import { parseObjectiveValuePrefill } from '@/lib/objective-value/objective-value-prefill';
+import { parseObjectiveValuePrefill, type ParsedObjectiveValuePrefill } from '@/lib/objective-value/objective-value-prefill';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
 interface PrefillTargets {
@@ -29,18 +29,21 @@ interface PrefillTargets {
   readonly pick: (point: GeoPoint) => void;
 }
 
+/** Ό,τι εφαρμόστηκε (η βάση σύγκρισης) και πού γυρίζει ο επισκέπτης — `null` = ο υπολογιστής άνοιξε κενός. */
+type AppliedObjectiveValuePrefill = Pick<ParsedObjectiveValuePrefill, 'draft' | 'back'>;
+
 export function useObjectiveValuePrefill(
   update: PrefillTargets['update'],
   pick: PrefillTargets['pick'],
-): Partial<ObjectiveValueDraft> | null {
-  const [applied, setApplied] = useState<Partial<ObjectiveValueDraft> | null>(null);
+): AppliedObjectiveValuePrefill | null {
+  const [applied, setApplied] = useState<AppliedObjectiveValuePrefill | null>(null);
   const targets = useRef<PrefillTargets>({ update, pick });
   targets.current = { update, pick };
   useEffect(() => {
     const prefill = parseObjectiveValuePrefill(window.location.search);
     if (prefill === null) return;
     targets.current.update(prefill.draft);
-    setApplied(prefill.draft);
+    setApplied({ draft: prefill.draft, back: prefill.back });
     if (prefill.point !== null) targets.current.pick(prefill.point);
   }, []);
   return applied;

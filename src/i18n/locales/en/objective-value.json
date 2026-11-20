@@ -8,7 +8,9 @@
   "page": {
     "title": "Objective value calculator",
     "intro": "Find the zone price from the property's position and calculate the objective value with the statutory coefficients. We only ask what affects your property.",
-    "scope": "Covers homes and apartments (including multi-level), storage rooms and parking spaces within town plans. It does not cover business premises, plots, special buildings or properties outside town plans."
+    "scope": "Covers homes and apartments (including multi-level), storage rooms and parking spaces within town plans. It does not cover business premises, plots, special buildings or properties outside town plans.",
+    "backLabel": "Return",
+    "backToProperty": "Back to your property"
   },
   "location": {
     "title": "1. Property location",

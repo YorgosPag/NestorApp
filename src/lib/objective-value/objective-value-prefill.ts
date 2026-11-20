@@ -24,6 +24,7 @@ import { isDateKey } from '@/lib/calendar/date-key';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
 import type { LevelDraft, ObjectiveValueDraft } from './objective-value-draft';
+import { parseObjectiveValueReturn, serializeObjectiveValueReturn, type ObjectiveValueReturn } from './objective-value-return';
 import { OBJECTIVE_VALUE_FORMS, RESIDENCE_FRONTAGES, type ObjectiveValueForm, type ResidenceFrontage } from './objective-value-types';
 
 export interface ObjectiveValuePrefill {
@@ -56,6 +57,8 @@ const PARAM = {
   frontage: 'frontage',
   permit: 'permit',
   common: 'common',
+  /** ADR-947 Φ1β — «← Πίσω στο ακίνητό σας»: κλειστή ένωση + ταυτότητα, ποτέ διεύθυνση (`objective-value-return.ts`). */
+  back: 'back',
 } as const;
 
 const MAX_FLOOR = 99;
@@ -69,8 +72,11 @@ function flag(value: boolean): string {
   return value ? '1' : '0';
 }
 
-/** Το ερώτημα της διεύθυνσης του υπολογιστή (χωρίς `?`). Κενό ⇒ τίποτα δεν προσυμπληρώνεται. */
-export function serializeObjectiveValuePrefill(prefill: ObjectiveValuePrefill): string {
+/**
+ * Το ερώτημα της διεύθυνσης του υπολογιστή (χωρίς `?`). Κενό ⇒ τίποτα δεν προσυμπληρώνεται. `back` = από πού ήρθε ο
+ * επισκέπτης, για τον σύνδεσμο επιστροφής (ADR-947 Φ1β).
+ */
+export function serializeObjectiveValuePrefill(prefill: ObjectiveValuePrefill, back: ObjectiveValueReturn | null = null): string {
   const params = new URLSearchParams();
   if (prefill.point !== null) {
     params.set(PARAM.lat, prefill.point.lat.toFixed(6));
@@ -87,6 +93,7 @@ export function serializeObjectiveValuePrefill(prefill: ObjectiveValuePrefill): 
   if (prefill.frontage !== null) params.set(PARAM.frontage, prefill.frontage);
   if (prefill.permitDate !== null) params.set(PARAM.permit, prefill.permitDate);
   if (prefill.areaIncludesCommon !== null) params.set(PARAM.common, flag(prefill.areaIncludesCommon));
+  if (back !== null) params.set(PARAM.back, serializeObjectiveValueReturn(back));
   return params.toString();
 }
 
@@ -156,6 +163,8 @@ export interface ParsedObjectiveValuePrefill {
   readonly point: GeoPoint | null;
   /** Ό,τι μπαίνει στο πρόχειρο — μόνο πεδία που πέρασαν τον έλεγχο. */
   readonly draft: Partial<ObjectiveValueDraft>;
+  /** Πού γυρίζει ο επισκέπτης — `null` όταν δεν δόθηκε ή δεν πέρασε την αυστηρή ανάγνωση. */
+  readonly back: ObjectiveValueReturn | null;
 }
 
 /** Η ανάγνωση του ερωτήματος· `null` όταν δεν υπάρχει προσυμπλήρωση (δεν δηλώνει είδος). */
@@ -172,5 +181,5 @@ export function parseObjectiveValuePrefill(search: string): ParsedObjectiveValue
     ...(elevator === null ? {} : { hasElevator: elevator }),
     ...declaredOf(params),
   };
-  return { point: pointOf(params), draft };
+  return { point: pointOf(params), draft, back: parseObjectiveValueReturn(params.get(PARAM.back)) };
 }

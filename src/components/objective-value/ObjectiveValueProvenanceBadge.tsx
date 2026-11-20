@@ -40,6 +40,8 @@ import type { ObjectiveValueResult } from '@/lib/objective-value/objective-value
 
 const NS = 'objective-value';
 const P = `${NS}:provenance`;
+/** Κουμπί επαναφοράς που **χωρά** στο δοχείο του (popover · στήλη αποτελέσματος): αναδίπλωση, όχι υπερχείλιση. */
+const REVERT_BUTTON_CLASS = 'h-auto max-w-full self-start whitespace-normal py-1 text-left';
 
 interface ProvenanceContextValue {
   readonly provenance: ObjectiveValueProvenance;
@@ -195,8 +197,10 @@ function RevertButton({ source, update }: { readonly source: ObjectiveValueInput
   if (source.kind !== 'user' || source.overrides === null) return null;
   const { revert } = source.overrides;
   return (
-    <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => update(revert)}>
-      <Undo2 className="mr-1 h-4 w-4" aria-hidden />
+    // `h-auto whitespace-normal`: το κουμπί αναδιπλώνεται μέσα στο popover (μετρημένο στην παραγωγή 2026-11-20: σε
+    // μία γραμμή έβγαινε έξω από το δεξί όριο).
+    <Button type="button" variant="outline" size="sm" className={REVERT_BUTTON_CLASS} onClick={() => update(revert)}>
+      <Undo2 className="mr-1 h-4 w-4 shrink-0" aria-hidden />
       {t(`${P}.detail.revert`)}
     </Button>
   );
@@ -270,8 +274,8 @@ export function ObjectiveValueOverrideSummary() {
   return (
     <>
       <p className="m-0 text-sm text-foreground">{t(`${P}.summary.changed`, { count: overrideCount })}</p>
-      <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => context.update(revertAll)}>
-        <Undo2 className="mr-1 h-4 w-4" aria-hidden />
+      <Button type="button" variant="outline" size="sm" className={REVERT_BUTTON_CLASS} onClick={() => context.update(revertAll)}>
+        <Undo2 className="mr-1 h-4 w-4 shrink-0" aria-hidden />
         {t(`${P}.summary.revertAll`)}
       </Button>
     </>

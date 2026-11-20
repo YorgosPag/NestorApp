@@ -18,6 +18,7 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -25,6 +26,9 @@ import { marketDayOf } from '@/lib/listings/listing-stats';
 import { computeObjectiveValue } from '@/lib/objective-value/compute-objective-value';
 import { draftToInput, INITIAL_DRAFT, relevantQuestions, type ObjectiveValueDraft, type UpdateDraft } from '@/lib/objective-value/objective-value-draft';
 import { deriveInputProvenance } from '@/lib/objective-value/objective-value-input-provenance';
+import { objectiveValueReturnHref, type ObjectiveValueReturn } from '@/lib/objective-value/objective-value-return';
+import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
+import { Link } from '@/lib/workspace/navigation';
 import type { ObjectiveValueResult as EngineResult } from '@/lib/objective-value/objective-value-types';
 
 import { ObjectiveValueAdjustments } from './ObjectiveValueAdjustments';
@@ -49,6 +53,23 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 registerRouteSlice(routeSlice);
 
 const NS = 'objective-value';
+
+/**
+ * **«← Πίσω στο ακίνητό σας»** (ADR-947 Φ1β) — όταν ο υπολογιστής ανοίγει από το ακίνητο του ιδιοκτήτη. Η διαδρομή
+ * χτίζεται από τον βοηθό διαδρομών, ποτέ από τη διεύθυνση (`objective-value-return.ts`): μόνο μέσα στην εφαρμογή.
+ */
+function BackLink({ back }: { readonly back: ObjectiveValueReturn | null }) {
+  const { t } = useTranslation([NS]);
+  if (back === null) return null;
+  return (
+    <nav aria-label={t(`${NS}:page.backLabel`)}>
+      <Link href={objectiveValueReturnHref(back)} className={`inline-flex items-center gap-1 text-sm ${VISIBLE_LINK_CLASS}`}>
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        {t(`${NS}:page.backToProperty`)}
+      </Link>
+    </nav>
+  );
+}
 
 function PageHeader() {
   const { t } = useTranslation([NS]);
@@ -128,13 +149,14 @@ export function ObjectiveValueContent() {
   const prefill = useObjectiveValuePrefill(update, location.pick);
   // Η τιμή ζώνης ανήκει στη θέση (ζώνη · δηλωμένο μέτωπο · χειροκίνητη)· το πρόχειρο την παίρνει τη στιγμή του υπολογισμού.
   const { result, questions, commercialityAssumed, sourcedFactor } = useCalculatorEvaluation(draft, location, today);
-  const provenance = useCalculatorProvenance({ draft, prefill, location, result, update, sourcedFactor });
+  const provenance = useCalculatorProvenance({ draft, prefill: prefill?.draft ?? null, location, result, update, sourcedFactor });
 
   // `busy={false}` ΡΗΤΑ (ADR-797 §Φ.Ρ.3): η σελίδα δεν φορτώνει αρχικά δεδομένα (η τιμή ζώνης ζητείται όταν ο
   // επισκέπτης δώσει θέση) — αλλά είναι στο εύρος του CHECK 3.94, που ζητά `aria-busy="false"` ως μάρτυρα ετοιμότητας.
   return (
     <ObjectiveValueProvenanceProvider value={provenance}>
       <ShellSurface as="main" measure="wide" busy={false} className="gap-y-6 py-4">
+        <BackLink back={prefill?.back ?? null} />
         <PageHeader />
         {/* Πλέγμα διάταξης μόνο (καμία σημασιολογία): οι ενότητες με επικεφαλίδα είναι τα βήματα μέσα του. */}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">

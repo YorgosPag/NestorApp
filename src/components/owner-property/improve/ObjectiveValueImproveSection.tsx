@@ -15,6 +15,7 @@
 import React, { useState } from 'react';
 
 import { ObjectiveValueLink } from '@/components/objective-value/ObjectiveValueLink';
+import { objectiveValueReturnOf } from '@/lib/objective-value/objective-value-return';
 import { ObjectiveValueSaveStatus } from '@/components/objective-value/ObjectiveValueSaveStatus';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -98,7 +99,7 @@ export function ObjectiveValueImproveSection({ subject }: { readonly subject: Ob
         <ObjectiveValueVisibility display={declarations.display} buyerView={zone.buyerView} onAnswer={onAnswer} />
       )}
       {prefill !== null && (
-        <ObjectiveValueLink className="self-start text-sm" prefillQuery={serializeObjectiveValuePrefill(prefill)}>
+        <ObjectiveValueLink className="self-start text-sm" prefillQuery={serializeObjectiveValuePrefill(prefill, objectiveValueReturnOf(subject.id))}>
           {t(`${I}.sections.objectiveValue.openCalculator`)}
         </ObjectiveValueLink>
       )}

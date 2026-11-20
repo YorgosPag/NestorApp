@@ -23,6 +23,7 @@ describe('objective-value prefill', () => {
     expect(parseObjectiveValuePrefill(serializeObjectiveValuePrefill(FULL))).toEqual({
       point: { lat: 37.9805, lng: 23.7355 },
       draft: { form: 'residence', levels: [{ floor: 3, area: 92.5 }], hasCentralHeating: false, hasElevator: true },
+      back: null,
     });
   });
 
@@ -32,7 +33,21 @@ describe('objective-value prefill', () => {
     expect(parseObjectiveValuePrefill(query)).toEqual({
       point: null,
       draft: { form: 'residence', levels: [{ floor: null, area: 92.5 }] },
+      back: null,
     });
+  });
+
+  it('ADR-947 Φ1β — η επιστροφή ταξιδεύει ως ένωση + ταυτότητα και ξαναδιαβάζεται αυτούσια', () => {
+    const back = { kind: 'offer', ownerPropertyId: 'ownp_ec5bf55a-bfb7-4b0e-9870-d5763a69d098' } as const;
+    const query = serializeObjectiveValuePrefill(FULL, back);
+    expect(new URLSearchParams(query).get('back')).toBe('offer:ownp_ec5bf55a-bfb7-4b0e-9870-d5763a69d098');
+    expect(parseObjectiveValuePrefill(query)?.back).toEqual(back);
+  });
+
+  it('ADR-947 Φ1β — ξένη ή πλαστή επιστροφή ⇒ κανένας σύνδεσμος (ποτέ ελεύθερη διεύθυνση)', () => {
+    for (const raw of ['https://evil.example', '//evil.example', 'offer:prop_123', 'offer:ownp_1:x', 'property:ownp_1', 'offer:ownp_../../x']) {
+      expect(parseObjectiveValuePrefill(`form=storage&back=${encodeURIComponent(raw)}`)?.back).toBeNull();
+    }
   });
 
   it('αποθήκη ⇒ επιφάνεια στο `area`, όχι επίπεδα', () => {
