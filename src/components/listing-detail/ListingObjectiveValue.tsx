@@ -20,6 +20,7 @@ import { ObjectiveValueLink } from '@/components/objective-value/ObjectiveValueL
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ListingObjectiveValue as Value } from '@/lib/objective-value/listing-objective-value';
 import { serializeObjectiveValuePrefill } from '@/lib/objective-value/objective-value-prefill';
+import type { ObjectiveValueReturn } from '@/lib/objective-value/objective-value-return';
 
 const NS = 'objective-value';
 const L = `${NS}:listing`;
@@ -27,12 +28,22 @@ const HEADING_ID = 'listing-objective-value';
 
 type Evaluated = Extract<Value, { kind: 'evaluated' }>;
 
+interface ListingObjectiveValueProps {
+  readonly value: Value;
+  /**
+   * Πού γυρίζει ο επισκέπτης από τον υπολογιστή (ADR-947 Φ1β). **Μόνο** η προεπισκόπηση του ιδιοκτήτη το δίνει
+   * (`ObjectiveValueVisibility`): ο αγοραστής της αγγελίας δεν έχει «ακίνητό σας» να γυρίσει. Το ορατό περιεχόμενο
+   * μένει ίδιο με της αγγελίας· αλλάζει μόνο ο δρόμος επιστροφής.
+   */
+  readonly back?: ObjectiveValueReturn | null;
+}
+
 /** Το κοινό σώμα (ADR-898 Φ4β: ένα για αγγελία και κτίριο) + ο σύνδεσμος στον υπολογιστή, ήδη συμπληρωμένος. */
-function EvaluatedBody({ value }: { readonly value: Evaluated }) {
+function EvaluatedBody({ value, back }: { readonly value: Evaluated; readonly back: ObjectiveValueReturn | null }) {
   const { t } = useTranslation([NS]);
   return (
     <ObjectiveValueEvaluated value={value} voice="listing">
-      <ObjectiveValueLink className="text-sm" prefillQuery={serializeObjectiveValuePrefill(value.prefill)}>
+      <ObjectiveValueLink className="text-sm" prefillQuery={serializeObjectiveValuePrefill(value.prefill, back)}>
         {t(value.bounds.kind === 'exact' ? `${L}.openCalculator` : `${L}.completeInCalculator`)}
       </ObjectiveValueLink>
     </ObjectiveValueEvaluated>
@@ -45,14 +56,14 @@ function EvaluatedBody({ value }: { readonly value: Evaluated }) {
  * 🔑 `hidden` ⇒ **τίποτα**, ούτε σύνδεσμος (ADR-898 Φ3β · πρότυπο NAR IDX: απενεργοποιείται η εκτίμηση **και** ο
  * σύνδεσμος προς αυτήν δίπλα στην αγγελία). Ο server δεν υπολόγισε τίποτα· ο γενικός υπολογιστής μένει στο υποσέλιδο.
  */
-export function ListingObjectiveValue({ value }: { readonly value: Value }) {
+export function ListingObjectiveValue({ value, back = null }: ListingObjectiveValueProps) {
   const { t } = useTranslation([NS]);
   if (value.kind === 'no-zone' || value.kind === 'hidden') return null;
   return (
     <section aria-labelledby={HEADING_ID} className="flex flex-col gap-2 rounded-md border border-border p-3">
       <h4 id={HEADING_ID} className="m-0 text-sm font-semibold text-foreground">{t(`${L}.title`)}</h4>
       {value.kind === 'evaluated' ? (
-        <EvaluatedBody value={value} />
+        <EvaluatedBody value={value} back={back} />
       ) : (
         <>
           <p className="m-0 text-sm text-muted-foreground">{t(`${L}.unsupported.${value.reason}`)}</p>

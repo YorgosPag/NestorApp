@@ -135,6 +135,37 @@ describe('ObjectiveValueImproveSection — ADR-898 Φ3β-2', () => {
   });
 });
 
+/** Οι σύνδεσμοι της οθόνης προς τον υπολογιστή. */
+function calculatorLinks(): readonly string[] {
+  return screen
+    .getAllByRole('link')
+    .map((link) => link.getAttribute('href') ?? '')
+    .filter((href) => href.includes('/ergaleia/antikeimeniki-axia'));
+}
+
+describe('ObjectiveValueImproveSection — ADR-947 Φ1β (δρόμος επιστροφής)', () => {
+  it('🔴 ιδιοκτήτης: ΚΑΙ οι δύο σύνδεσμοι (ενότητα + προεπισκόπηση αγοραστή) γυρίζουν στο ακίνητο', () => {
+    render(<OwnerSection owner={property} />);
+    const links = calculatorLinks();
+    // Μετάλλαξη: αν η προεπισκόπηση χάσει το `back`, ο ένας από τους δύο αποτυγχάνει εδώ.
+    expect(links).toHaveLength(2);
+    for (const href of links) expect(href).toContain(`back=${encodeURIComponent('offer:ownp_a')}`);
+  });
+
+  it('γραφείο (`prop_*`): κανένας σύνδεσμος δεν φέρει επιστροφή — η δημόσια σελίδα δεν ξέρει τον χώρο εργασίας', () => {
+    const subject: ObjectiveValueImproveSubject = {
+      id: 'prop_1',
+      declarations: undefined,
+      revision: 'r1',
+      write: async () => ({ kind: 'rejected', reasons: ['locked'] }),
+    };
+    render(<ObjectiveValueImproveSection subject={subject} />);
+    const links = calculatorLinks();
+    expect(links.length).toBeGreaterThan(0);
+    for (const href of links) expect(href).not.toContain('back=');
+  });
+});
+
 describe('ObjectiveValueImproveSection — ADR-898 Φ3β-3 (βάση από τον server · γραφείο)', () => {
   it('🔴 η βάση είναι η αγγελία ΤΟΥ SERVER: με έτος κατασκευής η άδεια προσεγγίζεται — δεν «ξεκλειδώνει» τίποτα', () => {
     // Η καθαρή προβολή γράφει `constructionYear: null`· το δένει μόνο ο γραφέας. Με βάση στον browser η οθόνη θα

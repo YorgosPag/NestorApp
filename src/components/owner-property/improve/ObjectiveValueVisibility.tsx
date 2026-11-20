@@ -22,6 +22,7 @@ import type {
   ObjectiveValueDeclarationsPatch,
   ObjectiveValueDisplay,
 } from '@/lib/objective-value/objective-value-declarations';
+import type { ObjectiveValueReturn } from '@/lib/objective-value/objective-value-return';
 
 const NS = 'objective-value';
 const I = `${NS}:improve.visibility`;
@@ -30,9 +31,11 @@ interface VisibilityProps {
   readonly display: ObjectiveValueDisplay;
   readonly buyerView: BuyerView;
   readonly onAnswer: (patch: ObjectiveValueDeclarationsPatch) => void;
+  /** Ο δρόμος επιστροφής από τον υπολογιστή (ADR-947 Φ1β) — ίδιος με τον σύνδεσμο της ενότητας. */
+  readonly back: ObjectiveValueReturn | null;
 }
 
-export function ObjectiveValueVisibility({ display, buyerView, onAnswer }: VisibilityProps) {
+export function ObjectiveValueVisibility({ display, buyerView, onAnswer, back }: VisibilityProps) {
   const { t } = useTranslation([NS]);
   const switchId = useId();
   const helpId = useId();
@@ -56,7 +59,7 @@ export function ObjectiveValueVisibility({ display, buyerView, onAnswer }: Visib
         {buyerView.kind === 'hidden' ? (
           <p className="m-0 text-sm text-muted-foreground">{t(`${I}.hiddenPreview`)}</p>
         ) : (
-          <ListingObjectiveValue value={buyerView} />
+          <ListingObjectiveValue value={buyerView} back={back} />
         )}
       </section>
     </Card>

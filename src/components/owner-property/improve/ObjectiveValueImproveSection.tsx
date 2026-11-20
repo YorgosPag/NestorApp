@@ -80,6 +80,8 @@ export function ObjectiveValueImproveSection({ subject }: { readonly subject: Ob
   const state = useObjectiveValueImprove(subject);
   const [localRejection, setLocalRejection] = useState<readonly ObjectiveValuePatchViolation[]>([]);
   const { zone, save, declarations, today, prefill } = state;
+  // ΕΝΑΣ δρόμος επιστροφής για τους δύο συνδέσμους προς τον υπολογιστή (ενότητα + προεπισκόπηση αγοραστή).
+  const back = objectiveValueReturnOf(subject.id);
   const onAnswer = (patch: ObjectiveValueDeclarationsPatch) => {
     const violations = objectiveValuePatchViolations(patch, today);
     setLocalRejection(violations);
@@ -96,10 +98,10 @@ export function ObjectiveValueImproveSection({ subject }: { readonly subject: Ob
       ))}
       {zone.kind === 'answered' ? <Body state={state} zone={zone} onAnswer={onAnswer} /> : <ZoneMessage zone={zone} />}
       {zone.kind === 'answered' && zone.buyerView.kind !== 'no-zone' && (
-        <ObjectiveValueVisibility display={declarations.display} buyerView={zone.buyerView} onAnswer={onAnswer} />
+        <ObjectiveValueVisibility display={declarations.display} buyerView={zone.buyerView} onAnswer={onAnswer} back={back} />
       )}
       {prefill !== null && (
-        <ObjectiveValueLink className="self-start text-sm" prefillQuery={serializeObjectiveValuePrefill(prefill, objectiveValueReturnOf(subject.id))}>
+        <ObjectiveValueLink className="self-start text-sm" prefillQuery={serializeObjectiveValuePrefill(prefill, back)}>
           {t(`${I}.sections.objectiveValue.openCalculator`)}
         </ObjectiveValueLink>
       )}
