@@ -20,7 +20,7 @@
     "src/i18n/generated/routes/email__preferences__token.el.json": "95ad8b3c951ab6fa8db90e0701424325016f2c62a6600aa576ee80197a6c35ad",
     "src/i18n/generated/routes/engagements.el.json": "76e20123c51827a315c646031ff3b33e4f1567fee847125cae0b6de31cf4f3d0",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "3e070c1b1274fc21eabc274b6bcfa61837a0851327f34798801fc571b4fcd018",
-    "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "c9a3ace89646bcf8ee5713fdb054f695610b0d83483cddea234d233b3dcfbd4a",
+    "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "7efcebf8b91424ef7915c2afe8dd0442808028679f30cbbd417b444c5396c81d",
     "src/i18n/generated/routes/handover-invite__token.el.json": "5f802bb153f7da3e1f25e91ec7ed91fb1acf50d1bfc8381b5c1661a996567d70",
     "src/i18n/generated/routes/handover-protocol.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/handover-protocol__verify.el.json": "bf46310bff0d59b1341fa8417b8e6b93a406aef159e5e0c2ff9d2152974233b3",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "42f14951c7863fc1fcdd18eb172df2c66164b1ba8d83d9fb109a13ad3457a15f",
+  "inputsSha256": "92dfb473399768e887076c450813a22f8e157edb9b0bfcdf5230ab2a164bb9a2",
   "languages": [
     "el"
   ],
@@ -3546,6 +3546,8 @@
             "questions.plotUtilisation.label",
             "questions.title",
             "questions.yes",
+            "result.barLabel",
+            "result.barPending",
             "result.base",
             "result.breakdown",
             "result.disclaimer",
@@ -3556,6 +3558,7 @@
             "result.myProperty",
             "result.pending",
             "result.refColumn",
+            "result.showBreakdown",
             "result.title",
             "result.valueColumn",
             "seo.breadcrumbHome",
@@ -41252,7 +41255,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1363927
+    "sliceBytes": 1364095
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

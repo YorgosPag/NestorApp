@@ -21,7 +21,9 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 import { ShellSurface } from '@/core/containers/ShellSurface';
+import { useElementInView } from '@/hooks/useElementInView';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { prefersReducedMotion } from '@/lib/a11y/reduced-motion';
 import { marketDayOf } from '@/lib/listings/listing-stats';
 import { computeObjectiveValue } from '@/lib/objective-value/compute-objective-value';
 import { draftToInput, INITIAL_DRAFT, relevantQuestions, type ObjectiveValueDraft, type UpdateDraft } from '@/lib/objective-value/objective-value-draft';
@@ -34,6 +36,7 @@ import type { ObjectiveValueResult as EngineResult } from '@/lib/objective-value
 import { ObjectiveValueAdjustments } from './ObjectiveValueAdjustments';
 import { ObjectiveValueFaq } from './ObjectiveValueFaq';
 import { ObjectiveValueLocation } from './ObjectiveValueLocation';
+import { ObjectiveValueMobileBar } from './ObjectiveValueMobileBar';
 import { ObjectiveValueProperty } from './ObjectiveValueProperty';
 import {
   ObjectiveValueOverrideSummary,
@@ -140,6 +143,61 @@ function useCalculatorProvenance({ draft, prefill, location, result, update, sou
   );
 }
 
+/**
+ * **Η διάταξη του εργαλείου** (ADR-947) — μία στήλη στο κινητό · `lg`: φόρμα | αποτέλεσμα · `xl`: θέση + χάρτης |
+ * φόρμα | αποτέλεσμα. Η σειρά DOM μένει η σειρά των βημάτων (θέση → ακίνητο → … → αποτέλεσμα) σε κάθε πλάτος· μόνο οι
+ * θέσεις στο πλέγμα αλλάζουν.
+ */
+const WORKSPACE_GRID =
+  'grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,24rem)]';
+const LOCATION_CELL = 'min-w-0 lg:col-start-1 lg:row-start-1';
+const FORM_CELL = 'flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2 xl:col-start-2 xl:row-start-1';
+// Στο `lg` το αποτέλεσμα πιάνει και τις δύο σειρές της φόρμας, ώστε το `sticky` να έχει όλο το ύψος της για διαδρομή.
+const RESULT_CELL = 'lg:sticky lg:top-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 xl:col-start-3 xl:row-span-1';
+
+interface WorkspaceProps {
+  readonly draft: ObjectiveValueDraft;
+  readonly update: UpdateDraft;
+  readonly location: ObjectiveValueLocationState;
+  readonly today: string;
+  readonly evaluation: ReturnType<typeof useCalculatorEvaluation>;
+  readonly resultRef: (element: HTMLElement | null) => void;
+}
+
+function CalculatorWorkspace({ draft, update, location, today, evaluation, resultRef }: WorkspaceProps) {
+  const { result, questions, commercialityAssumed, sourcedFactor } = evaluation;
+  return (
+    // 🔑 `data-shell-span="full"` (ADR-797 §Β.11 breakout): το ΕΡΓΑΛΕΙΟ απλώνεται· κεφαλίδα και FAQ μένουν στο μέτρο.
+    // Νέος ρόλος > 80ch στο `measure` απαγορεύεται σκόπιμα — το μέτρο είναι μήκος γραμμής κειμένου, όχι πλάτος εργαλείου.
+    <div data-shell-span="full" className={WORKSPACE_GRID}>
+      <div className={LOCATION_CELL}>
+        <ObjectiveValueLocation location={location} />
+      </div>
+      <div className={FORM_CELL}>
+        <ObjectiveValueProperty draft={draft} update={update} />
+        <ObjectiveValueQuestions
+          questions={questions}
+          draft={draft}
+          update={update}
+          today={today}
+          commerciality={location.commerciality}
+          renderProvenance={(question) => <ObjectiveValueQuestionProvenance question={question} />}
+        />
+        <ObjectiveValueAdjustments draft={draft} update={update} />
+      </div>
+      <aside ref={resultRef} className={RESULT_CELL}>
+        <ObjectiveValueResult
+          result={result}
+          commercialityAssumed={commercialityAssumed}
+          sourcedCommercialityFactor={sourcedFactor}
+          commercialityProvenance={<ObjectiveValueProvenanceBadge input="commercialityFactor" />}
+          overrides={<ObjectiveValueOverrideSummary />}
+        />
+      </aside>
+    </div>
+  );
+}
+
 export function ObjectiveValueContent() {
   const [draft, setDraft] = useState<ObjectiveValueDraft>(INITIAL_DRAFT);
   const update = useCallback((patch: Partial<ObjectiveValueDraft>) => setDraft((current) => ({ ...current, ...patch })), []);
@@ -148,8 +206,14 @@ export function ObjectiveValueContent() {
   // ADR-898 Φ3 — από αγγελία: ό,τι ξέρει ήδη η αγγελία, ώστε να μένουν μόνο οι ερωτήσεις που άφησε ανοιχτές.
   const prefill = useObjectiveValuePrefill(update, location.locate);
   // Η τιμή ζώνης ανήκει στη θέση (ζώνη · δηλωμένο μέτωπο · χειροκίνητη)· το πρόχειρο την παίρνει τη στιγμή του υπολογισμού.
-  const { result, questions, commercialityAssumed, sourcedFactor } = useCalculatorEvaluation(draft, location, today);
+  const evaluation = useCalculatorEvaluation(draft, location, today);
+  const { result, sourcedFactor } = evaluation;
   const provenance = useCalculatorProvenance({ draft, prefill: prefill?.draft ?? null, location, result, update, sourcedFactor });
+  const resultView = useElementInView<HTMLElement>();
+  const showBreakdown = useCallback(
+    () => resultView.element.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' }),
+    [resultView.element],
+  );
 
   // `busy={false}` ΡΗΤΑ (ADR-797 §Φ.Ρ.3): η σελίδα δεν φορτώνει αρχικά δεδομένα (η τιμή ζώνης ζητείται όταν ο
   // επισκέπτης δώσει θέση) — αλλά είναι στο εύρος του CHECK 3.94, που ζητά `aria-busy="false"` ως μάρτυρα ετοιμότητας.
@@ -158,32 +222,10 @@ export function ObjectiveValueContent() {
       <ShellSurface as="main" measure="wide" busy={false} className="gap-y-6 py-4">
         <BackLink back={prefill?.back ?? null} />
         <PageHeader />
-        {/* Πλέγμα διάταξης μόνο (καμία σημασιολογία): οι ενότητες με επικεφαλίδα είναι τα βήματα μέσα του. */}
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-6">
-            <ObjectiveValueLocation location={location} />
-            <ObjectiveValueProperty draft={draft} update={update} />
-            <ObjectiveValueQuestions
-              questions={questions}
-              draft={draft}
-              update={update}
-              today={today}
-              commerciality={location.commerciality}
-              renderProvenance={(question) => <ObjectiveValueQuestionProvenance question={question} />}
-            />
-            <ObjectiveValueAdjustments draft={draft} update={update} />
-          </div>
-          <aside className="lg:sticky lg:top-4">
-            <ObjectiveValueResult
-              result={result}
-              commercialityAssumed={commercialityAssumed}
-              sourcedCommercialityFactor={sourcedFactor}
-              commercialityProvenance={<ObjectiveValueProvenanceBadge input="commercialityFactor" />}
-              overrides={<ObjectiveValueOverrideSummary />}
-            />
-          </aside>
-        </div>
+        <CalculatorWorkspace draft={draft} update={update} location={location} today={today} evaluation={evaluation} resultRef={resultView.ref} />
         <ObjectiveValueFaq />
+        {/* Τελευταίο παιδί του `<main>`: το `sticky` προσγειώνεται εδώ στο τέλος, χωρίς να καλύπτει τίποτα. */}
+        <ObjectiveValueMobileBar result={result} resultInView={resultView.inView} onShowBreakdown={showBreakdown} />
       </ShellSurface>
     </ObjectiveValueProvenanceProvider>
   );

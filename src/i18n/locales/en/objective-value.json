@@ -145,6 +145,9 @@
   "result": {
     "title": "4. Result",
     "label": "Objective value (indicative)",
+    "barLabel": "Result summary",
+    "barPending": "Not calculated yet",
+    "showBreakdown": "Breakdown",
     "pending": "To calculate, fill in: {fields}",
     "invalid": "Check these values:",
     "breakdown": "How it was calculated",

@@ -294,3 +294,18 @@ type IssuanceDeliverable =
   κλικ, αφού ο άνθρωπος βλέπει ήδη το σημείο. Νέο `locate(point)` στο `useObjectiveValueLocation`: ίδια ετυμηγορία με το
   `pick` (πινέζα · μέτωπο ξεχνιέται · ζώνη), μαζί με `focus: { point, accuracy: 'exact' }`, άρα ζουμ κτιρίου από τον
   ίδιο πίνακα (`geocoding-focus`) και κανένας κύκλος αβεβαιότητας. Το σημείο είναι ήδη πινέζα ζώνης.
+- **2026-11-20** — **Διάταξη του υπολογιστή** (έγκριση Giorgio, Plan Mode). Σε 1920px ο υπολογιστής ήταν 80ch ≈ 720px.
+  - 🔴 Η πρόταση του handoff («νέος ρόλος `tool` στο `spacing.layout.measure`») **απορρίφθηκε**: ο γεννήτορας αρνείται
+    ρόλο > 80ch, και αυτό είναι σκόπιμο, γιατί το μέτρο είναι μήκος γραμμής κειμένου και όχι πλάτος εργαλείου. Χρησιμοποιήθηκε ο **υπάρχων**
+    breakout (`data-shell-span="full"`, `shell-surface.css`, προηγούμενο `AgencyDirectoryContent`): μόνο το εργαλείο
+    απλώνεται· κεφαλίδα και FAQ μένουν στο μέτρο. Κανένα νέο token.
+  - Πλέγμα (`ObjectiveValueContent` → `CalculatorWorkspace`): κινητό μία στήλη · `lg` φόρμα | αποτέλεσμα (όπως πριν) ·
+    `xl` θέση + χάρτης | φόρμα | αποτέλεσμα 24rem. Η σειρά DOM μένει η σειρά των βημάτων. Το αποτέλεσμα μένει `sticky`·
+    η στήλη του χάρτη **όχι** (32rem χάρτης + αναζήτηση + ζώνη > ύψος οθόνης 1080 ⇒ το κάτω μέρος θα κοβόταν).
+  - Χάρτης: `MAP_HEIGHT_CLASS` (`h-72 md:h-96 xl:h-[32rem]`).
+  - Κινητό/tablet: νέο `ObjectiveValueMobileBar`. Είναι `sticky bottom-0` και όχι `fixed`, ως τελευταίο παιδί του `<main>`, άρα δεν
+    καλύπτει ποτέ το FAQ και δεν χρειάζεται `pb-*` στο κέλυφος. Δείχνει ποσό ή «δεν υπολογίστηκε ακόμη» και κουμπί «Ανάλυση»
+    (`scrollIntoView`, σεβόμενο το `prefersReducedMotion`). Κρύβεται με `invisible` όταν φαίνεται το ίδιο το αποτέλεσμα, μέσω του νέου
+    γενικού `src/hooks/useElementInView.ts`. z-index από την κλίμακα (`--z-index-sticky`). Δεν έχει `aria-live`, γιατί το αποτέλεσμα
+    έχει ήδη `role="status"`.
+  - i18n: `result.{barLabel, barPending, showBreakdown}` (el/en) · ξαναπαράχθηκαν `i18n.ts` + route slice.

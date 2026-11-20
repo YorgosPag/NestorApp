@@ -42,6 +42,8 @@ const NS = 'objective-value';
 const NO_FRONT = 'none';
 /** Επίπεδο πόλης: ο άνθρωπος βλέπει δρόμους και μπορεί να πατήσει, πριν ψάξει διεύθυνση. */
 const CITY_ZOOM = 12;
+/** Στο `xl` ο χάρτης έχει δική του στήλη (ADR-947, διάταξη) ⇒ ψηλότερος, για να φαίνεται το οικοδομικό τετράγωνο. */
+const MAP_HEIGHT_CLASS = 'h-72 md:h-96 xl:h-[32rem]';
 const MAP_CENTER = { lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE };
 
 type LocationProps = { readonly location: ObjectiveValueLocationState };
@@ -184,7 +186,7 @@ export function ObjectiveValueLocation({ location }: LocationProps) {
         pin={location.pin}
         focus={location.focus}
         busy={location.lookup.kind === 'loading'}
-        heightClass="h-72 md:h-96"
+        heightClass={MAP_HEIGHT_CLASS}
       />
       <ZoneAnswer location={location} />
     </CalculatorStep>
