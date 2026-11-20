@@ -92,7 +92,7 @@
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
     "src/i18n/generated/routes/offers__new.el.json": "73fda44762c96c57da71ce042617e5b51ecea89deb30ef26d920e64beaa6d5bf",
-    "src/i18n/generated/routes/offers__offerId.el.json": "9e310942148be6759450547694c541c9ec7797b9a1a67926404a4d9129b5eb8b",
+    "src/i18n/generated/routes/offers__offerId.el.json": "e683a6cbea3f2469b0778bd4e714b6516299271d7fc1789fb405c16457aa0a2c",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "bfddc6394c00d7e5f4b2835153253ff9713022d528faa576b0066ccc0d8b246e",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3186f5e3e3f73a245d03e682a62a8752bb50ca884f7eb993d6f210c5995aa24b",
+  "inputsSha256": "bf76b7f3736ef99d46602b3fbc52438602ad7f83e565e1a59e24879a992eaae3",
   "languages": [
     "el"
   ],
@@ -37059,7 +37059,6 @@
             "offer.history.lead.company",
             "offer.history.lead.personal",
             "offer.history.loading",
-            "offer.history.title",
             "offer.invariant.area-not-positive",
             "offer.invariant.bedrooms-negative",
             "offer.invariant.duplicate-offer-kind",
@@ -41228,7 +41227,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1360907
+    "sliceBytes": 1360870
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

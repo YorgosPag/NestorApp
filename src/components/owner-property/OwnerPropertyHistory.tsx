@@ -30,15 +30,14 @@ import type { OwnerProperty } from '@/types/owner-property';
  * εισαγωγή το χρονολόγιο ιστορικού έμπαινε στη **στατική κλειστότητα** της `/offers/[offerId]`: ο
  * γεννήτορας του slice βρήκε **δυναμικά `t()`** (`AuditTimelineView`: ετικέτες πεδίων που λύνονται
  * τη στιγμή της απόδοσης) και **αρνήθηκε** να εκπέμψει slice — 43.729 bytes ως κάτω φράγμα.
- * Ίδιο πρότυπο με το `PurchaseOrderDetail`. Ο **τίτλος** και η **επεξήγηση** μένουν σύγχρονα
- * (ζουν σε αυτό το αρχείο), ώστε η ενότητα να μην ξεκινά ποτέ με ωμό κλειδί (CHECK 3.51).
+ * Ίδιο πρότυπο με το `PurchaseOrderDetail`. Η **επεξήγηση** μένει σύγχρονη (ζει σε αυτό το αρχείο)
+ * και ο τίτλος έρχεται από την ενότητα, ώστε η ενότητα να μην ξεκινά ποτέ με ωμό κλειδί (CHECK 3.51).
  */
 const ActivityTab = React.lazy(() =>
   import('@/components/shared/audit/ActivityTab').then((m) => ({ default: m.ActivityTab })),
 );
 
 const NS = 'property-market';
-const HEADING_ID = 'owner-property-history-heading';
 
 /**
  * **Ποιος το βλέπει** — λέγεται ρητά, γιατί είναι η απάντηση στο πρώτο ερώτημα κάθε ιδιώτη
@@ -52,23 +51,23 @@ const LEAD_KEY: Readonly<Record<AuditLedgerKind, string>> = {
 
 type CustodyFields = Pick<OwnerProperty, 'id' | 'authorUserId' | 'authorCompanyId'>;
 
+/**
+ * 📐 **ΧΩΡΙΣ ΔΙΚΗ ΤΟΥ ΕΠΙΚΕΦΑΛΙΔΑ** (ADR-946 §3.2, μετρημένο στην παραγωγή 2026-11-20): ζει μέσα στην ενότητα του
+ * `SectionListDetail`, που **ήδη** δίνει `<h2>` «Ιστορικό» και `aria-labelledby`. Δεύτερο `<h2>` με το ίδιο κείμενο
+ * ακριβώς από κάτω = διπλή επικεφαλίδα στην οθόνη **και** στον αναγνώστη οθόνης. Μένει η επεξήγηση «ποιος το βλέπει».
+ */
 export function OwnerPropertyHistory({ property }: { readonly property: CustodyFields }): React.ReactElement {
   const { t } = useTranslation([NS]);
   const ledger = auditLedgerKindOf(custodyWorkspace(custodyOf(property)));
 
   return (
-    <section aria-labelledby={HEADING_ID} className="flex flex-col gap-2">
-      <header>
-        <h2 id={HEADING_ID} className="m-0 text-base font-semibold text-foreground">
-          {t(`${NS}:offer.history.title`)}
-        </h2>
-        <p className="m-0 text-sm text-muted-foreground">{t(LEAD_KEY[ledger])}</p>
-      </header>
+    <>
+      <p className="m-0 text-sm text-muted-foreground">{t(LEAD_KEY[ledger])}</p>
       <React.Suspense
         fallback={<p className="m-0 text-sm text-muted-foreground">{t(`${NS}:offer.history.loading`)}</p>}
       >
         <ActivityTab entityType="owner_property" entityId={property.id} ledger={ledger} />
       </React.Suspense>
-    </section>
+    </>
   );
 }

@@ -33,17 +33,20 @@ import { MapOrAbsenceCover } from '@/components/listing-map-snapshot/MapOrAbsenc
 import { LISTING_CARD_ASPECT, LISTING_CARD_ASPECT_CLASS } from '@/components/search-results/listing-card-frame';
 import { listingPhotoPositionClass } from '@/components/search-results/listing-photo-position-class';
 
+import cardStyles from './owner-property-card.module.css';
+
 const K = 'property-market:offer.card';
 
-/** Η στήλη της μικρογραφίας: πλήρες πλάτος σε κινητό, σταθερή στήλη από `sm` και πάνω. */
-const COVER_SIZES = '(min-width: 640px) 224px, 100vw';
 /**
- * 🔴 **`sm:self-start`, ΑΛΛΙΩΣ Η ΑΝΑΛΟΓΙΑ ΔΕΝ ΙΣΧΥΕΙ** (ADR-777 §8.70, μετρημένο ζωντανά 2026-10-13): η
- * κάρτα είναι `sm:flex-row` με το προεπιλεγμένο `align-items: stretch`, άρα το πλαίσιο έπαιρνε το
- * **ύψος της στήλης κειμένου** και το `aspect-[3/2]` αγνοούνταν — 3:2 δηλωμένο, ~2:3 **όρθιο** στην
- * οθόνη, και άλλο ύψος σε κάθε κάρτα (με ή χωρίς στατιστικά).
+ * Το πλάτος της μικρογραφίας το αποφασίζει η **κάρτα** (container query, `owner-property-card.module.css`):
+ * 14rem δίπλα στο κείμενο, ή όλο το πλάτος από πάνω — έως 34,75rem (556px), το κατώφλι της σειράς.
+ * Το `auto` (HTML, lazy εικόνες) αφήνει τον browser να διαλέξει από το **πραγματικό** πλάτος· η υπόλοιπη λίστα
+ * είναι η εφεδρεία (eager εικόνα ή browser χωρίς `auto`) και καλύπτει τη **μεγαλύτερη** περίπτωση, όχι την 224px:
+ * αλλιώς η στοιβαγμένη κάρτα στον υπολογιστή θα έπαιρνε θολή εικόνα.
  */
-const COVER_FRAME = `${LISTING_CARD_ASPECT_CLASS} w-full shrink-0 overflow-hidden rounded-md sm:w-56 sm:self-start`;
+const COVER_SIZES = 'auto, (min-width: 640px) 556px, 100vw';
+/** Γεωμετρία πλάτους/στοίχισης: `cardStyles.cover` (ADR-777 §8.70 `self-start` · ADR-946 §3.2 container query). */
+const COVER_FRAME = `${LISTING_CARD_ASPECT_CLASS} ${cardStyles.cover} shrink-0 overflow-hidden rounded-md`;
 
 interface OwnerPropertyCardCoverProps {
   readonly property: Pick<OwnerProperty, 'id' | 'title' | 'publication'>;
