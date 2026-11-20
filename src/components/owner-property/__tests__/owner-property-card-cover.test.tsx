@@ -13,6 +13,8 @@
  */
 
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { i18n } from 'i18next';
@@ -29,6 +31,7 @@ import {
 import { LISTING_CARD_ASPECT_CLASS } from '@/components/search-results/listing-card-frame';
 
 import { OwnerPropertyCardCover } from '../OwnerPropertyCardCover';
+import cardStyles from '../owner-property-card.module.css';
 
 jest.mock('@/i18n/hooks/useTranslation', () => {
   const reactI18next = jest.requireActual('react-i18next');
@@ -108,8 +111,10 @@ function expectAbsence(): void {
 
 describe('🔴 το πλαίσιο κρατά την αναλογία του — σε ΚΑΘΕ κατάσταση', () => {
   /**
-   * Το jsdom δεν έχει διάταξη, άρα η άγκυρα δένει τη **δήλωση**: χωρίς `sm:self-start` το flex-row
+   * Το jsdom δεν έχει διάταξη, άρα η άγκυρα δένει τη **δήλωση**: χωρίς `align-self: flex-start` η σειρά
    * της κάρτας τεντώνει το πλαίσιο στο ύψος του κειμένου και το `aspect-[3/2]` δεν ισχύει ποτέ.
+   * ADR-946 §3.2: η στοίχιση ζει στο container query του `owner-property-card.module.css` (κλάση `cover`),
+   * όχι σε `sm:` — το jsdom δεν εκτελεί container queries, άρα κρίνεται η κλάση ΚΑΙ ο κανόνας στην πηγή.
    */
   it.each([
     ['φωτογραφία', publication(THUMBNAIL)],
@@ -118,7 +123,16 @@ describe('🔴 το πλαίσιο κρατά την αναλογία του —
     renderCover(pub);
 
     const frame = screen.getByRole('figure');
-    expect(frame).toHaveClass(LISTING_CARD_ASPECT_CLASS, 'sm:self-start');
+    expect(frame).toHaveClass(LISTING_CARD_ASPECT_CLASS, cardStyles.cover);
+  });
+
+  it('ο κανόνας της σειράς κρατά το πλαίσιο στην κορυφή (`align-self: flex-start`)', () => {
+    const css = readFileSync(path.join(process.cwd(), 'src/components/owner-property/owner-property-card.module.css'), 'utf8');
+    const rowRule = css.slice(css.indexOf('@container owner-card'));
+    const coverInRow = rowRule.slice(rowRule.indexOf('.cover'), rowRule.indexOf('}', rowRule.indexOf('.cover')));
+
+    expect(rowRule.indexOf('.cover')).toBeGreaterThan(-1);
+    expect(coverInRow).toContain('align-self: flex-start');
   });
 });
 

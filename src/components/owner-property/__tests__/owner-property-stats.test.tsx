@@ -163,7 +163,7 @@ describe('Κ — τα πλακίδια της κάρτας (§8.74.7)', () => {
     const pending = render(<StatsRowPending />);
     const expected = shapeOf(pending.container);
     pending.unmount();
-    expect(expected).toBe(Array.from({ length: CARD_KPI_COUNT }, () => 'h-4/h-6/h-4').join(' | '));
+    expect(expected).toBe(Array.from({ length: CARD_KPI_COUNT }, () => 'h-4/h-6/h-8').join(' | ')); // λεπτομέρεια = 2 γραμμές (ADR-946 §3.2)
     for (const state of states) {
       const { container, unmount } = renderWithI18n(<OwnerPropertyStatsRow stats={state} listedAt={LISTED} priceReduction={null} />);
       expect(shapeOf(container)).toBe(expected);

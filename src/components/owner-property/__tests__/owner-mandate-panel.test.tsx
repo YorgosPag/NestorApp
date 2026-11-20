@@ -174,14 +174,16 @@ describe('Ρ — η ραφή: το πλαίσιο είναι ΠΡΑΓΜΑΤΙΚ�
    * έμεινε **δυνατότητα σε unmounted container** — δηλαδή νεκρό.
    */
   it('Ρ-1 η σελίδα της αγγελίας υπολογίζει ΚΑΙ αποδίδει την ακμή', () => {
-    const source = readFileSync(
-      path.join(process.cwd(), 'src/components/owner-property/OwnerPropertyDetailContent.tsx'),
-      'utf8',
-    );
+    // ADR-946: η σελίδα έγινε list-detail — υπολογίζει η σελίδα, αποδίδει η ενότητα (`OwnerPropertySections`).
+    const read = (file: string): string =>
+      readFileSync(path.join(process.cwd(), 'src/components/owner-property', file), 'utf8');
+    const page = read('OwnerPropertyDetailContent.tsx');
+    const sections = read('OwnerPropertySections.tsx');
 
-    expect(source).toContain('ownerMandateViews(property, atISO)');
-    expect(source).toContain('<OwnerMandatePanel views={mandateViews} />');
+    expect(page).toContain('mandateViews: ownerMandateViews(property, atISO)');
+    expect(page).toContain('<OwnerPropertySectionContent sectionId={sectionId} data={data} />');
+    expect(sections).toContain('<OwnerMandatePanel views={data.mandateViews} />');
     // 🔴 ΕΝΑ ρολόι για όλη την όψη: δύο κλήσεις μπορούν να πέσουν σε άλλη μέρα.
-    expect(source.split('nowISO()')).toHaveLength(2);
+    expect(page.split('nowISO()')).toHaveLength(2);
   });
 });
