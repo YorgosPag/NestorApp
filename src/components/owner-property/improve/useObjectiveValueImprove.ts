@@ -25,7 +25,11 @@ import { useValueZoneAt, type ValueZoneLookup } from '@/hooks/market/useValueZon
 import { useFieldPatchQueue, type FieldPatchQueueHandle } from '@/hooks/useFieldPatchQueue';
 import { marketDayOf } from '@/lib/listings/listing-stats';
 import { valueZonePointOf, type ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
-import { listingObjectiveValue, type ListingObjectiveValue } from '@/lib/objective-value/listing-objective-value';
+import {
+  listingObjectiveValue,
+  listingObjectiveValuePrefill,
+  type ListingObjectiveValue,
+} from '@/lib/objective-value/listing-objective-value';
 import {
   applyObjectiveValuePatch,
   readObjectiveValueDeclarations,
@@ -33,6 +37,7 @@ import {
   type ObjectiveValueDeclarationsPatch,
 } from '@/lib/objective-value/objective-value-declarations';
 import { objectiveValueImprovement, type ObjectiveValueImprovement } from '@/lib/objective-value/objective-value-improve';
+import type { ObjectiveValuePrefill } from '@/lib/objective-value/objective-value-prefill';
 import type {
   ObjectiveValueImproveSubject,
   ObjectiveValueWriteRejection,
@@ -59,22 +64,29 @@ export interface ObjectiveValueImproveState {
   readonly zone: ImproveZone;
   readonly save: ImproveSave;
   readonly today: string;
+  /**
+   * **Ο υπολογιστής ανοίγει με το ακίνητο** (ADR-947 Φ1 · Δ8) — από την εκδοχή του **κατόχου** (εμφανής, απύλωτη),
+   * ανεξάρτητα από τη ζώνη. `null` όσο φορτώνει η βάση ή όταν το είδος είναι εκτός εντύπων.
+   */
+  readonly prefill: ObjectiveValuePrefill | null;
 }
 
-/** Η αγγελία του αγοραστή (`listing`, πίσω από την πύλη) και η απύλωτη βάση του κατόχου (`basis`, από τον server). */
+/**
+ * Η αγγελία του αγοραστή (`listing`, πίσω από την πύλη) και η εκδοχή του **κατόχου** (`owner`): η **απύλωτη** βάση του
+ * server με τις δηλώσεις **εμφανείς** — ο κάτοχος βελτιώνει και όταν κρύβει, και πάνω στην πυλωμένη αγγελία το μικτό
+ * ανά όροφο θα είχε ήδη χαθεί (ADR-898 Φ3β-3β). Μία εκδοχή για ερωτήσεις **και** υπολογιστή (ADR-947 Φ1).
+ */
 interface ImproveListings {
   readonly listing: PublicListing;
-  readonly basis: PublicListing;
+  readonly owner: PublicListing;
 }
 
-function zoneOf(lookup: ValueZoneLookup, { listing, basis }: ImproveListings, declarations: ObjectiveValueDeclarations, today: string): ImproveZone {
+function zoneOf(lookup: ValueZoneLookup, { listing, owner }: ImproveListings, today: string): ImproveZone {
   if (lookup.kind !== 'answered') return lookup;
   return {
     kind: 'answered',
     buyerView: listingObjectiveValue(listing, lookup.verdict, today),
-    // Ο κάτοχος βελτιώνει και όταν κρύβει ⇒ οι ερωτήσεις πάνω στην εμφανή εκδοχή της **απύλωτης** βάσης: πάνω στην
-    // πυλωμένη αγγελία το μικτό ανά όροφο θα είχε ήδη χαθεί (ADR-898 Φ3β-3β).
-    improvement: objectiveValueImprovement(withObjectiveValueDeclarations(basis, { ...declarations, display: 'shown' }), lookup.verdict, today),
+    improvement: objectiveValueImprovement(owner, lookup.verdict, today),
     verdict: lookup.verdict,
   };
 }
@@ -103,11 +115,16 @@ export function useObjectiveValueImprove(subject: ObjectiveValueImproveSubject):
     () => (preview.kind === 'ready' ? withObjectiveValueDeclarations(preview.listing, declarations) : null),
     [preview, declarations],
   );
+  const owner = useMemo(
+    () => (preview.kind === 'ready' ? withObjectiveValueDeclarations(preview.listing, { ...declarations, display: 'shown' }) : null),
+    [preview, declarations],
+  );
   const zoneLookup = useValueZoneAt(listing === null ? null : valueZonePointOf(listing.position));
   const resolved = lookupOf(preview, listing, zoneLookup);
   const zone = useMemo(
-    () => (listing === null || preview.kind !== 'ready' ? resolved : zoneOf(resolved, { listing, basis: preview.listing }, declarations, today)),
-    [resolved, listing, preview, declarations, today],
+    () => (listing === null || owner === null ? resolved : zoneOf(resolved, { listing, owner }, today)),
+    [resolved, listing, owner, today],
   );
-  return { declarations, zone, save, today };
+  const prefill = useMemo(() => (owner === null ? null : listingObjectiveValuePrefill(owner)), [owner]);
+  return { declarations, zone, save, today, prefill };
 }

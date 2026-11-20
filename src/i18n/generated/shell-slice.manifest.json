@@ -94,7 +94,7 @@
     "src/i18n/generated/routes/offers__new.el.json": "73fda44762c96c57da71ce042617e5b51ecea89deb30ef26d920e64beaa6d5bf",
     "src/i18n/generated/routes/offers__offerId.el.json": "e683a6cbea3f2469b0778bd4e714b6516299271d7fc1789fb405c16457aa0a2c",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
-    "src/i18n/generated/routes/offers__offerId__improve.el.json": "f718c7d257f5cffb5183f2287373e57c73fa823a48029a720bfc2e7d53a4aa78",
+    "src/i18n/generated/routes/offers__offerId__improve.el.json": "4d28bae57c9a93cfa68f30eec51515a117c2f1a764ab206a39f413b2c4fc4b0e",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6f6d677f6e4c0b17f32ec333d1b50e7c86f308c97a227b080de194f99a34f3d6",
+  "inputsSha256": "4a0d5048dee076073b0eb7a762cb6cfc47f22900faedf8da85aea788b811792f",
   "languages": [
     "el"
   ],
@@ -37623,6 +37623,7 @@
             "improve.sections.commonCharges.lead",
             "improve.sections.energyCertificate.lead",
             "improve.sections.objectiveValue.lead",
+            "improve.sections.objectiveValue.openCalculator",
             "improve.sections.terrain.lead",
             "improve.sections.terrain.loading",
             "improve.signInNeeded",
@@ -41233,7 +41234,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1361532
+    "sliceBytes": 1361711
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

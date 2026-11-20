@@ -6,12 +6,15 @@
  * @related `useObjectiveValueImprove.ts` (κατάσταση) · `improve-sections.ts` (ο καταχωρητής που την κρεμά)
  *
  * 🔑 **Κάθε απάντηση αποθηκεύεται αμέσως** (σειριακή ουρά, αισιόδοξη επικάλυψη)· ο listener μένει η πηγή αλήθειας.
+ * 🔑 **Ο υπολογιστής ανοίγει με το ακίνητο** (ADR-947 Φ1 · Δ8): ίδια προσυμπλήρωση με την αγγελία, από την εκδοχή του
+ *   κατόχου — και όταν η θέση δεν δίνει ζώνη (ο άνθρωπος βάζει μόνο την πινέζα).
  * 🔑 **Έλεγχος και στον browser, με τον ΙΔΙΟ κανόνα** (`objectiveValuePatchViolations`) — ο server κρίνει ξανά
  *   (ζώνη και τιράντες): μια μελλοντική ημερομηνία δεν φεύγει καν.
  */
 
 import React, { useState } from 'react';
 
+import { ObjectiveValueLink } from '@/components/objective-value/ObjectiveValueLink';
 import { ObjectiveValueSaveStatus } from '@/components/objective-value/ObjectiveValueSaveStatus';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -20,6 +23,7 @@ import {
   type ObjectiveValuePatchViolation,
 } from '@/lib/objective-value/objective-value-declarations';
 import type { ObjectiveValueImproveSubject } from '@/lib/objective-value/objective-value-improve-subject';
+import { serializeObjectiveValuePrefill } from '@/lib/objective-value/objective-value-prefill';
 
 import { ObjectiveValueBeforeAfter } from './ObjectiveValueBeforeAfter';
 import { ObjectiveValueImproveQuestions } from './ObjectiveValueImproveQuestions';
@@ -74,7 +78,7 @@ export function ObjectiveValueImproveSection({ subject }: { readonly subject: Ob
   const { t } = useTranslation([NS]);
   const state = useObjectiveValueImprove(subject);
   const [localRejection, setLocalRejection] = useState<readonly ObjectiveValuePatchViolation[]>([]);
-  const { zone, save, declarations, today } = state;
+  const { zone, save, declarations, today, prefill } = state;
   const onAnswer = (patch: ObjectiveValueDeclarationsPatch) => {
     const violations = objectiveValuePatchViolations(patch, today);
     setLocalRejection(violations);
@@ -92,6 +96,11 @@ export function ObjectiveValueImproveSection({ subject }: { readonly subject: Ob
       {zone.kind === 'answered' ? <Body state={state} zone={zone} onAnswer={onAnswer} /> : <ZoneMessage zone={zone} />}
       {zone.kind === 'answered' && zone.buyerView.kind !== 'no-zone' && (
         <ObjectiveValueVisibility display={declarations.display} buyerView={zone.buyerView} onAnswer={onAnswer} />
+      )}
+      {prefill !== null && (
+        <ObjectiveValueLink className="self-start text-sm" prefillQuery={serializeObjectiveValuePrefill(prefill)}>
+          {t(`${I}.sections.objectiveValue.openCalculator`)}
+        </ObjectiveValueLink>
       )}
     </>
   );

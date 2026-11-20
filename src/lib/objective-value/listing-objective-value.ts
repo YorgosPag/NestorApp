@@ -3,7 +3,8 @@
  * της μηχανής, με **δηλωμένες** υποθέσεις (ADR-898 Φ3).
  * @related `services/market/listing-market-context.service.ts` (ο καλών: υπολογισμός **στον server κατά την ανάγνωση**,
  *   ADR-889 §10.2 — οι τιμές ζωνών αναθεωρούνται, άρα ποτέ αποθήκευση) · `objective-value-bounds.ts` (ποσό ή όρια) ·
- *   `objective-value-prefill.ts` (ο υπολογιστής ανοίγει συμπληρωμένος)
+ *   `objective-value-prefill.ts` (ο υπολογιστής ανοίγει συμπληρωμένος — από την αγγελία **και** από το ακίνητο στο
+ *   `/me`, ADR-947 Φ1: {@link listingObjectiveValuePrefill})
  * @module lib/objective-value/listing-objective-value
  *
  * 🔑 **ΜΙΑ πηγή ανά είσοδο** (ADR-898 §3 · Φ3):
@@ -242,6 +243,21 @@ function prefillOf(listing: PublicListing, resolution: ListingObjectiveValueReso
 function declarationsOf(listing: PublicListing): ListingObjectiveValueDeclared | null {
   const declarations = listing.objectiveValueDeclarations;
   return declarations.display === 'hidden' ? null : declarations.declared;
+}
+
+/**
+ * **Ο υπολογιστής ανοίγει με το ακίνητο** (ADR-947 Φ1 · Δ8) — η προσυμπλήρωση **χωρίς** ζώνη: ό,τι ξέρει το ακίνητο
+ * (έντυπο, όροφος, εμβαδόν, δηλώσεις) αξίζει και όταν η θέση δεν είναι η ίδια η διεύθυνση — ο άνθρωπος βάζει την
+ * πινέζα, όχι όλα τα στοιχεία από την αρχή. `null` = είδος εκτός εντύπων ή απόκρυψη.
+ *
+ * 🔑 **Ίδια επίλυση και ίδια προβολή με την αγγελία** (`resolve` → `prefillOf`): ο κάτοχος (`/me`) και ο αγοραστής
+ * ανοίγουν τον υπολογιστή με τα **ίδια** στοιχεία για το ίδιο ακίνητο. Το μέτωπο δεν μπαίνει ποτέ στη διεύθυνση.
+ */
+export function listingObjectiveValuePrefill(listing: PublicListing): ObjectiveValuePrefill | null {
+  const declared = declarationsOf(listing);
+  const form = objectiveValueFormOf(listing.type);
+  if (declared === null || form === null) return null;
+  return prefillOf(listing, resolve(listing, form, declared));
 }
 
 /**

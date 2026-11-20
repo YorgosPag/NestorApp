@@ -282,7 +282,8 @@
       },
       "objectiveValue": {
         "title": "Objective value",
-        "lead": "Buyers see the objective value as the law defines it. Every answer here narrows it, from a range to a single amount."
+        "lead": "Buyers see the objective value as the law defines it. Every answer here narrows it, from a range to a single amount.",
+        "openCalculator": "Open your property in the calculator — its details are already filled in"
       }
     },
     "zone": {
