@@ -37,6 +37,18 @@ export interface OpenDataSource {
 
 const CC_BY_4: OpenDataLicense = { spdx: 'CC-BY-4.0', url: 'https://creativecommons.org/licenses/by/4.0/' };
 
+/**
+ * Η σελίδα ενός συνόλου δεδομένων του data.gov.gr από το **αμετάβλητο id** του πακέτου CKAN, ποτέ από το slug.
+ *
+ * 🔴 **Μετρημένο 2026-11-20**: ο εκδότης μετονόμασε το σύνολο των ζωνών (slug `geochoriki-apeikonisi-…` →
+ * `anaprosarmogi-2021-geochoriki-apeikonisi-…`) και ο σύνδεσμος της απόδοσης CC-BY έδινε **404** σε κάθε σελίδα με
+ * ζώνες — το id `1fcf3d7d-…` έμεινε ίδιο, και το `/dataset/<id>` ανακατευθύνει στο τρέχον slug. Η πύλη Ε9 της
+ * ανανέωσης (ADR-889 §11.12) ελέγχει κάθε εβδομάδα ότι κάθε σύνδεσμος απόδοσης απαντά.
+ */
+function dataGovGrDatasetUrl(packageId: string): string {
+  return `https://data.gov.gr/dataset/${packageId}`;
+}
+
 export const OPEN_DATA_SOURCE_IDS = ['transferValues', 'valueZones', 'ipGeolocation'] as const;
 export type OpenDataSourceId = (typeof OPEN_DATA_SOURCE_IDS)[number];
 
@@ -44,15 +56,16 @@ export const OPEN_DATA_SOURCES: Readonly<Record<OpenDataSourceId, OpenDataSource
   /** Μητρώο Αξιών Μεταβιβάσεων Ακινήτων — κύριος ΥΠΕΘΟΟ (ADR-889 §2.1). */
   transferValues: {
     id: 'transferValues',
-    datasetUrl: 'https://data.gov.gr/dataset/mitroo-axion-metavivaseon-akiniton',
+    /** slug `mitroo-axion-metavivaseon-akiniton`. */
+    datasetUrl: dataGovGrDatasetUrl('11840ea7-66f3-44a9-bb61-8eb812915681'),
     license: CC_BY_4,
     textNamespace: 'market-contracts',
   },
   /** Ζώνες αντικειμενικών αξιών (valuemaps) — κύριος ΥΠΕΘΟΟ (ADR-889 §2.3). */
   valueZones: {
     id: 'valueZones',
-    datasetUrl:
-      'https://data.gov.gr/dataset/geochoriki-apeikonisi-zonon-systimatos-antikeimenikoy-prosdiorismoy-axion-akiniton-kai-ypologismos-a',
+    /** «(αναπροσαρμογή 2021) Γεωχωρική Απεικόνιση Ζωνών…» — το ίδιο id από το οποίο κατεβαίνει το shapefile. */
+    datasetUrl: dataGovGrDatasetUrl('1fcf3d7d-e9f3-423d-83ff-59b930aa18f8'),
     license: CC_BY_4,
     textNamespace: 'market-contracts',
   },

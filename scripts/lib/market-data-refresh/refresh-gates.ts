@@ -37,7 +37,13 @@ export const REFRESH_THRESHOLDS = {
   freshnessErrorAfterDays: 60,
 } as const;
 
-export type GateId = 'E2' | 'E3' | 'E4' | 'E5' | 'E6' | 'E7' | 'E8';
+export type GateId = 'E2' | 'E3' | 'E4' | 'E5' | 'E6' | 'E7' | 'E8' | 'E9';
+
+/**
+ * Οι πύλες που κρίνουν το **`main`**, όχι τη νέα έξοδο: κοκκινίζουν το run, **δεν** μπλοκάρουν το PR δεδομένων
+ * (που ούτε τις προκαλεί ούτε τις θεραπεύει — εκτός από την Ε8, όπου το PR είναι ακριβώς η θεραπεία).
+ */
+const MAIN_GATES: ReadonlySet<GateId> = new Set<GateId>(['E8', 'E9']);
 
 export interface GateResult {
   readonly id: GateId;
@@ -148,12 +154,35 @@ export function freshnessGate(asOf: string | null, now: Date): GateResult {
   return { id: 'E8', title, ok: true, detail, ...(age > t.freshnessWarnAfterDays ? { warning: true } : {}) };
 }
 
+/** Ο έλεγχος **ενός** συνδέσμου απόδοσης: `status` = η τελική απάντηση μετά τις ανακατευθύνσεις· `null` = δεν απάντησε. */
+export interface AttributionLinkCheck {
+  readonly source: string;
+  readonly url: string;
+  readonly status: number | null;
+  /** Το μήνυμα του δικτύου όταν `status === null`. */
+  readonly error?: string;
+}
+
 /**
- * Οι πύλες που κρίνουν τη **νέα έξοδο** (Ε2–Ε7) μπλοκάρουν το PR. Η Ε8 κρίνει το **`main`**: ένα PR με φρέσκα δεδομένα
- * είναι ακριβώς η θεραπεία της, άρα δεν το μπλοκάρει — κοκκινίζει όμως το run.
+ * Ε9 — **σύνδεσμοι απόδοσης** (ADR-889 §11.12). Η CC-BY 4.0 ζητά σύνδεσμο προς την πηγή σε κάθε σελίδα που τη
+ * δείχνει· ένας σύνδεσμος 404 είναι **παραβίαση όρου άδειας**, όχι κοσμητικό σφάλμα. Μετρημένο 2026-11-20: η
+ * μετονομασία ενός συνόλου στο data.gov.gr έσπασε την απόδοση των ζωνών και **καμία** πύλη δεν το είδε.
+ * Μόνο 2xx περνά (η ανακατεύθυνση ακολουθείται πριν την κρίση).
+ */
+export function attributionLinksGate(checks: readonly AttributionLinkCheck[]): GateResult {
+  const title = 'Σύνδεσμοι απόδοσης πηγών (CC-BY)';
+  const broken = checks.filter((check) => check.status === null || check.status < 200 || check.status >= 300);
+  if (broken.length === 0) return { id: 'E9', title, ok: true, detail: `${checks.length}/${checks.length} απαντούν 2xx` };
+  const list = broken.map((check) => `\`${check.source}\` ${check.url} → ${check.status === null ? `δίκτυο: ${check.error ?? 'σφάλμα'}` : `HTTP ${check.status}`}`);
+  return { id: 'E9', title, ok: false, detail: `${list.join(' · ')} — διόρθωση στο \`src/config/open-data-sources.ts\`` };
+}
+
+/**
+ * Οι πύλες που κρίνουν τη **νέα έξοδο** (Ε2–Ε7) μπλοκάρουν το PR. Οι πύλες του `main` (`MAIN_GATES`) όχι —
+ * κοκκινίζουν όμως το run.
  */
 export function prGatesPass(results: readonly GateResult[]): boolean {
-  return allGatesPass(results.filter((result) => result.id !== 'E8'));
+  return allGatesPass(results.filter((result) => !MAIN_GATES.has(result.id)));
 }
 
 export function allGatesPass(results: readonly GateResult[]): boolean {

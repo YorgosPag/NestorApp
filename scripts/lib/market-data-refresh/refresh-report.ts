@@ -149,9 +149,22 @@ function verdictLines(input: RefreshReportInput): string[] {
   if (red !== '') lines.push(`🔴 **Απρόσιτη πηγή**: ${red} — το run είναι κόκκινο`, '');
   if (known !== '') lines.push(`⚠️ **Δηλωμένος περιορισμός πρόσβασης**: ${known} — δες την ενότητα της πηγής`, '');
   if (!prGatesPass(input.gates)) lines.push('❌ Πύλη απέτυχε — **κανένα PR**');
-  else if (!allGatesPass(input.gates)) lines.push('❌ Τα δεδομένα του `main` είναι **μπαγιάτικα** (Ε8) — το run είναι κόκκινο');
+  else if (!allGatesPass(input.gates)) lines.push(...mainGateFailureLines(input.gates));
   else lines.push('✅ Όλες οι πύλες πέρασαν');
   return lines;
+}
+
+/** Η πύλη του `main` που απέτυχε, με το **όνομα** της βλάβης — όχι γενικό «κόκκινο». */
+const MAIN_GATE_FAILURE: Readonly<Partial<Record<GateResult['id'], string>>> = {
+  E8: '❌ Τα δεδομένα του `main` είναι **μπαγιάτικα** (Ε8) — το run είναι κόκκινο',
+  E9: '❌ **Σπασμένος σύνδεσμος απόδοσης** (Ε9) — παραβίαση όρου CC-BY· το run είναι κόκκινο',
+};
+
+function mainGateFailureLines(gates: readonly GateResult[]): string[] {
+  return gates.flatMap((gate) => {
+    const line = gate.ok ? undefined : MAIN_GATE_FAILURE[gate.id];
+    return line === undefined ? [] : [line];
+  });
 }
 
 /** Όλη η αναφορά, Markdown. */

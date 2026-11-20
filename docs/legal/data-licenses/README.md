@@ -7,9 +7,13 @@
 
 | Ημερομηνία | Φορέας | Σύνολο δεδομένων | Άδεια | Αρχείο | ADR |
 |---|---|---|---|---|---|
-| 2026-09-28 | ΥΠΕΘΟΟ — ΑΤΕΠΑΑ (`atepaa@minfin.gr`, DKIM `minfin.gr`) | Μητρώο Αξιών Μεταβιβάσεων Ακινήτων — [data.gov.gr](https://data.gov.gr/dataset/mitroo-axion-metavivaseon-akiniton) · [πόρος](https://data.gov.gr/dataset/mitroo-axion-metavivaseon-akiniton/resource/f6f66e8d-8ff6-4bb7-9cfb-da4282893083) | **CC-BY 4.0**, ρητά και εμπορική χρήση | `2026-09-28_ATEPAA-YPETHOO_adeia-CC-BY_mitroo-metavivaseon-zones.eml` | ADR-889 §2.1 |
-| 2026-09-28 | ΥΠΕΘΟΟ — ΑΤΕΠΑΑ (ίδιο μήνυμα) | Ζώνες αντικειμενικών αξιών (valuemaps), **shapefiles** ως 2ος πόρος — [data.gov.gr](https://data.gov.gr/dataset/geochoriki-apeikonisi-zonon-systimatos-antikeimenikoy-prosdiorismoy-axion-akiniton-kai-ypologismos-a) | CC-BY 4.0 | ίδιο | ADR-889 §2.3 |
+| 2026-09-28 | ΥΠΕΘΟΟ — ΑΤΕΠΑΑ (`atepaa@minfin.gr`, DKIM `minfin.gr`) | Μητρώο Αξιών Μεταβιβάσεων Ακινήτων — [data.gov.gr](https://data.gov.gr/dataset/11840ea7-66f3-44a9-bb61-8eb812915681) · [πόρος](https://data.gov.gr/dataset/11840ea7-66f3-44a9-bb61-8eb812915681/resource/f6f66e8d-8ff6-4bb7-9cfb-da4282893083) | **CC-BY 4.0**, ρητά και εμπορική χρήση | `2026-09-28_ATEPAA-YPETHOO_adeia-CC-BY_mitroo-metavivaseon-zones.eml` | ADR-889 §2.1 |
+| 2026-09-28 | ΥΠΕΘΟΟ — ΑΤΕΠΑΑ (ίδιο μήνυμα) | Ζώνες αντικειμενικών αξιών (valuemaps), **shapefiles** ως 2ος πόρος — [data.gov.gr](https://data.gov.gr/dataset/1fcf3d7d-e9f3-423d-83ff-59b930aa18f8) | CC-BY 4.0 | ίδιο | ADR-889 §2.3 |
 | 2026-09-29 | DB-IP.com (δημοσιευμένοι όροι — **κανένα** μήνυμα) | IP to City Lite, MMDB, μηνιαία — [db-ip.com](https://db-ip.com/db/download/ip-to-city-lite) | **CC-BY 4.0**· όρος του κυρίου: **σύνδεσμος προς το DB-IP.com** σε κάθε σελίδα που δείχνει ή χρησιμοποιεί αποτελέσματα | — (δημόσια σελίδα λήψης, ελέγχθηκε 2026-09-29) | ADR-894 |
+
+> Οι σύνδεσμοι data.gov.gr γράφονται με το **id** του πακέτου, όχι με το slug: στις 2026-11-20 το σύνολο των ζωνών
+> μετονομάστηκε (`anaprosarmogi-2021-…`) και ο παλιός σύνδεσμος έδινε 404. Το `/dataset/<id>` ανακατευθύνει πάντα στο
+> τρέχον όνομα (ADR-889 §11.12).
 
 ## Υποχρεώσεις CC-BY 4.0
 1. **Αναφορά πηγής**: ΥΠΕΘΟΟ + σύνδεσμος στο σύνολο δεδομένων + σύνδεσμος στην άδεια.

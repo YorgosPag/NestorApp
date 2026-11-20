@@ -30,6 +30,7 @@ import { MAMA_RUN_SUMMARY_PATH, resolveMamaWindow, type MamaRunSummary } from '.
 import { VALUE_ZONES_RUN_SUMMARY_PATH, type ValueZonesRunSummary } from './lib/value-zones/zone-download';
 import { diffMarket, diffZones, type MarketDiff, type ZoneDiff } from './lib/market-data-refresh/refresh-diff';
 import {
+  attributionLinksGate,
   coverageGate,
   determinismGate,
   freshnessGate,
@@ -46,6 +47,7 @@ import {
   accessOf,
   checkSource,
   needsBuild,
+  probeAttributionLinks,
   probeMarket,
   probeZones,
   type SourceCheck,
@@ -210,15 +212,25 @@ function flagAccess(probes: Probes): boolean {
   return notable;
 }
 
-/** Ε8 πάνω στο ΜΑΜΑ που σερβίρει **τώρα** το `public/` (μετά την παραγωγή, αν έγινε). Κόκκινο ⇒ `exitCode 1`. */
-function checkFreshness(): GateResult {
-  const gate = freshnessGate(readDataSnapshot(PUBLIC_DIR).market?.asOf ?? null, new Date());
-  if (!gate.ok) {
-    annotate('error', gate.title, gate.detail);
-    process.exitCode = 1;
-  } else if (gate.warning) annotate('warning', gate.title, gate.detail);
-  return gate;
+/**
+ * Οι πύλες του **`main`** (μετά την παραγωγή, αν έγινε): Ε8 φρεσκάδα του ΜΑΜΑ που σερβίρει **τώρα** το `public/` ·
+ * Ε9 σύνδεσμοι απόδοσης (ADR-889 §11.12). Κόκκινο ⇒ `exitCode 1`, ⚠️ ⇒ annotation.
+ */
+async function checkMainGates(): Promise<GateResult[]> {
+  const gates = [
+    freshnessGate(readDataSnapshot(PUBLIC_DIR).market?.asOf ?? null, new Date()),
+    attributionLinksGate(await probeAttributionLinks(probeSource)),
+  ];
+  for (const gate of gates) {
+    if (!gate.ok) {
+      annotate('error', gate.title, gate.detail);
+      process.exitCode = 1;
+    } else if (gate.warning) annotate('warning', gate.title, gate.detail);
+  }
+  return gates;
 }
+
+const gateMark = (gate: GateResult): string => (gate.ok ? (gate.warning ? '⚠️' : '✅') : '❌');
 
 function writeReport(path: string, report: string): void {
   mkdirSync(dirname(path), { recursive: true });
@@ -238,21 +250,20 @@ async function main(): Promise<void> {
   if (options.probeOnly) {
     for (const id of SOURCE_IDS) console.log(`${id}: ${describeCheck(probes[id])}`);
     flagAccess(probes);
-    const freshness = checkFreshness();
-    console.log(`${freshness.id}: ${freshness.ok ? (freshness.warning ? '⚠️' : '✅') : '❌'} ${freshness.detail}`);
+    for (const gate of await checkMainGates()) console.log(`${gate.id}: ${gateMark(gate)} ${gate.detail}`);
     return;
   }
   const notable = flagAccess(probes);
   if (!needsBuild(probes.market) && !needsBuild(probes.zones)) {
-    const freshness = checkFreshness();
-    if (notable || !freshness.ok || freshness.warning === true) {
-      writeReport(options.reportPath, renderRefreshReport({ market: { check: probes.market, diff: null }, zones: { check: probes.zones, diff: null }, gates: [freshness] }));
-    } else console.log(`✅ Καμία αλλαγή στις πηγές (ΜΑΜΑ + ζώνες) — κανένα PR. ${freshness.detail}.`);
+    const mainGates = await checkMainGates();
+    if (notable || mainGates.some((gate) => !gate.ok || gate.warning === true)) {
+      writeReport(options.reportPath, renderRefreshReport({ market: { check: probes.market, diff: null }, zones: { check: probes.zones, diff: null }, gates: mainGates }));
+    } else console.log(`✅ Καμία αλλαγή στις πηγές (ΜΑΜΑ + ζώνες) — κανένα PR. ${mainGates.map((gate) => gate.detail).join(' · ')}.`);
     writeGithubOutput(options.githubOutput, false);
     return;
   }
   const { gates: outputGates, market, zones } = await rebuild(probes, before, options.acceptDrop);
-  const gates = [...outputGates, checkFreshness()];
+  const gates = [...outputGates, ...(await checkMainGates())];
   writeReport(options.reportPath, renderRefreshReport({ market: { check: probes.market, diff: market }, zones: { check: probes.zones, diff: zones }, gates }));
   const passed = prGatesPass(gates);
   writeGithubOutput(options.githubOutput, passed);

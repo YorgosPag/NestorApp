@@ -5,6 +5,7 @@
  * καταγεγραμμένης προέλευσης, οι επαναλήψεις του `HEAD`, και η ανάγνωση της προβολής «πριν» (άκυρο ⇒ σφάλμα, ποτέ σιωπή).
  */
 
+import { OPEN_DATA_SOURCE_IDS, OPEN_DATA_SOURCES } from '../../src/config/open-data-sources';
 import type { SourceProbe } from '../lib/cached-download';
 import { probeSource } from '../lib/cached-download';
 import { MAMA_SOURCE_ACCESS, latestPublishedMamaYear, mamaSourceUrl, resolveMamaWindow } from '../lib/market-transactions/mama-download';
@@ -14,6 +15,7 @@ import {
   checkSource,
   classifyAccess,
   needsBuild,
+  probeAttributionLinks,
   probeMarket,
   probeZones,
   type Probe,
@@ -236,5 +238,38 @@ describe('προβολή «πριν» — άκυρο αρχείο ⇒ σφάλμ
     ]);
     expect([...snapshot.zones.keys()].sort()).toEqual(['a|7|Α', 'a|7|Α|ΟΔΟΣ', 'b|7|Α']);
     expect(() => zoneSnapshotOf(zoneIndex, [{ id: 'a', zones: [{ id: 7 }], fronts: [] }])).toThrow('value-zones/a');
+  });
+});
+
+describe('Ε9 — έλεγχος συνδέσμων απόδοσης (ADR-889 §11.12)', () => {
+  const answering = (status: number): Probe => async (url) => ({ url, status, lastModified: null, bytes: null });
+
+  it('ελέγχει ΚΑΘΕ πηγή του config, με τη σειρά του — η λίστα δεν γράφεται δεύτερη φορά', async () => {
+    const seen: string[] = [];
+    const probe: Probe = async (url) => {
+      seen.push(url);
+      return answering(200)(url);
+    };
+    const checks = await probeAttributionLinks(probe);
+    expect(checks.map((check) => check.source)).toEqual([...OPEN_DATA_SOURCE_IDS]);
+    expect(seen).toEqual(OPEN_DATA_SOURCE_IDS.map((id) => OPEN_DATA_SOURCES[id].datasetUrl));
+  });
+
+  it('σφάλμα δικτύου σε μία πηγή ⇒ `status: null` με το μήνυμα· οι άλλες ελέγχονται κανονικά', async () => {
+    const failing = OPEN_DATA_SOURCES.valueZones.datasetUrl;
+    const probe: Probe = async (url) => {
+      if (url === failing) throw new Error('ECONNRESET');
+      return answering(200)(url);
+    };
+    const checks = await probeAttributionLinks(probe);
+    expect(checks.find((check) => check.source === 'valueZones')).toMatchObject({ status: null, error: 'ECONNRESET' });
+    expect(checks.filter((check) => check.status === 200)).toHaveLength(OPEN_DATA_SOURCE_IDS.length - 1);
+  });
+
+  it('κάθε σύνδεσμος data.gov.gr δείχνει το ΑΜΕΤΑΒΛΗΤΟ id του πακέτου, ποτέ το slug (μετονομασία 2026-11-20 ⇒ 404)', () => {
+    const dataGov = OPEN_DATA_SOURCE_IDS.map((id) => OPEN_DATA_SOURCES[id].datasetUrl).filter((url) => url.includes('data.gov.gr'));
+    expect(dataGov.length).toBeGreaterThan(0);
+    const byPackageId = /^https:\/\/data\.gov\.gr\/dataset\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    for (const url of dataGov) expect(url).toMatch(byPackageId);
   });
 });

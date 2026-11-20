@@ -13,6 +13,8 @@
 import { SourceHttpError, type SourceAccessRestriction, type SourceProbe } from '../cached-download';
 import { MAMA_SOURCE_ACCESS, mamaSourceUrl, type MamaWindow } from '../market-transactions/mama-download';
 import { VALUE_ZONES_SOURCE_URL } from '../value-zones/zone-download';
+import { OPEN_DATA_SOURCE_IDS, OPEN_DATA_SOURCES } from '../../../src/config/open-data-sources';
+import type { AttributionLinkCheck } from './refresh-gates';
 import type { MamaInput, MarketSnapshot, ZoneSnapshot } from './refresh-snapshot';
 
 export type Probe = (url: string) => Promise<SourceProbe>;
@@ -129,6 +131,23 @@ export async function probeMarket(before: MarketSnapshot | null, window: MamaWin
     if (reason !== null) reasons.push(reason);
   }
   return decision(reasons);
+}
+
+/**
+ * Ε9 — `HEAD` σε **κάθε** σύνδεσμο απόδοσης του `OPEN_DATA_SOURCES` (ADR-889 §11.12). Η λίστα **δεν** γράφεται εδώ:
+ * νέα πηγή στο config ⇒ ελέγχεται αυτόματα. Σφάλμα δικτύου / 5xx μετά τις επαναλήψεις του `probeSource` ⇒ `status: null`.
+ */
+export async function probeAttributionLinks(probe: Probe): Promise<AttributionLinkCheck[]> {
+  const checks: AttributionLinkCheck[] = [];
+  for (const id of OPEN_DATA_SOURCE_IDS) {
+    const url = OPEN_DATA_SOURCES[id].datasetUrl;
+    try {
+      checks.push({ source: id, url, status: (await probe(url)).status });
+    } catch (error: unknown) {
+      checks.push({ source: id, url, status: null, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+  return checks;
 }
 
 /** Οι ζώνες: ένα zip. Η προέλευση των ζωνών δεν κρατά μέγεθος — μόνο Last-Modified + sha256. */

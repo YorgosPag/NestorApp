@@ -11,6 +11,7 @@ import { diffMarket, diffZones, type MarketDiff, type MedianMove } from '../lib/
 import {
   REFRESH_THRESHOLDS,
   allGatesPass,
+  attributionLinksGate,
   coverageGate,
   determinismGate,
   freshnessGate,
@@ -18,6 +19,7 @@ import {
   prGatesPass,
   unassignedZonesGate,
   volumeGate,
+  type AttributionLinkCheck,
   type GateResult,
 } from '../lib/market-data-refresh/refresh-gates';
 import type { SourceCheck } from '../lib/market-data-refresh/refresh-probe';
@@ -210,5 +212,36 @@ describe('Ε8 — φρεσκάδα (dbt source freshness)', () => {
   it('άκυρο / απόν asOf ⇒ ❌, ποτέ σιωπηλό «περνά»', () => {
     expect(freshnessGate(null, now).ok).toBe(false);
     expect(freshnessGate('2026-02-30', now).ok).toBe(false);
+  });
+});
+
+describe('Ε9 — σύνδεσμοι απόδοσης CC-BY (ADR-889 §11.12)', () => {
+  const link = (status: number | null, source = 'valueZones'): AttributionLinkCheck => ({
+    source,
+    url: `https://data.gov.gr/dataset/${source}`,
+    status,
+    ...(status === null ? { error: 'ECONNRESET' } : {}),
+  });
+
+  it('όρια: 200 και 204 ✅ · 199, 300, 404, δίκτυο ❌ (η ανακατεύθυνση ακολουθείται ΠΡΙΝ την κρίση)', () => {
+    expect(attributionLinksGate([link(200), link(204, 'transferValues')])).toMatchObject({ id: 'E9', ok: true, detail: '2/2 απαντούν 2xx' });
+    for (const status of [199, 300, 404, null]) expect(attributionLinksGate([link(200, 'transferValues'), link(status)]).ok).toBe(false);
+  });
+
+  it('το μετρημένο περιστατικό 2026-11-20: 404 ⇒ ονομάζει πηγή, URL, status και πού διορθώνεται', () => {
+    const gate = attributionLinksGate([link(404)]);
+    expect(gate.detail).toContain('`valueZones` https://data.gov.gr/dataset/valueZones → HTTP 404');
+    expect(gate.detail).toContain('src/config/open-data-sources.ts');
+    expect(attributionLinksGate([link(null)]).detail).toContain('δίκτυο: ECONNRESET');
+  });
+
+  it('πύλη του `main`: ΔΕΝ μπλοκάρει το PR δεδομένων, κοκκινίζει όμως το run — και η αναφορά λέει ΤΙ χάλασε', () => {
+    const broken = attributionLinksGate([link(404)]);
+    expect(prGatesPass([determinismGate([], 1), broken])).toBe(true);
+    expect(allGatesPass([determinismGate([], 1), broken])).toBe(false);
+    const text = renderRefreshReport({ market: { check: checked([]), diff: null }, zones: { check: checked([]), diff: null }, gates: [broken] });
+    expect(text).toContain('**Σπασμένος σύνδεσμος απόδοσης** (Ε9)');
+    expect(text).not.toContain('μπαγιάτικα');
+    expect(text).not.toContain('κανένα PR**');
   });
 });
