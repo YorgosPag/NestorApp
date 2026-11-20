@@ -3,6 +3,7 @@
  * άδειας / ΣΑΟ του κτιρίου. Ποτέ τεκμήριο «αποπερατωμένο», ποτέ μερικό άθροισμα ως σύνολο.
  */
 
+import { UNKNOWN_COMMERCIALITY } from '@/lib/market/value-zone-file';
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
 
@@ -23,7 +24,7 @@ const TODAY = '2026-10-02';
 
 const READY: ValueZoneVerdict = {
   kind: 'ready',
-  zone: { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01' },
+  zone: { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } },
   nearEdge: false,
   fronts: [],
 };
@@ -87,14 +88,14 @@ describe('buildingUnitObjectiveValue', () => {
     expect(noSao).toMatchObject({ bounds: { kind: 'unresolved', result: { missing: ['plotUtilisation'] } } });
 
     const withSao = valueOf(context({ source: 'schedule', stage: 'frame' }, { plotUtilisation: 0.8 }));
-    const expected = objectiveValueBounds({ ...BASE_DRAFT, residenceCompletion: 'frame', plotUtilisation: 0.8 }, TODAY, [2000]);
+    const expected = objectiveValueBounds({ ...BASE_DRAFT, residenceCompletion: 'frame', plotUtilisation: 0.8 }, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]);
     expect(withSao).toMatchObject({ kind: 'evaluated', bounds: expected });
     expect(expected).toMatchObject({ kind: 'exact', result: { factors: expect.arrayContaining([{ key: 'completion', factor: 0.5, ref: 'ΠΟΛ.1149/1994 άρθ.3 §9' }]) } });
   });
 
   it('ρεύμα ⇒ αποπερατωμένο · η άδεια του ΚΤΙΡΙΟΥ καταργεί την προσέγγιση από το έτος', () => {
     const value = valueOf(context({ source: 'schedule', stage: 'electricity' }, { permitDate: '2025-03-01' }));
-    const expected = objectiveValueBounds({ ...BASE_DRAFT, residenceCompletion: 'complete', permitDate: '2025-03-01' }, TODAY, [2000]);
+    const expected = objectiveValueBounds({ ...BASE_DRAFT, residenceCompletion: 'complete', permitDate: '2025-03-01' }, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]);
     expect(value).toMatchObject({ kind: 'evaluated', bounds: expected });
     expect(value).toMatchObject({ kind: 'evaluated' });
     const kinds = value.kind === 'evaluated' ? value.assumptions.map((assumption) => assumption.kind) : [];
@@ -104,7 +105,7 @@ describe('buildingUnitObjectiveValue', () => {
   it('η άδεια της ΜΟΝΑΔΑΣ (δήλωση) υπερισχύει της άδειας του κτιρίου', () => {
     const own = declared({ permitDate: '2010-05-01' });
     const value = valueOf(context({ source: 'declared', stage: 'electricity' }, { permitDate: '2025-03-01' }), {}, own);
-    const expected = objectiveValueBounds({ ...BASE_DRAFT, residenceCompletion: 'complete', permitDate: '2010-05-01' }, TODAY, [2000]);
+    const expected = objectiveValueBounds({ ...BASE_DRAFT, residenceCompletion: 'complete', permitDate: '2010-05-01' }, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]);
     expect(value).toMatchObject({ bounds: expected });
   });
 
@@ -123,7 +124,7 @@ describe('buildingUnitObjectiveValue', () => {
     const expected = objectiveValueBounds(
       { ...INITIAL_DRAFT, form: 'storage', levels: [{ floor: 2, area: 10 }], area: 10, ancillaryCompletion: 'plaster', residenceCompletion: null, permitDate: '1998-07-01' },
       TODAY,
-      [2000],
+      [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }],
     );
     expect(value).toMatchObject({ kind: 'evaluated', bounds: expected });
   });
@@ -154,7 +155,7 @@ describe('ανελκυστήρας — παράμετρος ΤΥΠΟΥ με υπ
     const expected = objectiveValueBounds(
       { ...COMPLETE_DRAFT, hasElevator: true },
       TODAY,
-      [2000],
+      [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }],
     );
     expect(value).toMatchObject({ kind: 'evaluated', bounds: expected, inherited: ['stage', 'hasElevator'] });
     expect(elevatorOf(value)).toBeDefined();
@@ -162,14 +163,14 @@ describe('ανελκυστήρας — παράμετρος ΤΥΠΟΥ με υπ
 
   it('το χαρακτηριστικό της μονάδας νικά το κτίριο — και η προέλευση ΔΕΝ λέει «από το κτίριο»', () => {
     const value = valueOf(context(COMPLETE, { hasElevator: true }), { floor: 4 });
-    const expected = objectiveValueBounds(COMPLETE_DRAFT, TODAY, [2000]);
+    const expected = objectiveValueBounds(COMPLETE_DRAFT, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]);
     expect(value).toMatchObject({ bounds: expected, inherited: ['stage'] });
   });
 
   it('η δήλωση της μονάδας νικά το κτίριο', () => {
     const value = valueOf(context(COMPLETE, { hasElevator: true }), fourth, declared({ hasElevator: false }));
     expect(value).toMatchObject({ inherited: ['stage'] });
-    const expected = objectiveValueBounds(COMPLETE_DRAFT, TODAY, [2000]);
+    const expected = objectiveValueBounds(COMPLETE_DRAFT, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]);
     expect(value).toMatchObject({ bounds: expected });
   });
 
@@ -195,20 +196,20 @@ describe('κεντρική θέρμανση — ΙΔΙΟ σχήμα με τον 
 
   it('το κτίριο λέει «όχι» ⇒ ο συντελεστής του νόμου (×0,95, άρθ. 3 §11α), «από το κτίριο»', () => {
     const value = valueOf(context(COMPLETE, { hasCentralHeating: false }), silent);
-    const expected = objectiveValueBounds({ ...COMPLETE_DRAFT, hasCentralHeating: false }, TODAY, [2000]);
+    const expected = objectiveValueBounds({ ...COMPLETE_DRAFT, hasCentralHeating: false }, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]);
     expect(value).toMatchObject({ kind: 'evaluated', bounds: expected, inherited: ['stage', 'hasCentralHeating'] });
     expect(heatingFactorOf(value)).toMatchObject({ factor: 0.95, ref: expect.stringContaining('§11α') });
   });
 
   it('αυτόνομη θέρμανση της μονάδας νικά το «όχι» του κτιρίου — η αυτόνομη ΕΙΝΑΙ εγκατάσταση, καμία μείωση', () => {
     const value = valueOf(context(COMPLETE, { hasCentralHeating: false }), { heatingType: 'autonomous' });
-    expect(value).toMatchObject({ bounds: objectiveValueBounds(COMPLETE_DRAFT, TODAY, [2000]), inherited: ['stage'] });
+    expect(value).toMatchObject({ bounds: objectiveValueBounds(COMPLETE_DRAFT, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]), inherited: ['stage'] });
     expect(heatingFactorOf(value)).toBeUndefined();
   });
 
   it('η δήλωση της μονάδας νικά το κτίριο', () => {
     const value = valueOf(context(COMPLETE, { hasCentralHeating: false }), silent, declared({ hasCentralHeating: true }));
-    expect(value).toMatchObject({ bounds: objectiveValueBounds(COMPLETE_DRAFT, TODAY, [2000]), inherited: ['stage'] });
+    expect(value).toMatchObject({ bounds: objectiveValueBounds(COMPLETE_DRAFT, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]), inherited: ['stage'] });
   });
 
   it('αποθήκη: η θέρμανση του κτιρίου ΔΕΝ μπαίνει (τα έντυπα 4/5 δεν τη ρωτούν)', () => {

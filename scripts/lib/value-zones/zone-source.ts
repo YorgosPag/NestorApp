@@ -10,6 +10,7 @@
  * εκτός μορφής. Μια ζώνη που «χάνεται» σιωπηλά θα έδειχνε μια πραγματική θέση ως «εκτός συστήματος».
  */
 
+import type { CommercialityFact } from '../../../src/lib/market/value-zone-file';
 import { readZip } from '../zip-extract';
 import {
   SHAPE_POLYGON,
@@ -21,7 +22,7 @@ import {
 } from './shapefile';
 
 /** Τα πεδία που διαβάζουμε — επικυρώνονται **κατά όνομα**. Τα υπόλοιπα 16 της πηγής αγνοούνται ρητά. */
-export const REQUIRED_ZONE_FIELDS = ['ZONEREGIST', 'ZONENAME', 'CURRENTZON', 'ZONEDESCRI', 'VALID_FROM', 'VALID_TO'] as const;
+export const REQUIRED_ZONE_FIELDS = ['ZONEREGIST', 'ZONENAME', 'CURRENTZON', 'ZONEDESCRI', 'VALID_FROM', 'VALID_TO', 'URL_SE'] as const;
 
 /** Το `.prj` πρέπει να δηλώνει τον ελληνικό κάνναβο πάνω στο GGRS87 (EPSG:2100). */
 const GREEK_GRID_PRJ = /PROJCS\["Greek_Grid".*GGRS_1987/;
@@ -34,6 +35,8 @@ export interface SourceZone {
   readonly validFrom: string;
   /** Κείμενο οριοθέτησης (κυκλικές) ή δρόμος + τμήμα (μέτωπα). */
   readonly description: string;
+  /** Ο ΣΕ (`URL_SE`) — ADR-898 Φ5. */
+  readonly commerciality: CommercialityFact;
   /** Μέρη στον κάνναβο (μέτρα): δακτύλιοι ή πολυγραμμές. */
   readonly parts: readonly (readonly ShapeCoordinate[])[];
 }
@@ -90,6 +93,28 @@ function integerAtLeast(minimum: number, raw: string, where: string): number {
   return value;
 }
 
+/** «1,0» / «1,4» — ελληνική υποδιαστολή (δεκτή και η τελεία). */
+const FACTOR_TEXT = /^\d+(?:[.,]\d+)?$/;
+
+/**
+ * **Το `URL_SE` της πηγής** (ADR-898 Φ5) — παρά το όνομα, είναι **ή** ο αριθμός του ΣΕ **ή** σύνδεσμος στον πίνακα ΣΕ
+ * της περιοχής (PDF) **ή** κενό. Μετρημένο 2026-11-20: κυκλικές 9.563 αριθμοί · 2.940 PDF · 2 κενά — μέτωπα 929 · 4.268 · 0.
+ *
+ * 🔴 ΣΤΟΠ: αριθμός **< 1** (ο νόμος δεν επιτρέπει μικρότερο — θα μείωνε σιωπηλά την αξία) · σύνδεσμος που δεν είναι
+ * `https://` · οτιδήποτε άλλο.
+ */
+export function parseCommercialitySource(raw: string, where: string): CommercialityFact {
+  const text = raw.trim();
+  if (text === '') return { kind: 'unknown' };
+  if (FACTOR_TEXT.test(text)) {
+    const value = Number(text.replace(',', '.'));
+    if (value < 1) throw new Error(`value-zones: ΣΕ «${raw}» < 1 — ο νόμος δεν το επιτρέπει (${where})`);
+    return { kind: 'factor', value };
+  }
+  if (text.startsWith('https://')) return { kind: 'document', url: text };
+  throw new Error(`value-zones: URL_SE «${raw}» δεν είναι ούτε αριθμός ούτε σύνδεσμος https (${where})`);
+}
+
 function readLayer(base: string, layer: Layer): { shape: ShapeFile; zones: SourceZone[] } {
   if (layer.shp === undefined || layer.dbf === undefined) throw new Error(`value-zones: ελλιπές στρώμα ${base}`);
   if (layer.prj === undefined || !GREEK_GRID_PRJ.test(layer.prj)) {
@@ -119,6 +144,7 @@ function readLayer(base: string, layer: Layer): { shape: ShapeFile; zones: Sourc
       price: integerAtLeast(1, values.CURRENTZON, where),
       validFrom: isoDate(values.VALID_FROM, where),
       description: values.ZONEDESCRI,
+      commerciality: parseCommercialitySource(values.URL_SE, where),
       parts,
     });
   });

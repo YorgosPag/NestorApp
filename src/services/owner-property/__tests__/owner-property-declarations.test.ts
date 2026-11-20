@@ -47,9 +47,9 @@ const STRANGER = { uid: 'user-2', companyId: null };
 
 const FRONTED: ValueZoneVerdict = {
   kind: 'ready',
-  zone: { id: 'z1', name: 'Β', price: 1200, validFrom: '2022-01-01' },
+  zone: { id: 'z1', name: 'Β', price: 1200, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } },
   nearEdge: false,
-  fronts: [{ id: 'f1', name: 'Μ1', price: 1500, validFrom: '2022-01-01', street: 'Εγνατίας', distanceM: 8 }],
+  fronts: [{ id: 'f1', name: 'Μ1', price: 1500, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const }, street: 'Εγνατίας', distanceM: 8 }],
 };
 
 function seeded() {

@@ -13,8 +13,9 @@
  * 🔑 **Ό,τι δεν απαριθμείται** (επιφάνεια, όροφος, παλαιότητα, ΣΑΟ) ⇒ `unresolved` με το `missing` της μηχανής: ένα
  * εύρος πάνω σε συνεχή άγνωστο θα ήταν τόσο φαρδύ που θα έλεγε ψέματα με αριθμούς.
  *
- * 🔑 **ΣΕ = 1,0 με σήμανση** (`commercialityAssumed`), όπως το «δεν τον ξέρω» του υπολογιστή (ADR-898 §10.2): ο
- * γεννήτορας ζωνών δεν τον κρατά ακόμη (Φ5), και η σήμανση μπαίνει **μόνο** όταν ο ΣΕ μετρά.
+ * 🔑 **Ο ΣΕ, με προτεραιότητα** (ADR-898 Φ5): **ρητή απάντηση** του προχείρου > **αριθμός της πηγής** για το ζεύγος
+ * ({@link ZoneCandidate}) > **1,0 με σήμανση** (`commercialityAssumed`, όπως το «δεν τον ξέρω» του υπολογιστή, §10.2).
+ * Η σήμανση μπαίνει **μόνο** όταν ο ΣΕ μετρά **και** η πηγή δεν τον δίνει (κενό ή πίνακας PDF).
  */
 
 import { computeObjectiveValue } from './compute-objective-value';
@@ -30,6 +31,7 @@ import {
   type PendingObjectiveValue,
   type StoragePosition,
 } from './objective-value-types';
+import type { ZoneCandidate } from './objective-value-zone';
 
 /** Ο ΣΕ όταν δεν τον ξέρουμε: το κατώτατο του νόμου (≥ 1), πάντα σημασμένο. */
 export const ASSUMED_COMMERCIALITY_FACTOR = 1;
@@ -126,22 +128,29 @@ function explore(draft: ObjectiveValueDraft, todayIso: string, exploration: Expl
   return null;
 }
 
+/** Το πρόχειρο ενός ζεύγους: η τιμή του, και ο ΣΕ της πηγής **μόνο** όπου ο άνθρωπος δεν απάντησε. */
+function draftOfCandidate(draft: ObjectiveValueDraft, candidate: ZoneCandidate): ObjectiveValueDraft {
+  const { price: zonePrice, commerciality } = candidate;
+  if (draft.commercialityFactor !== null || commerciality.kind !== 'factor') return { ...draft, zonePrice };
+  return { ...draft, zonePrice, commercialityFactor: commerciality.value };
+}
+
 /**
- * **Το ποσό ή τα όρια του νόμου** για ένα πρόχειρο. `zonePrices` = οι τιμές που μπορεί να ισχύουν (η ζώνη και τα
- * μέτωπα υπό όρο, `zonePriceCandidates`)· κενό ⇒ ισχύει όποια τιμή έχει το πρόχειρο. `positions` = οι θέσεις που μένουν
- * δυνατές όταν η θέση είναι ανοιχτή ({@link PositionCandidates}).
+ * **Το ποσό ή τα όρια του νόμου** για ένα πρόχειρο. `candidates` = τα ζεύγη (τιμή, ΣΕ πηγής) που μπορεί να ισχύουν (η
+ * ζώνη και τα μέτωπα υπό όρο, `zoneCandidates`)· κενό ⇒ ισχύει όποια τιμή και ΣΕ έχει το πρόχειρο. `positions` = οι
+ * θέσεις που μένουν δυνατές όταν η θέση είναι ανοιχτή ({@link PositionCandidates}).
  */
 export function objectiveValueBounds(
   draft: ObjectiveValueDraft,
   todayIso: string,
-  zonePrices: readonly number[],
+  candidates: readonly ZoneCandidate[],
   positions: PositionCandidates = {},
 ): ObjectiveValueBounds {
   const exploration: Exploration = { positions, results: [], open: [], commercialityAssumed: false };
-  const prices = zonePrices.length === 0 ? [draft.zonePrice] : zonePrices;
-  if (prices.length > 1) markOpen(exploration, 'zoneFront');
-  for (const zonePrice of prices) {
-    const stopped = explore({ ...draft, zonePrice }, todayIso, exploration);
+  const drafts = candidates.length === 0 ? [draft] : candidates.map((candidate) => draftOfCandidate(draft, candidate));
+  if (drafts.length > 1) markOpen(exploration, 'zoneFront');
+  for (const candidateDraft of drafts) {
+    const stopped = explore(candidateDraft, todayIso, exploration);
     if (stopped !== null) return { kind: 'unresolved', result: stopped };
   }
   const { results, open, commercialityAssumed } = exploration;

@@ -3,6 +3,7 @@
  * σιωπηλή μαντεψιά (πρόσοψη/μέτωπο ⇒ όρια).
  */
 
+import { UNKNOWN_COMMERCIALITY } from '@/lib/market/value-zone-file';
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
 import type { PublicListing } from '@/types/public-listing';
@@ -21,7 +22,7 @@ const TODAY = '2026-10-01';
 
 const READY: ValueZoneVerdict = {
   kind: 'ready',
-  zone: { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01' },
+  zone: { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } },
   nearEdge: false,
   fronts: [],
 };
@@ -34,7 +35,7 @@ const declared = (declarations: Partial<ObjectiveValueDeclarations>) =>
 
 const FRONTED: ValueZoneVerdict = {
   ...READY,
-  fronts: [{ id: 'f1', name: 'Μ1', price: 2600, validFrom: '2022-01-01', street: 'Ακαδημίας', distanceM: 10 }],
+  fronts: [{ id: 'f1', name: 'Μ1', price: 2600, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const }, street: 'Ακαδημίας', distanceM: 10 }],
 };
 
 const home = (overrides: Parameters<typeof listing>[0] = {}) =>
@@ -56,7 +57,7 @@ describe('listingObjectiveValue', () => {
       hasElevator: true,
       permitDate: '1998-07-01',
     };
-    expect(value).toMatchObject({ bounds: objectiveValueBounds(draft, TODAY, [2000]) });
+    expect(value).toMatchObject({ bounds: objectiveValueBounds(draft, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]) });
     expect(legalAgeYears('1998-07-01', TODAY)).toBe(26);
   });
 
@@ -82,7 +83,7 @@ describe('listingObjectiveValue', () => {
   it('μέτωπα υπό όρο ⇒ ανοίγει και το `zoneFront`', () => {
     const fronted: ValueZoneVerdict = {
       ...READY,
-      fronts: [{ id: 'f1', name: 'Μ1', price: 2600, validFrom: '2022-01-01', street: 'Ακαδημίας', distanceM: 10 }],
+      fronts: [{ id: 'f1', name: 'Μ1', price: 2600, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const }, street: 'Ακαδημίας', distanceM: 10 }],
     };
     expect(listingObjectiveValue(home(), fronted, TODAY)).toMatchObject({ bounds: { open: ['zoneFront', 'frontage'] } });
   });
@@ -111,14 +112,14 @@ describe('listingObjectiveValue', () => {
 
     it('με βάση ανά όροφο ⇒ ο υπολογισμός της μηχανής πάνω στα ΔΥΟ επίπεδα', () => {
       const value = listingObjectiveValue(maisonette([{ floor: 0, grossSqm: 60 }, { floor: 1, grossSqm: 40 }]), READY, TODAY);
-      expect(value).toMatchObject({ kind: 'evaluated', levelBasis: { kind: 'perLevel' }, bounds: objectiveValueBounds(perLevelDraft, TODAY, [2000]) });
+      expect(value).toMatchObject({ kind: 'evaluated', levelBasis: { kind: 'perLevel' }, bounds: objectiveValueBounds(perLevelDraft, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]) });
       expect(value).toMatchObject({ prefill: { floor: null, area: null, levels: perLevelDraft.levels } });
     });
 
     it('ΟΧΙ ο κανόνας του Ε9 ούτε όλο το εμβαδόν στον όροφο εισόδου: διαφορετικό ποσό από το «ένα επίπεδο»', () => {
       const perLevel = listingObjectiveValue(maisonette([{ floor: 0, grossSqm: 60 }, { floor: 1, grossSqm: 40 }]), READY, TODAY);
       for (const floor of [0, 1]) {
-        const lumped = objectiveValueBounds({ ...perLevelDraft, levels: [{ floor, area: 100 }] }, TODAY, [2000]);
+        const lumped = objectiveValueBounds({ ...perLevelDraft, levels: [{ floor, area: 100 }] }, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]);
         expect(perLevel).not.toMatchObject({ bounds: lumped });
       }
     });
@@ -194,7 +195,7 @@ describe('listingObjectiveValue — οι δηλώσεις του αγγελιο�
       hasElevator: true,
       permitDate: '1990-03-15',
     };
-    expect(value).toMatchObject({ bounds: objectiveValueBounds(draft, TODAY, [2000]), prefill: { permitDate: '1990-03-15' } });
+    expect(value).toMatchObject({ bounds: objectiveValueBounds(draft, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]), prefill: { permitDate: '1990-03-15' } });
     expect(evaluated(value).assumptions).toEqual([{ kind: 'areaWithoutCommon' }, { kind: 'declaredByLister', fields: ['permitDate'] }]);
   });
 

@@ -6,12 +6,18 @@
  *
  * 🔑 **Η χειροκίνητη τιμή μετρά μόνο όταν ΔΕΝ βρέθηκε ζώνη** (καμία θέση ακόμη · κατά προσέγγιση · εκτός ζωνών ·
  * αποτυχία). Με έτοιμη ζώνη αγνοείται — αλλιώς ένα ξεχασμένο πεδίο θα υπερίσχυε σιωπηλά του χάρτη.
+ *
+ * 🔑 **Ο ΣΕ έρχεται με την τιμή** (ADR-898 Φ5): η ζώνη ή το δηλωμένο μέτωπο φέρνουν τον δικό τους· η χειροκίνητη τιμή
+ * δεν ξέρει ΣΕ ⇒ `unknown`, και ο άνθρωπος ρωτιέται.
  */
 
 import type { ValueZoneLookup } from '@/hooks/market/useValueZoneAt';
-import { zonePriceOf } from '@/lib/objective-value/objective-value-zone';
+import { UNKNOWN_COMMERCIALITY } from '@/lib/market/value-zone-file';
+import { zoneCandidateOf, type ZoneCandidate } from '@/lib/objective-value/objective-value-zone';
 
-export function chosenZonePrice(lookup: ValueZoneLookup, frontKey: string | null, manualPrice: number | null): number | null {
-  if (lookup.kind !== 'answered' || lookup.verdict.kind !== 'ready') return manualPrice;
-  return zonePriceOf(lookup.verdict, frontKey);
+export function chosenZone(lookup: ValueZoneLookup, frontKey: string | null, manualPrice: number | null): ZoneCandidate | null {
+  if (lookup.kind !== 'answered' || lookup.verdict.kind !== 'ready') {
+    return manualPrice === null ? null : { price: manualPrice, commerciality: UNKNOWN_COMMERCIALITY };
+  }
+  return zoneCandidateOf(lookup.verdict, frontKey);
 }

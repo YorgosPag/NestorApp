@@ -135,6 +135,7 @@ export const ZONE_FIELDS: readonly DbfFieldFixture[] = [
   { name: 'ZONEDESCRI', length: 60 },
   { name: 'VALID_FROM', length: 8 },
   { name: 'VALID_TO', length: 8 },
+  { name: 'URL_SE', length: 120 },
 ];
 
 /** Τετράγωνο δεξιόστροφο (ESRI: εξωτερικός), κλειστό, στον κάνναβο. */

@@ -41,7 +41,7 @@ const TODAY = '2026-09-28';
 
 const READY: ValueZoneVerdict = {
   kind: 'ready',
-  zone: { id: 4953, name: 'Θ', price: 3850, validFrom: '2022-01-01' },
+  zone: { id: 4953, name: 'Θ', price: 3850, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } },
   nearEdge: false,
   fronts: [],
 };

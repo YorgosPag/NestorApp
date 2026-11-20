@@ -186,13 +186,13 @@ export function buildingUnitObjectiveValue(
   today: string,
 ): BuildingUnitObjectiveValue {
   if (basis.kind !== 'ready') return basis;
-  const { form, zonePrices, positions } = basis;
+  const { form, zoneCandidates, positions } = basis;
   const overlay = stageOverlay(context.stage, form);
   if (overlay.kind === 'beforeStage') return overlay;
   const { resolution, inherited } = overlayFacts(basis.resolution, context, form, overlay.patch);
   return {
     kind: 'evaluated',
-    bounds: objectiveValueBounds(resolution.draft, today, zonePrices, positions),
+    bounds: objectiveValueBounds(resolution.draft, today, zoneCandidates, positions),
     levelBasis: resolution.levelBasis,
     assumptions: assumptionsOf(resolution, form),
     inherited,

@@ -37,7 +37,7 @@ import {
   type ListingObjectiveValueResolution,
 } from './listing-objective-value';
 import { RESIDENCE_FRONTAGES } from './objective-value-types';
-import { declaredZonePriceCandidates, zoneFrontAnswers, zonePriceCandidates } from './objective-value-zone';
+import { declaredZoneCandidates, zoneCandidates, zoneFrontAnswers, type ZoneCandidate } from './objective-value-zone';
 
 /** Πόσες ανοιχτές ερωτήσεις προτείνονται **ταυτόχρονα** — coaching, όχι κατηγορητήριο (ADR-842 §6 #7). */
 export const IMPROVE_QUESTIONS_AT_A_TIME = 3;
@@ -96,10 +96,10 @@ function relevantFields(listing: PublicListing, verdict: ValueZoneVerdict, today
   const undeclared = { ...listing, frontage: null, objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE };
   const basis = listingObjectiveValueBasis(undeclared, verdict);
   if (basis.kind !== 'ready') return [];
-  const [zonePrice = null] = basis.zonePrices;
+  const zonePrice = basis.zoneCandidates[0]?.price ?? null;
   const asked = relevantQuestions({ ...basis.resolution.draft, zonePrice }, today);
   return OBJECTIVE_VALUE_DECLARED_FIELDS.filter((field) => {
-    if (field === 'zoneFront') return zonePriceCandidates(verdict).length > 1;
+    if (field === 'zoneFront') return zoneCandidates(verdict).length > 1;
     if (field === 'areaIncludesCommon') return basis.form === 'residence';
     const question = ENGINE_QUESTION_OF[field];
     return question !== undefined && asked.includes(question);
@@ -123,22 +123,22 @@ function stateOf(field: ObjectiveValueDeclaredField, resolution: ListingObjectiv
   }
 }
 
-/** Οι πιθανές απαντήσεις μιας ερώτησης που απαριθμείται, ως (πρόχειρο, τιμές ζώνης) για τη μηχανή. */
+/** Οι πιθανές απαντήσεις μιας ερώτησης που απαριθμείται, ως (πρόχειρο, ζεύγη ζώνης) για τη μηχανή. */
 function scenariosOf(
   question: OpenQuestion,
   draft: ObjectiveValueDraft,
-  zonePrices: readonly number[],
+  candidates: readonly ZoneCandidate[],
   verdict: ValueZoneVerdict,
-): readonly (readonly [ObjectiveValueDraft, readonly number[]])[] {
+): readonly (readonly [ObjectiveValueDraft, readonly ZoneCandidate[]])[] {
   switch (question) {
     case 'zoneFront':
-      return zoneFrontAnswers(verdict).map((answer) => [draft, declaredZonePriceCandidates(verdict, answer)] as const);
+      return zoneFrontAnswers(verdict).map((answer) => [draft, declaredZoneCandidates(verdict, answer)] as const);
     case 'frontage':
-      return RESIDENCE_FRONTAGES.map((frontage) => [{ ...draft, frontage }, zonePrices] as const);
+      return RESIDENCE_FRONTAGES.map((frontage) => [{ ...draft, frontage }, candidates] as const);
     case 'hasCentralHeating':
-      return [true, false].map((hasCentralHeating) => [{ ...draft, hasCentralHeating }, zonePrices] as const);
+      return [true, false].map((hasCentralHeating) => [{ ...draft, hasCentralHeating }, candidates] as const);
     case 'hasElevator':
-      return [true, false].map((hasElevator) => [{ ...draft, hasElevator }, zonePrices] as const);
+      return [true, false].map((hasElevator) => [{ ...draft, hasElevator }, candidates] as const);
     case 'position':
       return [];
   }
@@ -147,8 +147,8 @@ function scenariosOf(
 /** Minimax: «πλάτος τώρα − το χειρότερο πλάτος μετά την απάντηση». `null` όταν κάποιο σενάριο δεν δίνει εύρος. */
 function narrowing(width: number, scenarios: ReturnType<typeof scenariosOf>, today: string): number | null {
   let worst = 0;
-  for (const [draft, prices] of scenarios) {
-    const after = boundsWidth(objectiveValueBounds(draft, today, prices));
+  for (const [draft, candidates] of scenarios) {
+    const after = boundsWidth(objectiveValueBounds(draft, today, candidates));
     if (after === null) return null;
     worst = Math.max(worst, after);
   }
@@ -162,7 +162,7 @@ function isOpenQuestion(field: ObjectiveValueDeclaredField): field is ObjectiveV
 interface ImpactContext {
   readonly bounds: ObjectiveValueBounds;
   readonly draft: ObjectiveValueDraft;
-  readonly zonePrices: readonly number[];
+  readonly zoneCandidates: readonly ZoneCandidate[];
   readonly verdict: ValueZoneVerdict;
   readonly today: string;
 }
@@ -177,7 +177,7 @@ function impactOf(field: ObjectiveValueDeclaredField, context: ImpactContext): I
     return blocking ? { kind: 'unblocks' } : { kind: 'none' };
   }
   if (bounds.kind !== 'range' || !isOpenQuestion(field) || !bounds.open.includes(field)) return { kind: 'none' };
-  const scenarios = scenariosOf(field, context.draft, context.zonePrices, context.verdict);
+  const scenarios = scenariosOf(field, context.draft, context.zoneCandidates, context.verdict);
   const amount = narrowing(bounds.high - bounds.low, scenarios, context.today);
   return amount === null || amount <= 0 ? { kind: 'none' } : { kind: 'narrows', amount };
 }
@@ -208,9 +208,9 @@ export function objectiveValueImprovement(
 ): ObjectiveValueImprovement {
   const basis = listingObjectiveValueBasis(listing, verdict);
   if (basis.kind !== 'ready') return basis;
-  const { resolution, zonePrices } = basis;
-  const bounds = objectiveValueBounds(resolution.draft, today, zonePrices);
-  const context: ImpactContext = { bounds, draft: resolution.draft, zonePrices, verdict, today };
+  const { resolution, zoneCandidates: candidates } = basis;
+  const bounds = objectiveValueBounds(resolution.draft, today, candidates);
+  const context: ImpactContext = { bounds, draft: resolution.draft, zoneCandidates: candidates, verdict, today };
   const questions = relevantFields(listing, verdict, today).map((field) => ({
     field,
     state: stateOf(field, resolution),

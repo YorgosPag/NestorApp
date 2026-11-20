@@ -21,7 +21,7 @@ import { geoRingsNearestEdgeMetres, isPointInGeoRings } from '@/lib/geo/geo-ring
 import type { GeoBoundingBox, GeoPoint } from '@/types/geo/coordinates';
 import type { PlacePosition } from '@/types/geo/public-place';
 
-import type { ValueFront, ValueZone, ValueZoneArea } from './value-zone-file';
+import type { CommercialityFact, ValueFront, ValueZone, ValueZoneArea } from './value-zone-file';
 
 /** Πόσο μακριά από το μέτωπο μπορεί να είναι η θέση ενός ακινήτου με πρόσοψη εκεί: βάθος κτιρίου + μισός δρόμος. */
 export const FRONT_REACH_M = 35;
@@ -38,6 +38,8 @@ export interface ValueZoneFigure {
   /** €/τ.μ. */
   readonly price: number;
   readonly validFrom: string;
+  /** Ο ΣΕ της πηγής **για αυτή την τιμή** (ADR-898 Φ5): το μέτωπο έχει τον δικό του, υπό τον ίδιο όρο πρόσοψης. */
+  readonly commerciality: CommercialityFact;
 }
 
 export interface ValueZoneFrontCandidate extends ValueZoneFigure {
@@ -74,7 +76,7 @@ export function bboxWithin(point: GeoPoint, box: GeoBoundingBox, metres: number)
 }
 
 function figureOf(zone: ValueZone | ValueFront): ValueZoneFigure {
-  return { id: zone.id, name: zone.name, price: zone.price, validFrom: zone.validFrom };
+  return { id: zone.id, name: zone.name, price: zone.price, validFrom: zone.validFrom, commerciality: zone.commerciality };
 }
 
 interface ZoneHit {

@@ -26,6 +26,7 @@ import {
   VALUE_ZONES_FORMAT_VERSION,
   valueZonesPublicPath,
   type BboxTuple,
+  type CommercialityField,
   type ValueFrontRecord,
   type ValueZoneAreaFile,
   type ValueZoneRecord,
@@ -53,11 +54,13 @@ interface ZoneIdentity {
   readonly name: string;
   readonly price: number;
   readonly validFrom: string;
+  readonly se?: CommercialityField;
   readonly bbox: BboxTuple;
 }
 
+/** 🔑 Ο ΣΕ είναι μέρος της ταυτότητας (ADR-898 Φ5): δύο τμήματα του ίδιου δρόμου με άλλον πίνακα ΣΕ μένουν δύο. */
 function zoneKey(record: ZoneIdentity): string {
-  return [record.id, record.name, record.price, record.validFrom].join('|');
+  return [record.id, record.name, record.price, record.validFrom, record.se ?? ''].join('|');
 }
 
 /** Εγγραφές με το ίδιο κλειδί γίνονται **μία**: bbox ένωση, συντεταγμένες στη σειρά της πηγής. */
@@ -132,6 +135,21 @@ function reportSizes(): void {
   console.log(`  αρχεία ${sizes.length} · διάμεσος ${kb(pick(0.5).bytes)} · p95 ${kb(pick(0.95).bytes)} · max ${kb(largest.bytes)} (${largest.name}, gzip ${kb(gz)}) · σύνολο ${(total / 1e6).toFixed(1)} MB`);
 }
 
+/** ADR-898 Φ5 — πόσες εγγραφές ξέρουν τον ΣΕ: αριθμός · αριθμός πίνακα PDF · ολόκληρο URL (δεν ταίριαξε το πρόθεμα) · άγνωστος. */
+function reportCommerciality(files: readonly ValueZoneAreaFile[]): void {
+  const count = (records: readonly { readonly se?: CommercialityField }[]) => {
+    const kinds = { factor: 0, documentId: 0, documentUrl: 0, unknown: 0 };
+    for (const { se } of records) {
+      if (se === undefined) kinds.unknown += 1;
+      else if (typeof se === 'number') kinds.factor += 1;
+      else if (se.startsWith('https://')) kinds.documentUrl += 1;
+      else kinds.documentId += 1;
+    }
+    return JSON.stringify(kinds);
+  };
+  console.log(`  ΣΕ ζώνες: ${count(files.flatMap((file) => file.zones))} · μέτωπα: ${count(files.flatMap((file) => file.fronts))}`);
+}
+
 async function main(): Promise<void> {
   console.log('▶ build:value-zones');
   const cached = await loadValueZonesSource(process.argv.includes('--refresh'));
@@ -156,6 +174,7 @@ async function main(): Promise<void> {
   writeFileSync(VALUE_ZONES_RUN_SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
   console.log(`  χωρίς περιοχή: ${report.unassigned.length} ${JSON.stringify(report.unassigned.slice(0, 20))}`);
   console.log(`  μικρότερες από την ανοχή: ${report.collapsed.length} ${JSON.stringify(report.collapsed.slice(0, 20))}`);
+  reportCommerciality(files);
   reportSizes();
 }
 

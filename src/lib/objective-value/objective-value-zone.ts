@@ -7,9 +7,14 @@
  *
  * 🔑 **Το μέτωπο ισχύει μόνο αν ΔΗΛΩΘΕΙ** («έχει πρόσοψη στην οδό …»): η θέση δεν αποδεικνύει πρόσοψη (ADR-889 §10).
  * Χωρίς δήλωση ⇒ η τιμή της ζώνης που περικλείει το σημείο.
+ *
+ * 🔑 **Υποψήφια ΖΕΥΓΗ, όχι τιμές** (ADR-898 Φ5): ο ΣΕ της πηγής ανήκει στην τιμή του — η ζώνη έχει τον δικό της, κάθε
+ * μέτωπο τον δικό του. Ένα σημείο αλήθειας που ρέει ως τη μηχανή (`objectiveValueBounds`).
  */
 
-import type { ValueZoneFrontCandidate, ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
+import type { ValueZoneFigure, ValueZoneFrontCandidate, ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
+import { formatNumber } from '@/lib/intl-formatting';
+import type { CommercialityFact } from '@/lib/market/value-zone-file';
 
 import type { ZoneFrontDeclaration } from './objective-value-declarations';
 
@@ -18,20 +23,48 @@ export function frontKeyOf(front: ValueZoneFrontCandidate): string {
   return `${front.id}|${front.street}`;
 }
 
-/** Η τιμή για το δηλωμένο μέτωπο, ή της ζώνης· `null` όταν η ετυμηγορία δεν είναι έτοιμη. */
-export function zonePriceOf(verdict: ValueZoneVerdict, frontKey: string | null): number | null {
+/** Μια τιμή ζώνης που μπορεί να ισχύει, **μαζί με τον ΣΕ της πηγής** για αυτήν. */
+export interface ZoneCandidate {
+  /** €/τ.μ. */
+  readonly price: number;
+  readonly commerciality: CommercialityFact;
+}
+
+function candidateOf(figure: ValueZoneFigure): ZoneCandidate {
+  return { price: figure.price, commerciality: figure.commerciality };
+}
+
+function candidateKey({ price, commerciality }: ZoneCandidate): string {
+  if (commerciality.kind === 'factor') return `${price}|f${commerciality.value}`;
+  return commerciality.kind === 'document' ? `${price}|d${commerciality.url}` : `${price}|?`;
+}
+
+/** Ίδια τιμή **και** ίδιος ΣΕ ⇒ ένα ζεύγος (η μηχανή θα έδινε το ίδιο ποσό)· η σειρά της εισόδου μένει. */
+function uniqueCandidates(candidates: readonly ZoneCandidate[]): readonly ZoneCandidate[] {
+  const byKey = new Map<string, ZoneCandidate>();
+  for (const candidate of candidates) if (!byKey.has(candidateKey(candidate))) byKey.set(candidateKey(candidate), candidate);
+  return [...byKey.values()];
+}
+
+/** Ο ΣΕ όπως τον γράφει η πηγή («1,0», «1,4») — η ΙΔΙΑ μορφή στη σύνοψη ζώνης και στο αποτέλεσμα του υπολογιστή. */
+export function formatCommercialityFactor(factor: number): string {
+  return formatNumber(factor, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+}
+
+/** Το ζεύγος για το δηλωμένο μέτωπο, ή της ζώνης· `null` όταν η ετυμηγορία δεν είναι έτοιμη. */
+export function zoneCandidateOf(verdict: ValueZoneVerdict, frontKey: string | null): ZoneCandidate | null {
   if (verdict.kind !== 'ready') return null;
   const front = frontKey === null ? undefined : verdict.fronts.find((candidate) => frontKeyOf(candidate) === frontKey);
-  return front === undefined ? verdict.zone.price : front.price;
+  return candidateOf(front ?? verdict.zone);
 }
 
 /**
- * **Όλες οι τιμές που μπορεί να ισχύουν** όσο η πρόσοψη στα μέτωπα δεν έχει δηλωθεί: η ζώνη, και κάθε μέτωπο υπό όρο
+ * **Όλα τα ζεύγη που μπορεί να ισχύουν** όσο η πρόσοψη στα μέτωπα δεν έχει δηλωθεί: η ζώνη, και κάθε μέτωπο υπό όρο
  * (ADR-889 §10.2: εμφανίζονται μόνο τα **ακριβότερα** της ζώνης). Πρώτη πάντα η ζώνη. Κενό όταν δεν υπάρχει ζώνη.
  */
-export function zonePriceCandidates(verdict: ValueZoneVerdict): readonly number[] {
+export function zoneCandidates(verdict: ValueZoneVerdict): readonly ZoneCandidate[] {
   if (verdict.kind !== 'ready') return [];
-  return [...new Set([verdict.zone.price, ...verdict.fronts.map((front) => front.price)])];
+  return uniqueCandidates([verdict.zone, ...verdict.fronts].map(candidateOf));
 }
 
 /**
@@ -54,13 +87,13 @@ export function zoneFrontAnswers(verdict: ValueZoneVerdict): readonly ZoneFrontD
 }
 
 /**
- * **Οι τιμές που μπορεί να ισχύουν, με τη δήλωση του αγγελιοδότη** (ADR-898 Φ3β): «καμία πρόσοψη σε μέτωπο» ⇒ η ζώνη ·
+ * **Τα ζεύγη που μπορεί να ισχύουν, με τη δήλωση του αγγελιοδότη** (ADR-898 Φ3β): «καμία πρόσοψη σε μέτωπο» ⇒ η ζώνη ·
  * δρόμος που είναι ακόμη υποψήφιο μέτωπο ⇒ η τιμή του. Χωρίς δήλωση, ή με δρόμο που μια αναθεώρηση ζωνών έβγαλε από
  * τα μέτωπα ⇒ **όλες** οι υποψήφιες (ανοιχτό ⇒ όρια) — ποτέ μαντεψιά.
  */
-export function declaredZonePriceCandidates(verdict: ValueZoneVerdict, zoneFront: ZoneFrontDeclaration | null): readonly number[] {
-  if (verdict.kind !== 'ready' || zoneFront === null) return zonePriceCandidates(verdict);
-  if (zoneFront.kind === 'none') return [verdict.zone.price];
-  const prices = streetFrontPrices(verdict, zoneFront.street);
-  return prices.length === 0 ? zonePriceCandidates(verdict) : prices;
+export function declaredZoneCandidates(verdict: ValueZoneVerdict, zoneFront: ZoneFrontDeclaration | null): readonly ZoneCandidate[] {
+  if (verdict.kind !== 'ready' || zoneFront === null) return zoneCandidates(verdict);
+  if (zoneFront.kind === 'none') return [candidateOf(verdict.zone)];
+  const street = uniqueCandidates(verdict.fronts.filter((front) => front.street === zoneFront.street).map(candidateOf));
+  return street.length === 0 ? zoneCandidates(verdict) : street;
 }

@@ -6,7 +6,7 @@
 
 import { readZip } from '../../zip-extract';
 import { SHAPE_POLYGON, SHAPE_POLYLINE, readDbfTable, readShapeFile } from '../shapefile';
-import { dbfEncodingOf, readZoneSource } from '../zone-source';
+import { dbfEncodingOf, parseCommercialitySource, readZoneSource } from '../zone-source';
 import {
   GREEK_GRID_PRJ,
   ZONE_FIELDS,
@@ -16,8 +16,9 @@ import {
   clockwiseSquare,
 } from './shapefile-fixtures';
 
-const ZONE_ROW = { ZONEREGIST: '4953', ZONENAME: 'Θ', CURRENTZON: '3850', ZONEDESCRI: 'ΑΚΑΔΗΜΙΑΣ', VALID_FROM: '20220101', VALID_TO: '' };
-const FRONT_ROW = { ZONEREGIST: '4944', ZONENAME: 'Α', CURRENTZON: '8550', ZONEDESCRI: 'ΒΑΣ. ΣΟΦΙΑΣ αριστερά', VALID_FROM: '20250101', VALID_TO: '' };
+const SE_PDF = 'https://www1.gsis.gr/gspp/dhpe/file_utils/fdownload?type=APAA&fname=COMMERCIAL_COEFF/COMMERCIAL_COEFF_4947.pdf';
+const ZONE_ROW = { ZONEREGIST: '4953', ZONENAME: 'Θ', CURRENTZON: '3850', ZONEDESCRI: 'ΑΚΑΔΗΜΙΑΣ', VALID_FROM: '20220101', VALID_TO: '', URL_SE: '1,0' };
+const FRONT_ROW = { ZONEREGIST: '4944', ZONENAME: 'Α', CURRENTZON: '8550', ZONEDESCRI: 'ΒΑΣ. ΣΟΦΙΑΣ αριστερά', VALID_FROM: '20250101', VALID_TO: '', URL_SE: SE_PDF };
 
 interface LayerOptions {
   readonly prj?: string;
@@ -80,6 +81,17 @@ describe('readZoneSource', () => {
     expect(source.fronts).toEqual([expect.objectContaining({ id: 4944, price: 8550, validFrom: '2025-01-01', description: 'ΒΑΣ. ΣΟΦΙΑΣ αριστερά' })]);
   });
 
+  it('ADR-898 Φ5 — ο ΣΕ πάει με την εγγραφή του: αριθμός στη ζώνη, πίνακας PDF στο μέτωπο', () => {
+    const source = readZoneSource(sourceZip([{ values: ZONE_ROW }]));
+    expect(source.zones[0].commerciality).toEqual({ kind: 'factor', value: 1 });
+    expect(source.fronts[0].commerciality).toEqual({ kind: 'document', url: SE_PDF });
+  });
+
+  it('ADR-898 Φ5 — χωρίς πεδίο URL_SE ΣΤΑΜΑΤΑ (ποτέ σιωπηλό «άγνωστος ΣΕ» παντού)', () => {
+    const withoutSe = ZONE_FIELDS.filter((field) => field.name !== 'URL_SE');
+    expect(() => readZoneSource(sourceZip([{ values: ZONE_ROW }], { fields: withoutSe }))).toThrow(/URL_SE/);
+  });
+
   it('ταυτότητα 0 γίνεται δεκτή (μετρημένη στην πηγή)· τιμή 0 ΣΤΑΜΑΤΑ', () => {
     expect(readZoneSource(sourceZip([{ values: { ...ZONE_ROW, ZONEREGIST: '0' } }])).zones[0].id).toBe(0);
     expect(() => readZoneSource(sourceZip([{ values: { ...ZONE_ROW, CURRENTZON: '0' } }]))).toThrow(/ακέραιος ≥ 1/);
@@ -95,5 +107,28 @@ describe('readZoneSource', () => {
     const withoutPrice = ZONE_FIELDS.filter((field) => field.name !== 'CURRENTZON');
     expect(() => readZoneSource(sourceZip([{ values: ZONE_ROW }], { fields: withoutPrice }))).toThrow(/CURRENTZON/);
     expect(() => readZoneSource(sourceZip([{ values: { ...ZONE_ROW, VALID_FROM: '2022-01' } }]))).toThrow(/YYYYMMDD/);
+  });
+});
+
+describe('parseCommercialitySource (ADR-898 Φ5)', () => {
+  it('αριθμός με ελληνική υποδιαστολή (και τελεία)', () => {
+    expect(parseCommercialitySource('1,0', 'x')).toEqual({ kind: 'factor', value: 1 });
+    expect(parseCommercialitySource(' 1,4 ', 'x')).toEqual({ kind: 'factor', value: 1.4 });
+    expect(parseCommercialitySource('1.2', 'x')).toEqual({ kind: 'factor', value: 1.2 });
+  });
+
+  it('ΣΕ < 1 ΣΤΑΜΑΤΑ — ο νόμος δεν το επιτρέπει', () => {
+    expect(() => parseCommercialitySource('0,9', 'x')).toThrow(/< 1/);
+  });
+
+  it('σύνδεσμος https = πίνακας ΣΕ · άλλος σύνδεσμος ή κείμενο ΣΤΑΜΑΤΑ', () => {
+    expect(parseCommercialitySource(SE_PDF, 'x')).toEqual({ kind: 'document', url: SE_PDF });
+    expect(() => parseCommercialitySource('http://www1.gsis.gr/x.pdf', 'x')).toThrow(/https/);
+    expect(() => parseCommercialitySource('βλ. πίνακα', 'x')).toThrow(/https/);
+  });
+
+  it('κενό = άγνωστος', () => {
+    expect(parseCommercialitySource('', 'x')).toEqual({ kind: 'unknown' });
+    expect(parseCommercialitySource('   ', 'x')).toEqual({ kind: 'unknown' });
   });
 });

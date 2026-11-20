@@ -17,7 +17,7 @@ import { assignAdminArea, type AdminAreaLookup } from '../../../src/lib/geo/admi
 import { geoJsonRings } from '../../../src/lib/geo/geo-geojson';
 import { geoRingsNearestEdgeMetres } from '../../../src/lib/geo/geo-ring';
 import { greekGridToGeoPoint } from '../../../src/lib/geo/greek-grid';
-import type { ValueFrontRecord, ValueZoneRecord } from '../../../src/lib/market/value-zone-file';
+import { commercialityFieldOf, type ValueFrontRecord, type ValueZoneRecord } from '../../../src/lib/market/value-zone-file';
 import type { GeoPoint } from '../../../src/types/geo/coordinates';
 import type { ShapeCoordinate } from './shapefile';
 import { bboxOfPositions, gridInteriorPoint, groupGridPolygons, toGeoMultiLine, toGeoMultiPolygon } from './zone-geometry';
@@ -86,7 +86,8 @@ async function placeZone(zone: SourceZone, toleranceM: number, lookup: AdminArea
     return;
   }
   const bbox = bboxOfPositions(geometry.coordinates.flat(2));
-  slotOf(byArea, areaId).zones.push({ id: zone.id, name: zone.name, price: zone.price, validFrom: zone.validFrom, bbox, geometry });
+  const se = commercialityFieldOf(zone.commerciality);
+  slotOf(byArea, areaId).zones.push({ id: zone.id, name: zone.name, price: zone.price, validFrom: zone.validFrom, se, bbox, geometry });
 }
 
 /** Το μέσο της μεσαίας κορυφής του μακρύτερου μέρους — σημείο **πάνω** στο μέτωπο. */
@@ -130,7 +131,8 @@ async function placeFront(front: SourceZone, lookup: AdminAreaLookup, byArea: Ma
     return;
   }
   const bbox = bboxOfPositions(geometry.coordinates.flat());
-  const record = { id: front.id, name: front.name, price: front.price, validFrom: front.validFrom, street: front.description, bbox, geometry };
+  const se = commercialityFieldOf(front.commerciality);
+  const record = { id: front.id, name: front.name, price: front.price, validFrom: front.validFrom, se, street: front.description, bbox, geometry };
   slotOf(byArea, areaId).fronts.push(record);
 }
 

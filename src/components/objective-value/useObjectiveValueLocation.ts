@@ -17,9 +17,10 @@ import { useValueZoneAt, type ValueZoneLookup } from '@/hooks/market/useValueZon
 import { nowISO } from '@/lib/date-local';
 import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
 import { valueZonePointOf } from '@/lib/market/value-zone-at-point';
+import { UNKNOWN_COMMERCIALITY, type CommercialityFact } from '@/lib/market/value-zone-file';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
-import { chosenZonePrice } from './objective-value-zone';
+import { chosenZone } from './objective-value-zone';
 
 export interface ObjectiveValueLocationState {
   readonly query: string;
@@ -38,6 +39,8 @@ export interface ObjectiveValueLocationState {
   readonly setManualPrice: (price: number | null) => void;
   /** Η τιμή που μπαίνει στη μηχανή, ή `null`. */
   readonly zonePrice: number | null;
+  /** Ο ΣΕ της πηγής για αυτή την τιμή (ADR-898 Φ5) — `unknown` χωρίς ζώνη ή με χειροκίνητη τιμή. */
+  readonly commerciality: CommercialityFact;
 }
 
 interface PinState {
@@ -95,6 +98,7 @@ export function useObjectiveValueLocation(): ObjectiveValueLocationState {
   const pick = useCallback((point: GeoPoint) => placePin({ ...NO_PIN, pin: point }), [placePin]);
 
   const lookup = useValueZoneAt(pinState.pin);
+  const zone = chosenZone(lookup, frontKey, manualPrice);
   return {
     query,
     setQuery,
@@ -106,6 +110,7 @@ export function useObjectiveValueLocation(): ObjectiveValueLocationState {
     setFrontKey,
     manualPrice,
     setManualPrice,
-    zonePrice: chosenZonePrice(lookup, frontKey, manualPrice),
+    zonePrice: zone?.price ?? null,
+    commerciality: zone?.commerciality ?? UNKNOWN_COMMERCIALITY,
   };
 }

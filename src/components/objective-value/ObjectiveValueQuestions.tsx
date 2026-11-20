@@ -6,8 +6,8 @@
  * 🔑 **Η λίστα έρχεται από τη μηχανή** (`relevantQuestions`), όχι από κανόνες γραμμένους εδώ: ΣΕ μόνο ως τον Γ'
  * όροφο, ανελκυστήρας μόνο πάνω από τον Β', ΣΑΟ μόνο σε ημιτελές, τίποτα για ανοιχτή θέση στάθμευσης.
  *
- * 🔑 **ΣΕ «δεν τον ξέρω» = 1,0 ΜΕ ρητή σήμανση** — ο γεννήτορας ζωνών δεν κρατά ακόμη τον ΣΕ (ADR-898 Φ5)· η υπόθεση
- * φαίνεται και στο αποτέλεσμα, ποτέ σιωπηλά.
+ * 🔑 **ΣΕ «δεν τον ξέρω» = 1,0 ΜΕ ρητή σήμανση** — η υπόθεση φαίνεται και στο αποτέλεσμα, ποτέ σιωπηλά. Η ερώτηση
+ * εμφανίζεται μόνο όταν η πηγή των ζωνών **δεν** δίνει αριθμό (ADR-898 Φ5)· με πίνακα ΣΕ σε PDF, δείχνει τον σύνδεσμο.
  */
 
 import React, { useId } from 'react';
@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { frontageLabel } from '@/lib/listings/frontage-label';
+import type { CommercialityFact } from '@/lib/market/value-zone-file';
+import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
 import type { ConditionalQuestion, ObjectiveValueDraft, UpdateDraft } from '@/lib/objective-value/objective-value-draft';
 import { RESIDENCE_FRONTAGES } from '@/lib/objective-value/objective-value-types';
 
@@ -30,6 +32,8 @@ export interface ObjectiveValueQuestionProps {
   readonly today: string;
   /** Πώς λέγεται το «δεν απαντήθηκε» στα Ναι/Όχι — προεπιλογή ο υπολογιστή (`unknown`). */
   readonly unsetVoice?: YesNoUnsetVoice;
+  /** Ο ΣΕ της πηγής για τη θέση (ADR-898 Φ5) — με πίνακα PDF, η ερώτηση δείχνει τον σύνδεσμο. */
+  readonly commerciality?: CommercialityFact;
 }
 
 /** Οι ερωτήσεις που απαντώνται με `YesNo` — αυτές **αναιρούνται από το χειριστήριό τους** (ADR-898 §18.1). */
@@ -87,10 +91,15 @@ function YesNoQuestion({ draft, update, field, unsetVoice }: ObjectiveValueQuest
   );
 }
 
-function CommercialityQuestion({ draft, update }: ObjectiveValueQuestionProps) {
+function CommercialityQuestion({ draft, update, commerciality }: ObjectiveValueQuestionProps) {
   const { t } = useTranslation([NS]);
   return (
     <>
+      {commerciality?.kind === 'document' && (
+        <a href={commerciality.url} target="_blank" rel="noopener noreferrer" className={`self-start text-sm ${VISIBLE_LINK_CLASS}`}>
+          {t(`${NS}:questions.commercialityFactor.document`)}
+        </a>
+      )}
       <LabelledNumber
         label={t(`${NS}:questions.commercialityFactor.label`)}
         help={t(`${NS}:questions.commercialityFactor.help`)}

@@ -8,6 +8,10 @@
  * μείνει πίσω. Κάθε πλήκτρο ξαναϋπολογίζει — η μηχανή είναι καθαρή και φθηνή.
  *
  * 🔑 **Σήμερα = ημέρα αγοράς Αθήνας** (`marketDayOf`), η ημερομηνία αποτίμησης για την παλαιότητα.
+ *
+ * 🔑 **ΣΕ από την πηγή ⇒ καμία ερώτηση** (ADR-898 Φ5): όταν τα δεδομένα ζωνών δίνουν αριθμό για την επιλεγμένη τιμή
+ * (ζώνη ή δηλωμένο μέτωπο), μπαίνει αυτός και η ερώτηση φεύγει — το αποτέλεσμα λέει από πού ήρθε. Πίνακας PDF ή κενό ⇒
+ * η ερώτηση μένει (με σύνδεσμο στον πίνακα).
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -24,7 +28,7 @@ import { ObjectiveValueLocation } from './ObjectiveValueLocation';
 import { ObjectiveValueProperty } from './ObjectiveValueProperty';
 import { ObjectiveValueQuestions } from './ObjectiveValueQuestions';
 import { ObjectiveValueResult } from './ObjectiveValueResult';
-import { useObjectiveValueLocation } from './useObjectiveValueLocation';
+import { useObjectiveValueLocation, type ObjectiveValueLocationState } from './useObjectiveValueLocation';
 import { useObjectiveValuePrefill } from './useObjectiveValuePrefill';
 
 // 🔴 ADR-744 §18 — το route slice φτάνει στον φυλλομετρητή ΜΟΝΟ από client component (όχι από το `page.tsx`).
@@ -46,6 +50,36 @@ function PageHeader() {
   );
 }
 
+/**
+ * **Ό,τι βλέπει η μηχανή** — το πρόχειρο με την τιμή ζώνης της θέσης και, όταν η πηγή τον δίνει, τον ΣΕ της (ADR-898 Φ5).
+ * Παράγωγα μόνο: αποτέλεσμα, ερωτήσεις, και ο ΣΕ της πηγής **όταν μετρά** (για τη γραμμή προέλευσης).
+ */
+function useCalculatorEvaluation(draft: ObjectiveValueDraft, location: ObjectiveValueLocationState, today: string) {
+  const { commerciality, zonePrice } = location;
+  const sourceFactor = commerciality.kind === 'factor' ? commerciality.value : null;
+  const effective = useMemo<ObjectiveValueDraft>(
+    () => ({
+      ...draft,
+      zonePrice,
+      ...(sourceFactor === null ? {} : { commercialityFactor: sourceFactor, commercialityAssumed: false }),
+    }),
+    [draft, zonePrice, sourceFactor],
+  );
+  const result = useMemo(() => computeObjectiveValue(draftToInput(effective, today)), [effective, today]);
+  const asked = useMemo(() => relevantQuestions(effective, today), [effective, today]);
+  const questions = useMemo(
+    () => (sourceFactor === null ? asked : asked.filter((question) => question !== 'commercialityFactor')),
+    [asked, sourceFactor],
+  );
+  return {
+    result,
+    questions,
+    commercialityAssumed: effective.commercialityAssumed && questions.includes('commercialityFactor'),
+    // Η γραμμή προέλευσης μόνο όταν ο ΣΕ ΜΕΤΡΑ για αυτό το ακίνητο (π.χ. όχι πάνω από τον Γ' όροφο).
+    sourcedFactor: sourceFactor !== null && asked.includes('commercialityFactor') ? sourceFactor : null,
+  };
+}
+
 export function ObjectiveValueContent() {
   const [draft, setDraft] = useState<ObjectiveValueDraft>(INITIAL_DRAFT);
   const update = useCallback((patch: Partial<ObjectiveValueDraft>) => setDraft((current) => ({ ...current, ...patch })), []);
@@ -53,11 +87,8 @@ export function ObjectiveValueContent() {
   const today = useMemo(() => marketDayOf(Date.now()), []);
   // ADR-898 Φ3 — από αγγελία: ό,τι ξέρει ήδη η αγγελία, ώστε να μένουν μόνο οι ερωτήσεις που άφησε ανοιχτές.
   useObjectiveValuePrefill(update, location.pick);
-
   // Η τιμή ζώνης ανήκει στη θέση (ζώνη · δηλωμένο μέτωπο · χειροκίνητη)· το πρόχειρο την παίρνει τη στιγμή του υπολογισμού.
-  const effective = useMemo(() => ({ ...draft, zonePrice: location.zonePrice }), [draft, location.zonePrice]);
-  const result = useMemo(() => computeObjectiveValue(draftToInput(effective, today)), [effective, today]);
-  const questions = useMemo(() => relevantQuestions(effective, today), [effective, today]);
+  const { result, questions, commercialityAssumed, sourcedFactor } = useCalculatorEvaluation(draft, location, today);
 
   // `busy={false}` ΡΗΤΑ (ADR-797 §Φ.Ρ.3): η σελίδα δεν φορτώνει αρχικά δεδομένα (η τιμή ζώνης ζητείται όταν ο
   // επισκέπτης δώσει θέση) — αλλά είναι στο εύρος του CHECK 3.94, που ζητά `aria-busy="false"` ως μάρτυρα ετοιμότητας.
@@ -69,13 +100,14 @@ export function ObjectiveValueContent() {
         <div className="flex min-w-0 flex-col gap-6">
           <ObjectiveValueLocation location={location} />
           <ObjectiveValueProperty draft={draft} update={update} />
-          <ObjectiveValueQuestions questions={questions} draft={draft} update={update} today={today} />
+          <ObjectiveValueQuestions questions={questions} draft={draft} update={update} today={today} commerciality={location.commerciality} />
           <ObjectiveValueAdjustments draft={draft} update={update} />
         </div>
         <aside className="lg:sticky lg:top-4">
           <ObjectiveValueResult
             result={result}
-            commercialityAssumed={draft.commercialityAssumed && questions.includes('commercialityFactor')}
+            commercialityAssumed={commercialityAssumed}
+            sourcedCommercialityFactor={sourcedFactor}
           />
         </aside>
       </div>

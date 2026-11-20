@@ -17,7 +17,7 @@
  * | παλαιότητα | **δήλωση** ημερομηνίας άδειας · αλλιώς `constructionYear` | το έτος είναι **προσέγγιση** — δηλωμένη υπόθεση |
  * | μικτά με κοινόχρηστους | **δήλωση** · αλλιώς «όχι» | η κανονική περίπτωση του νόμου — δηλωμένη υπόθεση |
  * | πρόσοψη | `frontage` (ορατό χαρακτηριστικό, δήλωση) | αναπάντητη ⇒ **όρια**, ποτέ μαντεψιά |
- * | μέτωπο | **δήλωση** `zoneFront` → `declaredZonePriceCandidates` | αναπάντητο ή δρόμος εκτός μετώπων ⇒ **όρια** |
+ * | μέτωπο | **δήλωση** `zoneFront` → `declaredZoneCandidates` | αναπάντητο ή δρόμος εκτός μετώπων ⇒ **όρια** |
  *
  * 🔑 **Ιεραρχία (ADR-898 Φ3β): γενικό χαρακτηριστικό > δήλωση αγγελιοδότη > προσέγγιση/ανοιχτό.** Η δήλωση καλύπτει
  * μόνο το κενό — καμία δεύτερη αλήθεια. Και η **απόκρυψη** κρίνεται **πρώτη**: κρυμμένη ⇒ κανένας υπολογισμός.
@@ -42,7 +42,7 @@ import { INITIAL_DRAFT, type LevelDraft, type ObjectiveValueDraft } from './obje
 import type { ObjectiveValuePrefill } from './objective-value-prefill';
 import { OBJECTIVE_VALUE_FORM_OF_TYPE, objectiveValueFormOf } from './objective-value-form-of-type';
 import type { ObjectiveValueForm } from './objective-value-types';
-import { declaredZonePriceCandidates, streetFrontPrices } from './objective-value-zone';
+import { declaredZoneCandidates, streetFrontPrices, type ZoneCandidate } from './objective-value-zone';
 
 /** Επανεξαγωγή: ο πίνακας ζει χωριστά, ώστε η προβολή να μη φέρνει τη μηχανή (ADR-898 Φ3β). */
 export { OBJECTIVE_VALUE_FORM_OF_TYPE };
@@ -257,7 +257,8 @@ export type ListingObjectiveValueBasis =
       readonly kind: 'ready';
       readonly form: ObjectiveValueForm;
       readonly resolution: ListingObjectiveValueResolution;
-      readonly zonePrices: readonly number[];
+      /** Τα ζεύγη (τιμή ζώνης, ΣΕ πηγής) που μπορεί να ισχύουν (ADR-898 Φ5). */
+      readonly zoneCandidates: readonly ZoneCandidate[];
       /** Οι θέσεις που μένουν δυνατές αν η θέση είναι ανοιχτή — μόνο για χώρο του κτιρίου (ADR-898 §19). */
       readonly positions?: PositionCandidates;
     };
@@ -284,11 +285,11 @@ export function objectiveValueBasisOf(
 ): ObjectiveValueBasis {
   const form = objectiveValueFormOf(listing.type);
   if (form === null) return { kind: 'unsupported', reason: 'type' };
-  const zonePrices = declaredZonePriceCandidates(valueZone, declared.zoneFront);
-  if (zonePrices.length === 0) return { kind: 'no-zone' };
+  const zoneCandidates = declaredZoneCandidates(valueZone, declared.zoneFront);
+  if (zoneCandidates.length === 0) return { kind: 'no-zone' };
   const base = resolve(listing, form, declared);
   const resolution = zoneFrontUsed(declared, valueZone) ? { ...base, used: [...base.used, 'zoneFront' as const] } : base;
-  return { kind: 'ready', form, resolution, zonePrices };
+  return { kind: 'ready', form, resolution, zoneCandidates };
 }
 
 /**
@@ -298,10 +299,10 @@ export function objectiveValueBasisOf(
 export function listingObjectiveValue(listing: PublicListing, valueZone: ValueZoneVerdict, today: string): ListingObjectiveValue {
   const basis = listingObjectiveValueBasis(listing, valueZone);
   if (basis.kind !== 'ready') return basis;
-  const { form, resolution, zonePrices } = basis;
+  const { form, resolution, zoneCandidates } = basis;
   return {
     kind: 'evaluated',
-    bounds: objectiveValueBounds(resolution.draft, today, zonePrices),
+    bounds: objectiveValueBounds(resolution.draft, today, zoneCandidates),
     levelBasis: resolution.levelBasis,
     assumptions: assumptionsOf(resolution, form),
     prefill: prefillOf(listing, resolution),

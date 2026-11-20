@@ -8,7 +8,14 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { readValueZoneArea, readValueZonesIndex, valueZonesPublicPath, VALUE_ZONES_INDEX_PUBLIC_PATH } from '../value-zone-file';
+import {
+  commercialityFieldOf,
+  readValueZoneArea,
+  readValueZonesIndex,
+  valueZonesPublicPath,
+  VALUE_ZONES_FORMAT_VERSION,
+  VALUE_ZONES_INDEX_PUBLIC_PATH,
+} from '../value-zone-file';
 
 const PUBLIC = join(process.cwd(), 'public');
 
@@ -22,6 +29,44 @@ describe('value-zone-file', () => {
     expect(readValueZoneArea({ v: 1, id: 'other', bbox: [0, 0, 1, 1], toleranceM: 2, zones: [], fronts: [] }, 'municipal_unit:1')).toBeNull();
     expect(readValueZoneArea('<html>', 'municipal_unit:1')).toBeNull();
     expect(readValueZonesIndex({ v: 2 })).toBeNull();
+  });
+
+  describe('ADR-898 Φ5 — ο ΣΕ στο αρχείο (`se`)', () => {
+    const PDF = 'https://www1.gsis.gr/gspp/dhpe/file_utils/fdownload?type=APAA&fname=COMMERCIAL_COEFF/COMMERCIAL_COEFF_4947.pdf';
+    const ring = [[[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]]];
+    const areaWith = (se: unknown, v: number = VALUE_ZONES_FORMAT_VERSION) => ({
+      v,
+      id: 'a',
+      bbox: [0, 0, 1, 1],
+      toleranceM: 2,
+      zones: [{ id: 1, name: 'Α', price: 1000, validFrom: '2022-01-01', se, bbox: [0, 0, 1, 1], geometry: { type: 'MultiPolygon', coordinates: ring } }],
+      fronts: [],
+    });
+    const commercialityOf = (se: unknown) => readValueZoneArea(areaWith(se), 'a')?.zones[0]?.commerciality ?? null;
+
+    it('συμπαγής μορφή: αριθμός · αριθμός πίνακα για το γνωστό πρόθεμα · ολόκληρο URL αλλιώς · απόν = άγνωστος', () => {
+      expect(commercialityFieldOf({ kind: 'factor', value: 1.4 })).toBe(1.4);
+      expect(commercialityFieldOf({ kind: 'document', url: PDF })).toBe('4947');
+      expect(commercialityFieldOf({ kind: 'document', url: 'https://example.gr/se.pdf' })).toBe('https://example.gr/se.pdf');
+      expect(commercialityFieldOf({ kind: 'unknown' })).toBeUndefined();
+    });
+
+    it('ο αναγνώστης ξαναχτίζει ό,τι έγραψε ο γραφέας', () => {
+      expect(commercialityOf(1.4)).toEqual({ kind: 'factor', value: 1.4 });
+      expect(commercialityOf('4947')).toEqual({ kind: 'document', url: PDF });
+      expect(commercialityOf('https://example.gr/se.pdf')).toEqual({ kind: 'document', url: 'https://example.gr/se.pdf' });
+      expect(commercialityOf(undefined)).toEqual({ kind: 'unknown' });
+    });
+
+    it('χαλασμένο `se` ακυρώνει το αρχείο — ποτέ σιωπηλό «άγνωστος»', () => {
+      expect(readValueZoneArea(areaWith(0.9), 'a')).toBeNull();
+      expect(readValueZoneArea(areaWith('http://example.gr/se.pdf'), 'a')).toBeNull();
+      expect(readValueZoneArea(areaWith(true), 'a')).toBeNull();
+    });
+
+    it('αρχείο παλιάς έκδοσης (χωρίς ΣΕ) απορρίπτεται ρητά', () => {
+      expect(readValueZoneArea(areaWith(undefined, VALUE_ZONES_FORMAT_VERSION - 1), 'a')).toBeNull();
+    });
   });
 
   it('το ευρετήριο και κάθε αρχείο του public/ διαβάζονται, με ζώνες που έχουν τιμή και δακτυλίους', () => {

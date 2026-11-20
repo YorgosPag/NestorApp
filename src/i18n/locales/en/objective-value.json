@@ -91,7 +91,9 @@
       "label": "Zone commerciality coefficient (SE)",
       "help": "Listed next to the zone price in the Ministry's tables. On this floor it changes the floor coefficient.",
       "unknown": "I don't know it — use 1.0",
-      "assumed": "An SE of 1.0 is used because none was given. If the zone's SE is higher, the amount changes."
+      "assumed": "An SE of 1.0 is used because none was given. If the zone's SE is higher, the amount changes.",
+      "fromSource": "SE {factor}, from the Ministry's zone data for this location.",
+      "document": "SE table for the area (PDF, gsis.gr)"
     },
     "ageYears": {
       "label": "Building permit date",

@@ -44,7 +44,7 @@ import {
   type ParkingPosition,
   type StoragePosition,
 } from './objective-value-types';
-import { declaredZonePriceCandidates } from './objective-value-zone';
+import { declaredZoneCandidates, type ZoneCandidate } from './objective-value-zone';
 
 /** Τα είδη χώρου — η πηγή είναι ο κανόνας «ποιοι χώροι είναι του κτιρίου» (ADR-898 §20)· εδώ μόνο ξαναεξάγονται. */
 export { BUILDING_SPACE_KINDS, type BuildingSpaceKind } from '@/lib/building-spaces/building-space-membership';
@@ -149,10 +149,10 @@ function positionsOf(position: SpacePosition): readonly SpaceLawPosition[] {
   return position.kind === 'open' ? position.candidates : [];
 }
 
-/** Οι τιμές ζώνης: όλες οι υποψήφιες μόνο όπου μια δυνατή θέση δέχεται γραμμική ζώνη· αλλιώς μόνο η ζώνη. */
-function spaceZonePrices(verdict: ValueZoneVerdict, position: SpacePosition): readonly number[] {
+/** Τα ζεύγη ζώνης: όλα τα υποψήφια μόνο όπου μια δυνατή θέση δέχεται γραμμική ζώνη· αλλιώς μόνο η ζώνη. */
+function spaceZoneCandidates(verdict: ValueZoneVerdict, position: SpacePosition): readonly ZoneCandidate[] {
   const linear = positionsOf(position).some((candidate) => LINEAR_ZONE_POSITIONS.has(candidate));
-  return declaredZonePriceCandidates(verdict, linear ? null : { kind: 'none' });
+  return declaredZoneCandidates(verdict, linear ? null : { kind: 'none' });
 }
 
 function isParkingPosition(position: SpaceLawPosition): position is ParkingPosition {
@@ -205,15 +205,15 @@ export function buildingSpaceObjectiveValue(
 ): BuildingSpaceObjectiveValue {
   const position = spacePositionOf(space, context);
   if (position.kind === 'mainUse') return { value: { kind: 'unsupported', reason: 'mainUse' }, position };
-  const zonePrices = spaceZonePrices(verdict, position);
-  if (zonePrices.length === 0) return { value: { kind: 'no-zone' }, position };
+  const zoneCandidates = spaceZoneCandidates(verdict, position);
+  if (zoneCandidates.length === 0) return { value: { kind: 'no-zone' }, position };
   const resolution: ListingObjectiveValueResolution = {
     draft: draftOf(space, position),
     levelBasis: { kind: 'single' },
     used: [],
     approximatedFrom: null,
   };
-  const basis = { kind: 'ready' as const, form: space.kind, resolution, zonePrices, positions: candidatesOf(space, position) };
+  const basis = { kind: 'ready' as const, form: space.kind, resolution, zoneCandidates, positions: candidatesOf(space, position) };
   const value = buildingUnitObjectiveValue(basis, context, today);
   if (value.kind !== 'evaluated') return { value, position };
   const fromBuilding = position.kind === 'fixed' && position.source === 'building';

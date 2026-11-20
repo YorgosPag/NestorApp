@@ -482,8 +482,8 @@ Idealista όχι, γιατί η Ισπανία δεν έχει τέτοια πη
 | `scripts/lib/value-zones/zone-geometry.ts` · `zone-areas.ts` | Τρύπες από τη φορά (ESRI) → RFC 7946 (αντιστροφή **όλων**) · Douglas–Peucker 2 m · εσωτερικό σημείο με σάρωση (κοίλες ζώνες) · ανάθεση σε Δ.Ε. με εφεδρικά σημεία και «πλησιέστερο τετράγωνο» για παραλιακά μέτωπα |
 | `scripts/lib/admin-boundaries/admin-area-lookup.ts` | Ο κριτής περιοχής από τον δίσκο, για γεννήτορες |
 | `scripts/build-value-zones.ts` · `npm run build:value-zones` | Ο γεννήτορας — **ντετερμινιστικός** (δύο εκτελέσεις ⇒ ίδιο sha256) |
-| `src/lib/market/value-zone-file.ts` | Σχήμα + διαδρομές + αναγνώστες, κοινά γεννήτορα/server/browser |
-| `src/lib/market/value-zone-at-point.ts` | Ο καθαρός κριτής: `valueZonePointOf` · `valueZoneAtPoint` → `imprecise`·`outside`·`unavailable`·`ready` (+ `nearEdge`, μέτωπα) |
+| `src/lib/market/value-zone-file.ts` | Σχήμα + διαδρομές + αναγνώστες, κοινά γεννήτορα/server/browser. **Έκδοση 2** (ADR-898 Φ5, 2026-11-20): πεδίο `se` ανά ζώνη/μέτωπο = ο ΣΕ του `URL_SE` (αριθμός · αριθμός πίνακα PDF του gsis.gr · ολόκληρο `https` URL · απόν = άγνωστος)· χαλασμένο `se` ή έκδοση 1 ⇒ το αρχείο απορρίπτεται. Ο ΣΕ είναι και στο κλειδί συγχώνευσης του γεννήτορα |
+| `src/lib/market/value-zone-at-point.ts` | Ο καθαρός κριτής: `valueZonePointOf` · `valueZoneAtPoint` → `imprecise`·`outside`·`unavailable`·`ready` (+ `nearEdge`, μέτωπα· κάθε ζώνη/μέτωπο με `commerciality`, ADR-898 §22) |
 | `src/services/market/value-zones.reader.ts` | Server: αρχεία με **bbox** από το ευρετήριο (όχι από το `adminArea` ⇒ σωστό και στα σύνορα) · LRU 256 |
 | `src/lib/market/value-zones.ts` · `hooks/market/useValueZoneLayer.ts` | Browser: `LazyJsonSnapshot` ανά αρχείο· ποια αρχεία τα λέει ο server (`AreaMarketPageData.valueZoneFiles`) — το ευρετήριο (~90 KB) **δεν** κατεβαίνει |
 | `src/lib/market/value-zone-classes.ts` · `components/area-market/value-zone-paint.ts` | Κλάσεις τιμής · `step` του MapLibre από `--map-seq-1..5` (νέα διαδοχική κλίμακα στο `globals.css`, ίδια στα δύο θέματα γιατί ο χάρτης OSM είναι ανοιχτός και στα δύο) |
@@ -852,6 +852,7 @@ ADR-865, καμία αλλαγή στο `storage.rules`.
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-11-20 | **§10.3 — σχήμα αρχείων ζωνών έκδοση 2** (ADR-898 Φ5 §22): πεδίο `se` (ΣΕ του `URL_SE`) σε ζώνες και μέτωπα, `URL_SE` υποχρεωτικό στην πηγή (ΣΤΟΠ αν λείπει), ΣΕ < 1 ή σύνδεσμος όχι `https` ⇒ ΣΤΟΠ· ο ΣΕ στο κλειδί συγχώνευσης· ο κριτής θέσης δίνει `commerciality`. Αναπαραγωγή ×2 με ίδιο sha256· 1.033 αρχεία, 12.501 ζώνες / 3.738 μέτωπα (αμετάβλητα), 15,18 MB (+0,95%). |
 | 2026-11-20 | **§11.12 — πύλη Ε9, σύνδεσμοι απόδοσης**: η μετονομασία του συνόλου των ζωνών στο data.gov.gr έκανε τον σύνδεσμο απόδοσης CC-BY **404** (μετρημένο). Οι σύνδεσμοι γράφονται πλέον με το id του πακέτου (`dataGovGrDatasetUrl`). Η εβδομαδιαία ανανέωση ελέγχει **κάθε** `datasetUrl` του config (`attributionLinksGate`, πύλη του `main` όπως η Ε8 — `MAIN_GATES`), και η ετυμηγορία ονομάζει ποια πύλη του `main` απέτυχε. jest 55/55 |
 | 2026-10-29 | **§11 — τα τοπικά αντίγραφα έκλεισαν**: όσα κατηγορήματα προώθησε το §11 στο `lib/type-guards` (`isPlainRecord` · `isFiniteNumber`) δεν έχουν πια ιδιωτικό δίδυμο στο `src/` — 27 αρχεία + νέο `plainRecordOrNull` (λεπτομέρειες: ADR-225 Phase 2). |
 | 2026-10-01 | **§10.3 — ADR-898 Φ3α**: το `GET /api/market/listing-context/[id]` επιστρέφει και `objectiveValue` — η αντικειμενική της αγγελίας υπολογίζεται κατά την ανάγνωση πάνω στη ζώνη που μόλις διαβάστηκε (ίδιος λόγος με §10.2: ποτέ αποθήκευση) |

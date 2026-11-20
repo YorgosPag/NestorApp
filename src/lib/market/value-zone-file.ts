@@ -26,7 +26,11 @@ import { geoJsonRings } from '../geo/geo-geojson';
 import { isGeoPolyline } from '../geo/geo-line';
 import { isFiniteNumber, isPlainRecord } from '@/lib/type-guards';
 
-export const VALUE_ZONES_FORMAT_VERSION = 1;
+/**
+ * **2** (ADR-898 Φ5): το πεδίο `se` (ΣΕ). Παλιό αρχείο ⇒ **απορρίπτεται** (`unavailable`), ποτέ σιωπηλό «χωρίς ΣΕ»
+ * που θα έβαζε ξανά 1,0 με σήμανση εκεί όπου η πηγή τον ξέρει.
+ */
+export const VALUE_ZONES_FORMAT_VERSION = 2;
 
 /** Ο φάκελος μέσα στο `public/`. */
 export const VALUE_ZONES_DIR = 'data/value-zones';
@@ -38,6 +42,53 @@ export const VALUE_ZONES_DIR = 'data/value-zones';
 /** `[δύση, νότος, ανατολή, βορράς]` — σειρά GeoJSON. */
 export type BboxTuple = readonly [number, number, number, number];
 
+// ─── Ο Συντελεστής Εμπορικότητας (ΣΕ) της ζώνης — ADR-898 Φ5 ───
+
+/**
+ * **Τι λέει η πηγή για τον ΣΕ** (`URL_SE` του ΥΠΕΘΟΟ), ανά ζώνη **και** ανά μέτωπο — πάει μαζί με την τιμή της.
+ * - `factor` = ο αριθμός (≥ 1, ο νόμος δεν επιτρέπει μικρότερο).
+ * - `document` = πίνακας ΣΕ της περιοχής σε PDF (gsis.gr): ο ΣΕ εξαρτάται από τη θέση μέσα στη ζώνη ⇒ τον ξέρει ο άνθρωπος.
+ * - `unknown` = κενό στην πηγή.
+ */
+export type CommercialityFact =
+  | { readonly kind: 'factor'; readonly value: number }
+  | { readonly kind: 'document'; readonly url: string }
+  | { readonly kind: 'unknown' };
+
+export const UNKNOWN_COMMERCIALITY: CommercialityFact = { kind: 'unknown' };
+
+/**
+ * Το κοινό πρόθεμα των πινάκων ΣΕ της πηγής (μετρημένο 2026-11-20). Ο γεννήτορας γράφει **μόνο τον αριθμό** του πίνακα
+ * όταν το URL ταιριάζει ακριβώς· αλλιώς ολόκληρο το URL — ποτέ απώλεια.
+ */
+const COMMERCIALITY_DOCUMENT_PREFIX = 'https://www1.gsis.gr/gspp/dhpe/file_utils/fdownload?type=APAA&fname=COMMERCIAL_COEFF/COMMERCIAL_COEFF_';
+const COMMERCIALITY_DOCUMENT_SUFFIX = '.pdf';
+const DOCUMENT_ID = /^\d+$/;
+
+/** Στο αρχείο: αριθμός = ΣΕ · ψηφία = αριθμός πίνακα PDF · `https://…` = άλλο URL πίνακα · **απόν** = άγνωστος. */
+export type CommercialityField = number | string;
+
+/** Η συμπαγής μορφή για τον γεννήτορα· `undefined` ⇒ το πεδίο παραλείπεται. */
+export function commercialityFieldOf(fact: CommercialityFact): CommercialityField | undefined {
+  if (fact.kind === 'factor') return fact.value;
+  if (fact.kind === 'unknown') return undefined;
+  const { url } = fact;
+  if (url.startsWith(COMMERCIALITY_DOCUMENT_PREFIX) && url.endsWith(COMMERCIALITY_DOCUMENT_SUFFIX)) {
+    const id = url.slice(COMMERCIALITY_DOCUMENT_PREFIX.length, -COMMERCIALITY_DOCUMENT_SUFFIX.length);
+    if (DOCUMENT_ID.test(id)) return id;
+  }
+  return url;
+}
+
+/** Αυστηρός αναγνώστης· `null` = χαλασμένο πεδίο (ακυρώνει το αρχείο), ποτέ σιωπηλό «άγνωστος». */
+function readCommerciality(raw: unknown): CommercialityFact | null {
+  if (raw === undefined) return UNKNOWN_COMMERCIALITY;
+  if (isFiniteNumber(raw)) return raw >= 1 ? { kind: 'factor', value: raw } : null;
+  if (typeof raw !== 'string') return null;
+  if (DOCUMENT_ID.test(raw)) return { kind: 'document', url: `${COMMERCIALITY_DOCUMENT_PREFIX}${raw}${COMMERCIALITY_DOCUMENT_SUFFIX}` };
+  return raw.startsWith('https://') ? { kind: 'document', url: raw } : null;
+}
+
 interface ZoneFields {
   /** `ZONEREGIST` της πηγής — **δεν** είναι μοναδικό σε όλη τη χώρα (4 διπλά, μετρημένο)· ταυτότητα = id + σχήμα. */
   readonly id: number;
@@ -47,6 +98,8 @@ interface ZoneFields {
   readonly price: number;
   /** Έναρξη ισχύος `YYYY-MM-DD`. */
   readonly validFrom: string;
+  /** Ο ΣΕ της πηγής (`URL_SE`), συμπαγής ({@link CommercialityField}) — απόν = άγνωστος. */
+  readonly se?: CommercialityField;
   readonly bbox: BboxTuple;
 }
 
@@ -94,14 +147,16 @@ export const VALUE_ZONES_INDEX_PUBLIC_PATH: readonly string[] = [...VALUE_ZONES_
 // ΤΟ ΣΧΗΜΑ ΣΤΗ ΜΝΗΜΗ (αυτό διαβάζουν server και browser)
 // ============================================================================
 
-export interface ValueZone extends Omit<ValueZoneRecord, 'bbox'> {
+export interface ValueZone extends Omit<ValueZoneRecord, 'bbox' | 'se'> {
   readonly bbox: GeoBoundingBox;
+  readonly commerciality: CommercialityFact;
   /** Οι δακτύλιοι για τον κριτή (even–odd, `isPointInGeoRings`) — από το **ίδιο** `geometry` που ζωγραφίζεται. */
   readonly rings: readonly GeoOutline[];
 }
 
-export interface ValueFront extends Omit<ValueFrontRecord, 'bbox'> {
+export interface ValueFront extends Omit<ValueFrontRecord, 'bbox' | 'se'> {
   readonly bbox: GeoBoundingBox;
+  readonly commerciality: CommercialityFact;
   readonly lines: readonly GeoPolyline[];
 }
 
@@ -130,11 +185,15 @@ function bboxOfTuple(value: unknown): GeoBoundingBox | null {
   return { west, south, east, north };
 }
 
-function readZoneFields(row: Record<string, unknown>): (Omit<ZoneFields, 'bbox'> & { bbox: GeoBoundingBox }) | null {
+type ReadZoneFields = Omit<ZoneFields, 'bbox' | 'se'> & { bbox: GeoBoundingBox; commerciality: CommercialityFact };
+
+function readZoneFields(row: Record<string, unknown>): ReadZoneFields | null {
   const bbox = bboxOfTuple(row.bbox);
   if (bbox === null || !Number.isInteger(row.id) || (row.id as number) < 0 || !isFiniteNumber(row.price) || row.price <= 0) return null;
   if (typeof row.name !== 'string' || typeof row.validFrom !== 'string') return null;
-  return { id: row.id, name: row.name, price: row.price, validFrom: row.validFrom, bbox };
+  const commerciality = readCommerciality(row.se);
+  if (commerciality === null) return null;
+  return { id: row.id, name: row.name, price: row.price, validFrom: row.validFrom, bbox, commerciality };
 }
 
 function readZone(value: unknown): ValueZone | null {

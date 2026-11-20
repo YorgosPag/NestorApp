@@ -97,6 +97,8 @@
     "price": "Zone price at the property's location: {price}",
     "zone": "Zone {name} · in force since {date}",
     "nearEdge": "The location is close to a zone boundary; the exact address confirms the zone.",
+    "commerciality": "Zone commerciality coefficient (SE): {factor}",
+    "commercialityDocument": "The zone's SE is given in an area table (PDF, gsis.gr)",
     "askingVsZone": "The asking price is {asking}% of the zone price; contracts in the area are signed at {contracts}% (median).",
     "frontsIntro": "If the property has frontage (entrance, window or shop window) on a nearby street with its own, higher zone price, the higher price applies:",
     "front": "{street}: {price}",

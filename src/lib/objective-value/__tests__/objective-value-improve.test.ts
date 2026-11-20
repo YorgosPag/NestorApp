@@ -3,6 +3,7 @@
  * ποια σειρά (minimax κέρδος — ό,τι λέει η ίδια η μηχανή, ποτέ δεύτερη αριθμητική).
  */
 
+import { UNKNOWN_COMMERCIALITY } from '@/lib/market/value-zone-file';
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
 
@@ -31,7 +32,7 @@ const TODAY = '2026-10-01';
 
 const READY: ValueZoneVerdict = {
   kind: 'ready',
-  zone: { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01' },
+  zone: { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } },
   nearEdge: false,
   fronts: [],
 };
@@ -39,8 +40,8 @@ const READY: ValueZoneVerdict = {
 const FRONTED: ValueZoneVerdict = {
   ...READY,
   fronts: [
-    { id: 'f1', name: 'Μ1', price: 2600, validFrom: '2022-01-01', street: 'Ακαδημίας', distanceM: 10 },
-    { id: 'f2', name: 'Μ2', price: 2300, validFrom: '2022-01-01', street: 'Σίνα', distanceM: 30 },
+    { id: 'f1', name: 'Μ1', price: 2600, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const }, street: 'Ακαδημίας', distanceM: 10 },
+    { id: 'f2', name: 'Μ2', price: 2300, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const }, street: 'Σίνα', distanceM: 30 },
   ],
 };
 
@@ -157,10 +158,10 @@ describe('objectiveValueImprovement — σειρά κατά κέρδος (minima
 
   it('`boundsWidth`: ποσό = 0 · εύρος = high − low · χωρίς εύρος = null', () => {
     const draft = { ...INITIAL_DRAFT, levels: [{ floor: 4, area: 90 }], hasCentralHeating: true, hasElevator: true, permitDate: '1998-07-01' };
-    expect(boundsWidth(objectiveValueBounds({ ...draft, frontage: 'single' }, TODAY, [2000]))).toBe(0);
-    const range = objectiveValueBounds(draft, TODAY, [2000]);
+    expect(boundsWidth(objectiveValueBounds({ ...draft, frontage: 'single' }, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]))).toBe(0);
+    const range = objectiveValueBounds(draft, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]);
     expect(boundsWidth(range)).toBe(range.kind === 'range' ? range.high - range.low : Number.NaN);
-    expect(boundsWidth(objectiveValueBounds({ ...draft, permitDate: null }, TODAY, [2000]))).toBeNull();
+    expect(boundsWidth(objectiveValueBounds({ ...draft, permitDate: null }, TODAY, [{ price: 2000, commerciality: UNKNOWN_COMMERCIALITY }]))).toBeNull();
   });
 });
 

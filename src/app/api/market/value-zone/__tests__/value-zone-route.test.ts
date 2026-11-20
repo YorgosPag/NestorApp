@@ -38,7 +38,7 @@ const call = (query: string): Promise<MockResponse> =>
 
 const READY = {
   kind: 'ready',
-  zone: { id: 'z1', name: 'ΚΣΤ', price: 3600, validFrom: '2022-01-01' },
+  zone: { id: 'z1', name: 'ΚΣΤ', price: 3600, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } },
   nearEdge: false,
   fronts: [],
 };

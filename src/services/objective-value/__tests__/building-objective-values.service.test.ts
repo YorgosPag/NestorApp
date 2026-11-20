@@ -19,7 +19,7 @@ jest.mock('@/services/listings/publish-public-listing', () => ({
   collectPlaceKnowledge: (...args: unknown[]) => collectPlaceKnowledge(...(args as [])),
 }));
 
-const ZONE: ValueZoneVerdict = { kind: 'ready', zone: { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01' }, nearEdge: false, fronts: [] };
+const ZONE: ValueZoneVerdict = { kind: 'ready', zone: { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } }, nearEdge: false, fronts: [] };
 const readValueZoneAt = jest.fn(async () => ZONE);
 jest.mock('@/services/market/value-zones.reader', () => ({ readValueZoneAt: (...args: unknown[]) => readValueZoneAt(...(args as [])) }));
 

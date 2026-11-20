@@ -27,7 +27,7 @@ function zone(id: number, price: number, ring: GeoOutline): ValueZone {
   const lats = ring.map((p) => p.lat);
   const lngs = ring.map((p) => p.lng);
   return {
-    id, name: `Z${id}`, price, validFrom: '2022-01-01',
+    id, name: `Z${id}`, price, validFrom: '2022-01-01', commerciality: { kind: 'unknown' },
     bbox: { south: Math.min(...lats), north: Math.max(...lats), west: Math.min(...lngs), east: Math.max(...lngs) },
     geometry: { type: 'MultiPolygon', coordinates: [[[...ring, ring[0]].map((p) => [p.lng, p.lat])]] },
     rings: [ring],
@@ -38,7 +38,7 @@ function front(id: number, price: number, street: string, line: GeoPolyline): Va
   const lats = line.map((p) => p.lat);
   const lngs = line.map((p) => p.lng);
   return {
-    id, name: `F${id}`, price, validFrom: '2025-01-01', street,
+    id, name: `F${id}`, price, validFrom: '2025-01-01', commerciality: { kind: 'unknown' }, street,
     bbox: { south: Math.min(...lats), north: Math.max(...lats), west: Math.min(...lngs), east: Math.max(...lngs) },
     geometry: { type: 'MultiLineString', coordinates: [line.map((p) => [p.lng, p.lat])] },
     lines: [line],
@@ -78,7 +78,7 @@ describe('valueZonePointOf — ποτέ ψευδής ακρίβεια', () => {
 describe('valueZoneAtPoint', () => {
   it('η κυκλική ζώνη που περιέχει το σημείο', () => {
     const verdict = valueZoneAtPoint(HERE, [AREA]);
-    expect(verdict.kind === 'ready' && verdict.zone).toEqual({ id: 1, name: 'Z1', price: 2000, validFrom: '2022-01-01' });
+    expect(verdict.kind === 'ready' && verdict.zone).toEqual({ id: 1, name: 'Z1', price: 2000, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } });
   });
 
   it('μέτωπα: μόνο τα ΑΚΡΙΒΟΤΕΡΑ, εντός εμβέλειας, υπό όρο', () => {

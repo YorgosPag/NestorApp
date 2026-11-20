@@ -14,6 +14,7 @@ import { SectionFrame } from '@/components/ui/section-frame';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatNumber } from '@/lib/intl-formatting';
 import { AADE_MYPROPERTY_URL } from '@/lib/objective-value/objective-value-page-sections';
+import { formatCommercialityFactor } from '@/lib/objective-value/objective-value-zone';
 import { missingOf } from '@/lib/objective-value/objective-value-draft';
 import type { AppliedFactor, ComputedObjectiveValue, ObjectiveValueResult as Result } from '@/lib/objective-value/objective-value-types';
 import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
@@ -92,7 +93,14 @@ export function ObjectiveValuePending({ result }: { readonly result: Result }) {
   );
 }
 
-export function ObjectiveValueResult({ result, commercialityAssumed }: { readonly result: Result; readonly commercialityAssumed: boolean }) {
+interface ObjectiveValueResultProps {
+  readonly result: Result;
+  readonly commercialityAssumed: boolean;
+  /** Ο ΣΕ που έδωσαν τα δεδομένα ζωνών, όταν μετρά (ADR-898 Φ5) — `null` αλλιώς. */
+  readonly sourcedCommercialityFactor?: number | null;
+}
+
+export function ObjectiveValueResult({ result, commercialityAssumed, sourcedCommercialityFactor = null }: ObjectiveValueResultProps) {
   const { t } = useTranslation([NS]);
   return (
     // Ίδιο σχήμα με το `CalculatorStep` (`section` με όνομα · `h2` · `gap-3`), πάνω στην ΕΠΙΦΑΝΕΙΑ: το μόνο βήμα με πλαίσιο.
@@ -110,6 +118,11 @@ export function ObjectiveValueResult({ result, commercialityAssumed }: { readonl
       </div>
       {result.kind === 'computed' && commercialityAssumed && (
         <p className="m-0 text-sm text-foreground">{t(`${NS}:questions.commercialityFactor.assumed`)}</p>
+      )}
+      {result.kind === 'computed' && sourcedCommercialityFactor !== null && (
+        <p className="m-0 text-sm text-muted-foreground">
+          {t(`${NS}:questions.commercialityFactor.fromSource`, { factor: formatCommercialityFactor(sourcedCommercialityFactor) })}
+        </p>
       )}
       {result.kind === 'computed' && <ObjectiveValueBreakdown result={result} />}
       <p className="m-0 text-xs text-muted-foreground">{t(`${R}.disclaimer`)}</p>

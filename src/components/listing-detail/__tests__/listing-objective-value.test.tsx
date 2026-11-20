@@ -22,7 +22,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => {
 
 const READY: ValueZoneVerdict = {
   kind: 'ready',
-  zone: { id: 'z1', name: 'Β', price: 1200, validFrom: '2022-01-01' },
+  zone: { id: 'z1', name: 'Β', price: 1200, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } },
   nearEdge: false,
   fronts: [],
 };

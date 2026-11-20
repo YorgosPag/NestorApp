@@ -15,14 +15,14 @@ import {
 } from '../building-space-objective-value';
 
 const TODAY = '2026-10-02';
-const ZONE = { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01' };
+const ZONE = { id: 'z1', name: 'Θ', price: 2000, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const } };
 const READY: ValueZoneVerdict = { kind: 'ready', zone: ZONE, nearEdge: false, fronts: [] };
 /** Ζώνη με μέτωπο ακριβότερο (γραμμική ζώνη υπό όρο). */
 const WITH_FRONT: ValueZoneVerdict = {
   kind: 'ready',
   zone: ZONE,
   nearEdge: false,
-  fronts: [{ id: 'f1', name: 'Μέτωπο', price: 3000, validFrom: '2022-01-01', street: 'Εγνατία', distanceM: 5 }],
+  fronts: [{ id: 'f1', name: 'Μέτωπο', price: 3000, validFrom: '2022-01-01', commerciality: { kind: 'unknown' as const }, street: 'Εγνατία', distanceM: 5 }],
 };
 
 /** Κτίριο αποπερατωμένο, με άδεια φέτος (παλαιότητα 0 ⇒ συντελεστής 1). */
