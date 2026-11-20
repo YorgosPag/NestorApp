@@ -74,6 +74,10 @@ async function dispatchNewSignIn(candidate: NewSignInCandidate, reasons: readonl
   const params = { device: `${candidate.deviceInfo.browser} · ${candidate.deviceInfo.os}`, ...(place ? { place } : {}) };
   const bodyKey = place ? 'newSignIn.body' : 'newSignIn.bodyNoPlace';
   const workspace = personalWorkspace(candidate.uid);
+  // ⚠️ ΔΕΝ ΠΑΙΡΝΕΙ `actions`, ΚΑΙ ΕΙΝΑΙ ΣΚΟΠΙΜΟ (ADR-841 §7 Α18 · ADR-894 §10 Β3): ο χώρος είναι ο
+  //    **προσωπικός**, και εκεί δεν υπάρχει σελίδα συσκευών — το `/account/security` ζει μόνο μέσα σε
+  //    `o/[workspace]`, και το `(me)/profile` δεν δείχνει συνεδρίες. Σύνδεσμος προς γραφείο θα άνοιγε
+  //    ξένο χώρο (ή κανέναν, για ιδιώτη)· κανένας σύνδεσμος είναι το έντιμο, όχι το αδιέξοδο.
   await dispatchNotification({
     eventType: NOTIFICATION_EVENT_TYPES.SECURITY_NEW_DEVICE_LOGIN,
     recipientId: candidate.uid,

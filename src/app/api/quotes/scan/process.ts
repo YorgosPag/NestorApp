@@ -29,6 +29,12 @@ import type { AuthContext } from '@/lib/auth';
 
 const logger = createModuleLogger('QUOTE_SCAN_PROCESS');
 
+/** Τα κλειδιά τίτλου της ειδοποίησης — στατικός κατάλογος (ADR-841 §7 Α18.14). */
+const SCAN_COMPLETED_TITLE_KEYS = {
+  known: 'common-shared:quoteNotifications.quoteScanCompleted',
+  unknown: 'common-shared:quoteNotifications.quoteScanCompletedUnknownVendor',
+} as const;
+
 /** Κάτω από αυτό ο ταξινομητής δεν πείθει ότι είναι προσφορά. */
 const MIN_QUOTE_CONFIDENCE = 30;
 
@@ -58,10 +64,7 @@ async function failAttempt(ctx: AuthContext, job: ScanJob, errorCode: QuoteExtra
 
 function notifyScanCompleted(ctx: AuthContext, quoteId: string, vendorName: string | null | undefined): void {
   // ADR-327: ποτέ ωμό `quoteId` ως «όνομα» (ήταν `?? quoteId`)· ο τίτλος από ΕΝΑ κλειδί, όχι δεύτερο ελληνικό κείμενο.
-  const title = vendorNotificationTitle(vendorName, {
-    known: 'common-shared:quoteNotifications.quoteScanCompleted',
-    unknown: 'common-shared:quoteNotifications.quoteScanCompletedUnknownVendor',
-  });
+  const title = vendorNotificationTitle(vendorName, SCAN_COMPLETED_TITLE_KEYS);
   void dispatchProcurementNotification(
     NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_SCAN_COMPLETED,
     ctx.uid,

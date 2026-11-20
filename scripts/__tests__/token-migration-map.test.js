@@ -136,12 +136,13 @@ describe('Χ4 — Η ΜΕΤΡΙΚΗ ΒΕΛΤΙΩΣΗΣ: γιατί ΟΧΙ το �
     return s.filter((x) => contrastRatio(rgb, hslToRgb(x.hsl)) < 4.5).length;
   };
 
-  test('Χ4.1 το --muted-foreground αποτυγχάνει σε >½ των επιφανειών, κι όμως ΕΙΝΑΙ ο σωστός στόχος', () => {
+  test('Χ4.1 το --muted-foreground αποτυγχάνει σε ΚΑΠΟΙΕΣ επιφάνειες, κι όμως ΕΙΝΑΙ ο σωστός στόχος', () => {
     const mf = foregroundTokens(themes.light).find((t) => t.name === '--muted-foreground');
     const failing = failingAgainstSurfaces(hslToRgb(mf.hsl), 'light');
-    const total = surfaceTokens(themes.light).length;
     // Αν η μετρική ήταν «αποτυγχάνει X/N», η σωστή μετανάστευση θα βαθμολογούνταν ΑΠΟΤΥΧΙΑ.
-    expect(failing).toBeGreaterThan(total / 2);
+    // ⚠️ Ήταν «> ½ των επιφανειών» — μέτρηση της τιμής ΠΡΙΝ το ADR-770 §18 (46,9% ⇒ 38%, σκόπιμα σκουρότερο).
+    //    Το επιχείρημα δεν χρειάζεται πλειοψηφία: αρκεί ο ΣΩΣΤΟΣ στόχος να μην είναι 0/N.
+    expect(failing).toBeGreaterThan(0);
     expect(TOKEN_MAP['colors.text.secondary']).toBe('--muted-foreground');
   });
 

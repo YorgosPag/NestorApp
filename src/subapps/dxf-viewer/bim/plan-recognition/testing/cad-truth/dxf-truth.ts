@@ -11,6 +11,7 @@
  */
 
 import type { AffinePoint } from '@/lib/geometry/affine-2x3';
+import { dimDefPoints } from '../../../../systems/dimensions/dimension-def-points';
 import { runDxfParse } from '../../../../utils/run-dxf-parse';
 import type { Entity } from '../../../../types/entities';
 import type { SceneModel } from '../../../../types/scene-types';
@@ -34,7 +35,7 @@ function project(p: AffinePoint, o: AffinePoint, d: AffinePoint): AffinePoint {
 /** Γραμμή διάστασης linear/aligned από τα `defPoints`, ή `null` για άλλο είδος ή εκφυλισμένη. */
 export function dxfDimensionTruth(e: Extract<Entity, { type: 'dimension' }>): CadTruthDimension | null {
   if (e.dimensionType !== 'linear' && e.dimensionType !== 'aligned') return null;
-  const [o1, o2, ref] = e.defPoints;
+  const [o1, o2, ref] = dimDefPoints(e);
   if (!o1 || !o2 || !ref) return null;
   const raw = e.dimensionType === 'linear'
     ? { x: Math.cos((e.rotation * Math.PI) / 180), y: Math.sin((e.rotation * Math.PI) / 180) }

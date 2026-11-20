@@ -151,6 +151,9 @@ function trackedFilesMentioningFlag() {
  * την αναφέρει σε ολόκληρο docblock. Είναι το `Κ7β` του CHECK 3.50.
  */
 function executableTextOf(relativePath) {
+  // Η τεκμηρίωση ΔΕΝ εκτελείται: ένα ADR που δείχνει τη θεραπεία (`FLAG: String(…)`) ή το «πριν»
+  // (`- FLAG=true`) δεν είναι γραφέας (ADR-807 .md, tracked από `5b3ef4fa`). Ο παρονομαστής μένει ακέραιος.
+  if (/\.mdx?$/i.test(relativePath)) return '';
   const source = fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
   if (/\.(sh|ps1|ya?ml)$/i.test(relativePath)) return stripHashComments(source);
   return stripComments(source);
@@ -303,6 +306,11 @@ describe('Κ2 — ένας και μόνο γραφέας της σημαίας'
     expect(assignsFlag(stripHashComments('# ' + FLAG + '=true'))).toBe(false);
     expect(assignsFlag(stripComments('// ' + FLAG + '=true'))).toBe(false);
     expect(assignsFlag(FLAG + '=true')).toBe(true);
+  });
+
+  test('η ΤΕΚΜΗΡΙΩΣΗ δεν είναι γραφέας', () => {
+    expect(executableTextOf('docs/centralized-systems/reference/adrs/ADR-807-personal-workspace-identity.md')).toBe('');
+    expect(executableTextOf('next.config.js')).not.toBe('');
   });
 
   test('η ΑΝΑΓΝΩΣΗ δεν είναι ανάθεση', () => {

@@ -59,6 +59,8 @@ jest.mock('../super-admin-active-company', () => ({
 jest.mock('../tenant-config', () => ({
   getTenantConfig: jest.fn(() => ({ mode: 'companyId', fieldName: 'companyId' })),
   resolveTenantValue: jest.fn(() => 'c1'),
+  // Καθαρή απάντηση «ανήκει ο γονέας σε άνθρωπο;» — η ΑΛΗΘΙΝΗ, όχι αντίγραφο του συνόλου της.
+  isPersonOwnedParent: jest.requireActual<typeof import('../tenant-config')>('../tenant-config').isPersonOwnedParent,
 }));
 
 jest.mock('@/config/firestore-collections', () => ({

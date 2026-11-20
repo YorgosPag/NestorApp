@@ -27,7 +27,7 @@
 import type { CompanySetupInput } from '../../types/company';
 import type { Partner, Member, Shareholder, ShareholderEFKAMode } from '../../types/entity';
 import { isCompleteShareSum } from '../../utils/share-sum';
-const VAT_PATTERN = /^\d{9}$/;
+import { GREEK_VAT_REGEX as VAT_PATTERN } from '@/lib/validation/greek-vat-number';
 
 function validatePartners(partners: Partner[]): string | null {
   for (const p of partners) {

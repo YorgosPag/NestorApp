@@ -23,23 +23,34 @@ import { PLATFORMS } from '@/config/domain-constants';
 describe('CRM channel bindings', () => {
   const channels = Object.keys(CRM_CHANNEL_BINDINGS) as CrmChannel[];
 
-  it('covers exactly the Meta channels routed through the shared store', () => {
+  it('covers exactly the channels routed through the shared store (3 Meta + the ADR-939 portal)', () => {
     expect(channels.sort()).toEqual(
       [
         COMMUNICATION_CHANNELS.WHATSAPP,
         COMMUNICATION_CHANNELS.MESSENGER,
         COMMUNICATION_CHANNELS.INSTAGRAM,
+        COMMUNICATION_CHANNELS.PORTAL,
       ].sort()
     );
   });
 
-  it.each(channels)('binds %s to a provider and platform of the same name', (channel) => {
+  /**
+   * The platform each channel is pinned to. The Meta channels share one string
+   * across the three enums; the portal diverges intentionally (ADR-939): the
+   * provider is the shared link, the platform is the web.
+   */
+  const EXPECTED_PLATFORM: Readonly<Record<CrmChannel, string>> = {
+    [COMMUNICATION_CHANNELS.WHATSAPP]: PLATFORMS.WHATSAPP,
+    [COMMUNICATION_CHANNELS.MESSENGER]: PLATFORMS.MESSENGER,
+    [COMMUNICATION_CHANNELS.INSTAGRAM]: PLATFORMS.INSTAGRAM,
+    [COMMUNICATION_CHANNELS.PORTAL]: PLATFORMS.WEB,
+  };
+
+  it.each(channels)('binds %s to a provider of the same name and its declared platform', (channel) => {
     const { provider, platform } = resolveChannelBinding(channel);
 
-    // The three enums use the same string value per channel. If they ever
-    // diverge intentionally, this assertion is the place to encode the mapping.
     expect(provider).toBe(channel);
-    expect(platform).toBe(channel);
+    expect(platform).toBe(EXPECTED_PLATFORM[channel]);
   });
 
   it('resolves each channel to its canonical provider', () => {
@@ -49,6 +60,8 @@ describe('CRM channel bindings', () => {
       .toBe(IDENTITY_PROVIDER.MESSENGER);
     expect(resolveChannelBinding(COMMUNICATION_CHANNELS.INSTAGRAM).provider)
       .toBe(IDENTITY_PROVIDER.INSTAGRAM);
+    expect(resolveChannelBinding(COMMUNICATION_CHANNELS.PORTAL).provider)
+      .toBe(IDENTITY_PROVIDER.PORTAL);
   });
 
   it('resolves each channel to its canonical platform', () => {
@@ -58,6 +71,8 @@ describe('CRM channel bindings', () => {
       .toBe(PLATFORMS.MESSENGER);
     expect(resolveChannelBinding(COMMUNICATION_CHANNELS.INSTAGRAM).platform)
       .toBe(PLATFORMS.INSTAGRAM);
+    expect(resolveChannelBinding(COMMUNICATION_CHANNELS.PORTAL).platform)
+      .toBe(PLATFORMS.WEB);
   });
 
   it('never maps two channels onto the same provider', () => {

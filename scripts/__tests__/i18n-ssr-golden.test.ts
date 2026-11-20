@@ -23,8 +23,23 @@ import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import { hasAreaMarketPage } from '@/types/area-market';
 import legalManifest from '@/config/legal-document-versions/manifest.json';
 
+import { validateSetupInput } from '@/subapps/accounting/services/setup/company-setup-input';
+import type { SubcontractAgreementDraftInput } from '@/subapps/procurement/subcontracts/agreements/agreement-draft';
+import { judgeAgreementDraft } from '@/subapps/procurement/subcontracts/agreements/judge-agreement-draft';
+import { createAgreementBodySchema } from '@/subapps/procurement/subcontracts/schema/agreement.schema';
+import { approveClauseVersionBodySchema } from '@/subapps/procurement/subcontracts/schema/clause.schema';
+
+import {
+  GOLDEN_CLAUSE_KEYS,
+  GOLDEN_CLAUSE_VERSION,
+  goldenAgreementBody,
+  goldenApprovedLibrary,
+  goldenApproveBody,
+  goldenIssuerSetupBody,
+  goldenSubcontractIds,
+} from '../lib/emulator/golden-subcontracts';
 import { WITNESS_COLLECTIONS, witnessCollectionPath, witnessId } from '../lib/emulator/golden-witnesses';
-import { COMPANY_ALIAS } from '../lib/emulator/personas';
+import { COMPANY_ALIAS, COMPANY_ID, COMPANY_NAME } from '../lib/emulator/personas';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const GC = require('../lib/i18n-ssr/golden-catalog');
@@ -130,6 +145,9 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
       project: ENTERPRISE_ID_PREFIXES.PROJECT,
       rfq: ENTERPRISE_ID_PREFIXES.RFQ,
       purchaseOrder: ENTERPRISE_ID_PREFIXES.PURCHASE_ORDER,
+      subcontractClause: ENTERPRISE_ID_PREFIXES.SUBCONTRACT_CLAUSE,
+      subcontractTemplate: ENTERPRISE_ID_PREFIXES.SUBCONTRACT_TRADE_TEMPLATE,
+      subcontractAgreement: ENTERPRISE_ID_PREFIXES.SUBCONTRACT_AGREEMENT,
       contact: ENTERPRISE_ID_PREFIXES.CONTACT,
       building: ENTERPRISE_ID_PREFIXES.BUILDING,
       property: ENTERPRISE_ID_PREFIXES.PROPERTY,
@@ -214,6 +232,54 @@ describe('Γ — ο κατάλογος golden απέναντι στο src/', () 
       expect([secret, contract.includes(`name: '${secret}'`)]).toEqual([secret, true]);
       expect([secret, workflow.includes(`-e ${secret}`)]).toEqual([secret, true]);
     }
+  });
+});
+
+// ===========================================================================
+// Γ10 — ΤΟ ΣΥΜΒΟΛΑΙΟ ΤΟΥ ΣΠΟΡΕΑ ΜΕ ΤΟ API ΤΗΣ ΥΠΕΡΓΟΛΑΒΙΑΣ (Pact-style)
+// ===========================================================================
+
+describe('Γ10 — τα σώματα του σπορέα golden περνούν τους ΙΔΙΟΥΣ κριτές με τον server', () => {
+  // 🔑 Το API τρέχει μόνο στο CI (emulators + `next build`): λάθος σώμα θα το μαθαίναμε ΜΕΤΑ το merge.
+  //    Εδώ κρίνονται τα ΙΔΙΑ σώματα που στέλνει ο σπορέας, από τα zod των routes και τους κριτές του τομέα.
+  const TODAY = '2026-11-20';
+  const choice = { companyId: COMPANY_ID, projectId: 'proj_golden', subcontractorContactId: 'cont_alpha_golden' };
+  const judge = (draft: SubcontractAgreementDraftInput) =>
+    judgeAgreementDraft(draft, { library: goldenApprovedLibrary(COMPANY_ID), previous: [], actorUid: 'u_golden', today: TODAY }).issues;
+
+  test('Γ10α — συμφωνητικό: zod του route + επικύρωση + ρήτρες ⇒ ΚΑΝΕΝΑ εύρημα, με ΟΛΕΣ τις ρήτρες του προτύπου', () => {
+    const body = goldenAgreementBody(choice);
+    expect(createAgreementBodySchema.safeParse(body).success).toBe(true);
+    expect(judge(body.draft)).toEqual([]);
+    expect(body.draft.clauses.length).toBeGreaterThan(0);
+    expect(body.draft.templateId).toBe(goldenSubcontractIds(COMPANY_ID).subcontractTemplate);
+  });
+
+  test('Γ10β — ο κριτής ΔΕΝ είναι τυφλός: σώμα χωρίς υπεργολάβο ή με άγνωστη ρήτρα κοκκινίζει', () => {
+    const { draft } = goldenAgreementBody(choice);
+    expect(judge({ ...draft, subcontractorContactId: ' ' }).map((issue) => issue.code)).toContain('contactUnknown');
+    const unknownClause = { ...draft.clauses[0], clauseKey: 'golden.unknown' };
+    expect(judge({ ...draft, clauses: [unknownClause] })).not.toEqual([]);
+  });
+
+  test('Γ10γ — έγκριση ρήτρας: το σώμα περνά το zod του route', () => {
+    expect(approveClauseVersionBodySchema.safeParse(goldenApproveBody(1)).success).toBe(true);
+  });
+
+  test('Γ10δ — εκδότης: ο κριτής του setup δέχεται το σώμα, με την επωνυμία του χώρου (αλλιώς μετονομασία)', () => {
+    const body = goldenIssuerSetupBody(COMPANY_NAME);
+    expect(validateSetupInput(body)).toBeNull();
+    expect(validateSetupInput({ ...body, vatNumber: '12' })).not.toBeNull();
+    expect(body.businessName).toBe(COMPANY_NAME);
+  });
+
+  test('Γ10ε — τα ids έχουν το πρόθεμα του καταλόγου, και η ρήτρα της σελίδας είναι από όσες εγκρίνει ο σπορέας', () => {
+    const ids = goldenSubcontractIds(COMPANY_ID);
+    expect(ids.subcontractClause.startsWith(`${ENTITIES.subcontractClause.prefix}_`)).toBe(true);
+    expect(ids.subcontractTemplate.startsWith(`${ENTITIES.subcontractTemplate.prefix}_`)).toBe(true);
+    const approved = new Set(GOLDEN_CLAUSE_KEYS.map((key) => goldenApprovedLibrary(COMPANY_ID).get(key)?.clauseId));
+    expect(approved.has(ids.subcontractClause)).toBe(true);
+    expect(GOLDEN_CLAUSE_VERSION).toBe(1);
   });
 });
 

@@ -62,7 +62,9 @@ describe('usePlanReadValueThumbnails', () => {
   });
 
   it('ADR-929 §6.16 #8: ΚΑΜΙΑ μικρογραφία μέσα στο commit — η πρώτη ξεκινά μετά από ζωγραφική', async () => {
-    const { result } = renderHook(() => usePlanReadValueThumbnails('flr', reading([text('t1', 0), text('t2', 100)])));
+    // Σταθερή ταυτότητα όπως στον πραγματικό καλούντα (`recognition.reading`): νέο αντικείμενο ανά render = νέα ανάγνωση.
+    const r = reading([text('t1', 0), text('t2', 100)]);
+    const { result } = renderHook(() => usePlanReadValueThumbnails('flr', r));
     expect(getRegionImage).not.toHaveBeenCalled();
     await waitFor(() => expect(result.current.size).toBe(2));
     expect(getRegionImage).toHaveBeenCalledTimes(2);

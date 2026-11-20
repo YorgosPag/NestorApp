@@ -59,8 +59,23 @@ interface CaseNotice {
   readonly feature: string;
 }
 
+/**
+ * 🔑 **Ο στατικός κατάλογος των τίτλων υπόθεσης** (ADR-841 §7 Α18.14 · πρακτική FormatJS `defineMessages`): ο
+ * αποστολέας είναι εδώ, τα κλειδιά τα διαλέγουν οι ειδοποιητές — ο τύπος του {@link caseNoticeCopy} τα δένει στον
+ * κατάλογο, ώστε η άγκυρα reachability να κρίνει **κάθε** κλειδί που μπορεί να φτάσει στο κουδούνι.
+ */
+export const CASE_NOTICE_TITLE_KEYS = {
+  documentRequestOne: 'caseDocumentRequest.titleOne',
+  documentRequestMany: 'caseDocumentRequest.titleMany',
+  expiry: 'caseExpiry.title',
+  document: 'caseDocument.title',
+  documentRevision: 'caseDocument.revisionTitle',
+} as const;
+
+type CaseNoticeTitleKey =(typeof CASE_NOTICE_TITLE_KEYS)[keyof typeof CASE_NOTICE_TITLE_KEYS];
+
 /** Ο **κοινός** τίτλος/σώμα από κλειδιά του `common-shared` — η ελληνική απόδοση για το αποθηκευμένο κείμενο. */
-export function caseNoticeCopy(titleKey: string, titleParams: Record<string, string>, bodyKey: string, bodyParams?: Record<string, string>): CaseNoticeCopy {
+export function caseNoticeCopy(titleKey: CaseNoticeTitleKey, titleParams: Record<string, string>, bodyKey: string, bodyParams?: Record<string, string>): CaseNoticeCopy {
   return {
     title: caseNoticeT(titleKey, titleParams),
     titleKey,

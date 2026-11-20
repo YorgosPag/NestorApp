@@ -116,7 +116,34 @@ function isDispatcherItself(file: string): boolean {
  * το ίδιο το repo **επιβάλλει** για να μη γεννιούνται δυναμικά κλειδιά. Μια πύλη που
  * τιμωρεί το σωστό ιδίωμα θα ήταν χειρότερη από καμία πύλη.
  */
-function titleKeysOf(source: string): readonly string[] {
+/** Κυριολεκτικό που ΜΟΙΑΖΕΙ με κλειδί (έχει τελεία) — όχι τιμή απάντησης (`'accepted'`) ή ρόλου. */
+const KEY_LITERAL = /'([A-Za-z][\w.:-]*\.[\w.:-]+)'/g;
+
+/**
+ * 🔑 **Ο στατικός κατάλογος κλειδιών** (ADR-783 Ε2 · πρακτική FormatJS `defineMessages` / i18next-parser): κάθε
+ * κλειδί τίτλου ζει ως κυριολεκτικό σε `const …TITLE_KEY = '…'` ή `const …TITLE_KEYS = { … }`. Ο εξαγωγέας
+ * διαβάζει **τον κατάλογο**, όχι την έκφραση που διαλέγει από αυτόν.
+ */
+function catalogueKeysOf(source: string): readonly string[] {
+  const keys: string[] = [];
+  for (const block of source.matchAll(/const\s+\w*TITLE_KEYS?\b[^=;]*=\s*('[^']+'|\{[\s\S]*?\n\})/g)) {
+    for (const m of block[1].matchAll(KEY_LITERAL)) keys.push(m[1]);
+  }
+  return keys;
+}
+
+/** Ο κατάλογος ζει συχνά στο **module κειμένου** του παραγωγού (`listing-announcement-copy`, `conveyance-case-notice`). */
+function importedCatalogueKeysOf(file: string, source: string): readonly string[] {
+  const keys: string[] = [];
+  for (const m of source.matchAll(/import\s+\{[^}]*\}\s+from\s+'(@\/[^']+|\.{1,2}\/[^']+)'/g)) {
+    const base = m[1].startsWith('@/') ? path.join(SRC, m[1].slice(2)) : path.resolve(path.dirname(file), m[1]);
+    const target = [`${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')].find((candidate) => fs.existsSync(candidate));
+    if (target) keys.push(...catalogueKeysOf(fs.readFileSync(target, 'utf8')));
+  }
+  return keys;
+}
+
+function titleKeysOf(file: string, source: string): readonly string[] {
   const keys = new Set<string>();
 
   for (const m of source.matchAll(/titleKey\s*[:=]\s*'([^']+)'/g)) keys.add(m[1]);
@@ -125,13 +152,14 @@ function titleKeysOf(source: string): readonly string[] {
   //    `api/vendor/quote/[token]/route.ts` γράφει `const titleKey = συνθήκη ? 'α' : 'β';`
   //    και μετά σκέτο `titleKey,`. Ο εξαγωγέας έβρισκε **μηδέν** κλειδιά εκεί, δηλαδή
   //    **δύο πραγματικά κλειδιά δεν κρίνονταν από κανέναν** — και η πύλη ήταν πράσινη.
+  // ⛔ **ΟΧΙ τα μέλη μιας σύγκρισης** (ADR-783 Ε2): το `answer === 'accepted' ? …` έδινε το `'accepted'` ως
+  //    «κλειδί» — και έκρυβε ότι τα πραγματικά κλειδιά συντίθενταν με template literal, αόρατα σε όλους.
   for (const block of source.matchAll(/const\s+titleKey\s*=[\s\S]*?;/g)) {
-    for (const m of block[0].matchAll(/'([^']+)'/g)) keys.add(m[1]);
+    const withoutComparisons = block[0].replace(/'[^']*'\s*[!=]==|[!=]==\s*'[^']*'/g, '');
+    for (const m of withoutComparisons.matchAll(KEY_LITERAL)) keys.add(m[1]);
   }
 
-  for (const block of source.matchAll(/const\s+\w*TITLE_KEYS\b[\s\S]*?\n\};/g)) {
-    for (const m of block[0].matchAll(/'([A-Za-z][\w.:-]*\.[\w.:-]+)'/g)) keys.add(m[1]);
-  }
+  for (const key of [...catalogueKeysOf(source), ...importedCatalogueKeysOf(file, source)]) keys.add(key);
 
   return [...keys];
 }
@@ -155,7 +183,7 @@ const PRODUCERS = walk(SRC)
   .sort();
 
 const ENTRIES = PRODUCERS.flatMap((file) =>
-  titleKeysOf(fs.readFileSync(file, 'utf8')).map(
+  titleKeysOf(file, fs.readFileSync(file, 'utf8')).map(
     (key) => [path.relative(ROOT, file), key] as const,
   ),
 );
@@ -194,6 +222,17 @@ describe('ADR-841 §7 Α18.14 — κάθε `titleKey` φτάνει στον αν
 
     expect(PRODUCERS.length).toBeGreaterThan(0); // ΠΑΡΟΝΟΜΑΣΤΗΣ
     expect(silent).toEqual([]);
+  });
+
+  it('Κ0γ μετάλλαξη — ο εξαγωγέας διαβάζει καταλόγους, ΟΧΙ συγκρίσεις ή template literals (ADR-783 Ε2)', () => {
+    const keysOf = (source: string) => [...titleKeysOf(path.join(SRC, 'fixture.ts'), source)].sort();
+    // Το μέλος σύγκρισης δεν είναι κλειδί — και τα δύο κλάδια είναι.
+    expect(keysOf("const titleKey = answer === 'accepted' ? 'a.ok' : 'a.no';")).toEqual(['a.no', 'a.ok']);
+    // Σύνθεση με template literal ⇒ ΚΑΝΕΝΑ κλειδί ⇒ το Κ0β κοκκινίζει τον παραγωγό.
+    expect(keysOf('const titleKey = `${BASE}.acceptedTitle.${role}`;')).toEqual([]);
+    // Ο στατικός κατάλογος (με τύπο ή `as const`, ένθετος ή όχι) δίνει κάθε κλειδί του.
+    expect(keysOf("const X_TITLE_KEYS: Readonly<Record<K, string>> = {\n  a: 'n.a',\n  b: { c: 'n.c' },\n} as const;")).toEqual(['n.a', 'n.c']);
+    expect(keysOf("const TITLE_KEY = 'n.single';")).toEqual(['n.single']);
   });
 
   /**

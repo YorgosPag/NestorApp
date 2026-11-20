@@ -135,6 +135,19 @@ describe('Κ1-Κ2 · η γραμματική του εγγενούς καταλ�
 // Κ3 — ΚΑΘΕ ΑΡΙΘΜΟΣ ΑΚΡΙΒΩΣ ΜΙΑ ΦΟΡΑ
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * **Κλειστό σύνολο οικογενειών καταλόγου: ελάχιστο → η ΜΙΑ του αυθεντία.** Οι τρεις του `gridPatterns.cards`
+ * και η **κάρτα αγγελίας** (αποτελέσματα · βιτρίνα · αποθηκευμένες), που έχει δική της, μετρημένη αυθεντία
+ * (`LISTING_CARD_MIN_REM`, Zillow 344px· από αυτήν ξαναϋπολογίζει ο φρουρός της βιτρίνας). Νέα οικογένεια
+ * ⇒ νέα γραμμή εδώ, με αυθεντία· ποτέ δεύτερη γραφή του ίδιου αριθμού.
+ */
+const DECLARED_FAMILIES: Readonly<Record<string, string>> = {
+  '10rem': 'src/styles/design-tokens/modules/layout.ts',
+  '15rem': 'src/styles/design-tokens/modules/layout.ts',
+  '20rem': 'src/styles/design-tokens/modules/layout.ts',
+  '17rem': 'src/components/search-results/listing-card-frame.ts',
+};
+
 describe('Κ3 · κάθε ελάχιστο εμφανίζεται ΑΚΡΙΒΩΣ ΜΙΑ ΦΟΡΑ σε όλο το src/', () => {
   it('Κ3 · καμία δεύτερη γραφή του ίδιου αριθμού', () => {
     const sources = walkSource(SRC);
@@ -149,11 +162,9 @@ describe('Κ3 · κάθε ελάχιστο εμφανίζεται ΑΚΡΙΒΩΣ
     }
 
     // ΤΡΕΙΣ οικογένειες καρτών ⇒ τρία ελάχιστα, το καθένα σε ΜΙΑ θέση (ADR-784 §10).
-    expect([...occurrences.keys()].sort()).toEqual(['10rem', '15rem', '20rem']);
+    expect([...occurrences.keys()].sort()).toEqual(Object.keys(DECLARED_FAMILIES).sort());
     for (const [min, files] of occurrences) {
-      expect(`${min}: ${files.join(', ')}`).toBe(
-        `${min}: src/styles/design-tokens/modules/layout.ts`,
-      );
+      expect(`${min}: ${files.join(', ')}`).toBe(`${min}: ${DECLARED_FAMILIES[min]}`);
     }
   });
 
@@ -403,6 +414,22 @@ describe('Κ9 · ΚΑΘΕ εγγενής κατάλογος του src/ έχει
    */
   const EMAIL_EXEMPT = 'src/services/email-templates.service.ts';
 
+  /**
+   * 🔶 **ΔΗΛΩΜΕΝΗ ΕΞΑΙΡΕΣΗ, ΜΕ ΛΟΓΟ — ΕΝΑ ΑΡΧΕΙΟ.** Το `CARD_KPI_GRID` (ADR-777 §8.70.8) **δεν** είναι κατάλογος:
+   * είναι διακόπτης «4 στη σειρά ή 2 × 2». Το ελάχιστό του είναι `clamp(25%−…, …, 50%−…)` — **ποσοστό του
+   * περιέκτη**, άρα δομικά ≤ 100% και δεν μπορεί να ξεχειλίσει. Ένας `min(100%,…)` εκεί θα ήταν τελετουργία,
+   * όχι φρουρός. Ονομάζεται εδώ ώστε δεύτερο αρχείο που επικαλείται «ποσοστό» να κοκκινίσει (Κ9ε).
+   */
+  const PERCENT_BOUNDED_EXEMPT = 'src/components/owner-property/owner-property-stats-pending.tsx';
+  const PERCENT_CLAMP = /^clamp\(calc\(\d+%_-_[\d.]+rem\),.+,calc\(\d+%_-_[\d.]+rem\)\)$/;
+
+  /**
+   * Το **πάτωμα πεδίου** (`minWidth.field` του Tailwind) **είναι** φρουρός — `min(14rem, 100%)`. Δεκτό ΜΟΝΟ στην
+   * αυθεντία (`gridPatterns.form.fluid`)· το Κ9ζ επιβεβαιώνει ότι η τιμή του config κρατά το `100%`.
+   */
+  const FIELD_FLOOR = /^theme\(minWidth\.field\)$/;
+  const FIELD_FLOOR_AUTHORITY = 'src/styles/design-tokens/modules/layout.ts';
+
   /** ⛔ Ξένη περιοχή (άλλος ιδιοκτήτης) — **ονομάζεται**, δεν σιωπάται. */
   const isForeign = (rel: string): boolean => rel.startsWith('src/subapps/');
 
@@ -414,6 +441,8 @@ describe('Κ9 · ΚΑΘΕ εγγενής κατάλογος του src/ έχει
     | 'guarded'
     | 'zero-min'
     | 'email-exempt'
+    | 'percent-bounded'
+    | 'field-floor'
     | 'foreign-subapp'
     | 'unguarded';
 
@@ -438,6 +467,8 @@ describe('Κ9 · ΚΑΘΕ εγγενής κατάλογος του src/ έχει
     if (GUARDED.test(min)) return 'guarded';
     if (ZERO_MIN.test(min)) return 'zero-min';
     if (rel === EMAIL_EXEMPT) return 'email-exempt';
+    if (rel === PERCENT_BOUNDED_EXEMPT && PERCENT_CLAMP.test(min)) return 'percent-bounded';
+    if (rel === FIELD_FLOOR_AUTHORITY && FIELD_FLOOR.test(min)) return 'field-floor';
     if (isForeign(rel)) return 'foreign-subapp';
     return 'unguarded';
   };
@@ -447,6 +478,8 @@ describe('Κ9 · ΚΑΘΕ εγγενής κατάλογος του src/ έχει
       guarded: [],
       'zero-min': [],
       'email-exempt': [],
+      'percent-bounded': [],
+      'field-floor': [],
       'foreign-subapp': [],
       unguarded: [],
     };
@@ -485,6 +518,20 @@ describe('Κ9 · ΚΑΘΕ εγγενής κατάλογος του src/ έχει
     const emails = census().buckets['email-exempt'];
     expect(emails.length).toBeGreaterThan(0);
     for (const entry of emails) expect(entry.startsWith(EMAIL_EXEMPT)).toBe(true);
+  });
+
+  it('Κ9ε · η εξαίρεση του ποσοστιαίου clamp ισχύει για ΕΝΑ αρχείο, ονομασμένο', () => {
+    const bounded = census().buckets['percent-bounded'];
+    expect(bounded).toHaveLength(1);
+    for (const entry of bounded) expect(entry.startsWith(PERCENT_BOUNDED_EXEMPT)).toBe(true);
+  });
+
+  it('Κ9ζ · το πάτωμα πεδίου ζει ΜΟΝΟ στην αυθεντία και ΕΙΝΑΙ φρουρός (min(…, 100%))', () => {
+    const floors = census().buckets['field-floor'];
+    expect(floors).toHaveLength(1);
+    expect(floors[0].startsWith(FIELD_FLOOR_AUTHORITY)).toBe(true);
+    // Χωρίς αυτό, μια αλλαγή του config σε σκέτο «14rem» θα έκανε το πλέγμα να ξεχειλίζει, με την πύλη πράσινη.
+    expect(read('tailwind.config.ts')).toMatch(/field:\s*'min\([^']*,\s*100%\)'/);
   });
 
   it('Κ9δ · οι τρεις σταθερές του SSoT μετριούνται ως φρουρημένες', () => {

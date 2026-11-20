@@ -35,7 +35,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import { caseEngagementChangedDestination } from '@/services/conveyance/conveyance-engagement-notifier';
 import { resolveUserDisplayName } from '@/services/entity-audit.service';
-import type { DossierEngagement } from '@/types/engagement';
+import type { DossierEngagement, DossierEngagementRole } from '@/types/engagement';
 import type { DossierEngagementInvitation } from '@/types/engagement-invitation';
 import type { PropertyDossier } from '@/types/property-dossier';
 import { personalWorkspace } from '@/types/workspace-membership';
@@ -44,8 +44,43 @@ const logger = createModuleLogger('dossier-engagement-notifier');
 
 const elSharedT = createBundleTranslate({ 'common-shared': elShared }, 'common-shared', 'el');
 
-const CHANGED = 'caseEngagementChanged.dossier';
-const ANSWERED = 'caseEngagementAnswered.dossier';
+/** Η πράξη του κατόχου, όπως τη **λέει** ο τίτλος (το `ended` χωρίζεται σε ανάκληση/απόσυρση). */
+type ChangedPhrase = 'revoked' | 'withdrawn' | 'renewed' | 'reach';
+
+/**
+ * 🔑 **Στατικός κατάλογος κλειδιών** (ADR-841 §7 Α18.14 · πρακτική FormatJS `defineMessages`): κάθε κλειδί τίτλου
+ * είναι κυριολεκτικό εδώ — ποτέ template literal — ώστε να το βλέπουν το grep και η άγκυρα reachability.
+ */
+const CHANGED_TITLE_KEYS: Readonly<Record<'anonymous' | 'named', Readonly<Record<ChangedPhrase, string>>>> = {
+  anonymous: {
+    revoked: 'caseEngagementChanged.dossier.revokedTitle',
+    withdrawn: 'caseEngagementChanged.dossier.withdrawnTitle',
+    renewed: 'caseEngagementChanged.dossier.renewedTitle',
+    reach: 'caseEngagementChanged.dossier.reachTitle',
+  },
+  named: {
+    revoked: 'caseEngagementChanged.dossier.named.revokedTitle',
+    withdrawn: 'caseEngagementChanged.dossier.named.withdrawnTitle',
+    renewed: 'caseEngagementChanged.dossier.named.renewedTitle',
+    reach: 'caseEngagementChanged.dossier.named.reachTitle',
+  },
+};
+
+/** Ο τύπος απαιτεί κλειδί αποδοχής για **κάθε** ρόλο φακέλου — νέος ρόλος χωρίς κλειδί δεν μεταγλωττίζεται. */
+const ANSWERED_TITLE_KEYS: {
+  readonly accepted: Readonly<Record<DossierEngagementRole, string>>;
+  readonly declined: string;
+  readonly pending: string;
+} = {
+  accepted: {
+    owner_lawyer: 'caseEngagementAnswered.dossier.acceptedTitle.owner_lawyer',
+    notary: 'caseEngagementAnswered.dossier.acceptedTitle.notary',
+  },
+  declined: 'caseEngagementAnswered.dossier.declinedTitle',
+  pending: 'caseEngagementAnswered.dossier.invitationPendingTitle',
+};
+
+const PENDING_BODY_KEY = 'caseEngagementAnswered.dossier.invitationPendingBody';
 
 /** Μία ειδοποίηση του φακέλου — προς τον επαγγελματία **ή** προς τον κάτοχο. */
 interface DossierNotice {
@@ -95,10 +130,10 @@ export type DossierOwnerChange = 'ended' | 'renewed' | 'reach';
  * Με όνομα κατόχου ⇒ `…dossier.named.*` («{host} ανανέωσε…»)· χωρίς ⇒ η ανώνυμη φράση («Ο κάτοχος…»).
  */
 function changedTitleKey(change: DossierOwnerChange, after: DossierEngagement, named: boolean): string {
-  const base = named ? `${CHANGED}.named` : CHANGED;
-  if (change === 'renewed') return `${base}.renewedTitle`;
-  if (change === 'reach') return `${base}.reachTitle`;
-  return after.state === 'withdrawn' ? `${base}.withdrawnTitle` : `${base}.revokedTitle`;
+  const keys = CHANGED_TITLE_KEYS[named ? 'named' : 'anonymous'];
+  if (change === 'renewed') return keys.renewed;
+  if (change === 'reach') return keys.reach;
+  return after.state === 'withdrawn' ? keys.withdrawn : keys.revoked;
 }
 
 /**
@@ -158,7 +193,7 @@ export async function announceDossierInvitationAnswered(
   dossierLabel: string | null,
   answererUid: string,
 ): Promise<void> {
-  const titleKey = answer === 'accepted' ? `${ANSWERED}.acceptedTitle.${invitation.role}` : `${ANSWERED}.declinedTitle`;
+  const titleKey = answer === 'accepted' ? ANSWERED_TITLE_KEYS.accepted[invitation.role] : ANSWERED_TITLE_KEYS.declined;
   const who = await resolveUserDisplayName(answererUid, invitation.inviteeEmail);
   await dispatchDossierNotice(ownerNotice(invitation, {
     titleKey,
@@ -170,9 +205,9 @@ export async function announceDossierInvitationAnswered(
 /** ADR-901 Ε-5 — **3 ημέρες χωρίς απάντηση** ⇒ υπενθύμιση στον κάτοχο (μία φορά ανά πρόσκληση). */
 export async function announceDossierInvitationUnanswered(invitation: DossierEngagementInvitation, dossierLabel: string | null): Promise<void> {
   await dispatchDossierNotice(ownerNotice(invitation, {
-    titleKey: `${ANSWERED}.invitationPendingTitle`,
+    titleKey: ANSWERED_TITLE_KEYS.pending,
     titleParams: { title: dossierLabel ?? invitation.subject.dossierId, who: invitation.inviteeEmail },
-    bodyKey: `${ANSWERED}.invitationPendingBody`,
+    bodyKey: PENDING_BODY_KEY,
     eventId: `dossier-invitation:${invitation.id}:reminder`,
   }));
 }

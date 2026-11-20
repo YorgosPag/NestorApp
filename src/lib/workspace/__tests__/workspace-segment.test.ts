@@ -192,8 +192,9 @@ describe('Κ8 — 🔒 Η ΣΕΙΡΑ: το cookie πριν τον `user`', () =>
 
   it('Κ8β: η πλοήγηση εξακολουθεί να πυροδοτείται από τον `user` — η άγκυρα Κ8 έχει νόημα', () => {
     const source = read('src/auth/hooks/useAuthFormState.ts');
-    expect(source).toContain('router.replace(landing)');
-    expect(source).toMatch(/\[loading, user, router, landing\]/);
+    // ADR-908 (`fa8930a0`): η προσγείωση έγινε πλοήγηση ΕΓΓΡΑΦΟΥ αντί για `router.replace` — ο πυροδότης μένει ο `user`.
+    expect(source).toContain('navigateDocument(landing, { replace: true })');
+    expect(source).toMatch(/\[loading, user, landing\]/);
   });
 });
 
@@ -250,20 +251,29 @@ describe('Κ9 — 🔒 Ο σπορέας δίνει διεύθυνση στον 
 });
 
 describe('Κ10 — 🔒 Κανένας δεύτερος γραφέας', () => {
+  // ADR-807 · ADR-819 · ADR-848: το «σε ποιον χώρο;» μετακόμισε από τη σελίδα-δίχτυ στον ΕΝΑ ιδιοκτήτη,
+  // `workspace-destination.ts` (ο σύνδεσμος email `/n/{id}` χρειάστηκε την ίδια απάντηση). Οι άγκυρες ακολουθούν.
+  const DESTINATION = 'src/lib/workspace/workspace-destination.ts';
+
   it('Κ10: το δίχτυ ρωτά την αυθεντία και ΔΕΝ κατασκευάζει τμήμα μόνο του', () => {
     const net = read('src/app/(app)/[...unprefixed]/page.tsx');
+    const destination = read(DESTINATION);
 
-    expect(net).toContain('workspaceSegmentFor');
-    // 🔴 Η ακριβής τριαδική που ζούσε εδώ και παρήγαγε το 404.
-    expect(net).not.toMatch(/identity\.scope === 'organization' \? identity\.ctx\.companyId/);
+    // Η σελίδα ΑΝΑΘΕΤΕΙ — δεν ξαναχτίζει διεύθυνση.
+    expect(net).toContain('workspaceDestinationFor(identity, path)');
+    expect(net).not.toContain('workspacePath(');
+    expect(destination).toContain('workspaceSegmentFor');
+    // 🔴 Η ακριβής τριαδική που ζούσε στο δίχτυ και παρήγαγε το 404 — σε ΚΑΝΕΝΑ από τα δύο.
+    for (const source of [net, destination]) {
+      expect(source).not.toMatch(/identity\.scope === 'organization' \? identity\.ctx\.companyId/);
+    }
     // Το `workspacePath` τρέφεται **μόνο** από την αυθεντία.
-    expect(net).toMatch(/workspacePath\(resolution\.segment,/);
+    expect(destination).toMatch(/workspacePath\(resolution\.segment,/);
   });
 
   it('Κ10β: 🔴 το `unaddressable` ΔΕΝ μεταμφιέζεται σε 404', () => {
-    const net = read('src/app/(app)/[...unprefixed]/page.tsx');
     // «Ο χώρος σου δεν έχει διεύθυνση» ≠ «δεν υπάρχει» (ADR-819 §5 Α7).
-    expect(net).toMatch(/unaddressable[\s\S]{0,200}throw new Error/);
+    expect(read(DESTINATION)).toMatch(/unaddressable[\s\S]{0,200}throw new Error/);
   });
 });
 

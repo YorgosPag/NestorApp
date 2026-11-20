@@ -30,6 +30,10 @@ jest.mock('@/providers/NotificationProvider', () => ({
 jest.mock('@/hooks/catalog/useCatalogCollection', () => ({ useCatalogCollection: () => ({ state: 'ready', items: [] }) }));
 jest.mock('@/hooks/catalog/useCatalogAssetFiles', () => ({ useCatalogAssetFiles: () => ({ ready: true, byId: new Map(), byAsset: new Map() }) }));
 jest.mock('@/hooks/catalog/usePublicationsView', () => ({ usePublicationsView: jest.fn() }));
+// ADR-923 §5.15.3 — τα δημοσιευμένα έντυπα της ανοιχτής συνταγής (δική τους ανάγνωση, εδώ δεν κρίνεται).
+jest.mock('@/hooks/catalog/useCatalogEditions', () => ({
+  useOwnedCatalogEditions: () => ({ current: { state: 'ready', editions: [] }, reload: jest.fn(), revalidate: jest.fn() }),
+}));
 jest.mock('@/core/layouts', () => ({
   ListDetailsSplit: ({ list, details }: { readonly list: React.ReactNode; readonly details: React.ReactNode }) => <main>{list}{details}</main>,
 }));

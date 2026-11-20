@@ -29,6 +29,7 @@ import {
   type ClauseParameterDefinition,
   type CommercialTermBindingKey,
 } from '@/subapps/procurement/subcontracts/types/clause-parameter';
+import { gridPatterns } from '@/styles/design-tokens';
 import { ClauseParameterInput } from '../../editor/ClauseParameterInput';
 import { EditorField, issuesIdOf } from '../../editor/EditorField';
 import { FieldIssues } from '../../editor/FieldIssues';
@@ -76,7 +77,7 @@ function IdentityFields({ definition, index, issues, locked, onChange, onRename 
   const base = `param-${index}`;
   const path = joinPath('parameters', index);
   return (
-    <span className="grid grid-cols-[repeat(auto-fill,minmax(min(12rem,100%),1fr))] gap-3">
+    <span className={`grid gap-3 ${gridPatterns.form.fluid}`}>
       <EditorField id={`${base}-key`} label={t('subcontracts.library.authoring.parameter.key')} issues={issuesAt(issues, joinPath(path, 'key'))}>
         {locked
           ? <p className="m-0 flex items-center gap-1 font-mono text-sm"><Lock className="h-3 w-3" aria-hidden />{definition.key}</p>
@@ -99,7 +100,7 @@ function ValueFields({ definition, index, issues, language, onChange }: Paramete
   const sourceLabel = (choice: SourceChoice) => (choice === 'clause' ? t('subcontracts.library.parameters.ownValue') : t(`subcontracts.library.terms.${TERM_LABEL[choice]}`));
   const preferredIssues = issuesUnder(issues, joinPath(path, 'preferred'));
   return (
-    <span className="grid grid-cols-[repeat(auto-fill,minmax(min(12rem,100%),1fr))] gap-3">
+    <span className={`grid gap-3 ${gridPatterns.form.fluid}`}>
       <EditorField id={`${base}-source`} label={t('subcontracts.library.parameters.source')} issues={issuesAt(issues, joinPath(path, 'source'))}>
         <EnumSelect id={`${base}-source`} value={source} values={sources} disabled={sources.length === 1} onValueChange={(choice) => onChange(withSource(definition, choice === 'clause' ? null : choice))} getLabel={sourceLabel} />
       </EditorField>

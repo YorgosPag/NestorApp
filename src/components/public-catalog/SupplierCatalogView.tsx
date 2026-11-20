@@ -13,6 +13,7 @@ import { DEFAULT_LANGUAGE } from '@/i18n/languages';
 import { resolveLocalizedText, type LocalizedText } from '@/i18n/localized-text';
 import { listingImageSrcSet } from '@/lib/listings/listing-images';
 import { Link } from '@/lib/workspace/navigation';
+import { gridPatterns } from '@/styles/design-tokens';
 import { publicCategoryRoute, publicModelRoute, publicSegmentOf, publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import type { PublicModelCard } from '@/subapps/catalog/public/public-model-card';
 import type { ShowcaseCardPrices, ShowcaseConsumerPrice } from '@/subapps/catalog/public/showcase-price';
@@ -165,7 +166,7 @@ export function SupplierCatalogView(props: SupplierCatalogViewProps): React.JSX.
         {cards.length === 0 ? (
           <p className="m-0 text-sm text-muted-foreground">{t('supplier.empty')}</p>
         ) : (
-          <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3 p-0">
+          <ul className={`m-0 grid list-none gap-3 p-0 ${gridPatterns.cards.tile}`}>
             {cards.map((card) => <ModelCard key={card.modelId} segment={segment} card={card} fromPrice={cardPrices?.[card.modelId]} />)}
           </ul>
         )}

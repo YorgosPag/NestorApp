@@ -95,7 +95,7 @@ type LeadName =
   | 'availabilityLost'
   | 'availabilityGained';
 
-const LEADS: Readonly<Record<LeadName, Lead>> = {
+const LEAD_TITLE_KEYS: Readonly<Record<LeadName, Lead>> = {
   match: { key: 'demandListingMatch.namedTitle', manyKey: 'demandListingMatch.namedTitleMany' },
   matchReduced: { key: 'demandListingMatch.reducedNamedTitle', manyKey: 'demandListingMatch.reducedNamedTitleMany' },
   matchIntoBudget: { key: 'demandListingMatch.intoBudgetNamedTitle', manyKey: null },
@@ -296,10 +296,10 @@ export function matchAnnouncementCopy(topic: Pick<ListingTopic, 'listing' | 'rea
   const matchedAs = matchedAsSentence(metOn);
   const names = namesSentence(reasons);
   const reduction = freshReductionOf(listing, nowMs);
-  if (reduction === null) return { ...headerOf(LEADS.match, listing, reasons), body: joinSentences(names, matchedAs) };
+  if (reduction === null) return { ...headerOf(LEAD_TITLE_KEYS.match, listing, reasons), body: joinSentences(names, matchedAs) };
 
   const verdict = strongestBudgetVerdict(reasons.seeks, reduction);
-  const lead = verdict.kind === 'into-budget' ? LEADS.matchIntoBudget : LEADS.matchReduced;
+  const lead = verdict.kind === 'into-budget' ? LEAD_TITLE_KEYS.matchIntoBudget : LEAD_TITLE_KEYS.matchReduced;
   return {
     ...headerOf(lead, listing, reasons, featuredOf(verdict)),
     body: joinSentences(names, matchedAs, bodyOf(listing, reduction, verdict, reasons)),
@@ -312,8 +312,8 @@ export function matchAnnouncementCopy(topic: Pick<ListingTopic, 'listing' | 'rea
  * είναι ο πλουσιότερος λόγος (έχει όριο), και η είδηση είναι **μία**.
  */
 function priceDropLead(verdict: BudgetVerdict, reasons: AnnouncementReasons): Lead {
-  if (verdict.kind === 'into-budget') return LEADS.priceDropIntoBudget;
-  return reasons.demandIds.length === 0 ? LEADS.priceDropSaved : LEADS.priceDrop;
+  if (verdict.kind === 'into-budget') return LEAD_TITLE_KEYS.priceDropIntoBudget;
+  return reasons.demandIds.length === 0 ? LEAD_TITLE_KEYS.priceDropSaved : LEAD_TITLE_KEYS.priceDrop;
 }
 
 /**
@@ -381,7 +381,7 @@ export function availabilityChangeCopy(
   direction: AvailabilityShiftDirection,
   reasons: AnnouncementReasons,
 ): AnnouncementCopy {
-  const lead = direction === 'lost' ? LEADS.availabilityLost : LEADS.availabilityGained;
+  const lead = direction === 'lost' ? LEAD_TITLE_KEYS.availabilityLost : LEAD_TITLE_KEYS.availabilityGained;
   const names = namesSentence(reasons, 'Αφορά τις ζητήσεις σας');
   return {
     ...headerOf(lead, listing, reasons),

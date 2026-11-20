@@ -1120,7 +1120,8 @@
       "search": "Search assets",
       "none": "No suitable asset.",
       "remove": "Remove “{name}”",
-      "moveFirst": "Make “{name}” first"
+      "moveFirst": "Make “{name}” first",
+      "picker": "Choose an asset"
     },
     "references": {
       "code": "Product or model code",

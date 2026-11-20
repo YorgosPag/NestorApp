@@ -144,11 +144,11 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
     expect(content).toMatch(/retired: retired\.lookup/);
     // Η ίδια επιφάνεια και για τις δύο καταστάσεις — ποτέ δεύτερη σύνθεση για το αποσυρμένο.
     expect(content).toMatch(/state\.kind === 'found' \|\| state\.kind === 'retired'/);
-    // Οι πράξεις της αγγελίας (κοινό, ζήτηση, αντικειμενική, περιήγηση) μόνο σε ζωντανό. Είναι πλέον
+    // Οι πράξεις του ζωντανού ακινήτου (κοινό, ζήτηση, αντικειμενική, περιήγηση, παράδοση — ADR-916 §5.15) μόνο σε ζωντανό. Είναι πλέον
     // **καρτέλες**, άρα το κρίνει η ΜΙΑ σύνθεση και όχι η σελίδα: το εργοστάσιο τις δηλώνει
     // `liveRecordOnly` και η επιφάνεια τις φιλτράρει — για κάθε σημείο προσάρτησης μαζί.
     const liveOnly = createTabsConfig('properties').filter((tab) => tab.liveRecordOnly).map((tab) => tab.id);
-    expect(liveOnly).toEqual(['tour', 'listing', 'objectiveValue']);
+    expect(liveOnly).toEqual(['tour', 'listing', 'objectiveValue', 'handover']);
     const surface = read(DETAIL_SURFACE);
     expect(surface).toMatch(/offersLiveActs = !locked && !isCreatingNewUnit/);
     expect(surface).toMatch(/\.filter\(\(tab\) => offersLiveActs \|\| !tab\.liveRecordOnly\)/);

@@ -37,6 +37,56 @@ import { personalWorkspace } from '@/types/workspace-membership';
 
 jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ error: jest.fn(), warn: jest.fn(), info: jest.fn() }) }));
 
+// ─── Ο κριτής εγγραφής της Α2 — AST, με τα ΚΟΙΝΑ εργαλεία των πυλών «ενός γραφέα» ──────────────────────────────
+const { ts, sourceFileOf, walk, calleeName, lineOf } = require('../../../../scripts/lib/write-authority/ast') as {
+  readonly ts: typeof import('typescript');
+  readonly sourceFileOf: (absPath: string, text: string) => import('typescript').SourceFile;
+  readonly walk: (node: import('typescript').Node, visit: (node: import('typescript').Node) => void) => void;
+  readonly calleeName: (call: import('typescript').CallExpression) => string | null;
+  readonly lineOf: (sf: import('typescript').SourceFile, node: import('typescript').Node) => number;
+};
+type TsNode = import('typescript').Node;
+type TsExpression = import('typescript').Expression;
+
+const ENGAGEMENT_REF_FILE = 'src/lib/auth/engagement-ref.ts';
+/** Οι γεννήτορες ref συμμετοχής του `engagement-ref.ts`. */
+const REF_BUILDERS = /^(engagementRef|engagementDocOf|engagementsCollection(Of)?|dossierEngagementsCollection)$/;
+const REF_BUILDER_MENTION = /\b(engagementRef|engagementDocOf|engagementsCollection(Of)?|dossierEngagementsCollection)\(/;
+const WRITE_METHODS = new Set(['set', 'update', 'create', 'delete']);
+
+/** Δείχνει η έκφραση σε ref συμμετοχής; (γεννήτορας · `.doc()` πάνω του · τριαδικός · μεταβλητή που τον κρατά) */
+function isEngagementRef(expression: TsExpression | undefined, refs: ReadonlySet<string>): boolean {
+  if (!expression) return false;
+  if (ts.isParenthesizedExpression(expression)) return isEngagementRef(expression.expression, refs);
+  if (ts.isConditionalExpression(expression)) {
+    return isEngagementRef(expression.whenTrue, refs) || isEngagementRef(expression.whenFalse, refs);
+  }
+  if (ts.isIdentifier(expression)) return refs.has(expression.text);
+  if (!ts.isCallExpression(expression)) return false;
+  const name = calleeName(expression);
+  if (name !== null && REF_BUILDERS.test(name)) return true;
+  return name === 'doc' && ts.isPropertyAccessExpression(expression.expression)
+    && isEngagementRef(expression.expression.expression, refs);
+}
+
+/** Οι γραμμές όπου το αρχείο ΓΡΑΦΕΙ έγγραφο συμμετοχής. */
+function engagementWritesOf(file: string, text: string): readonly number[] {
+  const sf = sourceFileOf(file, text);
+  const refs = new Set<string>();
+  const lines: number[] = [];
+  walk(sf, (node: TsNode) => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && isEngagementRef(node.initializer, refs)) {
+      refs.add(node.name.text);
+    }
+    if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return;
+    if (!WRITE_METHODS.has(node.expression.name.text)) return;
+    if (isEngagementRef(node.arguments[0], refs) || isEngagementRef(node.expression.expression, refs)) {
+      lines.push(lineOf(sf, node));
+    }
+  });
+  return lines;
+}
+
 const NOW = Date.parse('2026-10-03T10:00:00.000Z');
 /** ADR-901 §14.8 — το σήμα όψεων είναι υποχρεωτικό· εδώ καταγράφεται (οι άγκυρες σήματος ζουν στο τέλος). */
 const signal = jest.fn();
@@ -299,12 +349,30 @@ describe('ADR-862 Φ1 — δομικές άγκυρες (Α2 · Α6)', () => {
     expect(builders).toEqual(['src/lib/auth/engagement-ref.ts']);
   });
 
-  it('Α2 — έγγραφο συμμετοχής ΓΡΑΦΕΙ μόνο ο ΕΝΑΣ γραφέας', () => {
-    const writers = all
-      .filter((f) => /engagementRef\(/.test(readFileSync(f, 'utf8')))
-      .map(rel)
-      .filter((f) => f !== 'src/lib/auth/engagement-ref.ts');
+  /**
+   * 🔴 **ΚΡΙΝΕΤΑΙ Η ΕΓΓΡΑΦΗ, ΟΧΙ Η ΑΝΑΦΟΡΑ** (ADR-783 Ε2). Η πρώτη γραφή ρωτούσε «αναφέρει `engagementRef(`;» ⇒
+   * κατήγγελλε την **ανάγνωση** `tx.get(engagementRef(…))` και ήταν **τυφλή** σε εγγραφή μέσω `engagementDocOf` ·
+   * `dossierEngagementsCollection(…).doc()`. Τώρα: AST, κλήση `set/update/create/delete` (και `tx.`/`batch.`) με
+   * όρισμα ή δέκτη ref συμμετοχής — ίδιο ιδίωμα με τις πύλες 3.87/3.88/3.89/3.102 (`scripts/lib/write-authority/ast.js`).
+   */
+  it('Α2 — έγγραφο συμμετοχής ΓΡΑΦΕΙ μόνο ο ΕΝΑΣ γραφέας (και ο γραφέας βρίσκεται)', () => {
+    const candidates = all.filter((f) => rel(f) !== ENGAGEMENT_REF_FILE && REF_BUILDER_MENTION.test(readFileSync(f, 'utf8')));
+    const writes = candidates.flatMap((f) => engagementWritesOf(f, readFileSync(f, 'utf8')).map((line) => `${rel(f)}:${line}`));
+    const writers = [...new Set(writes.map((w) => w.replace(/:\d+$/, '')))];
     expect(writers).toEqual(['src/lib/auth/engagement-write.ts']);
+    // Παρονομαστής: ο γραφέας γράφει με create/set σε ≥ 4 σημεία — αλλιώς ο κριτής δεν κοίταξε.
+    expect(writes.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('Α2 μετάλλαξη — ανάγνωση ≠ εγγραφή · εγγραφή μέσω κάθε γεννήτορα ref ⇒ κόκκινο', () => {
+    const judge = (body: string) => engagementWritesOf('fixture.ts', `async function f(tx, db, key, e, id) {\n${body}\n}`).length;
+    expect(judge('await tx.get(engagementRef(db, key));')).toBe(0);
+    expect(judge('await engagementsCollection(db, "c", "p").where("uid", "==", "u").get();')).toBe(0);
+    expect(judge('tx.set(engagementDocOf(db, e), e);')).toBe(1);
+    expect(judge('batch.update(engagementRef(db, key), { state: "x" });')).toBe(1);
+    expect(judge('await dossierEngagementsCollection(db, id).doc("x").update({});')).toBe(1);
+    expect(judge('const ref = c ? dossierEngagementsCollection(db, id).doc(k) : engagementRef(db, key);\nawait ref.delete();')).toBe(1);
+    expect(judge('tx.create(engagementsCollectionOf(db, home).doc(e.id), e);')).toBe(1);
   });
 
   it('Α6 — ο γραφέας ΔΕΝ αγγίζει claims', () => {

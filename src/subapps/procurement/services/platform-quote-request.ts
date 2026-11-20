@@ -60,6 +60,9 @@ const TITLE_KEY = 'quoteRequest.receivedTitle';
 const BODY_KEY = 'quoteRequest.receivedBody';
 
 async function notifyAdministrator(notice: PlatformQuoteRequestNotice, uid: string, titleParams: Record<string, string>): Promise<void> {
+  // ⚠️ ΔΕΝ ΠΑΙΡΝΕΙ `actions`, ΚΑΙ ΕΙΝΑΙ ΣΚΟΠΙΜΟ (ADR-841 §7 Α18 · ADR-876 §5): η μόνη πόρτα του αιτήματος
+  //    είναι ο σύνδεσμος πύλης, και το token του **δεν γράφεται ποτέ σε έγγραφο**· το RFQ ανήκει στον
+  //    αγοραστή. Ο σύνδεσμος ζει μόνο στο email που ήδη παραδόθηκε.
   await dispatchNotification({
     eventType: NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_REQUESTED,
     recipientId: uid,

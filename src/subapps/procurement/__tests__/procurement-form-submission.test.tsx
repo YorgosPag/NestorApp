@@ -26,7 +26,11 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
       .requireActual<typeof import('@/test-utils/i18n-mock')>('@/test-utils/i18n-mock')
       .keyEchoTranslation(),
 }));
-jest.mock('@/lib/workspace/navigation', () => ({ useRouter: () => ({ push, back: jest.fn() }) }));
+// Το `usePathname` το ζητά το `RouteTabs` της σελίδας σάρωσης (ίδιο σύνορο πλοήγησης, ADR-787).
+jest.mock('@/lib/workspace/navigation', () => ({
+  useRouter: () => ({ push, back: jest.fn() }),
+  usePathname: () => '/procurement/quotes/scan',
+}));
 // Σταθερό αντικείμενο, όπως το Next (νέο ανά render ⇒ το effect της σελίδας ξανατρέχει ⇒ ατέρμων βρόχος).
 const searchParams = new URLSearchParams();
 jest.mock('next/navigation', () => ({ useSearchParams: () => searchParams }));

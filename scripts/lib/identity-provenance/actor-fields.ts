@@ -69,6 +69,7 @@ export const ACTOR_FIELD_NAMES: readonly string[] = [
   'filterBy',
   'handledBy',
   'holdPlacedBy',
+  'holdReleasedBy',
   'initiatedBy',
   'issuedBy',
   'lastModifiedBy',

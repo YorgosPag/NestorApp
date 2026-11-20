@@ -22,6 +22,10 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 jest.mock('@/auth', () => ({
   useAuth: () => ({ user: { companyId: undefined }, loading: false }),
 }));
+// Το σήμα αδιάβαστων του μενού είναι ζωντανός ακροατής (σύνορο I/O)· εδώ δεν κρίνεται ⇒ «κανένα αδιάβαστο».
+jest.mock('@/hooks/network-messaging/useNetworkUnreadCount', () => ({
+  useNetworkUnreadCount: () => ({ count: 0, atLeast: false }),
+}));
 jest.mock('@/lib/workspace/navigation', () => ({
   Link: ({ href, children, onClick, className }: {
     href: string;

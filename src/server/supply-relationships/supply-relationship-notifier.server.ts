@@ -26,7 +26,7 @@ import { viewDestination, type NotificationDestination } from '@/lib/notificatio
 import { createModuleLogger } from '@/lib/telemetry';
 import { readWorkspaceName } from '@/lib/workspace/workspace-catalog';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
-import { CATALOG_PAGES, SUPPLIERS_TAB_QUERY } from '@/subapps/catalog/catalog-routes';
+import { CATALOG_PAGES, supplierConnectionsHref } from '@/subapps/catalog/catalog-routes';
 import type { SupplyRelationship, SupplyRelationshipSide } from '@/subapps/catalog/types/supply-relationship';
 import { orgWorkspace } from '@/types/workspace-membership';
 
@@ -38,7 +38,7 @@ const elSharedT = createBundleTranslate({ 'common-shared': elShared }, 'common-s
 export function supplyConnectionDestination(relationship: Pick<SupplyRelationship, 'companyId' | 'buyerCompanyId'>, side: SupplyRelationshipSide): NotificationDestination {
   return side === 'supplier'
     ? viewDestination(CATALOG_PAGES.connections, orgWorkspace(relationship.companyId))
-    : viewDestination(`${CATALOG_PAGES.connections}${SUPPLIERS_TAB_QUERY}`, orgWorkspace(relationship.buyerCompanyId));
+    : viewDestination(supplierConnectionsHref(),orgWorkspace(relationship.buyerCompanyId));
 }
 
 /** Ο παραλήπτης της έγκρισης είναι όποιος ζήτησε: έτσι ξαναβρίσκεται η πλευρά του από το έγγραφο. */

@@ -65,7 +65,20 @@ describe('Π — η οθόνη λέει την αλήθεια', () => {
 
   it('Π2 🔴 — υποχρεωτικοί τύποι: ΚΑΝΕΝΑΣ διακόπτης, «Πάντα» και στις δύο στήλες, ορατή εξήγηση', () => {
     renderMatrix();
-    expect(MANDATORY_ROWS).toHaveLength(4);
+    // ΔΕΥΤΕΡΗ ΦΩΝΗ, ΟΝΟΜΑΣΤΙΚΗ: ήταν σκέτο «4» και πάλιωσε σιωπηλά όσο έμπαιναν υποχρεωτικοί τύποι
+    // (ADR-835 · 841 · 892 · 900 · 943). Η λίστα λέει ΠΟΙΟΣ μπήκε — όχι μόνο ότι άλλαξε ένας αριθμός.
+    expect(MANDATORY_ROWS.map((row) => row.path).sort()).toEqual([
+      'properties.caseEngagementChanged',
+      'properties.stayRequestAnswered',
+      'properties.stayRequestReceived',
+      'security.newDeviceLogin',
+      'security.ownershipLost',
+      'security.passwordChange',
+      'security.payoutDetailsChanged',
+      'security.suspiciousActivity',
+      'security.twoFactorChange',
+      'security.workspaceMembershipEnded',
+    ]);
     for (const row of MANDATORY_ROWS) {
       expect(document.getElementById(`${preferenceRowId(row.path)}-notify`)).toBeNull();
       expect(document.getElementById(`${preferenceRowId(row.path)}-email`)).toBeNull();

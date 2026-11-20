@@ -360,7 +360,8 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
       'είναι διαθέσιμη»: δεν εκδίδεται κουπόνι πρόσβασης, άρα κανένα showcase/αρχείο με κωδικό δεν ' +
       'ανοίγει. Οι σύνδεσμοι ΧΩΡΙΣ κωδικό δεν επηρεάζονται — γι\' αυτό η βλάβη φαίνεται μόνο σε ' +
       'όποιον προστάτεψε τον σύνδεσμό του, δηλαδή στους πιο ευαίσθητους.',
-    consumer: 'src/server/sharing/share-access-grant.ts',
+    // Το όνομα ζει στο κοινό κουπόνι πρόσβασης (`ACCESS_GRANT_SECRET_ENV`)· το `share-access-grant.ts` το επανεξάγει.
+    consumer: 'src/server/access-grant/access-grant.ts',
   },
   {
     name: 'GEMI_OPENDATA_API_KEY',

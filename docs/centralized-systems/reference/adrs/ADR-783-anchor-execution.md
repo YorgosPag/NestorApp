@@ -574,6 +574,119 @@ be mounted`)*. Το πρώτο σφάλμα **έκρυβε** το δεύτερο
 
 ## 12. Changelog
 
+- **2026-11-20** — **Ένταξη Β+Ε+Δ, Ο5ε**: οι δηλώσεις `MemoryHintNote` · `ProposalFieldRow` στο
+  `DECLARED_EMPHASIS_TERNARIES` (ομάδα Β) **σβήστηκαν** — το `6f1a9f3e` του `main` (ADR-770 §19.4) αφαίρεσε τις ίδιες τις
+  τριαδικές (`variant="outline"` + `COLOR_BRIDGE.action`), και το ratchet κατά ταυτότητα ζητά «μίκρυνε τη δήλωση».
+
+- **2026-11-20** — **ΟΜΑΔΑ Δ — 28 μπαγιάτικα tests, ο κώδικας σωστός** (run `44566553459`). Κάθε αιτία επαληθεύτηκε στο
+  log **και** στον σημερινό κώδικα· mocks μόνο στα σύνορα I/O, αλλιώς η αληθινή συνάρτηση (`containerActorOf` ·
+  `isPersonOwnedParent` μέσω `requireActual`). (i) **Fixtures** (7): `names: []` στην περιοχή · `advance: null` · ο
+  φρουρός κλειδώματος θέλει το αποθηκευμένο έγγραφο (ADR-249 §7) · `'pending'` εκτός `USER_STATUSES` (ADR-660 §6) ⇒
+  `'inactive'` · ανάγνωση με κλειδί εγγράφου (`getData`) · σταθερή ταυτότητα ανάγνωσης. (ii) **Mocks/providers** (7).
+  (iii) **Σκόπιμες αλλαγές** (6): οι αποφασισμένες γραμμές ζουν στο `ProposalDecidedLines` (§5.5.2 Β5.2) — το test
+  αποδίδει πλέον **και τις δύο** λίστες όπως το `ProposalReview`, αλλιώς η «Αναίρεση» θα έμενε **χωρίς κανένα test** ·
+  `portal → web` (ADR-939) γράφτηκε ρητά · ονόματα εμφάνισης του μητρώου (ADR-893) με ακριβή ισότητα · πλοήγηση
+  εγγράφου (ADR-908) · Σ1 του `identity-provenance` **αφαιρέθηκε** (ADR-660 §6: το route δεν φιλτράρει πια τίποτα). (iv)
+  **Άγκυρες** (5) + **Κ10** του `workspace-segment` → `workspace-destination.ts`. (v) 🔴 **Parser** `cron-route-contract`:
+  εργασία χωρίς `run:` (`superseded`) δανειζόταν το `run:` της **επόμενης** ⇒ το `public-catalog-sweep` **δεν ελεγχόταν
+  ποτέ** (36 = 36 με άλλο περιεχόμενο)· πλέον κρίση ανά τμήμα. (vi) **Αριθμοί**: «4» → **ονομαστική** λίστα 10
+  υποχρεωτικών · Χ4.1 «> ½» → «> 0» (ADR-770 §18). (vii) **`environment-contract`** = απόκλιση ρυθμίσεων, όχι test
+  (έγκριση Giorgio): καταναλωτής `SHARE_ACCESS_SECRET` → `access-grant.ts` · `STAY_ICAL_FEED_SECRET` στο `.env.example`
+  · `EVERYPAY_*` → `your_…` · `PAYMENTS_PROVIDER_MODE=` κενό. ⚠️ Μάθημα εργαλείου: εξαγωγέας με όριο 60 γραμμών ανά
+  suite **έκρυψε** 2 αποτυχίες (Κ10 · `review.modelCode`) — τις έπιασε μόνο η εκτέλεση. Πράσινα: 28 suites.
+
+- **2026-11-20** — **ΟΜΑΔΑ Ε2 #11 — i18n-ssr-golden Γ1/Γ1ε** (ADR-875 §10.6, run `44566553459`).
+  12 νέα δυναμικά πρότυπα χωρίς απόφαση. (i) 5 της υπεργολαβίας (ADR-928) δένονται με 3 νέες οντότητες `api`
+  (`sccl` · `sctt` · `sca`). Μάρτυρας με `db.set` θα παραβίαζε το CHECK 3.113, οπότε η σπορά γίνεται **μέσω API της
+  εικόνας**: εκδότης (`PUT /api/accounting/setup`) → βιβλιοθήκη → έγκριση των προτάσεων → πρότυπα → συμφωνητικό
+  `single_project`. (ii) Συμβόλαιο τύπου Pact: τα σώματα είναι καθαροί κατασκευαστές (`scripts/lib/emulator/
+  golden-subcontracts.ts`, πρόχειρο από το `draftFromTemplate`) και η άγκυρα **Γ10α-ε** τα κρίνει με τους κριτές του
+  server (zod των routes · `judgeAgreementDraft` · κριτής setup, που εξήχθη σε `company-setup-input.ts`). (iii) Τα 7
+  `/suppliers/[alias]/**` δηλώνονται `DOMAIN_FIXTURE`. Πράσινες: `i18n-ssr-golden` · `accounting-setup-route`
+  (67/67). ⏳ Η τελική απόδειξη είναι ο χρησμός 3.51 στο CI.
+- **2026-11-20** — **ΟΜΑΔΑ Ε2 #10 — ownership-callsite-coverage-anchor** (ADR-742 §7terdecies, run `44566553459`).
+  25 αταξινόμητα + 2 μπαγιάτικα. (i) Ο `CALL_PATTERN` μετρά **και** το `ownedOrNull(` (περιτύλιγμα του SSoT στο
+  ίδιο `tenant-ownership.ts`) ⇒ 45 σημεία προς ταξινόμηση. (ii) `procurement-handler` (Φάση Γ) **ξαναβρέθηκε**, όχι
+  σβήστηκε: νέο πεδίο `callsiteIn` ⇒ η κλήση ζει στο `po-tenant-scope.ts` (`findOwnedPO`, `d5a7b50a`), η σουίτα
+  ασκεί τον φράχτη αληθινό· η περίμετρος μένει 13 (10+3). (iii) `rfq-service` → `vendor-recipient` (`a8f96e3f`).
+  (iv) `PROVEN`: μόνο το `vendor-invite-resolver` (Α3′ κενό/κενό· μετάλλαξη μετρημένη κόκκινη· η σουίτα ονομάζει
+  πλέον τη διαδρομή). Το `vendor-invite-service` **όχι**: γρ. 218 (`revokeVendorInvite`) χωρίς ζεύγος. (v) Τα
+  υπόλοιπα 43 στο `OUTSIDE` με ADR+commit. Κανένα πραγματικό κενό ιδιοκτησίας (ανάγνωση). + έλεγχος ότι νέο σπίτι
+  κλήσης δεν δηλώνεται και «εκτός». Πράσινες: η σουίτα + `vendor-invite-resolver/service` · `ownership-empty-pair-*` ·
+  `ownership-upstream-guarded` · `resource-concealment-anchor` · `tenant-ownership`.
+- **2026-11-20** — **ΟΜΑΔΑ Ε2 #8 — notification-title-key-reach Κ0β/Κ2** (ADR-841 §7 Α18.14, run `44566553459`).
+  Ο εξαγωγέας ήταν τυφλός σε 11 παραγωγούς (σκέτο `TITLE_KEY` · `TITLE_KEY: Record<…>` · ternary μέσα σε αντικείμενο ·
+  έμμεση πηγή) και μάζευε το `'accepted'` από **σύγκριση**, κρύβοντας ότι ο `dossier-engagement-notifier` συνέθετε
+  κλειδιά με template literal. Θεραπεία (πρακτική FormatJS `defineMessages` / i18next-parser): **στατικοί κατάλογοι
+  κλειδιών στους παραγωγούς** — `INTEREST_TITLE_KEYS` · `CHANGED_TITLE_KEYS`/`ANSWERED_TITLE_KEYS` (ο τύπος απαιτεί
+  κλειδί για **κάθε** `DossierEngagementRole`) · `SCAN_COMPLETED_TITLE_KEYS` · `VENDOR_DECLINED_TITLE_KEYS` ·
+  `LEAD_TITLE_KEYS` (μετονομασία του `LEADS`) · `CASE_NOTICE_TITLE_KEYS` στο `conveyance-case-notice` με **τύπο** στην
+  παράμετρο του `caseNoticeCopy` (οι 3 ειδοποιητές υπόθεσης ζητούν από τον κατάλογο). Ο εξαγωγέας διαβάζει
+  `const …TITLE_KEY(S) = '…' | {…}` τοπικά **και** σε εισαγόμενα modules, και αφαιρεί τα μέλη συγκρίσεων. Το Κ0β
+  **δεν** αποδυναμώθηκε. + άγκυρα Κ0γ (σύγκριση ⇒ όχι κλειδί · template literal ⇒ κανένα · κατάλογος ⇒ όλα).
+  Κάθε κλειδί υπάρχει σε el+en (Κ2). Πράσινες: η σουίτα (267) + 35 αδελφές (conveyance · demand · dossier ·
+  comms · notification-title · quotes/vendor · destination-custody).
+- **2026-11-20** — **ΟΜΑΔΑ Ε2 #7 — engagement-anchor Α2** (ADR-862 Φ1, run `44566553459`). Ο κριτής «ΕΝΑΣ γραφέας
+  συμμετοχής» ρωτούσε «αναφέρει `engagementRef(`;» ⇒ κατήγγελλε την **ανάγνωση** `tx.get(engagementRef(…))` του
+  `issuance-engagement-action.server.ts:77` και ήταν **τυφλός** σε εγγραφή μέσω `engagementDocOf` ·
+  `engagementsCollectionOf` · `dossierEngagementsCollection(…).doc()`. Τώρα **AST**: κλήση `set/update/create/delete`
+  με όρισμα ή δέκτη ref συμμετοχής (γεννήτορας · `.doc()` πάνω του · τριαδικός · μεταβλητή που τον κρατά), με τα
+  κοινά `sourceFileOf`/`walk`/`calleeName`/`lineOf` του `scripts/lib/write-authority/ast.js`. Παρονομαστής: ≥ 4 εγγραφές
+  στο `engagement-write.ts`. + άγκυρα μετάλλαξης (7 fixtures: ανάγνωση/ερώτημα ⇒ 0 · κάθε γεννήτορας ⇒ 1).
+  Πράσινες: η σουίτα (30) + `engagement-dossier-anchor` · `acting-workspace` · `dossier-access-routes` ·
+  `contact-engagement-link-accounts`.
+- **2026-11-20** — **ΟΜΑΔΑ Ε2 #9 — notification-destination-custody** (ADR-841 §7 Α18 · ADR-849 §6δ, run `44566553459`).
+  (α) **Κ1 ψευδώς θετικό**: 4 παραγωγοί (`listing-availability-change-notifier` · `listing-price-drop-notifier` ·
+  `dossier-engagement-notifier` · `stay-booking-notifier.service`) απλώνουν `...x.destination`, πεδίο τύπου
+  `NotificationDestination` **υποχρεωτικό** ⇒ το `declaresDestination` το δέχεται. (β) **Κ2 ψευδώς θετικό**: γυμνή
+  σταθερά SSoT (`AGENCY_SHOWCASE_CARD_ROUTE` · `PRIVATE_PROFILE_ROUTE`) ⇒ δεκτή **ολόκληρο το όρισμα** (`$`), ώστε
+  σύνθεση να μην περνά. (γ) **Κ2 πραγματικό**: `supply-relationship-notifier.server.ts` συνέθετε
+  `` `${CATALOG_PAGES.connections}${SUPPLIERS_TAB_QUERY}` `` ⇒ βοηθός `supplierConnectionsHref()` στο
+  `catalog-routes.ts` (η `SUPPLIERS_TAB_QUERY` έγινε ιδιωτική). (δ) **Δηλωμένη φράση** «ΔΕΝ ΠΑΙΡΝΕΙ `actions`» με
+  λόγο σε `member-exit-notifier` (χωρίς πρόσβαση ⇒ 403) · `platform-quote-request` (token ADR-876 §5) ·
+  `new-sign-in-notifier` (ο προσωπικός χώρος δεν έχει σελίδα συσκευών· `/account/security` μόνο σε `o/[workspace]`).
+  Πράσινες: η σουίτα (123) + `server/workspace` · `server/supply-relationships` · catalog routes/navigation.
+- **2026-11-19** — **ΟΜΑΔΑ Ε1 — 6 ΜΗΤΡΩΑ/ΔΗΛΩΣΕΙΣ, ΚΑΜΙΑ ΠΑΡΑΒΙΑΣΗ ΣΕ ΚΩΔΙΚΑ ΠΑΡΑΓΩΓΗΣ** (run `44566553459`).
+  Κάθε αιτία επαληθεύτηκε στο log και στις αδελφές άγκυρες της ίδιας σουίτας.
+  (1) **acting-workspace Α48**: `supply-buyer-office.server.ts` διαβάζει `.actingFor` του **αποτελέσματος**
+  του `resolveActingFor` (ADR-923 §5.12) — ίδιο σχήμα με τις δύο πόρτες ⇒ γραμμή στο κλειστό σύνολο με λόγο.
+  (2) **firebase-emulator-destination Κ2 — ψευδώς θετικό**: το ADR-807 `.md` (tracked από `5b3ef4fa`)
+  μετρούσε ως γραφέας ⇒ η τεκμηρίωση δεν είναι εκτελέσιμο κείμενο (`.md`/`.mdx` → `''`)· νέα άγκυρα
+  «η ΤΕΚΜΗΡΙΩΣΗ δεν είναι γραφέας»· ο παρονομαστής (`git grep`) ακέραιος.
+  (3) **workspace-scope-gate Μ0β/Μ0γ/Ι7**: οι 7 νομικές οθόνες πήγαν στο `(light)` (`cb214338`) ⇒ σβήστηκαν
+  από το `.workspace-scope.json` (ΟΧΙ από το `OUTSIDE_WORKSPACE`, που καλύπτει όλα τα groups). Ι7 «moved > 100»
+  μπαγιάτικο από `4279ed42` (baseline με πρόθεμα, 19 μετακινούμενα) ⇒ «> 0»· `workspace-scope.test.ts` Ε2
+  «> 10» ⇒ «> 0» (παρονομαστής, όχι καρφωμένο πλήθος). Οι Κ2/Μ1/Μ4 έπαιρναν το `terms` ως δείγμα δηλωμένης
+  εξαίρεσης ⇒ δείγμα `onboarding`.
+  (4) **property-card-route Α10**: καρτέλα `handover` `liveRecordOnly` (ADR-916 §5.15, `f215cc70`) ⇒ στη λίστα.
+  (5) **no-hand-floor-labels**: δύο fixtures γκαλερί έγραφαν «· 2ος όροφος» ⇒ αφαιρέθηκε (όχι νέα εξαίρεση).
+  (6) **identity-provenance-actor-fields ΑΦ1**: 17/18 «ονόματα» ήταν κλειδιά μετάφρασης του **παραγόμενου**
+  `src/types/i18n.ts` ⇒ ο σαρωτής παραλείπει παραγόμενα αρχεία με το **υπάρχον** `isGeneratedSource`
+  (`scripts/lib/address-vocabulary/type-index.js`)· +`holdReleasedBy` (`file-record.ts`, γραφέας από `input.actor.uid`).
+  Πράσινες τοπικά: οι 6 σουίτες + `workspace-scope.test.ts`.
+- **2026-11-19** — **ΟΜΑΔΑ Β — 8 ΠΥΛΕΣ ΠΟΥ ΚΟΚΚΙΝΙΣΕ ΝΕΟΣ ΚΩΔΙΚΑΣ** (run `44566553459`). Κάθε αιτία
+  επαληθεύτηκε στο log· κάθε θεραπεία πάει από **υπάρχον** SSoT, κανένας νέος βοηθός.
+  (1) **defpoints**: `dxf-truth.ts` → `dimDefPoints(e)`. (2) **popover-naming**: `AssetPickerPopover`
+  `aria-label` = νέο κλειδί `catalog:values.assets.picker` (el/en). (3) **leave-guard**: δήλωση
+  `NewAgreementDialog` («η σύμβαση δημιουργήθηκε») + μετονομασία `MobileDetailsSlideIn` →
+  `details-sheet-frame`. (4) **uom**: `ScheduleFields` στο `ALLOWED` — `RECURRENCE_UNITS` είναι
+  μονάδες **χρόνου**. (5) **ops-claims-mirror — ψευδώς θετικό**: το read-only
+  `audit-identity-provenance.ts` ανέφερε το `setCustomUserClaims` **σε σχόλιο** ⇒ η πύλη περνά από
+  το `stripComments` του `scripts/lib/source-text.js`. (6) **5C**: η άγκυρα που διατρέχει το
+  `RENDERABLE_ENTITY_TYPES` λεγόταν `vector-pdf-print-pass` ⇒ `git mv` σε
+  `vector-pdf-print-coverage.test.ts` (ολόκληρη: τα `jest.mock` δεν μοιράζονται με ασφάλεια, και η
+  σκηνή-δείγμα είναι όλο το πεδίο)· τα κλειδιά του CHECK 3.64 μετονομάστηκαν, το hash αμετάβλητο.
+  (7) **Ο5ε** (ξεχωριστό «ναι»): `MemoryHintNote` · `ProposalFieldRow` τονίζουν την **κύρια
+  ενέργεια** (`primaryOptionIndex`), όχι πατημένη κατάσταση ⇒ `DECLARED_EMPHASIS_TERNARIES`.
+  (8) **catalog-grid** — 🔴 **ΔΙΟΡΘΩΘΗΚΕ ΔΙΚΗ ΜΟΥ ΠΡΟΒΛΕΨΗ**: η ανάποδη γραφή `min(Xrem,100%)` **δεν**
+  ήταν ψευδώς θετικό του Κ9· έκρυβε **πέντε** ιδιωτικά ελάχιστα από το Κ3 (9·10·12·14·17rem). Θεραπεία:
+  δημόσιος κατάλογος (4) → `gridPatterns.cards.tile` · φάκελοι → `.media` · φόρμες υπεργολαβίας (4)
+  → **νέο `gridPatterns.form.fluid`**, με ελάχιστο το **υπάρχον** πάτωμα πεδίου `minWidth.field`
+  (`min(14rem, 100%)`, ADR-797) — όχι πέμπτος αριθμός · κάρτα αγγελίας 17rem → **δηλωμένη οικογένεια**
+  του Κ3 (`DECLARED_FAMILIES`, αυθεντία `listing-card-frame.ts`) · `CARD_KPI_GRID` (clamp σε
+  ποσοστά, δομικά ≤ 100%) → δηλωμένη εξαίρεση ενός αρχείου (Κ9ε) · πάτωμα πεδίου μόνο στην αυθεντία
+  και με `100%` στο config (Κ9ζ) · fixture του `shell-surface-prose-lists` χτίζεται από το
+  `gridPatterns.cards.media`.
 - **2026-11-19** — **ΟΜΑΔΑ Γ — 18 ΚΟΚΚΙΝΑ ΠΟΥ ΗΤΑΝ ΤΟΥ ΠΕΡΙΒΑΛΛΟΝΤΟΣ, ΟΧΙ ΤΟΥ ΚΩΔΙΚΑ** (run
   `44566553459`). Κάθε αιτία **επαληθεύτηκε στο log**, όχι στο handoff — και το log διόρθωσε
   τρεις φορές την πρόβλεψη. Κοινό σχήμα: *πράσινο τοπικά, κόκκινο στον runner*.

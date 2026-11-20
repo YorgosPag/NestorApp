@@ -22,7 +22,7 @@ import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import type { ConveyanceContribution } from '@/types/conveyance-contribution';
 import type { ConveyanceEngagement } from '@/types/engagement';
-import { caseNoticeCopy, noticeToEngaged, noticeToHost, type CaseNoticeCopy } from './conveyance-case-notice';
+import { CASE_NOTICE_TITLE_KEYS, caseNoticeCopy, noticeToEngaged, noticeToHost, type CaseNoticeCopy } from './conveyance-case-notice';
 
 const FEATURE = 'conveyance-transmittal';
 
@@ -37,7 +37,7 @@ function transmittalEventId(contributionId: string, recipientUid: string): strin
 }
 
 function copyOf(notice: TransmittalNotice): CaseNoticeCopy {
-  const titleKey = notice.contribution.supersedes === null ? 'caseDocument.title' : 'caseDocument.revisionTitle';
+  const titleKey = notice.contribution.supersedes === null ? CASE_NOTICE_TITLE_KEYS.document : CASE_NOTICE_TITLE_KEYS.documentRevision;
   const titleParams = { title: notice.propertyName ?? notice.record.id, document: notice.contribution.file.displayName };
   return caseNoticeCopy(titleKey, titleParams, `caseDocument.body.${notice.contribution.authorRole}`);
 }

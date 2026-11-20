@@ -32,10 +32,19 @@ import { writeFileSync } from 'node:fs';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { generateDeterministicSubcontractClauseId, generateDeterministicSubcontractClauseVersionId } from '@/services/enterprise-id.service';
 
+import {
+  GOLDEN_CLAUSE_KEYS,
+  GOLDEN_CLAUSE_VERSION,
+  goldenAgreementBody,
+  goldenApproveBody,
+  goldenIssuerSetupBody,
+  goldenSubcontractIds,
+} from './lib/emulator/golden-subcontracts';
 import { AUTH_HOST, PROJECT_ID, SEED_CREDENTIAL, runSeeder } from './lib/emulator/identity';
-import { COMPANY_ALIAS, COMPANY_ID, ORACLE_REPRESENTATIVES, PERSONAS, oracleClassOf } from './lib/emulator/personas';
+import { COMPANY_ALIAS, COMPANY_ID, COMPANY_NAME, ORACLE_REPRESENTATIVES, PERSONAS, oracleClassOf } from './lib/emulator/personas';
 import {
   GOLDEN_MARK,
   WITNESS_COLLECTIONS,
@@ -79,10 +88,10 @@ function assertLoopbackTarget(): void {
   if (!LOOPBACK_HOSTS.has(new URL(BASE_URL).hostname)) fail(`η εικόνα «${BASE_URL}» ΔΕΝ είναι loopback — καμία εγγραφή εκτός μηχανής`);
 }
 
-/** POST στην εικόνα ως `company_admin`· κάθε μη-επιτυχία ⇒ `throw` με όνομα διαδρομής. */
-async function post(session: ApiSession, route: string, body: unknown): Promise<Record<string, unknown>> {
+/** Αίτημα στην εικόνα ως `company_admin`· κάθε μη-επιτυχία ⇒ `throw` με όνομα διαδρομής. */
+async function send(method: 'POST' | 'PUT', session: ApiSession, route: string, body: unknown): Promise<Record<string, unknown>> {
   const response = await fetch(`${BASE_URL}${route}`, {
-    method: 'POST',
+    method,
     headers: {
       authorization: `Bearer ${session.idToken}`,
       'content-type': 'application/json',
@@ -97,6 +106,8 @@ async function post(session: ApiSession, route: string, body: unknown): Promise<
   }
   return payload;
 }
+
+const post = (session: ApiSession, route: string, body: unknown): Promise<Record<string, unknown>> => send('POST', session, route, body);
 
 function field(payload: Record<string, unknown>, route: string, ...path: string[]): string {
   let cursor: unknown = payload;
@@ -153,6 +164,55 @@ async function createPoShareToken(session: ApiSession, purchaseOrderId: string):
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 2β. Η υπεργολαβία (ADR-928) — ΕΝΑΣ γραφέας ανά έγγραφο (CHECK 3.113), άρα ΜΟΝΟ από το API.
+//     Τα σώματα ζουν στο `lib/emulator/golden-subcontracts.ts`, όπου τα κρίνει η άγκυρα Γ10.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type SubcontractGoldenIds = ReturnType<typeof goldenSubcontractIds> & { readonly subcontractAgreement: string };
+
+const LIBRARY_SEED_ROUTE = '/api/subcontracts/library/seed';
+
+/**
+ * Η σπορά βιβλιοθήκης γράφει τις ρήτρες ως **προτάσεις** (προτείνων ο `DEFAULT_LIBRARY_PROPOSER`)· ο admin τις
+ * εγκρίνει όπως ο άνθρωπος — τέσσερα μάτια, γιατί δεν είναι ο προτείνων. Ιδεμποτικό: χωρίς ανοιχτή πρόταση ⇒ καμία
+ * κλήση. Η ανάγνωση (ρήτρα · αναθεώρηση έκδοσης) είναι ανάγνωση, όχι εγγραφή· γράφει μόνο το API.
+ */
+async function approveSeededClauses(db: Firestore, session: ApiSession): Promise<void> {
+  for (const clauseKey of GOLDEN_CLAUSE_KEYS) {
+    const clauseId = generateDeterministicSubcontractClauseId(COMPANY_ID, clauseKey);
+    const clauseRef = db.collection(COLLECTIONS.SUBCONTRACT_CLAUSES).doc(clauseId);
+    const proposal: unknown = (await clauseRef.get()).get('openProposal');
+    if (typeof proposal === 'number') {
+      const versionId = generateDeterministicSubcontractClauseVersionId(clauseId, proposal);
+      const revision: unknown = (await clauseRef.collection(SUBCOLLECTIONS.SUBCONTRACT_CLAUSE_VERSIONS).doc(versionId).get()).get('revision');
+      if (typeof revision !== 'number') fail(`η πρόταση ${proposal} της ρήτρας ${clauseKey} δεν έχει αναθεώρηση`);
+      await post(session, `/api/subcontracts/clauses/${clauseId}/versions/${proposal}/approve`, goldenApproveBody(revision));
+    }
+    // Το συμβόλαιο (Γ10) κρίθηκε με αυτή την έκδοση σε ισχύ: άλλη ⇒ άρνηση, ποτέ σιωπηλή απόκλιση.
+    const current: unknown = (await clauseRef.get()).get('currentVersion');
+    if (current !== GOLDEN_CLAUSE_VERSION) fail(`η ρήτρα ${clauseKey} έχει σε ισχύ την έκδοση ${String(current)}, όχι ${GOLDEN_CLAUSE_VERSION}`);
+  }
+}
+
+/** Ρήτρες → έγκριση → ξανά σπορά: τα πρότυπα γράφονται μόνο όταν οι ρήτρες τους είναι εγκεκριμένες. */
+async function seedApprovedLibrary(db: Firestore, session: ApiSession): Promise<void> {
+  await post(session, LIBRARY_SEED_ROUTE, {});
+  await approveSeededClauses(db, session);
+  const report = (await post(session, LIBRARY_SEED_ROUTE, {})).data as { templatesPending?: unknown[] } | undefined;
+  if (!report || !Array.isArray(report.templatesPending)) fail(`${LIBRARY_SEED_ROUTE}: η απάντηση δεν έχει templatesPending`);
+  if (report.templatesPending.length > 0) fail(`${LIBRARY_SEED_ROUTE}: πρότυπα σε εκκρεμότητα μετά την έγκριση: ${JSON.stringify(report.templatesPending)}`);
+}
+
+/** Εκδότης (προφίλ λογιστικής) → βιβλιοθήκη → συμφωνητικό στο golden έργο. */
+async function seedSubcontracts(db: Firestore, session: ApiSession, projectId: string, contactId: string): Promise<SubcontractGoldenIds> {
+  await send('PUT', session, '/api/accounting/setup', goldenIssuerSetupBody(COMPANY_NAME));
+  await seedApprovedLibrary(db, session);
+  const route = '/api/subcontracts/agreements';
+  const body = goldenAgreementBody({ companyId: COMPANY_ID, projectId, subcontractorContactId: contactId });
+  return { ...goldenSubcontractIds(COMPANY_ID), subcontractAgreement: field(await post(session, route, body), route, 'data', 'id') };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 3. Η βαθμίδα `witness` + η σύνθεση
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -191,6 +251,7 @@ async function seedGolden(auth: Auth, db: Firestore): Promise<GoldenIds> {
     purchaseOrder,
     poShareToken: await createPoShareToken(session, purchaseOrder),
     attendanceToken: await createAttendanceToken(session, projectId),
+    ...(await seedSubcontracts(db, session, projectId, contactId)),
     ...GOLDEN_VALUES,
   } as GoldenIds;
 }

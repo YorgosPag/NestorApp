@@ -32,6 +32,12 @@ const logger = createModuleLogger('VENDOR_PORTAL_DECLINE_API');
 
 const MAX_REASON_CHARS = 1000;
 
+/** Τα κλειδιά τίτλου της ειδοποίησης — στατικός κατάλογος (ADR-841 §7 Α18.14). */
+const VENDOR_DECLINED_TITLE_KEYS = {
+  known: 'common-shared:quoteNotifications.vendorDeclined',
+  unknown: 'common-shared:quoteNotifications.vendorDeclinedUnknownVendor',
+} as const;
+
 async function readReason(request: NextRequest): Promise<string | null> {
   const body: unknown = await request.json().catch(() => null);
   if (!body || typeof body !== 'object') return null;
@@ -46,10 +52,7 @@ function notifyPm(opened: OpenVendorInvite): void {
       const rfq = await getRfq(invite.companyId, invite.rfqId);
       if (!rfq) return;
       // ADR-327: ΕΝΑ κλειδί → τίτλος· πρόσκληση χωρίς όνομα ΚΑΙ email ⇒ «ένας προμηθευτής», ποτέ κενό όνομα.
-      const title = vendorNotificationTitle(vendorSnapshotFromInvite(invite).name, {
-        known: 'common-shared:quoteNotifications.vendorDeclined',
-        unknown: 'common-shared:quoteNotifications.vendorDeclinedUnknownVendor',
-      }, { rfqTitle: rfq.title });
+      const title = vendorNotificationTitle(vendorSnapshotFromInvite(invite).name, VENDOR_DECLINED_TITLE_KEYS, { rfqTitle: rfq.title });
       await dispatchProcurementNotification(
         NOTIFICATION_EVENT_TYPES.PROCUREMENT_VENDOR_DECLINED,
         rfq.createdBy,

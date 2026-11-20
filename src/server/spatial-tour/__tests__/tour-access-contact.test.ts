@@ -13,7 +13,11 @@
 jest.mock('server-only', () => ({}));
 jest.mock('@/server/auth/account-identities', () => ({ readAccountIdentities: jest.fn() }));
 jest.mock('@/services/ai-pipeline/shared/contact-lookup-search', () => ({ findContactByEmail: jest.fn() }));
-jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { recordChange: jest.fn() } }));
+// Το `resolvePerformer` (ίχνος γέννησης) λύνει το όνομα του δράστη από το ΙΔΙΟ module — σύνορο I/O, άρα mock.
+jest.mock('@/services/entity-audit.service', () => ({
+  EntityAuditService: { recordChange: jest.fn() },
+  resolveUserDisplayName: jest.fn(async (_uid: string, emailFallback: string | null) => emailFallback),
+}));
 
 import type { Firestore } from 'firebase-admin/firestore';
 

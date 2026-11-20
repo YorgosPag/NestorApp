@@ -35,7 +35,7 @@ export function AssetPickerPopover({ assets, files, text, onPick }: AssetPickerP
     return wanted === '' ? assets : assets.filter((asset) => normalizeSearchText(`${asset.code} ${text(asset.labels, '')}`.toLowerCase()).includes(wanted));
   }, [assets, query, text]);
   return (
-    <PopoverContent className="grid w-80 gap-2">
+    <PopoverContent className="grid w-80 gap-2" aria-label={t('values.assets.picker')}>
       <Input aria-label={t('values.assets.search')} placeholder={t('values.assets.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
       <ul className="m-0 grid max-h-64 list-none gap-1 overflow-auto p-0">
         {shown.length === 0 ? <li className="text-sm text-muted-foreground">{t('values.assets.none')}</li> : shown.map((asset) => {

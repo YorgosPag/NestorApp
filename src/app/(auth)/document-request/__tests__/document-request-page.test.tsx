@@ -26,6 +26,7 @@ const VIEW = {
   quote: {
     basis: 'firm', amountMinor: 10_000, vatRatePercent: 24, vatIncluded: false, validUntil: '2026-12-31',
     scope: ['issuance'], note: null, deliveryBusinessDays: 5, revision: 1, previousTotalMinor: null, signingDay: null,
+    advance: null,
   },
 };
 /** Ο φάκελος προσφοράς του επαγγελματία — κλειστή λίστα, ποτέ ιδιοκτήτης ή ακριβής διεύθυνση. */

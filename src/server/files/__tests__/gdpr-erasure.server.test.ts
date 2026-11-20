@@ -45,7 +45,8 @@ let fake: FakeFirestore;
 const db = (): AdminFirestore => fake as unknown as AdminFirestore;
 
 function stored(collection: string, id: string): Record<string, unknown> {
-  return fake.all<Record<string, unknown>>(collection).find((doc) => doc.id === id) ?? {};
+  // Με το ΚΛΕΙΔΙ του εγγράφου, όχι με πεδίο `id` — τα σχόλια/κοινοποιήσεις δεν κουβαλούν `id` στο σώμα τους.
+  return fake.getData(collection, id) ?? {};
 }
 
 function seedCompanyFile(id: string, extra: Record<string, unknown> = {}): void {

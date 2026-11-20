@@ -13,6 +13,7 @@ import React from 'react';
 
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { Link } from '@/lib/workspace/navigation';
+import { gridPatterns } from '@/styles/design-tokens';
 import { publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import type { PublicPortfolioProject } from '@/subapps/catalog/public/public-supplier-profile';
 
@@ -51,7 +52,7 @@ export function PublicProjectView({ segment, legalName, project }: PublicProject
       {rest.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="m-0 text-lg font-semibold">{t('project.photos')}</h2>
-          <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3 p-0">
+          <ul className={`m-0 grid list-none gap-3 p-0 ${gridPatterns.cards.tile}`}>
             {rest.map((image) => <li key={image.assetId}><ProjectImage image={image} title={title} className="w-full rounded-sm object-contain" /></li>)}
           </ul>
         </section>

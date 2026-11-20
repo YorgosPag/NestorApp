@@ -16,6 +16,7 @@ import { isAppFeatureEnabled } from '@/config/feature-flags';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { quotableSkuAddress } from '@/lib/navigation/procurement-urls';
 import { Link } from '@/lib/workspace/navigation';
+import { gridPatterns } from '@/styles/design-tokens';
 import type { PublicCatalogAttribute, PublicCatalogMedia, PublicCatalogModel, PublicCatalogValue } from '@/subapps/catalog/public/public-catalog-schema';
 import { publicSupplierRoute } from '@/subapps/catalog/public/public-catalog-routes';
 import { publicModelTitle } from '@/subapps/catalog/public/public-model-card';
@@ -62,7 +63,7 @@ function MediaRow({ media, fallbackAlt }: { readonly media: readonly PublicCatal
   const { text } = usePublicCatalogText();
   if (media.length === 0) return null;
   return (
-    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3 p-0">
+    <ul className={`m-0 grid list-none gap-3 p-0 ${gridPatterns.cards.tile}`}>
       {media.map((item) => <li key={item.assetId}><img src={item.url} alt={text(item.labels) || fallbackAlt} loading="lazy" className="w-full rounded-sm object-contain" /></li>)}
     </ul>
   );

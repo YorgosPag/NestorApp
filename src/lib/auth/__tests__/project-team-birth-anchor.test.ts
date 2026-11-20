@@ -51,6 +51,7 @@ import type { AuthContext } from '../types';
 import { writeProjectBirth } from '@/app/api/projects/list/project-birth';
 import { resolveContainerProject } from '@/lib/files/container-project';
 import { transitionContainer } from '@/services/iso19650/container-transitions';
+import { containerActorOf } from '@/services/iso19650/container-transition-vocabulary';
 import { backfillProjectTeams } from '@/app/api/admin/migrations/backfill-project-members/backfill-project-members-operations';
 
 const COMPANY = 'comp_alpha';
@@ -263,7 +264,8 @@ describe('Α30 — σε ποιο έργο ζει το δοχείο', () => {
 
 describe('Α31 — ο γραφέας κατάστασης σφραγίζει έργο + ομάδα', () => {
   const FILE = 'file_plan';
-  const actor = { uid: CREATOR, companyId: COMPANY, globalRole: 'internal_user', permissions: ['iso19650:containers:share'] };
+  // Ο δράστης από την ΙΔΙΑ κατασκευή με κάθε διαδρομή (`containerActorOf`, ADR-866 Β3) — χειρόγραφο σχήμα έμεινε χωρίς `custody`.
+  const actor = containerActorOf({ ...caller(CREATOR), permissions: ['iso19650:containers:share'] });
   const share = () => transitionContainer({ fileId: FILE, act: 'share', actor } as never);
 
   beforeEach(() => {

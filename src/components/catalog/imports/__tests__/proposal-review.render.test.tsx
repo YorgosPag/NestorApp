@@ -122,10 +122,12 @@ describe('ProposalReview', () => {
   it('η διόρθωση στέλνει το νέο κείμενο της πηγής, μόνο αν άλλαξε', () => {
     const value = proposal([row([field()])]);
     const { onChange } = setup(value);
-    fireEvent.click(screen.getByRole('button', { name: '1.8 kW' }));
+    // §5.5.2 Β7 (`c88249f2`): το όνομα του κουμπιού λέει ΤΙ διορθώνεις· η τιμή μένει το ορατό του κείμενο.
+    expect(screen.getByRole('button', { name: 'review.editValue' })).toHaveTextContent('1.8 kW');
+    fireEvent.click(screen.getByRole('button', { name: 'review.editValue' }));
     fireEvent.blur(screen.getByRole('textbox'));
     expect(onChange).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: '1.8 kW' }));
+    fireEvent.click(screen.getByRole('button', { name: 'review.editValue' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '2,7 kW' } });
     fireEvent.blur(screen.getByRole('textbox'));
     expect(onChange).toHaveBeenCalledWith(value, { edits: [{ rowKey: 'r0', targetKey: importTargetKey(target), text: '2,7 kW' }] });
@@ -226,7 +228,8 @@ describe('ProposalReview', () => {
   it('χωρίς κωδικό μοντέλου ζητά τον κωδικό, και τον στέλνει', () => {
     const value = proposal([row([field()])], { modelCode: null });
     const { onChange } = setup(value);
-    fireEvent.change(screen.getByLabelText('review.modelCode'), { target: { value: 'mfp' } });
+    // Η ΕΝΟΤΗΤΑ φέρει πια το ίδιο όνομα (`aria-label`) με το πεδίο ⇒ στοχεύεται το πεδίο με τον ρόλο του.
+    fireEvent.change(screen.getByRole('textbox', { name: 'review.modelCode' }), { target: { value: 'mfp' } });
     fireEvent.click(screen.getByRole('button', { name: 'review.setModelCode' }));
     expect(onChange).toHaveBeenCalledWith(value, { modelCode: 'mfp' });
   });

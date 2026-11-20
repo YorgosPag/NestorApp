@@ -88,9 +88,17 @@ const DESTINATION_SSOT = path.join(SRC_ROOT, 'lib', 'notifications', 'notificati
  */
 const DECLARED_NO_DESTINATION = 'ΔΕΝ ΠΑΙΡΝΕΙ `actions`, ΚΑΙ ΕΙΝΑΙ';
 
-/** Δηλώνει προορισμό: κυριολεκτικό `actions: [` ή βοηθό `...xxxDestination(`. */
+/**
+ * Δηλώνει προορισμό: κυριολεκτικό `actions: [`, βοηθό `...xxxDestination(`, ή **πεδίο** `...x.destination`
+ * (ο καλών έχει ήδη λύσει τον προορισμό σε πεδίο τύπου `NotificationDestination`, υποχρεωτικό — ο τύπος
+ * εγγυάται ότι δεν λείπει· ADR-783 Ε2).
+ */
 function declaresDestination(source: string): boolean {
-  return /\n\s*actions:\s*\[/.test(source) || /\.\.\.\s*\w+Destination\(/.test(source);
+  return (
+    /\n\s*actions:\s*\[/.test(source) ||
+    /\.\.\.\s*\w+Destination\(/.test(source) ||
+    /\.\.\.\s*[\w.]*\.destination\b/.test(source)
+  );
 }
 
 const ACTION_BLOCKS = /\n\s*actions:\s*\[[^\]]*\]/g;
@@ -102,8 +110,11 @@ function viewDestinationArgs(source: string): readonly string[] {
     .map((m) => m[2].trim());
 }
 
-/** Η διαδρομή ζητείται από SSoT: βοηθός `…Href(` ή σταθερά μητρώου (`ENTITY_ROUTES.…`). */
-const ROUTE_FROM_SSOT = /^(\w+Href\(|[A-Z][A-Z_]*\.[\w.]+)/;
+/**
+ * Η διαδρομή ζητείται από SSoT: βοηθός `…Href(`, σταθερά μητρώου (`ENTITY_ROUTES.…`) ή **γυμνή** σταθερά
+ * διαδρομής (`PRIVATE_PROFILE_ROUTE`) — ολόκληρο το όρισμα, ώστε σύνθεση (`` `${X}${Y}` ``) να μην περνά.
+ */
+const ROUTE_FROM_SSOT = /^(\w+Href\(|[A-Z][A-Z_]*\.[\w.]+|[A-Z][A-Z0-9_]*$)/;
 
 // =============================================================================
 

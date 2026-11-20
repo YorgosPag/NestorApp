@@ -96,7 +96,7 @@ async function manifestTextOf(protocolId: string, shape: ManifestShape): Promise
     schema: shape === 'foreign-schema' ? 'acme.transmittal.v9' : HANDOVER_PROTOCOL_MANIFEST_SCHEME,
     protocol: { id: protocolId, revision: 2, supersedes: { id: protocolIdOf(0), revision: 1 }, issuedAt: ISSUED_AT },
     issuer: { name: 'Κατασκευαστική Παράδειγμα Α.Ε.' },
-    property: { label: 'Διαμέρισμα Α2 · 2ος όροφος', appurtenances: [] },
+    property: { label: 'Διαμέρισμα Α2', appurtenances: [] },
     recipient: { name: 'Μαρία Παπαδοπούλου' },
     events: { saleCompletedAt: ISSUED_AT, invitationAcceptedAt: ISSUED_AT, deliveryStartedAt: ISSUED_AT, deliveryCompletedAt: ISSUED_AT },
     legalText: { document: 'handover-protocol', version: 1, digest: 'sha256:'.padEnd(71, 'e'), path: '/handover-protocol/versions/1' },

@@ -119,7 +119,8 @@ describe('Ε — η δήλωση αποδεικνύεται, δεν διαβάζ
     //    είναι διεύθυνση. Δεν είναι εξαίρεση βολικότητας: είναι ακριβώς η
     //    διαφορά των δύο ερωτημάτων, γραμμένη.
     const declared = Object.keys(gate.outsideWorkspace).filter(s => !isDynamicSegment(s));
-    expect(declared.length).toBeGreaterThan(10); // παρονομαστής: δεν είναι άδειο
+    // παρονομαστής: δεν είναι άδειο (ΟΧΙ καρφωμένο πλήθος — οι 7 νομικές οθόνες έφυγαν στο `(light)`, `cb214338`)
+    expect(declared.length).toBeGreaterThan(0);
 
     for (const seg of declared) {
       expect(seg in OUTSIDE_WORKSPACE).toBe(true);

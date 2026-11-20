@@ -27,6 +27,9 @@ const {
   CLAIMS_UPDATED_AT_FIELD,
   USERS_COLLECTION,
 } = require('../_shared/setClaimsWithMirror');
+// Η ΜΙΑ αφαίρεση σχολίων: ένα script που ΤΕΚΜΗΡΙΩΝΕΙ «κανένα setCustomUserClaims» δεν είναι καλών
+// (μετρημένο 2026-11-19: το read-only `audit-identity-provenance.ts` κοκκίνιζε από το docblock του).
+const { stripComments } = require('../lib/source-text');
 
 const REPO = path.join(__dirname, '..', '..');
 const SCRIPTS = path.join(REPO, 'scripts');
@@ -109,7 +112,7 @@ describe('Σ — το συμβόλαιο έγινε μηχανικό', () => {
   }
 
   const offenders = scriptFiles()
-    .filter((p) => fs.readFileSync(p, 'utf8').includes('setCustomUserClaims'))
+    .filter((p) => stripComments(fs.readFileSync(p, 'utf8')).includes('setCustomUserClaims'))
     .map((p) => path.relative(SCRIPTS, p).split(path.sep).join('/'));
 
   test('Σ0 — ΠΑΡΟΝΟΜΑΣΤΗΣ: ο σαρωτής όντως βλέπει αρχεία', () => {

@@ -12,6 +12,7 @@
 import React from 'react';
 
 import { Link } from '@/lib/workspace/navigation';
+import { gridPatterns } from '@/styles/design-tokens';
 import type { PublicCatalogMedia } from '@/subapps/catalog/public/public-catalog-schema';
 import { publicProjectRoute, publicSegmentOf } from '@/subapps/catalog/public/public-catalog-routes';
 import { publicProjectTitle, type PublicPortfolioProject, type PublicSupplierProfile } from '@/subapps/catalog/public/public-supplier-profile';
@@ -68,7 +69,7 @@ export function SupplierPortfolio({ segment, profile }: { readonly segment: stri
   return (
     <section id={SUPPLIER_PORTFOLIO_ANCHOR} className="flex scroll-mt-20 flex-col gap-3">
       <h2 className="m-0 text-lg font-semibold">{t('supplier.portfolio')}</h2>
-      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3 p-0">
+      <ul className={`m-0 grid list-none gap-3 p-0 ${gridPatterns.cards.tile}`}>
         {profile.projects.map((project) => <ProjectCard key={project.projectId} segment={segment} project={project} />)}
       </ul>
     </section>

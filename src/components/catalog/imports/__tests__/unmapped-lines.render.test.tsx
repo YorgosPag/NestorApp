@@ -8,6 +8,7 @@ import { lineKeyOf } from '@/subapps/catalog/import/page-line-overrides';
 import type { ImportLineOverride, ImportPageUnmappedLine } from '@/subapps/catalog/types/catalog-import';
 import type { ImportProposalWire } from '@/subapps/catalog/types/catalog-import-requests';
 import { markBundlesComplete } from '@/test-utils/i18n-mock';
+import { ProposalDecidedLines } from '../ProposalDecidedLines';
 import { ProposalUnmappedLines } from '../ProposalUnmappedLines';
 import type { LineActivity } from '../use-line-decisions';
 
@@ -15,6 +16,13 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));
 jest.mock('../../shared/catalog-ui-hooks', () => ({ useCatalogCanManage: () => true }));
+// Το κείμενο της απόφασης (`useLineDecisionText`) διαβάζει τις ιδιότητες του καταλόγου — εδώ καμία (αγνόηση · τιμή).
+jest.mock('@/hooks/catalog/useCatalogCollection', () => ({ useCatalogCollection: () => ({ items: [] }) }));
+// Το `ProposalDecidedLines` ρωτά τον ουδέτερο αναγνώστη πρόσβασης (ταυτότητα = σύνορο)· τα υπόλοιπα μένουν τα αληθινά.
+jest.mock('../../shared/catalog-neutral-hooks', () => ({
+  ...jest.requireActual<typeof import('../../shared/catalog-neutral-hooks')>('../../shared/catalog-neutral-hooks'),
+  useCatalogAccess: () => 'granted',
+}));
 // §5.5.2 Β8 βήμα Β: η λίστα γράφει την αιτία από το κοινό `review-reason-text`, που ζητά τα μηνύματα ευρημάτων — εδώ ο κωδικός τους.
 jest.mock('../import-issue-messages', () => ({ useImportIssueMessage: () => (issue: { readonly code: string }) => issue.code }));
 jest.mock('../import-surfaces', () => ({
@@ -43,9 +51,18 @@ interface SetupOptions {
 function setup(options: SetupOptions = {}) {
   const handlers = { onFocusLine: jest.fn(), onDecideLine: jest.fn() };
   const value = options.value ?? proposal();
+  const activity = options.activity ?? new Map();
+  const decidable = value.status === 'pending';
+  // §5.5.2 Β5.2 (`231e37cb`): όπως στο `ProposalReview` — εκκρεμείς γραμμές εδώ, αποφασισμένες (και αγνοημένες) στο
+  // `ProposalDecidedLines`. Κάθε γραμμή ζει σε ΑΚΡΙΒΩΣ μία από τις δύο.
   render(
-    <ProposalUnmappedLines proposal={value} lines={[LINE]} overrides={options.overrides} activity={options.activity ?? new Map()} activeLine={null}
-      decidable={value.status === 'pending'} pricesEnabled={options.pricesEnabled} {...handlers} />,
+    <>
+      <ProposalUnmappedLines proposal={value} lines={[LINE]} overrides={options.overrides} activity={activity} activeLine={null}
+        decidable={decidable} pricesEnabled={options.pricesEnabled} {...handlers} />
+      <ProposalDecidedLines proposal={value} lines={[LINE]} overrides={options.overrides} activity={activity}
+        onDecideLine={handlers.onDecideLine} pricesEnabled={options.pricesEnabled} decidable={decidable}
+        activeLine={null} onFocusLine={handlers.onFocusLine} />
+    </>,
   );
   return handlers;
 }

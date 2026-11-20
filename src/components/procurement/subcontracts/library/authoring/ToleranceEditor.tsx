@@ -22,6 +22,7 @@ import { toleranceTextOf } from '@/subapps/procurement/subcontracts/library/tole
 import { toleranceRulerOf, type RulerZone } from '@/subapps/procurement/subcontracts/library/tolerance-ruler';
 import type { SubcontractIssue } from '@/subapps/procurement/subcontracts/clauses/clause-issues';
 import type { ClauseParameterDefinition, ClauseParameterTolerance, NumericTolerance, OptionTolerance } from '@/subapps/procurement/subcontracts/types/clause-parameter';
+import { gridPatterns } from '@/styles/design-tokens';
 import { EditorField } from '../../editor/EditorField';
 import { FieldIssues } from '../../editor/FieldIssues';
 import { useToleranceWords } from '../ClauseText';
@@ -102,7 +103,7 @@ function BoundField({ definition, ...props }: ScaledFieldProps & { readonly defi
 function NumericBounds({ id, definition, tolerance, onChange }: { readonly id: string; readonly definition: ClauseParameterDefinition; readonly tolerance: NumericTolerance; readonly onChange: (next: NumericTolerance) => void }) {
   const { t } = useTranslation('procurement');
   return (
-    <span className="grid grid-cols-[repeat(auto-fill,minmax(min(9rem,100%),1fr))] gap-3">
+    <span className={`grid gap-3 ${gridPatterns.form.fluid}`}>
       {BOUNDS.map((bound) => (
         <EditorField key={bound} id={`${id}-${bound}`} label={t(`subcontracts.library.authoring.tolerance.bounds.${bound}`)}>
           <BoundField id={`${id}-${bound}`} definition={definition} nullable value={boundValue(tolerance, bound)} onValueChange={(value) => onChange(withBound(tolerance, bound, value))} placeholder={t('subcontracts.library.authoring.tolerance.noLimit')} />

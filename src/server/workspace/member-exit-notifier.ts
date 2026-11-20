@@ -87,6 +87,9 @@ export async function announceMemberExit(notice: MemberExitNotice): Promise<void
   const wording = WORDING_BY_KIND[notice.kind];
   try {
     const params = { office: await readWorkspaceName(notice.companyId) };
+    // ⚠️ ΔΕΝ ΠΑΙΡΝΕΙ `actions`, ΚΑΙ ΕΙΝΑΙ ΣΚΟΠΙΜΟ (ADR-841 §7 Α18 · ADR-892 §3.6 #3): ο άνθρωπος δεν έχει
+    //    πια πρόσβαση στο γραφείο — ένας σύνδεσμος εκεί θα ήταν 403· στον προσωπικό χώρο δεν υπάρχει
+    //    τίποτα να ανοίξει. Το μήνυμα είναι ολόκληρο στο σώμα.
     await dispatchNotification({
       eventType: NOTIFICATION_EVENT_TYPES.SECURITY_WORKSPACE_MEMBERSHIP_ENDED,
       recipientId: notice.uid,

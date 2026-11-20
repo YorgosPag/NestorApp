@@ -247,7 +247,16 @@ export const gridPatterns = {
     triple: 'lg:grid-cols-3',
     gap: 'gap-4',
     fullDouble: 'grid gap-4 grid-cols-1 md:grid-cols-2',
-    fullTriple: 'grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+    fullTriple: 'grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+    /**
+     * **Ρευστό πλέγμα πεδίων** — όσες στήλες χωράει ο **περιέκτης**, όχι το παράθυρο (Every Layout «RAM»).
+     * Το ελάχιστο **δεν** είναι δεύτερος αριθμός: είναι το πάτωμα πεδίου `minWidth.field` του
+     * `tailwind.config.ts` (`min(14rem, 100%)`, ADR-797 §Φ.Ρ.3), το ίδιο που φορά κάθε πεδίο σε γραμμή
+     * που αναδιπλώνεται. Μέχρι τις 2026-11-19 τέσσερις φόρμες υπεργολαβίας έγραφαν **τέσσερα** δικά τους
+     * ελάχιστα (9 · 10 · 12 · 14rem), και η ανάποδη γραφή `min(X,100%)` τα έκρυβε από το Κ3 της
+     * `catalog-grid-ssot` (ADR-783 changelog).
+     */
+    fluid: 'grid-cols-[repeat(auto-fill,minmax(theme(minWidth.field),1fr))]',
   }
 } as const;
 

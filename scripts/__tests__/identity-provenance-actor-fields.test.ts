@@ -23,6 +23,10 @@ import { describe, it, expect } from '@jest/globals';
 
 import { ACTOR_FIELD_NAMES } from '../lib/identity-provenance/actor-fields';
 
+// Η ΜΙΑ κρίση «παραγόμενο αρχείο» (κεφαλίδα `@generated` / `Auto-generated`) — ίδια με την πύλη λεξιλογίου διευθύνσεων.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { isGeneratedSource } = require('../lib/address-vocabulary/type-index') as { isGeneratedSource: (text: string) => boolean };
+
 /** Τα δέντρα όπου ζουν οι δηλώσεις τύπων του τομέα. */
 const SCANNED_TREES = ['src/types', 'src/services', 'src/lib'] as const;
 
@@ -77,6 +81,9 @@ function actorFieldsInTree(): Set<string> {
   for (const tree of SCANNED_TREES) {
     for (const file of listTypeScriptFiles(join(process.cwd(), tree))) {
       const source = readFileSync(file, 'utf8');
+      // ⚠️ Το παραγόμενο `src/types/i18n.ts` δηλώνει ΚΛΕΙΔΙΑ μετάφρασης (`reviewedBy: string;`), όχι πεδία δρώντα:
+      //    17 από τα 18 «ονόματα που λείπουν» ήταν από εκεί. Δεν είναι χαλάρωση — δεν είναι τύπος δεδομένων.
+      if (isGeneratedSource(source)) continue;
       for (const match of source.matchAll(ACTOR_DECLARATION)) {
         const name = match.groups?.name;
         if (name && looksLikeActorField(name)) found.add(name);

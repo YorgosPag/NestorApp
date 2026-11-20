@@ -227,6 +227,12 @@ export interface PlaceAnnouncement {
   readonly rounded: boolean;
 }
 
+/** Τα κλειδιά τίτλου — στατικός κατάλογος (ADR-841 §7 Α18.14)· ο `rounded` διαλέγει, δεν συνθέτει. */
+const INTEREST_TITLE_KEYS = {
+  exact: 'demandInterest.notificationTitle',
+  atLeast: 'demandInterest.notificationTitleAtLeast',
+} as const;
+
 /**
  * Το θέμα του email — **μία** διατύπωση, σε **μία** θέση.
  *
@@ -304,7 +310,7 @@ export async function announceOnePlace(
     // αποδίδει με `useTranslation(COMMON_NAMESPACES)`, οπότε το κλειδί ζει στο
     // `common-shared` — ένα `search-results:` πρόθεμα εδώ **δεν θα έλυνε**, γιατί
     // εκείνο το namespace δεν είναι φορτωμένο στον drawer.
-    titleKey: rounded ? 'demandInterest.notificationTitleAtLeast' : 'demandInterest.notificationTitle',
+    titleKey: rounded ? INTEREST_TITLE_KEYS.atLeast : INTEREST_TITLE_KEYS.exact,
     titleParams: { count: String(count), title: propertyTitle },
     // 🔑 **Η ΖΩΝΗ, ποτέ το ωμό πλήθος** — αυτό, και μόνο αυτό, κάνει την επανάληψη
     // δομικά αδύνατη. Δες `lib/demand/demand-announcement.ts`.

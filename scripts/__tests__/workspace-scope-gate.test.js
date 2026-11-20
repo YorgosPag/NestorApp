@@ -43,7 +43,7 @@ const FIXTURE_FILES = ['.workspace-scope.json', 'src/lib/workspace/workspace-pat
  * @param appPages σελίδες **σχετικές με το `src/app`**, σε **οποιοδήποτε** group — ό,τι
  *   χρειάζεται ο Κ3 για να δει και τους δύο κόσμους (π.χ. `(me)/projects`)
  */
-function miniRepo(edits = {}, pages = ['projects', 'contacts', 'admin', 'terms'], appPages = []) {
+function miniRepo(edits = {}, pages = ['projects', 'contacts', 'admin', 'onboarding'], appPages = []) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ws360-'));
 
   for (const rel of FIXTURE_FILES) {
@@ -113,9 +113,9 @@ describe('Κ — τα δύο κριτήρια', () => {
   });
 
   it('Κ2: δηλωμένη εξαίρεση μετριέται ΕΚΤΟΣ', () => {
-    const root = miniRepo({}, ['projects', 'admin', 'terms']);
+    const root = miniRepo({}, ['projects', 'admin', 'onboarding']);
     const m = gate.measure([], root);
-    expect(byState(m)['declared-outside']).toBe(2); // admin + terms
+    expect(byState(m)['declared-outside']).toBe(2); // admin + onboarding
     expect(byState(m)['unprefixed-in-scope']).toBe(1); // projects
   });
 
@@ -215,8 +215,8 @@ describe('Σ — κανόνας Κ3: τμήμα με ΔΥΟ ιδιοκτήτες
 describe('Μ — μεταλλάξεις στις ΕΙΣΟΔΟΥΣ', () => {
   it('Μ1: 🔴 εξαίρεση ΧΩΡΙΣ λόγο ⇒ η πύλη ΑΡΝΕΙΤΑΙ', () => {
     const root = miniRepo(
-      { '.workspace-scope.json': (s) => s.replace(/"why": "ΔΗΜΟΣΙΑ ΝΟΜΙΚΗ ΟΘΟΝΗ — ίδιος λόγος[^"]*"/, '"why": ""') },
-      ['terms'],
+      { '.workspace-scope.json': (s) => s.replace(/"why": "Ο ΑΝΘΡΩΠΟΣ ΦΤΑΝΕΙ ΕΔΩ[^"]*"/, '"why": ""') },
+      ['onboarding'],
     );
     expect(() => gate.measure([], root)).toThrow(/δεν έχει λόγο/);
   });
@@ -247,7 +247,7 @@ describe('Μ — μεταλλάξεις στις ΕΙΣΟΔΟΥΣ', () => {
   it('Μ4: αν αφαιρεθεί εξαίρεση, ο φάκελος γίνεται ΕΝΤΟΣ (fail-closed)', () => {
     const root = miniRepo(
       { '.workspace-scope.json': (s) => s.replace(/\s*"admin": \{[\s\S]*?\},\n/, '\n') },
-      ['admin', 'terms'],
+      ['admin', 'onboarding'],
     );
     const m = gate.measure([], root);
     expect(byState(m)['unprefixed-in-scope']).toBe(1);
@@ -335,6 +335,9 @@ describe('Ι — ο ισομορφισμός (ADR-787 §5.3 στ)', () => {
     const r = judgeIdentityShift({ before: baseline.violations, after, shift: shiftLive });
     expect(r.verdict).toBe('move');
     // Και ΚΑΤΙ μετακινήθηκε — αλλιώς το «move» θα ήταν κενή δήλωση.
-    expect(r.moved).toBeGreaterThan(100);
+    // ⚠️ ΟΧΙ «> 100»: από το `4279ed42` η baseline γεννιέται ήδη με πρόθεμα (586/723 είναι `/o/…`) και το
+    //    `shiftUrl` είναι idempotent (Ι6) ⇒ μετακινούνται μόνο όσα μένουν χωρίς πρόθεμα και εντός χώρου.
+    //    Ο παρονομαστής φυλάγεται στο `violations.length` παραπάνω· εδώ αρκεί «όχι κενό».
+    expect(r.moved).toBeGreaterThan(0);
   });
 });

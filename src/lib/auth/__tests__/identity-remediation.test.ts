@@ -110,9 +110,10 @@ describe('Θ1 — κάθε πράξη γεννά την ΑΚΡΙΒΗ αναίρ�
   it('Θ1.2 — η αναίρεση ΑΚΟΛΟΥΘΕΙ το έγγραφο, δεν το μαντεύει', () => {
     // Ίδια ετυμηγορία, ΑΛΛΟ έγγραφο ⇒ ΑΛΛΗ αναίρεση. Αν το inverse ήταν
     // καρφωμένο, αυτό θα το αποκάλυπτε.
-    const other = { ...GHOST, globalRole: 'internal_user', status: 'pending' } as const;
+    // ⚠️ Έγκυρη, μη ενεργή κατάσταση: το `'pending'` βγήκε από το `USER_STATUSES` (ADR-660 §6) ⇒ θα διαβαζόταν `null`.
+    const other = { ...GHOST, globalRole: 'internal_user', status: 'inactive' } as const;
     const plan = planOf(planRemediation('x', 'document-without-account', other, 1));
-    expect(plan.inverse.patch).toEqual({ globalRole: 'internal_user', status: 'pending' });
+    expect(plan.inverse.patch).toEqual({ globalRole: 'internal_user', status: 'inactive' });
   });
 
   it('Θ1.3 — έγγραφο ΧΩΡΙΣ ρόλο: η αναίρεση ΕΠΑΝΑΦΕΡΕΙ το null, δεν επινοεί ρόλο', () => {

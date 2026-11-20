@@ -206,8 +206,12 @@ describe('συμβόλαιο cron routes (ADR-740)', () => {
       const source = readScheduleSource();
       const entries = new Map<string, string>();
       // Το `slug:` και το `run:` ζουν στο ίδιο αντικείμενο, με πεδία ανάμεσά τους.
-      for (const match of source.matchAll(/slug:\s*'([^']+)'[\s\S]*?run:\s*(\w+)/g)) {
-        if (!entries.has(match[1])) entries.set(match[1], match[2]);
+      // ⚠️ ΚΑΘΕ ΔΗΛΩΣΗ ΚΡΙΝΕΤΑΙ ΜΕΣΑ ΣΤΟ ΔΙΚΟ ΤΗΣ ΤΜΗΜΑ (ως το επόμενο `slug:`): μια απενεργοποιημένη
+      //    εργασία ΧΩΡΙΣ `run:` (π.χ. `superseded`) αλλιώς «δανειζόταν» το `run:` της ΕΠΟΜΕΝΗΣ — μετρημένο
+      //    2026-11-19: `purge-deleted-contacts` ⇒ `runPublicCatalogSweep`.
+      for (const match of source.matchAll(/slug:\s*'([^']+)'((?:(?!\bslug:)[\s\S])*)/g)) {
+        const run = /run:\s*(\w+)/.exec(match[2]);
+        if (run && !entries.has(match[1])) entries.set(match[1], run[1]);
       }
       return entries;
     }

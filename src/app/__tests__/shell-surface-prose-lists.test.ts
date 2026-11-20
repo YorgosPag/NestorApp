@@ -23,6 +23,9 @@
 import fs from 'fs';
 import path from 'path';
 
+// Η ΠΡΑΓΜΑΤΙΚΗ κλάση καταλόγου (SSoT), όχι αντίγραφό της: το Κ3 της catalog-grid-ssot απαγορεύει δεύτερη γραφή.
+import { gridPatterns } from '@/styles/design-tokens';
+
 const CSS = fs.readFileSync(
   path.join(process.cwd(), 'src/app/shell-surface.css'),
   'utf8',
@@ -76,7 +79,7 @@ describe('Π1 — ΟΙ ΛΙΣΤΕΣ ΔΙΑΤΑΞΗΣ ΕΞΑΙΡΟΥΝΤΑΙ', ()
 
   it('🔴 το ΠΛΕΓΜΑ της ρίζας δεν παίρνει απόσταση παραγράφου', () => {
     const host = build(
-      '<ul class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4 p-0">' +
+      `<ul class="m-0 grid list-none ${gridPatterns.cards.media} gap-4 p-0">` +
         '<li id="a"></li><li id="b"></li></ul>',
     );
     expect(host.querySelector('#b')!.matches(proseSpacingSelector())).toBe(false);

@@ -170,8 +170,9 @@ describe('Φάση Β′ — ο δήμος βγαίνει από την αλυσ
     const admin = body.admin as readonly { level: number; id: string; name: string }[];
     expect(admin).toBeDefined();
     expect(admin.find((l) => l.level === 5)?.id).toBe('municipality:0701');
-    // Το όνομα είναι του **μητρώου**, με δύο σίγμα — όχι το τυπογραφικό της μηχανής.
-    expect(admin.find((l) => l.level === 5)?.name).toContain('ΘΕΣΣΑΛΟΝΙΚΗΣ');
+    // Το όνομα είναι του **μητρώου**, με δύο σίγμα — όχι το τυπογραφικό της μηχανής («Θεσαλονίκης»).
+    // ADR-893: το μητρώο γράφει πλέον ονόματα ΕΜΦΑΝΙΣΗΣ (όχι το ΚΕΦΑΛΑΙΟ της ΕΛΣΤΑΤ) ⇒ ακριβής ισότητα.
+    expect(admin.find((l) => l.level === 5)?.name).toBe('Δήμος Θεσσαλονίκης');
   });
 
   it('🔴 «Μητροπολιτική Ενότητα» (όρος OSM, εκτός ΕΛΣΤΑΤ) ΔΕΝ ακυρώνει τον δήμο', async () => {
@@ -270,7 +271,8 @@ describe('Φάση Β′ — ο δήμος βγαίνει από την αλυσ
     expect(admin.find((l) => l.level === 8)?.id).toBe('settlement:0711010101');
     expect(admin.find((l) => l.level === 5)?.id).toBe('municipality:0711');
     // ⬇️ Αυτά έλειπαν: πρόγονοι του αποδεδειγμένου οικισμού, δηλαδή αποδεδειγμένοι.
-    expect(admin.find((l) => l.level === 6)?.name).toContain('ΣΤΑΥΡΟΥΠΟΛΕΩΣ');
+    // Όνομα που η μηχανή ΔΕΝ είπε ποτέ («Σταυρούπολη») ⇒ ήρθε από το μητρώο (ADR-893: όνομα εμφάνισης).
+    expect(admin.find((l) => l.level === 6)?.name).toBe('Δημοτική Ενότητα Σταυρουπόλεως');
     expect(admin.find((l) => l.level === 7)).toBeDefined();
   });
 

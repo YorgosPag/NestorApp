@@ -94,8 +94,8 @@ describe('SupplierCatalogView', () => {
 
   it.each([
     [{ kind: 'nationwide' } as const, 'supplier.areaNationwide'],
-    [{ kind: 'radius', radiusKm: 30 } as const, 'supplier.areaRadius'],
-    [{ kind: 'outline', km2: 12 } as const, 'supplier.areaOutline'],
+    [{ kind: 'radius', radiusKm: 30, names: [] } as const, 'supplier.areaRadius'],
+    [{ kind: 'outline', km2: 12, names: [] } as const, 'supplier.areaOutline'],
   ])('περιοχή %j', (area, key) => {
     render(<SupplierCatalogView {...CATALOG} provider={{ logo: null, website: null, area }} />);
     expect(screen.getByText(key)).toBeTruthy();

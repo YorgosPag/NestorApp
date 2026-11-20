@@ -58,7 +58,7 @@ export const LISTING_CARD_GAP_REM = 0.75;
  * ποτέ** τον περιέκτη — το intrinsic «RAM» σχήμα (Every Layout). Ίδια απόφαση με το `min-w-field`.
  */
 export const LISTING_CARD_GRID_CLASS =
-  'm-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(17rem,100%),1fr))] gap-3 p-0';
+  'm-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-3 p-0';
 
 /**
  * Το πλάτος (rem) που **δηλώνουμε** στον περιηγητή για κάρτα της στήλης αποτελεσμάτων.

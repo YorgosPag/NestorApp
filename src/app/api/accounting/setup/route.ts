@@ -32,7 +32,7 @@ import 'server-only';
 import { after } from 'next/server';
 
 import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
-import { canonicalGemiNumber } from '@/lib/company/gemi-number';
+import { optionalGemiNumber, validateSetupInput } from '@/subapps/accounting/services/setup/company-setup-input';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -64,45 +64,6 @@ import {
 } from '@/subapps/accounting/services/validation/entity-arrays-validator';
 
 const logger = createModuleLogger('api/accounting/setup');
-
-// =============================================================================
-// VALIDATION HELPERS
-// =============================================================================
-
-/** Ελέγχει αν το ΑΦΜ είναι 9 ψηφία */
-function isValidVatNumber(vat: string): boolean {
-  return /^\d{9}$/.test(vat);
-}
-
-/**
- * Ο αριθμός ΓΕΜΗ όπως τον έγραψε ο άνθρωπος, ή `null` αν λείπει.
- *
- * ⚠️ Κενό ⇒ `null` και **όχι** `''`: ο ελεύθερος επαγγελματίας **δεν έχει** ΓΕΜΗ, και ένα κενό
- * κείμενο θα διαβαζόταν «δηλωμένος αριθμός» από κάθε καταναλωτή που ελέγχει `!== null`.
- */
-function optionalGemiNumber(body: Partial<CompanySetupInput>): string | null {
-  const value = (body as { gemiNumber?: unknown }).gemiNumber;
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
-}
-
-/** Ελέγχει αν η αίτηση σύνταξης έχει τα απαραίτητα πεδία */
-function validateSetupInput(data: Partial<CompanySetupInput>): string | null {
-  if (!data.businessName?.trim()) return 'businessName is required';
-  if (!data.vatNumber?.trim()) return 'vatNumber is required';
-  if (!isValidVatNumber(data.vatNumber.trim())) return 'vatNumber must be exactly 9 digits';
-  if (!data.taxOffice?.trim()) return 'taxOffice is required';
-  if (!data.address?.trim()) return 'address is required';
-  if (!data.city?.trim()) return 'city is required';
-  if (!data.postalCode?.trim()) return 'postalCode is required';
-  if (!data.profession?.trim()) return 'profession is required';
-  if (!data.mainKad?.code?.trim()) return 'mainKad.code is required';
-  if (!data.mainKad?.description?.trim()) return 'mainKad.description is required';
-  const gemiNumber = optionalGemiNumber(data);
-  if (gemiNumber !== null && canonicalGemiNumber(gemiNumber) === null) {
-    return 'gemiNumber must be a GEMI number (digits only, up to 12)';
-  }
-  return null;
-}
 
 /**
  * ADR-841 §7 Α23 — η επωνυμία και η νομική ταυτότητα του προφίλ **αντιγράφονται** (`companies.name`,

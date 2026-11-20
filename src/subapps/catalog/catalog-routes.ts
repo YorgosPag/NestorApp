@@ -207,7 +207,12 @@ export function supplyRequestHref(token: string): string {
 }
 
 /** Η καρτέλα του αγοραστή στις «Συνδέσεις»: ο σύνδεσμος της ειδοποίησης ανοίγει ακριβώς εκεί. */
-export const SUPPLIERS_TAB_QUERY = '?tab=suppliers';
+const SUPPLIERS_TAB_QUERY = '?tab=suppliers';
+
+/** «Οι προμηθευτές μου» — η διαδρομή χτίζεται ΕΔΩ, ποτέ με σύνθεση στον καλούντα (ADR-841 §7 Α18 Κ2). */
+export function supplierConnectionsHref(): string {
+  return `${CATALOG_PAGES.connections}${SUPPLIERS_TAB_QUERY}`;
+}
 
 /** Η καρτέλα «Ορατότητα» των «Εκπτώσεων»: εκεί διορθώνεται εξαγωγή όπου όλα είναι κρυφά (ADR-923 §5.14.1 · Ε3). */
 export const VISIBILITY_TAB_QUERY = '?tab=visibility';

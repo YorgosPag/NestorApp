@@ -138,8 +138,12 @@ describe('ADR-777 §8.31 — το κοινό εξάρτημα ρωτά, και �
       // ⚠️ Η ΧΡΗΣΗ, όχι η εισαγωγή. Η πρώτη γραφή έλεγχε σκέτο «DeepLinkNotice»
       // και έμενε ΠΡΑΣΙΝΗ όταν έσβηνε το στοιχείο από το JSX, γιατί η γραμμή
       // `import` αρκούσε — το βρήκε η μετάλλαξη, όχι η ανάγνωση.
-      expect(source).toMatch(/<DeepLinkNotice\s+selection=\{selection\}/);
+      // Αποθήκη και στάθμευση το παραδίδουν στο ΚΟΙΝΟ `SpaceCatalogPreamble` — ίδια επιλογή, ένα σημείο.
+      expect(source).toMatch(/<(DeepLinkNotice|SpaceCatalogPreamble)\s+selection=\{selection\}/);
     }
+    // …και το κοινό εξάρτημα ΠΡΑΓΜΑΤΙ ανακοινώνει, αλλιώς οι δύο οθόνες θα σιωπούσαν με πράσινη άγκυρα.
+    expect(read('src/components/space-management/shared/SpaceCatalogPreamble.tsx'))
+      .toMatch(/<DeepLinkNotice\s+selection=\{selection\}/);
   });
 
   // ==========================================================================

@@ -39,7 +39,8 @@ describe('🌍 ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΔΕΝΤΡΟ', () => {
 
   it('θετικός μάρτυρας: το CHECK 3.38 ΦΟΡΤΩΝΕΙ tailwindcss — μέσω require.resolve (το περιστατικό)', () => {
     expect(packageRequires('scripts/check-text-primary-ratchet.js', ROOT))
-      .toContainEqual({ pkg: 'tailwindcss', via: 'scripts/lib/contrast/tailwind-class-resolver.js' });
+      // ADR-940: η φόρτωση του Tailwind συγκεντρώθηκε στη ΜΙΑ μηχανή (`scripts/lib/tailwind/engine.js`), που τη ζητά ο resolver.
+      .toContainEqual({ pkg: 'tailwindcss', via: 'scripts/lib/tailwind/engine.js' });
   });
 
   it('το τοπικό composite action firebase-identity ΜΕΤΡΑ ως install (αλλιώς 3 ψευδώς θετικά)', () => {

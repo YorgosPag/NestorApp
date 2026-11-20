@@ -41,7 +41,7 @@ const BUYER = 'buyer@example.test';
 const OTHER = 'someone.else@example.test';
 /** Συνθετικά, όχι πραγματικά — η γκαλερί δεν διαβάζει ποτέ βάση. */
 const ISSUER = 'Κατασκευαστική Άλφα Α.Ε.';
-const PROPERTY = 'Διαμέρισμα Α1 · 2ος όροφος';
+const PROPERTY = 'Διαμέρισμα Α1';
 /** Σταθερή λήξη: η γκαλερί είναι **ντετερμινιστική** — ίδια εικόνα σε κάθε άνοιγμα. */
 const EXPIRES_AT = '2026-11-19T10:00:00.000Z';
 

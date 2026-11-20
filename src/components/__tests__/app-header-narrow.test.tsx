@@ -64,6 +64,8 @@ jest.mock('@/hooks/useSidebarState', () => ({
   useSidebarState: () => ({ expandedItems: [], toggleExpanded: () => undefined, activeHref: null }),
 }));
 jest.mock('@/contexts/BuildingsNoUnitsContext', () => ({ useBuildingsNoUnits: () => false }));
+// ADR-829 §7 — η μπάρα αναζήτησης ρωτά τον κριτή ικανότητας· γεμάτη μπάρα = ο ρεαλιστικός παρονομαστής του Ν3/Ν4.
+jest.mock('@/auth/hooks/useCapability', () => ({ useCapability: () => ({ pending: false, verdict: 'granted-by-role' }) }));
 
 import { AppHeader } from '../app-header';
 import { AppSidebar } from '../app-sidebar';

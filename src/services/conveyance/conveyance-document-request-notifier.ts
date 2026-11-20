@@ -21,7 +21,7 @@ import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import { fnv1a32 } from '@/lib/hash/fnv1a';
 import type { CaseActorRole, ConveyanceCase } from '@/types/conveyance-case';
 import type { ConveyanceEngagement } from '@/types/engagement';
-import { caseNoticeCopy, noticeToEngaged, noticeToHost, type CaseNoticeCopy, type CaseNoticeDelivery } from './conveyance-case-notice';
+import { CASE_NOTICE_TITLE_KEYS, caseNoticeCopy, noticeToEngaged, noticeToHost, type CaseNoticeCopy, type CaseNoticeDelivery } from './conveyance-case-notice';
 
 const FEATURE = 'conveyance-document-request';
 
@@ -51,7 +51,7 @@ export function documentRequestEventId(requestIds: readonly string[], recipientU
 function copyOf(notice: DocumentRequestNotice): CaseNoticeCopy {
   const count = notice.requestIds.length;
   const titleParams = { title: notice.propertyName ?? notice.record.id, count: String(count) };
-  const titleKey = count === 1 ? 'caseDocumentRequest.titleOne' : 'caseDocumentRequest.titleMany';
+  const titleKey = count === 1 ? CASE_NOTICE_TITLE_KEYS.documentRequestOne : CASE_NOTICE_TITLE_KEYS.documentRequestMany;
   return caseNoticeCopy(titleKey, titleParams, `caseDocumentRequest.body.${notice.requesterRole}`);
 }
 

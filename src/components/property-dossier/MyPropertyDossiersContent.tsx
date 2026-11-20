@@ -29,6 +29,7 @@ import { dossierDetailHref } from '@/lib/property-dossier/property-dossier-route
 import { partitionDossiers } from '@/lib/property-dossier/property-dossier-view';
 import { cn } from '@/lib/utils';
 import { useRouter } from '@/lib/workspace/navigation';
+import { gridPatterns } from '@/styles/design-tokens';
 import { useMyPropertyDossiers } from '@/services/realtime/hooks/useMyPropertyDossiers';
 import {
   PROPERTY_DOSSIER_LIFECYCLES,
@@ -68,7 +69,7 @@ function DossierList({ dossiers, lifecycle, onRename }: DossierListProps) {
   return (
     // Πλέγμα καρτών που κλιμακώνεται με το **διαθέσιμο** πλάτος (Drive «Folders»): μία στήλη στο κινητό, όσες
     // χωρούν από 20rem και πάνω σε φαρδιά οθόνη. `min(…,100%)` ⇒ καμία οριζόντια κύλιση κάτω από 20rem.
-    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(20rem,100%),1fr))] gap-3 p-0">
+    <ul className={`m-0 grid list-none gap-3 p-0 ${gridPatterns.cards.media}`}>
       {dossiers.map((dossier) => (
         <li key={dossier.id}>
           <PropertyDossierCard dossier={dossier} lifecycle={controls} onRename={onRename} />

@@ -28,6 +28,7 @@ import { documentLocaleOf } from '@/subapps/procurement/subcontracts/document/do
 import { estimatedLineAmount } from '@/subapps/procurement/subcontracts/lines/line-amount';
 import { setLinePricing } from '@/subapps/procurement/subcontracts/lines/line-edits';
 import { AGREEMENT_LINE_KINDS, AGREEMENT_LINE_PRICINGS, type AgreementLine } from '@/subapps/procurement/subcontracts/types/agreement-line';
+import { gridPatterns } from '@/styles/design-tokens';
 import { EditorField } from '../../editor/EditorField';
 import { FieldIssues } from '../../editor/FieldIssues';
 import { LocalizedTextFields } from '../LocalizedTextFields';
@@ -63,7 +64,7 @@ function PriceFields({ value, onChange, path, issues, language, index }: LineCar
   const id = `line-${index}`;
   const field = (name: string) => ({ id: `${id}-${name}`, issues: issuesAt(issues, joinPath(path, name)) });
   return (
-    <fieldset className="grid grid-cols-[repeat(auto-fill,minmax(min(10rem,100%),1fr))] gap-3">
+    <fieldset className={`grid gap-3 ${gridPatterns.form.fluid}`}>
       <EditorField {...field('kind')} label={t('subcontracts.sections.lines.kind')}>
         <EnumSelect id={`${id}-kind`} value={value.kind} values={AGREEMENT_LINE_KINDS} getLabel={(kind) => locale.phrase(`lines.kind.${kind}`)} onValueChange={(kind) => onChange({ ...value, kind })} />
       </EditorField>

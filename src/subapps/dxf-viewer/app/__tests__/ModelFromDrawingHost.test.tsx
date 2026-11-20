@@ -32,6 +32,13 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => `t:${key}` }),
 }));
 
+// ADR-929 Φ5.2γ — η κάρτα κλίμακας (`useAnnounceCalibration` · toast αναίρεσης) μιλά μέσω ειδοποιήσεων. ΣΤΑΘΕΡΟ
+// αντικείμενο: μπαίνει σε εξαρτήσεις `useCallback`, νέο ανά render θα άλλαζε την ταυτότητα των καλούντων.
+jest.mock('@/providers/NotificationProvider', () => {
+  const notifications = { success: jest.fn(), error: jest.fn(), warning: jest.fn(), info: jest.fn(), notify: jest.fn(), dismiss: jest.fn() };
+  return { useNotifications: () => notifications };
+});
+
 const commit = jest.fn();
 jest.mock('../../bim/family-types/useWallAutoTyping', () => ({
   useWallAutoTyping: () => ({ beginWallTyping: () => ({ typeWall: (w: unknown) => w, commit }) }),

@@ -23,10 +23,9 @@ import { NOTIFICATION_EVENT_TYPES } from '@/config/notification-events';
 import { expiryEventId, expirySummary, type ExpiryAlert } from '@/lib/conveyance/expiry-alerts';
 import type { ConveyanceCase } from '@/types/conveyance-case';
 import type { ConveyanceEngagement } from '@/types/engagement';
-import { caseNoticeCopy, noticeToEngaged, noticeToHost } from './conveyance-case-notice';
+import { CASE_NOTICE_TITLE_KEYS, caseNoticeCopy, noticeToEngaged, noticeToHost } from './conveyance-case-notice';
 
 const FEATURE = 'conveyance-expiry';
-const TITLE_KEY = 'caseExpiry.title';
 
 interface ExpiryNotice {
   readonly record: ConveyanceCase;
@@ -44,7 +43,7 @@ export async function announceExpiryToHost(notice: ExpiryNotice & { readonly rec
     record: notice.record,
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_HOST,
     eventId: expiryEventId(notice.record.id, notice.recipientUid, notice.alerts),
-    copy: caseNoticeCopy(TITLE_KEY, titleParamsOf(notice), 'caseExpiry.hostBody'),
+    copy: caseNoticeCopy(CASE_NOTICE_TITLE_KEYS.expiry, titleParamsOf(notice), 'caseExpiry.hostBody'),
     feature: FEATURE,
     recipientUid: notice.recipientUid,
   });
@@ -57,7 +56,7 @@ export async function announceExpiryToEngaged(notice: ExpiryNotice & { readonly 
     record: notice.record,
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_CASE_EXPIRY_ENGAGED,
     eventId: expiryEventId(notice.record.id, notice.engagement.uid, notice.alerts),
-    copy: caseNoticeCopy(TITLE_KEY, titleParamsOf(notice), 'caseExpiry.engagedBody'),
+    copy: caseNoticeCopy(CASE_NOTICE_TITLE_KEYS.expiry, titleParamsOf(notice), 'caseExpiry.engagedBody'),
     feature: FEATURE,
     engagement: notice.engagement,
   });

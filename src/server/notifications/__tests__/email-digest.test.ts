@@ -506,7 +506,8 @@ describe('Η — το ΘΕΜΑ δεν είναι ΣΩΜΑ', () => {
       join(process.cwd(), 'src/server/notifications/notification-orchestrator.ts'),
       'utf8',
     );
-    expect(source).toContain("content: body ?? '',");
+    // ADR-939 6.1 βήμα 6Β (`27e36ea2`): πρώτα το ρητό σώμα email του αιτήματος — η ΤΕΛΙΚΗ εφεδρεία μένει ΚΕΝΟ.
+    expect(source).toContain("content: request.emailBody ?? body ?? '',");
   });
 });
 

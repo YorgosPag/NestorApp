@@ -133,6 +133,8 @@ describe('ADR-901 §15.7 — η ΜΙΑ ερμηνεία της απουσίας 
     //     έτοιμη όψη, ποτέ το έγγραφο): η ΜΙΑ ερμηνεία · το σχήμα · ο γραφέας (+ οι καθαροί σχεδιασμοί του φακέλου,
     //     χωρισμένοι για το όριο μεγέθους) και οι δύο πόρτες που του το δίνουν.
     //     Η **κλήση** `acting.actingFor(e)` (ActingViews — ρωτά τη ΜΙΑ ερμηνεία) ΔΕΝ είναι ανάγνωση του πεδίου ⇒ εξαιρείται.
+    //     + ο αγοραστής προμήθειας (ADR-923 §5.12): διαβάζει `resolved.actingFor` του **αποτελέσματος** του
+    //     `resolveActingFor` (γραφείο ή άρνηση) — ποτέ το πεδίο εγγράφου, και δεν το δίνει σε γραφέα.
     const offScreen = (path: string) => !path.startsWith('src/components/') && !path.startsWith('src/hooks/');
     expect(matching(/\.actingFor\b(?!\s*\()/, offScreen)).toEqual([
       'src/lib/auth/acting-workspace.ts',
@@ -140,6 +142,7 @@ describe('ADR-901 §15.7 — η ΜΙΑ ερμηνεία της απουσίας 
       'src/lib/auth/engagement-schema.ts',
       'src/lib/auth/engagement-write.ts',
       'src/server/engagement-invitations/engagement-invitation-redeem.ts',
+      'src/server/supply-relationships/supply-buyer-office.server.ts',
       'src/services/conveyance/conveyance-engagement-access.service.ts',
     ]);
   });

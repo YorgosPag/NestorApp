@@ -49,9 +49,9 @@
     "src/i18n/generated/routes/o__workspace__catalog__imports.el.json": "46076f846eaf02af7f4f85bc5f154154298f47d538a0cf0b4c18f2797b7546e8",
     "src/i18n/generated/routes/o__workspace__catalog__measurements.el.json": "baaff2fd7d73895c59657523d6d7b8bde9a5a60871e8a9b362c814cc5b9c0aa5",
     "src/i18n/generated/routes/o__workspace__catalog__price-lists.el.json": "1ada521e13e9e01ac4577ab75a6a5f85538a10f6130c3b3dec5e9582ff50d0ca",
-    "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "91284e51c6e5a5f3e5b7a94f21d7b1cb27e395b2ec41e8d2acda363314b23aeb",
-    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "d47039d4bdc9eb77a9ffe4da5461f9a3b3948fb6258a7782bc34d19c962d9862",
-    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "0f5974343b7bbe05ccd34ad4730893c2e33cc6bdb232a058b82e82b66c8060f9",
+    "src/i18n/generated/routes/o__workspace__catalog__products.el.json": "8ff99303ec45c5b34553a0d6bfb144ac24097b3ff69f93bd18a306864e211ac8",
+    "src/i18n/generated/routes/o__workspace__catalog__publications.el.json": "522d5a8395f4f26444efd2fa4f2af2e1d05cdbce53c073803878031a9b179e34",
+    "src/i18n/generated/routes/o__workspace__catalog__settings.el.json": "00fba314228b05783107c4262e3203c4cf2da9ba681b0c97cc61d37d45203ff8",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "7ac6dda62ce61ab652a36f385a4e5c303144133bae6c98c65d02b1272049d002",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "714297b10ae14d8327e9225a7952724da697f822eee9a28cec359acdbb94f742",
+  "inputsSha256": "3186f5e3e3f73a245d03e682a62a8752bb50ca884f7eb993d6f210c5995aa24b",
   "languages": [
     "el"
   ],
@@ -11775,6 +11775,7 @@
             "values.assets.add",
             "values.assets.moveFirst",
             "values.assets.none",
+            "values.assets.picker",
             "values.assets.remove",
             "values.assets.search",
             "values.axisLocked",
@@ -12428,6 +12429,7 @@
             "publishing.subtitle",
             "publishing.title",
             "values.assets.none",
+            "values.assets.picker",
             "values.assets.search",
             "viewer-0",
             "xchangeExport.audience",
@@ -13418,6 +13420,7 @@
             "supplierVerification.title",
             "supplierVerification.uploading",
             "values.assets.none",
+            "values.assets.picker",
             "values.assets.search"
           ],
           "prefixes": [],
@@ -41225,7 +41228,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1360766
+    "sliceBytes": 1360907
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

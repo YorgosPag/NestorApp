@@ -37,8 +37,12 @@ import { join, relative, sep } from 'path';
 
 const SRC_ROOT = join(process.cwd(), 'src');
 
-/** Το σύμβολο του οποίου οι κλήσεις μετριούνται. */
-const CALL_PATTERN = /isPayloadOwnedByCompany\s*\(/;
+/**
+ * Τα σύμβολα του οποίου οι κλήσεις μετριούνται: ο SSoT **και** το περιτύλιγμά του `ownedOrNull` (ίδιο module,
+ * ίδια κρίση — ρωτά `isPayloadOwnedByCompany`). Χωρίς το δεύτερο, κάθε σημείο που περνά από τη σιωπηλή πολιτική
+ * ήταν **αόρατο** εδώ — και το `procurement-handler` της Φάσης Γ «μπαγιάτικο» μόλις μετανάστευσε σε αυτήν (ADR-783 Ε2).
+ */
+const CALL_PATTERN = /\b(isPayloadOwnedByCompany|ownedOrNull)\s*\(/;
 
 /**
  * Το ίδιο το module ορισμού: περιέχει την κλήση μέσα στους δικούς του
@@ -55,8 +59,11 @@ type Classification =
    * Αποδεδειγμένο με **ζεύγος κενό/κενό**: μετάλλαξη του SSoT το κοκκινίζει.
    * Το `suite` **πρέπει** να αναφέρει τη διαδρομή — έτσι πιάνεται η αφαίρεση
    * γραμμής από τον πίνακα.
+   *
+   * `callsiteIn`: η κλήση **μετακόμισε** σε φράχτη που το αρχείο καλεί (η σουίτα ασκεί το αρχείο από άκρη σε
+   * άκρη, με τον φράχτη αληθινό). Η γραμμή **ξαναβρίσκεται** στο νέο σπίτι — δεν σβήνεται από την ιστορική περίμετρο.
    */
-  | { readonly kind: 'empty-pair'; readonly suite: string }
+  | { readonly kind: 'empty-pair'; readonly suite: string; readonly callsiteIn?: string }
   /**
    * Το ζεύγος κενό/κενό είναι **απρόσιτο** λόγω φύλακα ανάντη, άρα ο SSoT είναι
    * εκεί αποδεδειγμένα ισοδύναμος με σκέτο `===`. Φυλάμε τον **ανάντη**.
@@ -101,9 +108,12 @@ const PHASE_C_PERIMETER: Readonly<Record<string, Classification>> = {
     kind: 'empty-pair',
     suite: 'src/services/ai-pipeline/tools/__tests__/handlers/ownership-empty-pair-handlers.test.ts',
   },
+  // ADR-923 κύμα 3 Λ5β (`d5a7b50a`) — ο έλεγχος βγήκε στον φράχτη `findOwnedPO` (πρόθεση `compose` ⇒ `ownedOrNull`)·
+  // η σουίτα τρέχει τον handler με τον φράχτη ΑΛΗΘΙΝΟ, άρα η απόδειξη μένει δική του.
   'services/ai-pipeline/tools/handlers/procurement-handler.ts': {
     kind: 'empty-pair',
     suite: 'src/services/ai-pipeline/tools/__tests__/handlers/ownership-empty-pair-handlers.test.ts',
+    callsiteIn: 'services/procurement/po-tenant-scope.ts',
   },
   'services/saved-reports/saved-reports-service.ts': {
     kind: 'empty-pair',
@@ -167,7 +177,17 @@ const PROVEN_AFTER_PHASE_C: Readonly<Record<string, Classification>> = {
     kind: 'empty-pair',
     suite: 'src/app/api/buildings/__tests__/building-write-fields.test.ts',
   },
+  // ADR-876 §5 Σ15 (`8a317580`) — διαπιστευτήριο ↔ πρόσκληση: Α3′ «κενό και στα δύο». Μετάλλαξη
+  // `snap.data()?.companyId !== credential.companyId`: κόκκινο, μετρημένο 2026-11-20 (ADR-783 Ε2).
+  'subapps/procurement/services/vendor-invite-resolver.ts': {
+    kind: 'empty-pair',
+    suite: 'src/subapps/procurement/services/__tests__/vendor-invite-resolver.test.ts',
+  },
 };
+
+/** Το αρχείο όπου ζει **σήμερα** η κλήση μιας αποδεδειγμένης γραμμής. */
+const callsiteOf = (file: string, c: Classification): string =>
+  (c.kind === 'empty-pair' ? c.callsiteIn : undefined) ?? file;
 
 /** Κάθε σημείο με **απόδειξη** — ό,τι ελέγχει ο πίνακας «η σουίτα ονομάζει τη διαδρομή». */
 const PROVEN_CALLSITES: Readonly<Record<string, Classification>> = {
@@ -225,7 +245,65 @@ const OUTSIDE_PHASE_C_PERIMETER: readonly string[] = [
   // ADR-884 Φ0.12 — ο έλεγχος «μπορεί ο μισθωτής να κοινοποιήσει;» μετακόμισε από τον browser
   // (`services/sharing/resolver-core/share-entity-access.ts`, διαγράφηκε) στον διακομιστή.
   'server/sharing/share-entity-access.ts',
-  'subapps/procurement/services/rfq-service.ts',
+  // ADR-923 T5 (`a8f96e3f`) — ο έλεγχος της επαφής-παραλήπτη μετακόμισε από το `rfq-service.ts`.
+  'subapps/procurement/services/vendor-recipient.ts',
+  //
+  // ─── ADR-783 Ε2 (2026-11-20) — η σάρωση μετρά ΚΑΙ το `ownedOrNull` · σημεία μεταγενέστερα της Φάσης Γ ───
+  // Ταξινομημένα, ΟΧΙ αποδεδειγμένα: καμία σουίτα κενό/κενό δεν ονομάζει τη διαδρομή. Δεν βρέθηκε κανένα
+  // πραγματικό κενό ιδιοκτησίας (ανάγνωση)· `property-anchor-guard.ts` με αντεστραμμένα ορίσματα = συμμετρικό.
+  // ADR-742 (`cedeeee6`, ενοποίηση «ανήκει σε εμένα;») · ADR-759 (`dfb446df`) · ADR-742 (`4c676f72`)
+  'services/floorplan-background/floorplan-background.service.ts',
+  'services/measurements/boq-tenant-ownership.ts',
+  'services/title-block-apply/survey-record-write.ts',
+  'subapps/procurement/services/procurement-owned-doc.ts',
+  // ADR-876 §5.8 Σ15-Σ21 (`8a317580`) — γρ. 218 (`revokeVendorInvite`) χωρίς ζεύγος κενό/κενό ⇒ όχι PROVEN.
+  'services/vendor-portal/vendor-invite-credential-store.ts',
+  'subapps/procurement/services/vendor-invite-service.ts',
+  'subapps/procurement/services/vendor-portal-submit-service.ts',
+  // ADR-905 / μεταβίβαση (`a228f670` · `0f84e9b5`)
+  'services/conveyance/conveyance-case.service.ts',
+  'services/conveyance/conveyance-dependency-relay.server.ts',
+  'services/conveyance/conveyance-subject.server.ts',
+  // ADR-898 (`f9144c87`) · ADR-909 (`5b0d23a7`) · ADR-907 (`b30659e2`)
+  'app/api/properties/[id]/property-anchor-guard.ts',
+  'app/api/properties/[id]/floorplan/route.ts',
+  'services/listings/floorplan-declaration.service.ts',
+  'services/listings/floor-plate-declaration.service.ts',
+  'services/listings/floor-plate.reader.ts',
+  // ADR-915 (`90990f2f` · `5154230e` · `b9d69a7d` · `ff36ac87`) · ADR-942 (`eccf9ded`) · ADR-916 (`80c3672c`)
+  'server/lib/owned-contact-docs.ts',
+  'services/document-registry/registry-owners.server.ts',
+  'server/lib/property-site-address.server.ts',
+  'services/professional-registry/registry-check-record.service.ts',
+  'services/document-registry/issuance-request-files.server.ts',
+  'services/property-handover/property-handover-line-closure.service.ts',
+  // ADR-917 (`030f8030` · `02497789`) · ADR-016 (`ea6df9f6`)
+  'services/ai-pipeline/tools/financial-query-tools.ts',
+  'services/project-cost/expense-cost-allocations.server.ts',
+  'app/api/communications/email/record-sent-email.ts',
+  // ADR-ACC-007 (`3883c60c`) · ADR-ACC-010 (`892162b6` · `cc539740`) · ADR-ACC-030 (`c290622a`) ·
+  // ADR-917 F4.0 (`5d604140`) · ADR-ACC-018 (`fd7013ea`)
+  'subapps/accounting/services/repository/accounting-repo-depreciation.ts',
+  'subapps/accounting/services/repository/accounting-repo-fiscal-periods.ts',
+  'subapps/accounting/services/repository/accounting-repo-journal-reversal.ts',
+  'subapps/accounting/services/repository/accounting-repo-invoice-payments.ts',
+  'subapps/accounting/services/repository/tenant-owned-doc.ts',
+  'server/accounting/public-invoice/tenant-invoice.ts',
+  // ADR-923 κατάλογος (`42fc385f` · `0b5ab077` · `8ce13693`) · §5.12 (`d14e0d0d` · `3c7c730a`) ·
+  // ADR-934 (`27c3cadc` · `23097706`) · προμήθειες (`668b768b`)
+  'server/catalog/catalog-store.server.ts',
+  'server/catalog/catalog-library-reads.server.ts',
+  'server/catalog/pricing-party-reads.server.ts',
+  'server/catalog/editions/catalog-edition-reads.server.ts',
+  'server/catalog/editions/catalog-edition-writer.server.ts',
+  'server/supply-relationships/boq-supplier-price.server.ts',
+  'server/supply-relationships/supply-foreign-search.server.ts',
+  'subapps/catalog/import/media-source-identity.ts',
+  'subapps/catalog/import/import-asset-fetch-document.ts',
+  'subapps/procurement/services/framework-agreement-scope-guard.ts',
+  // ADR-928 υπεργολαβία (`f41781e5` · `b354fe04`)
+  'server/subcontracts/subcontract-store.server.ts',
+  'server/subcontracts/agreement-parties.server.ts',
 ];
 
 /**
@@ -296,7 +374,7 @@ describe('⚓ ADR-742 — πληρότητα κάλυψης των σημείω�
   describe('κάθε σημείο κλήσης είναι ρητά ταξινομημένο', () => {
     test('καμία κλήση χωρίς ταξινόμηση (νέο σημείο ⇒ κόκκινο)', () => {
       const classified = new Set([
-        ...Object.keys(PROVEN_CALLSITES),
+        ...Object.entries(PROVEN_CALLSITES).map(([file, c]) => callsiteOf(file, c)),
         ...OUTSIDE_PHASE_C_PERIMETER,
       ]);
       const unclassified = callSiteFiles.filter(file => !classified.has(file));
@@ -305,7 +383,10 @@ describe('⚓ ADR-742 — πληρότητα κάλυψης των σημείω�
     });
 
     test('καμία μπαγιάτικη καταχώρηση (αρχείο χωρίς κλήση πια ⇒ κόκκινο)', () => {
-      const known = [...Object.keys(PROVEN_CALLSITES), ...OUTSIDE_PHASE_C_PERIMETER];
+      const known = [
+        ...Object.entries(PROVEN_CALLSITES).map(([file, c]) => callsiteOf(file, c)),
+        ...OUTSIDE_PHASE_C_PERIMETER,
+      ];
       const stale = known.filter(file => !callSiteFiles.includes(file));
 
       expect(stale).toEqual([]);
@@ -347,6 +428,11 @@ describe('⚓ ADR-742 — πληρότητα κάλυψης των σημείω�
       const doubled = proven.filter(
         file => file in PHASE_C_PERIMETER || OUTSIDE_PHASE_C_PERIMETER.includes(file),
       );
+      // Και το νέο σπίτι μιας κλήσης που μετακόμισε δεν δηλώνεται δεύτερη φορά ως «εκτός».
+      const relocated = Object.entries(PROVEN_CALLSITES)
+        .map(([file, c]) => callsiteOf(file, c))
+        .filter(home => OUTSIDE_PHASE_C_PERIMETER.includes(home));
+      expect(relocated).toEqual([]);
 
       expect(doubled).toEqual([]);
     });

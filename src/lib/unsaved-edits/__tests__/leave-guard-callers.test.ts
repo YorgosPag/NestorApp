@@ -20,9 +20,13 @@ const SETTLED_LEAVE_CALLERS: Readonly<Record<string, SettledCaller>> = {
     calls: 1,
     why: 'Το `guardLeave` εκτελεί την έξοδο ΑΦΟΥ απάντησε ο άνθρωπος — ό,τι φυλαγμένο τρέξει μέσα της δεν ξαναρωτά.',
   },
-  'src/core/layouts/MobileDetailsSlideIn.tsx': {
+  'src/core/layouts/details-sheet-frame.tsx': {
     calls: 1,
     why: 'Ο ✕ του φύλλου ρώτησε ήδη (`confirmLeave`) — η Ακύρωση που κλείνει την επιλογή δεν ξαναρωτά.',
+  },
+  'src/components/procurement/subcontracts/editor/NewAgreementDialog.tsx': {
+    calls: 1,
+    why: 'Η σύμβαση ΔΗΜΙΟΥΡΓΗΘΗΚΕ (`onSuccess`): το πρόχειρο έγινε εγγραφή, η πλοήγηση στη σελίδα της δεν είναι έξοδος.',
   },
   'src/hooks/trash/useEntityTrashState.ts': {
     calls: 2,

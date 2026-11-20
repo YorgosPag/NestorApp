@@ -29,6 +29,8 @@ const ALLOWED: Readonly<Record<string, string>> = {
     'Αναλυτής ΕΛΕΥΘΕΡΟΥ κειμένου νομικών εγγράφων («120 τ.μ.») — γραφές που ψάχνει μέσα σε πρόζα, όχι λεξιλόγιο τιμών.',
   'services/ai-pipeline/agentic-reply-utils.ts':
     'Ανίχνευση πρόθεσης σε μήνυμα χρήστη (λέξη-κλειδί «τ.μ.») — όχι μονάδα ποσότητας.',
+  'components/procurement/subcontracts/sections/plan/ScheduleFields.tsx':
+    'Μονάδες ΕΠΑΝΑΛΗΨΗΣ ΧΡΟΝΟΥ του σχεδίου πληρωμών (`RECURRENCE_UNITS`: ημέρες/εβδομάδες/μήνες) — άλλη έννοια από τη μονάδα ποσότητας.',
 };
 
 function listSourceFiles(dir: string, out: string[] = []): string[] {

@@ -24,6 +24,7 @@ import { templateCodeFromTitle } from '@/subapps/procurement/subcontracts/templa
 import type { LocalizedText } from '@/subapps/procurement/subcontracts/types/clause-parameter';
 import { AGREEMENT_DOCUMENT_MODES } from '@/subapps/procurement/subcontracts/types/trade-template';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
+import { gridPatterns } from '@/styles/design-tokens';
 import { EditorField, issuesIdOf } from '../../editor/EditorField';
 import { EditorSectionTabs } from '../../editor/EditorSectionTabs';
 import { TEMPLATE_SECTION_MAP } from '../../editor/editor-sections';
@@ -70,7 +71,7 @@ function IdentitySection(props: TemplateEditorFormProps) {
   return (
     <section aria-labelledby="editor-identity" className="space-y-3">
       <h3 id="editor-identity" className="text-base font-semibold">{t('subcontracts.editor.sections.identity')}</h3>
-      <fieldset className="grid grid-cols-[repeat(auto-fill,minmax(min(14rem,100%),1fr))] gap-3">
+      <fieldset className={`grid gap-3 ${gridPatterns.form.fluid}`}>
         <LocalizedTextFields id="template-title" label={t('subcontracts.library.templateEditor.title')} value={draft.title} onChange={setTitle} path="title" issues={issues} language={resolveHumanLanguage(i18n.language)} secondaryLanguage="en" />
         <CodeField editor={editor} onTouch={() => setKeyTouched(true)} />
         <EditorField id="template-trade" label={t('subcontracts.library.templates.trade')} issues={issuesAt(issues, 'trade')}>

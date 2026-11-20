@@ -119,9 +119,10 @@ describe('Π — βαθμονόμηση στον πραγματικό κώδικ
     // άγκυρα που κι αυτή διάβαζε το μητρώο θα ήταν ο ΙΔΙΟΣ κριτής δύο φορές. Εδώ χρειάζεται
     // ΔΕΥΤΕΡΗ ΦΩΝΗ (ADR-792 §7) — άρα όταν αλλάζει το λεξιλόγιο, αλλάζει ΚΑΙ αυτή, με το χέρι.
     // ADR-793: το `BimBounds` διασπάστηκε σε `PlanBounds` (ίχνος) + `SolidBounds` (στερεό).
+    // ADR-884 §4.14 Γ3 (`e2f41c59`): το `PlanarPoint` ΜΕΤΑΚΟΜΙΣΕ στο `src/lib/geometry/planar-polygon.ts` — εδώ μόνο
+    // επανεξάγεται, άρα δεν είναι πια ΔΗΛΩΣΗ αυτού του αρχείου.
     expect(found.map((f) => f.name).sort()).toEqual(
-      ['BimPoint', 'BimPolygon', 'BimPolyline', 'PlanBounds', 'PlanProfile', 'PlanarPoint',
-        'SolidBounds'],
+      ['BimPoint', 'BimPolygon', 'BimPolyline', 'PlanBounds', 'PlanProfile', 'SolidBounds'],
     );
   });
 
