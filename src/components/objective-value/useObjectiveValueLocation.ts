@@ -32,6 +32,11 @@ export interface ObjectiveValueLocationState {
   readonly pin: GeoPoint | null;
   readonly focus: PlaceFocus | null;
   readonly pick: (point: GeoPoint) => void;
+  /**
+   * Πινέζα από **γνωστό** σημείο (προσυμπλήρωση από το ακίνητο): ίδια ετυμηγορία με το `pick`, αλλά ο χάρτης **πετά**
+   * εκεί — ο άνθρωπος δεν το έδειξε ο ίδιος, άρα δεν το βλέπει ήδη.
+   */
+  readonly locate: (point: GeoPoint) => void;
   readonly lookup: ValueZoneLookup;
   readonly frontKey: string | null;
   readonly setFrontKey: (key: string | null) => void;
@@ -96,6 +101,11 @@ export function useObjectiveValueLocation(): ObjectiveValueLocationState {
     [reset, state],
   );
   const pick = useCallback((point: GeoPoint) => placePin({ ...NO_PIN, pin: point }), [placePin]);
+  // Το σημείο είναι ήδη πινέζα ζώνης (ίδιο με το `pick`) ⇒ `exact`: ζουμ κτιρίου, χωρίς κύκλο αβεβαιότητας.
+  const locate = useCallback(
+    (point: GeoPoint) => placePin({ ...NO_PIN, pin: point, focus: { point, accuracy: 'exact' } }),
+    [placePin],
+  );
 
   const lookup = useValueZoneAt(pinState.pin);
   const zone = chosenZone(lookup, frontKey, manualPrice);
@@ -105,6 +115,7 @@ export function useObjectiveValueLocation(): ObjectiveValueLocationState {
     resolver,
     ...pinState,
     pick,
+    locate,
     lookup,
     frontKey,
     setFrontKey,

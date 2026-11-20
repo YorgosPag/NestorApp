@@ -146,7 +146,7 @@ export function ObjectiveValueContent() {
   const location = useObjectiveValueLocation();
   const today = useMemo(() => marketDayOf(Date.now()), []);
   // ADR-898 Φ3 — από αγγελία: ό,τι ξέρει ήδη η αγγελία, ώστε να μένουν μόνο οι ερωτήσεις που άφησε ανοιχτές.
-  const prefill = useObjectiveValuePrefill(update, location.pick);
+  const prefill = useObjectiveValuePrefill(update, location.locate);
   // Η τιμή ζώνης ανήκει στη θέση (ζώνη · δηλωμένο μέτωπο · χειροκίνητη)· το πρόχειρο την παίρνει τη στιγμή του υπολογισμού.
   const { result, questions, commercialityAssumed, sourcedFactor } = useCalculatorEvaluation(draft, location, today);
   const provenance = useCalculatorProvenance({ draft, prefill: prefill?.draft ?? null, location, result, update, sourcedFactor });

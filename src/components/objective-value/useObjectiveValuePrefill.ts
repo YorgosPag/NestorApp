@@ -25,8 +25,8 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 interface PrefillTargets {
   /** Συγχώνευση στο πρόχειρο. */
   readonly update: (patch: Partial<ObjectiveValueDraft>) => void;
-  /** Η πινέζα — ίδια διαδρομή με το κλικ στον χάρτη. */
-  readonly pick: (point: GeoPoint) => void;
+  /** Η πινέζα — ίδια ετυμηγορία με το κλικ στον χάρτη, αλλά ο χάρτης πετά εκεί (`locate`, όχι `pick`). */
+  readonly locate: (point: GeoPoint) => void;
 }
 
 /** Ό,τι εφαρμόστηκε (η βάση σύγκρισης) και πού γυρίζει ο επισκέπτης — `null` = ο υπολογιστής άνοιξε κενός. */
@@ -34,17 +34,17 @@ type AppliedObjectiveValuePrefill = Pick<ParsedObjectiveValuePrefill, 'draft' | 
 
 export function useObjectiveValuePrefill(
   update: PrefillTargets['update'],
-  pick: PrefillTargets['pick'],
+  locate: PrefillTargets['locate'],
 ): AppliedObjectiveValuePrefill | null {
   const [applied, setApplied] = useState<AppliedObjectiveValuePrefill | null>(null);
-  const targets = useRef<PrefillTargets>({ update, pick });
-  targets.current = { update, pick };
+  const targets = useRef<PrefillTargets>({ update, locate });
+  targets.current = { update, locate };
   useEffect(() => {
     const prefill = parseObjectiveValuePrefill(window.location.search);
     if (prefill === null) return;
     targets.current.update(prefill.draft);
     setApplied({ draft: prefill.draft, back: prefill.back });
-    if (prefill.point !== null) targets.current.pick(prefill.point);
+    if (prefill.point !== null) targets.current.locate(prefill.point);
   }, []);
   return applied;
 }
