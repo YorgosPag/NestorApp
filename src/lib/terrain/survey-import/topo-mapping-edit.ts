@@ -13,11 +13,23 @@
  */
 
 import { suggestMappingFromHeaders } from './topo-column-mapping';
-import { suggestMappingFromRows } from './topo-column-sniffer';
+import { sniffMappingFromRows, type SniffBasis } from './topo-column-sniffer';
 import type { ColumnMapping, ColumnRole, RawTable } from './topo-import-types';
 
-/** Πόσες γραμμές βλέπει ο sniffer για να προτείνει — αρκετές για σταθερή ψήφο, όχι όλο το αρχείο. */
-const PROPOSAL_SAMPLE_ROWS = 50;
+/**
+ * Πόσες γραμμές βλέπει ο sniffer — **κατανεμημένες σε όλο το αρχείο** (ADR-920 §13.10 Α). Οι πρώτες 50 ενός πλέγματος
+ * μπορεί να έχουν σταθερό X και Z ⇒ λάθος σειρά. Ένα πέρασμα O(n) ανά υποψήφια στήλη· ο αριθμός είναι εκτίμηση.
+ */
+const PROPOSAL_SAMPLE_ROWS = 1000;
+
+/** Από πού βγήκε η πρόταση — `headers` = από τις ετικέτες· τα υπόλοιπα από τα δεδομένα (`SniffBasis`). */
+export type MappingBasis = 'headers' | SniffBasis;
+
+export interface MappingProposal {
+  readonly mapping: ColumnMapping;
+  /** `null` = καμία πρόταση (λιγότερες από τρεις αριθμητικές στήλες) — όλα «αγνόησε». */
+  readonly basis: MappingBasis | null;
+}
 
 /** Τεντώνει/κόβει μια αντιστοίχιση στο πλήθος στηλών του πίνακα· ό,τι λείπει γίνεται «αγνόησε». */
 export function padMapping(mapping: ColumnMapping, width: number): ColumnMapping {
@@ -29,12 +41,22 @@ function widthOf(table: RawTable): number {
   return Math.max(table.headers.length, ...table.rows.map((row) => row.length), 0);
 }
 
-/** **Η πρώτη πρόταση**: επικεφαλίδες αν υπάρχουν, αλλιώς τα ίδια τα δεδομένα, αλλιώς τίποτα. */
-export function proposeColumnMapping(table: RawTable): ColumnMapping {
+/** `count` γραμμές ομοιόμορφα από όλο τον πίνακα (πρώτη και τελευταία μέσα)· όλες, αν είναι λιγότερες. */
+function spreadRows<T>(rows: readonly T[], count: number): readonly T[] {
+  if (rows.length <= count) return rows;
+  if (count <= 1) return rows.slice(0, count);
+  const step = (rows.length - 1) / (count - 1);
+  return Array.from({ length: count }, (_, i) => rows[Math.round(i * step)]);
+}
+
+/** **Η πρώτη πρόταση**: επικεφαλίδες αν υπάρχουν, αλλιώς τα ίδια τα δεδομένα, αλλιώς τίποτα — μαζί με το από πού. */
+export function proposeColumnMapping(table: RawTable): MappingProposal {
   const width = widthOf(table);
-  if (table.headers.length > 0) return padMapping(suggestMappingFromHeaders(table.headers), width);
-  const sniffed = suggestMappingFromRows(table.rows.slice(0, PROPOSAL_SAMPLE_ROWS));
-  return padMapping(sniffed ?? [], width);
+  if (table.headers.length > 0) {
+    return { mapping: padMapping(suggestMappingFromHeaders(table.headers), width), basis: 'headers' };
+  }
+  const sniffed = sniffMappingFromRows(spreadRows(table.rows, PROPOSAL_SAMPLE_ROWS));
+  return { mapping: padMapping(sniffed?.mapping ?? [], width), basis: sniffed?.basis ?? null };
 }
 
 /**

@@ -32,6 +32,16 @@ type Survey = Pick<
   'read' | 'mapping' | 'unit' | 'unitDecision' | 'points' | 'preparation' | 'setRole' | 'applyPreset' | 'setUnit'
 >;
 
+/** Η σειρά των στηλών: από πού την προτείναμε (ADR-920 §13.10 Α)· σιωπά για επικεφαλίδες και όταν ο άνθρωπος την άλλαξε. */
+function MappingNote({ survey }: { readonly survey: Survey }) {
+  const { t } = useTranslation([NS]);
+  const { read, mapping } = survey;
+  if (read?.road !== 'table' || read.mappingBasis === null || read.mappingBasis === 'headers') return null;
+  const untouched = read.proposedMapping.length === mapping.length && read.proposedMapping.every((role, i) => role === mapping[i]);
+  if (!untouched) return null;
+  return <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:columns.basis.${read.mappingBasis}`)}</p>;
+}
+
 /** Η μονάδα: δηλωμένη από το σχέδιο · προτεινόμενη με αιτιολόγηση · ή ζητούμενη. */
 function UnitNote({ survey }: { readonly survey: Survey }) {
   const { t } = useTranslation([NS]);
@@ -101,6 +111,7 @@ export function SurveyPointsStep({ survey, disabled = false }: { readonly survey
       ) : (
         unitDecision?.kind === 'to-confirm' && <SurveyUnitSelect unit={unit} disabled={disabled} onUnit={setUnit} />
       )}
+      <MappingNote survey={survey} />
       <UnitNote survey={survey} />
       <PointsFacts survey={survey} />
     </section>

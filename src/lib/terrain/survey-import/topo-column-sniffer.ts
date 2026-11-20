@@ -28,9 +28,22 @@
  *
  * Ratios, not absolutes: the same file in mm scales every magnitude by 1000 and every rule still
  * holds. Pure — no I/O, no state, fully testable.
+ *
+ * ADR-920 §13.10 Α — two lessons from a live `x y z` file whose first 61 rows had X = 0 and Z = 0:
+ *   - a CONSTANT column says nothing about magnitude. Its mean |value| of 0 is «50× smaller» than anything, so it
+ *     was crowned the elevation, and a 0 in `assignHorizontal` made the other column look like a northing ⇒
+ *     «Z · Y · X» and hundreds of invented contradictions. A constant column now judges neither rule.
+ *   - before magnitude, ask the SURFACE. A terrain is a function z(x, y): for each of the three candidate elevation
+ *     columns, count positions stated twice with two different elevations (`survey-position-census`, the very count
+ *     the owner is shown). When exactly one candidate leaves the surface consistent and the others clearly do not,
+ *     that is the elevation — whatever the units. (Swapping X and Y never changes the count, so the six orders
+ *     reduce to three questions.) The thresholds below are an estimate, not a cited figure.
+ * The verdict carries its `basis`, so the screen can say how sure it is: `file-order` means «no evidence».
  */
 
+import type { TerrainSourcePoint } from '../publication/listing-terrain-source';
 import type { ColumnMapping, ColumnRole } from './topo-import-types';
+import { surveyFactsOf } from './survey-position-census';
 import { parseTopoField } from './topo-text-lines';
 
 /** A column counts as numeric when at least this share of its non-empty cells parse as numbers. */
@@ -45,6 +58,20 @@ const ELEVATION_MAGNITUDE_RATIO = 50;
 /** The first horizontal column is a NORTHING when it dwarfs the second by at least this factor. */
 const NORTHING_MAGNITUDE_RATIO = 4;
 
+/** The surface signal speaks only when a rejected candidate shows at least this many contradictions… */
+const SURFACE_MIN_CONFLICTS = 3;
+
+/** …and at least this many times as many as the winner. */
+const SURFACE_DECISIVE_RATIO = 10;
+
+/** What the elevation was recognised FROM — `file-order` = no evidence, the last coordinate column was assumed. */
+export type SniffBasis = 'surface' | 'magnitude' | 'file-order';
+
+export interface SniffedMapping {
+  readonly mapping: ColumnMapping;
+  readonly basis: SniffBasis;
+}
+
 interface ColumnStats {
   /** Share of non-empty cells that parsed as a number (0..1). */
   readonly numericRatio: number;
@@ -53,6 +80,16 @@ interface ColumnStats {
   readonly strictlyIncreasing: boolean;
   /** Mean of |value| over the numeric cells — the magnitude the heuristics compare. */
   readonly meanAbs: number;
+  /** Every numeric cell holds the same value — the column says nothing about magnitude. */
+  readonly constant: boolean;
+}
+
+/** A cell as a finite number, or `null`. */
+function cellNumber(row: readonly string[], index: number): number | null {
+  const cell = (row[index] ?? '').trim();
+  if (cell.length === 0) return null;
+  const value = parseTopoField(cell);
+  return value !== null && Number.isFinite(value) ? value : null;
 }
 
 /** How many columns the sample rows imply (the widest row wins — ragged tails are normal). */
@@ -65,11 +102,10 @@ function analyseColumn(rows: readonly (readonly string[])[], index: number): Col
   let filled = 0;
 
   for (const row of rows) {
-    const cell = (row[index] ?? '').trim();
-    if (cell.length === 0) continue;
+    if ((row[index] ?? '').trim().length === 0) continue;
     filled++;
-    const value = parseTopoField(cell);
-    if (value !== null && Number.isFinite(value)) values.push(value);
+    const value = cellNumber(row, index);
+    if (value !== null) values.push(value);
   }
 
   const numericRatio = filled === 0 ? 0 : values.length / filled;
@@ -81,6 +117,7 @@ function analyseColumn(rows: readonly (readonly string[])[], index: number): Col
     allInteger: values.length > 0 && values.every((v) => Number.isInteger(v)),
     strictlyIncreasing: values.length > 1 && values.every((v, i) => i === 0 || v > values[i - 1]),
     meanAbs: values.length === 0 ? 0 : sum / values.length,
+    constant: values.length > 0 && values.every((v) => v === values[0]),
   };
 }
 
@@ -100,19 +137,55 @@ function findPointIdColumn(numeric: readonly number[], stats: readonly ColumnSta
   return numeric.length - 1 >= COORD_COLUMNS ? first : null;
 }
 
-/** Which of the three coordinate columns is the elevation — `null` when none stands out. */
+/** How many positions contradict themselves when `zIndex` is the elevation and the other two are the position. */
+function conflictsWithElevation(rows: readonly (readonly string[])[], triple: readonly number[], zIndex: number): number {
+  const [a, b] = triple.filter((i) => i !== zIndex);
+  const points: TerrainSourcePoint[] = [];
+  for (const row of rows) {
+    const x = cellNumber(row, a);
+    const y = cellNumber(row, b);
+    const z = cellNumber(row, zIndex);
+    if (x !== null && y !== null && z !== null) points.push([x, y, z]);
+  }
+  return surveyFactsOf(points).conflictingElevations;
+}
+
+/** The elevation by the SURFACE signal — `null` unless exactly one candidate keeps the surface consistent. */
+function findElevationBySurface(rows: readonly (readonly string[])[], triple: readonly number[]): number | null {
+  const scores = triple.map((zIndex) => conflictsWithElevation(rows, triple, zIndex));
+  const [best, second] = [...scores].sort((p, q) => p - q);
+  const decisive = second >= SURFACE_MIN_CONFLICTS && second >= SURFACE_DECISIVE_RATIO * best;
+  return decisive ? triple[scores.indexOf(best)] : null;
+}
+
+/** Which of the three coordinate columns is the elevation by MAGNITUDE — `null` when none stands out. */
 function findElevationColumn(triple: readonly number[], stats: readonly ColumnStats[]): number | null {
   const magnitudes = triple.map((i) => stats[i].meanAbs);
   const smallest = magnitudes.indexOf(Math.min(...magnitudes));
+  if (stats[triple[smallest]].constant) return null;
   const others = magnitudes.filter((_, i) => i !== smallest);
   const largestOther = Math.max(...others);
   const clearlySmaller = magnitudes[smallest] * ELEVATION_MAGNITUDE_RATIO < largestOther;
   return clearlySmaller ? triple[smallest] : null;
 }
 
+/** The elevation column and what it was recognised from: surface → magnitude → file order (the last of three). */
+function chooseElevation(
+  rows: readonly (readonly string[])[],
+  triple: readonly number[],
+  stats: readonly ColumnStats[],
+): { readonly zIndex: number; readonly basis: SniffBasis } {
+  const bySurface = findElevationBySurface(rows, triple);
+  if (bySurface !== null) return { zIndex: bySurface, basis: 'surface' };
+  const byMagnitude = findElevationColumn(triple, stats);
+  if (byMagnitude !== null) return { zIndex: byMagnitude, basis: 'magnitude' };
+  return { zIndex: triple[COORD_COLUMNS - 1], basis: 'file-order' };
+}
+
 /**
  * The two horizontal columns → X and Y. File order stands unless the first one is several times
  * larger than the second, which in any projected CRS means Northing-before-Easting (PNEZD, NEZ).
+ * A constant column compares nothing (its 0 would make any other column «4× larger»).
  */
 function assignHorizontal(
   pair: readonly [number, number],
@@ -120,19 +193,21 @@ function assignHorizontal(
   roles: ColumnRole[],
 ): void {
   const [first, second] = pair;
-  const northingFirst = stats[first].meanAbs >= NORTHING_MAGNITUDE_RATIO * stats[second].meanAbs;
+  const comparable = !stats[first].constant && !stats[second].constant;
+  const northingFirst = comparable && stats[first].meanAbs >= NORTHING_MAGNITUDE_RATIO * stats[second].meanAbs;
   roles[first] = northingFirst ? 'y' : 'x';
   roles[second] = northingFirst ? 'x' : 'y';
 }
 
 /**
- * Propose a `ColumnMapping` from the DATA of a few sample rows (no headers needed).
+ * Propose a `ColumnMapping` from the DATA of sample rows (no headers needed), with what the elevation was recognised
+ * from. The rows should be spread over the whole file, not its head (`topo-mapping-edit`): a head can be constant.
  *
  * Returns `null` when the rows do not carry three coordinate columns at all — the caller then keeps
  * whatever it did before (for the cloud reader: «the first three numeric fields», unchanged), so a
  * file this sniffer cannot read is never made WORSE by it.
  */
-export function suggestMappingFromRows(rows: readonly (readonly string[])[]): ColumnMapping | null {
+export function sniffMappingFromRows(rows: readonly (readonly string[])[]): SniffedMapping | null {
   const width = columnCount(rows);
   if (width < COORD_COLUMNS) return null;
 
@@ -148,13 +223,17 @@ export function suggestMappingFromRows(rows: readonly (readonly string[])[]): Co
   const code = stats.findIndex((s, i) => !s.isNumeric && s.numericRatio === 0 && roles[i] === 'ignore');
   if (code !== -1) roles[code] = 'code';
 
-  // No magnitude separation → the file order stands: the LAST of the three is the elevation.
   const triple = numeric.filter((i) => i !== pointId).slice(0, COORD_COLUMNS);
-  const zIndex = findElevationColumn(triple, stats) ?? triple[COORD_COLUMNS - 1];
+  const { zIndex, basis } = chooseElevation(rows, triple, stats);
   const horizontal = triple.filter((i) => i !== zIndex);
 
   roles[zIndex] = 'z';
   assignHorizontal([horizontal[0], horizontal[1]], stats, roles);
 
-  return roles;
+  return { mapping: roles, basis };
+}
+
+/** The mapping alone — for callers that do not show the basis (the viewer's ASCII cloud). */
+export function suggestMappingFromRows(rows: readonly (readonly string[])[]): ColumnMapping | null {
+  return sniffMappingFromRows(rows)?.mapping ?? null;
 }

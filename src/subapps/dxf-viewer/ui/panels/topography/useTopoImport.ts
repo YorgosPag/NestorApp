@@ -231,7 +231,7 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
 
       setDxfPoints(null);
       setTable(parsed);
-      setMapping(proposeColumnMapping(parsed));
+      setMapping(proposeColumnMapping(parsed).mapping);
       setStep('mapping');
     } catch {
       setError('read');

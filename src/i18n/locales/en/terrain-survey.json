@@ -3,6 +3,11 @@
     "caption": "First rows of the file — choose what each column is",
     "presetLabel": "Column order",
     "presetPlaceholder": "Choose a format…",
+    "basis": {
+      "surface": "We found the elevation from the points themselves: in this order no position has two elevations. Change it if the file says otherwise.",
+      "magnitude": "We found the elevation from the size of the values: they are far smaller than the coordinates. Change the order if the file says otherwise.",
+      "file-order": "The file has no header and the data do not reveal the order — we kept the file's order. Check the columns before you continue."
+    },
     "columnN": "Column {n}",
     "roleOf": "What column “{column}” is",
     "role": {

@@ -51,10 +51,11 @@ function tableOf(read: SurveyFileRead) {
 describe('Π — η αντιστοίχιση ως επεξεργασία', () => {
   it('Π1 επικεφαλίδες · δεδομένα · τίποτα', () => {
     expect(proposeColumnMapping({ headers: ['ΑΑ', 'Χ', 'Ψ', 'Υψόμετρο'], rows: [['1', '2', '3', '4']] }))
-      .toStrictEqual(['pointId', 'x', 'y', 'z']);
+      .toStrictEqual({ mapping: ['pointId', 'x', 'y', 'z'], basis: 'headers' });
     const headless = { headers: [], rows: GREEK_ROWS.map((row) => row.split(';')) };
-    expect(proposeColumnMapping(headless)).toStrictEqual(['pointId', 'x', 'y', 'z']);
-    expect(proposeColumnMapping({ headers: [], rows: [['α', 'β']] })).toStrictEqual(['ignore', 'ignore']);
+    expect(proposeColumnMapping(headless)).toStrictEqual({ mapping: ['pointId', 'x', 'y', 'z'], basis: 'magnitude' });
+    expect(proposeColumnMapping({ headers: [], rows: [['α', 'β']] }))
+      .toStrictEqual({ mapping: ['ignore', 'ignore'], basis: null });
   });
 
   it('Π2 ο ρόλος μετακομίζει, δεν διπλασιάζεται', () => {

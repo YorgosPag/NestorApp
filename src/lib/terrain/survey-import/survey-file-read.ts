@@ -21,14 +21,20 @@ import { readDelimitedText } from './topo-delimited-reader';
 import { readExcelToTable } from './topo-excel-reader';
 import { scanDxfSurvey, type DxfSurveyScan } from './dxf-survey-points';
 import { surveyFileKindOf, SURVEY_FILE_SNIFF_BYTES } from './survey-file-kind';
-import { proposeColumnMapping } from './topo-mapping-edit';
+import { proposeColumnMapping, type MappingBasis } from './topo-mapping-edit';
 import type { ColumnMapping, RawTable } from './topo-import-types';
 
 /** Γιατί το αρχείο δεν διαβάστηκε — ένα όνομα ανά πράξη που οφείλει να προτείνει η οθόνη. */
 export type SurveyFileRefusal = 'xls-legacy' | 'dxf-binary' | 'unsupported' | 'unreadable' | 'empty';
 
 export type SurveyFileRead =
-  | { readonly road: 'table'; readonly table: RawTable; readonly proposedMapping: ColumnMapping }
+  | {
+      readonly road: 'table';
+      readonly table: RawTable;
+      readonly proposedMapping: ColumnMapping;
+      /** Από πού βγήκε η πρόταση — η οθόνη λέει πόσο σίγουρη είναι (ADR-920 §13.10 Α). */
+      readonly mappingBasis: MappingBasis | null;
+    }
   | { readonly road: 'dxf'; readonly scan: DxfSurveyScan }
   | { readonly road: 'refused'; readonly refusal: SurveyFileRefusal };
 
@@ -46,7 +52,8 @@ export function decodeSurveyText(bytes: Uint8Array): string {
 
 function tableRoad(table: RawTable): SurveyFileRead {
   if (table.rows.length === 0) return { road: 'refused', refusal: 'empty' };
-  return { road: 'table', table, proposedMapping: proposeColumnMapping(table) };
+  const proposal = proposeColumnMapping(table);
+  return { road: 'table', table, proposedMapping: proposal.mapping, mappingBasis: proposal.basis };
 }
 
 function dxfRoad(bytes: Uint8Array): SurveyFileRead {

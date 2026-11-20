@@ -25,17 +25,10 @@ import type { TerrainRefusalCode } from '../publication/terrain-publication-cont
 import type { ListingTerrainSnapshot } from '../publication/listing-terrain-types';
 import type { SnapshotFrame } from '../publication/listing-terrain-frame';
 import type { TopoPoint } from '../terrain-types';
+import { censusOf, surveyFactsOf, type SurveyFacts } from './survey-position-census';
 
-/** What the owner is told about the points, refused or not. Counts are over the CANONICAL (integer-mm) points. */
-export interface SurveyFacts {
-  readonly points: number;
-  /** Points carrying a measured elevation — only these shape the surface (ADR-720). */
-  readonly withElevation: number;
-  /** Extra points sitting on an already-taken position: the surface keeps the first. */
-  readonly coincident: number;
-  /** Of those, the ones whose elevation DIFFERS from the kept point — a contradiction in the survey. */
-  readonly conflictingElevations: number;
-}
+// The census lives in its own module (shared with the column sniffer, ADR-920 §13.10 Α); importers keep this path.
+export { surveyFactsOf, type SurveyFacts };
 
 /**
  * A survey position the owner should look at, ON the preview map (ADR-920 Β4.8) — never on the wire or in the snapshot:
@@ -76,43 +69,6 @@ export function surveySourceOf(points: readonly TopoPoint[]): ListingTerrainSour
     boundary: null,
     envelope: null,
   };
-}
-
-/** One canonical position: the elevation the TIN keeps (the FIRST) and how the repeats relate to it. */
-interface PositionCensus {
-  readonly x: number;
-  readonly y: number;
-  readonly keptZ: number | undefined;
-  repeats: number;
-  conflicts: number;
-}
-
-/** ONE pass over canonical points: integer mm, so «same position» is exactly what the TIN merges. */
-function censusOf(points: readonly TerrainSourcePoint[]): { withElevation: number; positions: Map<string, PositionCensus> } {
-  const positions = new Map<string, PositionCensus>();
-  let withElevation = 0;
-  for (const point of points) {
-    const z = point.length === 3 ? point[2] : undefined;
-    if (z !== undefined) withElevation++;
-    const key = `${point[0]}:${point[1]}`;
-    const seen = positions.get(key);
-    if (seen === undefined) { positions.set(key, { x: point[0], y: point[1], keptZ: z, repeats: 0, conflicts: 0 }); continue; }
-    seen.repeats++;
-    if (seen.keptZ !== z) seen.conflicts++;
-  }
-  return { withElevation, positions };
-}
-
-/** Facts over canonical points (see {@link censusOf}). */
-export function surveyFactsOf(points: readonly TerrainSourcePoint[]): SurveyFacts {
-  const { withElevation, positions } = censusOf(points);
-  let coincident = 0;
-  let conflictingElevations = 0;
-  for (const position of positions.values()) {
-    coincident += position.repeats;
-    conflictingElevations += position.conflicts;
-  }
-  return { points: points.length, withElevation, coincident, conflictingElevations };
 }
 
 /** The repeated positions, placed on the preview through the snapshot's own frame. */

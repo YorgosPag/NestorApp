@@ -5,7 +5,8 @@
  * read as «the first three numeric fields» yields X = the point id. Silent, plausible, wrong site.
  */
 
-import { suggestMappingFromRows } from '../topo-column-sniffer';
+import { proposeColumnMapping } from '@/lib/terrain/survey-import/topo-mapping-edit';
+import { sniffMappingFromRows, suggestMappingFromRows } from '../topo-column-sniffer';
 import { sampleTopoRows } from '../topo-text-lines';
 
 /** id, Easting(X), Northing(Y), Z, code — the file that used to be read as X=id. */
@@ -85,5 +86,39 @@ describe('suggestMappingFromRows — no proposal', () => {
 
   it('proposes nothing for an empty sample', () => {
     expect(suggestMappingFromRows([])).toBeNull();
+  });
+});
+
+/**
+ * ADR-920 §13.10 Α — the live file (`topo-test-ridge-dense.txt`): `x y z`, no header, X 0..12 · Y 0..60, Z a sawtooth
+ * of X (0,1,2,3,2,1,0,…). Its first 61 rows have X = 0 and Z = 0, and the old sniffer read «Z · Y · X».
+ */
+const SAW = [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 0];
+function sawtoothRows(order: (x: number, y: number, z: number) => number[]): string[][] {
+  const rows: string[][] = [];
+  SAW.forEach((z, x) => {
+    for (let y = 0; y <= 60; y++) rows.push(order(x, y, z).map(String));
+  });
+  return rows;
+}
+
+describe('ADR-920 §13.10 Α — a constant head, and the surface signal', () => {
+  it('reads the whole sawtooth as x, y, z — from the SURFACE (one candidate keeps z(x, y) consistent)', () => {
+    const table = { headers: [], rows: sawtoothRows((x, y, z) => [x, y, z]) };
+    expect(proposeColumnMapping(table)).toEqual({ mapping: ['x', 'y', 'z'], basis: 'surface' });
+  });
+
+  it('reads its first 50 rows (X and Z constant) as x, y, z — a constant column judges no magnitude', () => {
+    const head = sawtoothRows((x, y, z) => [x, y, z]).slice(0, 50);
+    expect(sniffMappingFromRows(head)).toEqual({ mapping: ['x', 'y', 'z'], basis: 'file-order' });
+  });
+
+  it('finds the elevation FIRST in a `z x y` file, where magnitude cannot tell', () => {
+    const table = { headers: [], rows: sawtoothRows((x, y, z) => [z, x, y]) };
+    expect(proposeColumnMapping(table)).toEqual({ mapping: ['z', 'x', 'y'], basis: 'surface' });
+  });
+
+  it('keeps the magnitude basis for a projected survey (the surface is consistent in every order)', () => {
+    expect(sniffMappingFromRows(rowsOf(PENZD))?.basis).toBe('magnitude');
   });
 });
