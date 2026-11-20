@@ -32,8 +32,7 @@ import {
 import { floorplanTabKind } from '@/lib/property-dossier/property-dossier-view';
 import { propertyDossierMediaBinding } from '@/lib/files/media-tabs/entity-media-binding';
 import { mediaTabScopePolicy } from '@/lib/files/media-tabs/media-tab-scope';
-import { matchesTabRead } from '@/lib/files/upload-scope';
-import type { FileRecord } from '@/types/file-record';
+import { matchesTabRead, type TabReadFile } from '@/lib/files/upload-scope';
 import type { PropertyDossier } from '@/types/property-dossier';
 
 /**
@@ -112,7 +111,7 @@ export function propertyDossierMediaTab(tab: PropertyDossierFileTab, type: Prope
  */
 export function propertyDossierFileTabOf<T extends PropertyDossierFileTab>(
   dossier: Pick<PropertyDossier, 'id' | 'label' | 'userId' | 'type'>,
-  file: Pick<FileRecord, 'domain' | 'category' | 'purpose'>,
+  file: TabReadFile,
   tabs: readonly T[],
 ): T | null {
   const binding = propertyDossierMediaBinding(dossier);

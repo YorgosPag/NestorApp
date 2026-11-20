@@ -27,6 +27,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const MG = require('../module-graph');
+const RK = require('./registry-keys');
 
 /** Η είσοδος της πύλης (ADR-924) — προεπιλογή ο δίσκος της ρίζας· ο εκτελεστής δίνει την όψη του commit. */
 const inputOf = (root) => require('../gate-input').openGateInput({ root });
@@ -121,12 +122,12 @@ function importedModulesOf(absFile, ctx) {
   const text = (ctx.input || inputOf(ctx.projectRoot)).read(absFile) ?? '';
   const mod = MG.parseModule(absFile, text);
   const specs = [
-    ...mod.imports.map(i => ({ spec: i.spec, names: namesOf(i) })),
-    ...mod.reExports.map(r => ({ spec: r.spec, names: null })),
+    ...mod.imports.map(i => ({ spec: i.spec, names: namesOf(i), dynamic: i.kind === 'dynamic', reExport: false })),
+    ...mod.reExports.map(r => ({ spec: r.spec, names: null, dynamic: false, reExport: true })),
   ];
-  return specs.map(({ spec, names }) => {
+  return specs.map(({ spec, names, dynamic, reExport }) => {
     const hit = MG.resolveSpecifier(spec, absFile, ctx);
-    return { spec, names, file: hit.kind === 'internal' ? toPosix(hit.file) : null, kind: hit.kind };
+    return { spec, names, dynamic, reExport, file: hit.kind === 'internal' ? toPosix(hit.file) : null, kind: hit.kind };
   });
 }
 
@@ -207,36 +208,77 @@ function seedFiles(projectRoot, hookDecls, ctx) {
  * Αντίστροφη κλειστότητα μέχρι σταθερό σημείο: ποιος εισάγει σημειωμένο αρχείο,
  * άμεσα ή μεταβατικά. Το προφίλτρο ανά γύρο είναι τα **basenames** του μετώπου·
  * ο AST κρίνει.
+ *
+ * 🔑 **Το όριο είναι ΔΟΜΙΚΟ, όχι βάθος** (ADR-783 ομάδα Ζ #2, 2026-11-20): κάθε γύρος σημειώνει ≥1 ΝΕΟ αρχείο
+ * (αλλιώς το μέτωπο αδειάζει), άρα η κλειστότητα τελειώνει σε ≤ |αρχεία κώδικα| γύρους — πάντα. Το παλιό σταθερό
+ * `12` ήταν βάθος αλυσίδας εισαγωγών: ο κώδικας βάθυνε (μετρημένο 17–24 γύροι, 15 σπόροι → 276 αρχεία) και η πύλη
+ * **έσκαγε** σε κάθε commit που την πυροδοτούσε. Υπέρβαση του δομικού ορίου = σφάλμα της ίδιας της μηχανής ⇒ `throw`.
+ *
+ * 🔑 **Τα μητρώα τεμπέλικων chunks κρίνονται ΑΝΑ ΚΛΕΙΔΙ** ({@link RK.judgeImporter}): το μέτωπο κρατά και
+ * **κλειδιά** εγγραφών που έφτασαν· όποιος εισάγει μητρώο φτάνει μόνο αν **ζητά** τέτοιο κλειδί. Κάθε γύρος
+ * σημειώνει ≥1 νέο αρχείο **ή** κλειδί ⇒ δομικό όριο = αρχεία + κλειδιά.
  */
-function reachingFiles(projectRoot, seeds, ctx, maxRounds = 12) {
+function reachingFiles(projectRoot, seeds, ctx, maxRounds = undefined, index = RK.EMPTY_INDEX) {
+  const bound = maxRounds ?? Math.max(1, ctx.fileSet.size + index.keyCount);
   const marked = new Set(seeds);
+  const reachedKeys = new Set();
   let frontier = new Set(seeds);
+  let frontierKeys = new Set();
   let rounds = 0;
 
-  while (frontier.size > 0 && rounds < maxRounds) {
+  while ((frontier.size > 0 || frontierKeys.size > 0) && rounds < bound) {
     rounds += 1;
     const tokens = [...frontier].map(f => path.basename(f).replace(/\.[jt]sx?$/, ''));
+    if (frontierKeys.size > 0) tokens.push(...index.tokens);
     const next = new Set();
+    const nextKeys = new Set();
     for (const rel of gitGrepFiles(projectRoot, tokens, ctx.input)) {
       const abs = toPosix(path.resolve(projectRoot, rel));
       if (marked.has(abs)) continue;
-      const hits = importedModulesOf(abs, ctx);
-      if (hits.some(h => h.file && frontier.has(h.file))) next.add(abs);
+      const verdict = RK.judgeImporter(abs, importedModulesOf(abs, ctx), frontier, frontierKeys, index, ctx);
+      if (verdict.marks) next.add(abs);
+      for (const key of verdict.keys) if (!reachedKeys.has(key)) nextKeys.add(key);
     }
     for (const f of next) marked.add(f);
+    for (const key of nextKeys) reachedKeys.add(key);
     frontier = next;
+    frontierKeys = nextKeys;
   }
 
-  if (rounds >= maxRounds && frontier.size > 0) {
-    throw new Error(`CHECK 3.52: η αντίστροφη κλειστότητα δεν συνέκλινε σε ${maxRounds} γύρους`);
+  if (rounds >= bound && (frontier.size > 0 || frontierKeys.size > 0)) {
+    throw new Error(`CHECK 3.52: η αντίστροφη κλειστότητα δεν συνέκλινε σε ${bound} γύρους`);
   }
   return marked;
 }
 
+/**
+ * Κ2 (β) — οι **δηλωμένοι παρατηρητές** της δημόσιας προβολής (`publicReadObservers`, ADR-783 ομάδα Ζ #2):
+ * εσωτερικός αναγνώστης που ρωτά «έφτασε η αγγελία στο κοινό;» (ADR-777 §8.103.2) **δεν** κάνει δημόσιο όποιον
+ * τον χρησιμοποιεί — ίδιο σκεπτικό με το `computeListingLedger`. Βγαίνει **μόνο** από τους σπόρους: αν φτάσει
+ * σε δημόσια προβολή από **άλλο** δρόμο, σημειώνεται κανονικά.
+ *
+ * ⛔ Κλειστό σύνολο, fail-closed ⇒ `throw` ΜΕ ΟΝΟΜΑ: χωρίς `why` · σελίδα/layout του `src/app` (θα έσβηνε
+ * το ίδιο το ελάττωμα) · δήλωση που **δεν είναι** σπόρος (μπαγιάτικη — δεν εξαιρεί τίποτα, άρα ψεύδεται).
+ */
+function excludeObservers(projectRoot, seeds, observers) {
+  const out = new Set(seeds);
+  for (const decl of observers) {
+    const where = `CHECK 3.52: publicReadObservers «${decl && decl.module}»`;
+    if (!decl || typeof decl.module !== 'string' || typeof decl.why !== 'string' || decl.why.trim() === '') {
+      throw new Error(`${where} — κάθε παρατηρητής δηλώνεται με \`module\` ΚΑΙ μη κενό \`why\`.`);
+    }
+    if (decl.module.startsWith('src/app/')) throw new Error(`${where} — σελίδα/layout δεν είναι παρατηρητής.`);
+    const abs = toPosix(path.resolve(projectRoot, decl.module));
+    if (!out.delete(abs)) throw new Error(`${where} — δεν καταναλώνει δημόσιο hook: η δήλωση είναι μπαγιάτικη.`);
+  }
+  return out;
+}
+
 /** @returns {Set<string>} απόλυτα posix μονοπάτια που φτάνουν σε δημόσια προβολή. */
-function computePublicReaching(projectRoot, hookDecls, input = inputOf(projectRoot)) {
+function computePublicReaching(projectRoot, hookDecls, input = inputOf(projectRoot), observers = []) {
   const ctx = createResolveContext(projectRoot, input);
-  return reachingFiles(projectRoot, seedFiles(projectRoot, hookDecls, ctx), ctx);
+  const seeds = excludeObservers(projectRoot, seedFiles(projectRoot, hookDecls, ctx), observers);
+  return reachingFiles(projectRoot, seeds, ctx, undefined, RK.loadRegistryIndex(projectRoot, ctx));
 }
 
 module.exports = {

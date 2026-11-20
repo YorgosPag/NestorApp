@@ -34,6 +34,9 @@
  *  ⚠️ Ο Κ1 είναι από κατασκευή **αυτο-συνεπής**: μετακίνησε δημόσια σελίδα μέσα στο
  *  `(app)` και η δήλωση αλλάζει μαζί της ⇒ ο Κ1 μένει **ΠΡΑΣΙΝΟΣ πάνω στο ελάττωμα**.
  *  Ο Κ2 είναι ο λόγος που η άγκυρα είναι άγκυρα.
+ *  🔑 (ADR-783 ομάδα Ζ #2) Μέσα από μητρώο τεμπέλικων chunks η προσβασιμότητα μετριέται **ανά κλειδί**
+ *  (`lib/shell-boundary/registry-keys.js`)· και οι **δηλωμένοι παρατηρητές** (`publicReadObservers`, με λόγο)
+ *  δεν είναι σπόροι: το γραφείο που ρωτά «έφτασε η αγγελία μου στο κοινό;» δεν γίνεται δημόσιο.
  *
  *  **Κ3 — ΙΔΙΟΚΤΗΣΙΑ ΣΥΜΒΟΛΟΥ**: τα σύμβολα κελύφους εισάγονται **μόνο** από τον
  *  δηλωμένο ιδιοκτήτη (τα tests μετρώνται ξεχωριστά, ρητά). Και ο ιδιοκτήτης οφείλει
@@ -243,7 +246,7 @@ function analyse(projectRoot, { withPublicSurface = true, input = openGateInput(
   const ownerFinding = auditOwner(projectRoot, cfg, symbolFindings, input);
 
   const publicReaching = withPublicSurface
-    ? PS.computePublicReaching(projectRoot, cfg.publicDataHooks, input)
+    ? PS.computePublicReaching(projectRoot, cfg.publicDataHooks, input, cfg.publicReadObservers || [])
     : null;
   const declarers = credentialDeclarers(projectRoot, cfg, resolveCtx);
 

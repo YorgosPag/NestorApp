@@ -9,7 +9,9 @@
  * | τα δύο σπίτια αποκλίνουν σε ταυτότητα/κατηγορία/διαβάθμιση | «ίδιο έγγραφο» |
  * | η πηγή αποκτά σκοπό που ταιριάζει σε καρτέλα του φακέλου | «καμία καρτέλα» |
  *
- * 🔑 «Καμία καρτέλα» ρωτά τις **πραγματικές** εμβέλειες του φακέλου (`propertyDossierFileTabOf`), χωρίς mock: η πηγή
+ * 🔑 «Καμία καρτέλα» — ούτε το καταφύγιο «Έγγραφα» (ADR-916 Φ-Γ3): το αρχείο λειτουργίας (`publicationIdentity`) δεν
+ * πέφτει ποτέ σε αυτό (ADR-866 §5.3.1).
+ * 🔑 Ρωτά τις **πραγματικές** εμβέλειες του φακέλου (`propertyDossierFileTabOf`), χωρίς mock: η πηγή
  * είναι κανονικό JSON του διακομιστή, όχι έγγραφο του ανθρώπου — αν εμφανιζόταν στα «Έγγραφα», θα μπορούσε να
  * μετονομαστεί ή να μεταφερθεί σαν οποιοδήποτε αρχείο, και η επαναπροβολή δεν θα το μάθαινε.
  */
@@ -65,8 +67,10 @@ describe('buildPublishedTerrainFileRecord — δύο σπίτια', () => {
     const dossier: Pick<PropertyDossier, 'id' | 'label' | 'userId' | 'type'> =
       { id: 'pdos_a', label: 'Οικόπεδο', userId: 'user_9', type };
     const record = personal();
-    const file = { domain: record.domain, category: record.category, purpose: record.purpose } as
-      Parameters<typeof propertyDossierFileTabOf>[1];
+    const file = {
+      domain: record.domain, category: record.category, purpose: record.purpose,
+      publicationIdentity: record.publicationIdentity,
+    } as Parameters<typeof propertyDossierFileTabOf>[1];
     expect(propertyDossierFileTabOf(dossier, file, ALL_TABS)).toBeNull();
   });
 });

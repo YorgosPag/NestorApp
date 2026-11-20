@@ -47,6 +47,14 @@
       "names": ["usePublicAgencies", "usePublicAgency"]
     }
   ],
+  "publicReadObservers": [
+    {
+      "module": "src/hooks/listings/useListingReach.ts",
+      "why": "ADR-777 §8.103.2 — η κεφαλίδα ακινήτου του ΓΡΑΦΕΙΟΥ ρωτά «έφτασε η αγγελία ΜΟΥ στο κοινό;» (σήμα «Στο κοινό» / «Δεν έφτασε στο κοινό»). Διαβάζει τη δημόσια προβολή με τον ΥΠΑΡΧΟΝΤΑ αναγνώστη (usePublicListing, σύνορο CHECK 3.74) — δεύτερη ανάγνωση του public_listings θα ήταν διπλότυπο. Παρατηρητής, όχι δημόσια επιφάνεια: ίδιο σκεπτικό με το computeListingLedger (ο πίνακας του μεσίτη που δείχνει «live» δεν γίνεται δημόσιος). Εξαιρείται ΜΟΝΟ από τους σπόρους — αν φτάσει σε δημόσια προβολή από άλλο δρόμο, σημειώνεται."
+    }
+  ],
+  "$publicReadObserversWhy": "Κ2 (β) — ADR-783 ομάδα Ζ #2 (2026-11-20). Κλειστό σύνολο: κάθε εγγραφή θέλει μη κενό why· σελίδα/layout του src/app ΑΠΑΓΟΡΕΥΕΤΑΙ· δήλωση που δεν καταναλώνει πια δημόσιο hook ⇒ throw (μπαγιάτικη).",
+
   "credentialLinkMetadata": {
     "module": "src/lib/tokens/credential-link-page.ts",
     "names": ["CREDENTIAL_LINK_PAGE_METADATA"]

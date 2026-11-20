@@ -348,6 +348,132 @@ describe('Κ — άγκυρες κριτηρίου', () => {
 // αποφασίζει» — ίσχυε για τον Κ2 και ΟΧΙ για τον Κ3. Ένα σχόλιο που δηλώνει κάλυψη
 // δεν είναι κάλυψη· γι' αυτό η άγκυρα είναι **δύο κατευθύνσεων**.
 
+/**
+ * ADR-783 ομάδα Ζ #2 — το όριο της αντίστροφης κλειστότητας είναι ΔΟΜΙΚΟ, όχι βάθος. Το σταθερό `12` έσκαγε όταν ο
+ * κώδικας βάθυνε (μετρημένο 17–24 γύροι στο repo). Μετάλλαξη «όριο 12» ⇒ κόκκινο εδώ.
+ */
+describe('Κ9 — βαθιά αλυσίδα εισαγωγών συγκλίνει (κανένα όριο βάθους)', () => {
+  const PS = require('../lib/shell-boundary/public-surface');
+  const DEPTH = 20;
+
+  test(`αλυσίδα ${DEPTH} επιπέδων πάνω από δημόσιο hook: η πύλη ΔΕΝ σκάει και φτάνει ως τον τελευταίο κρίκο`, () => {
+    const link = (i) => `src/components/chain/Link${i}.tsx`;
+    const { root } = miniRepo((files) => {
+      for (let i = 1; i <= DEPTH; i += 1) {
+        const from = i === 1 ? '@/components/search/SearchLandingContent' : `@/components/chain/Link${i - 1}`;
+        const name = i === 1 ? 'SearchLandingContent' : `Link${i - 1}`;
+        files[link(i)] = `import { ${name} } from '${from}';\nexport const Link${i} = () => ${name};\n`;
+      }
+    });
+    const reaching = PS.computePublicReaching(root, GATE.loadConfig(root).publicDataHooks);
+    expect([...reaching].some((file) => file.endsWith(link(DEPTH)))).toBe(true);
+  });
+});
+
+/**
+ * ADR-783 ομάδα Ζ #2 — μητρώο τεμπέλικων chunks: η προσβασιμότητα είναι ΑΝΑ ΚΛΕΙΔΙ. Το περιστατικό: μία εγγραφή
+ * του `lazyRoutes.tsx` έφτασε σε δημόσιο hook και 83 σελίδες του `(app)` έγιναν «δημόσια επιφάνεια».
+ * Μετάλλαξη «το μητρώο κρίνεται ως αρχείο» ⇒ κόκκινο το Κ10α· «αδιαφανής χρήση = καθαρή» ⇒ κόκκινο το Κ10γ.
+ */
+describe('Κ10 — μητρώο τεμπέλικων chunks: ανά κλειδί, fail-closed', () => {
+  const REGISTRY = 'src/utils/lazyRoutes.tsx';
+  const ADMIN_PAGE = 'src/app/(app)/admin/page.tsx';
+  const withRegistry = (pageBody) => (files) => {
+    files['.i18n-shell-slice.json'] = JSON.stringify({ lazyRouteRegistries: [REGISTRY] });
+    files['src/utils/lazyRouteFactory.tsx'] = 'export const defineLazyRoutes = (r) => r;\n';
+    files[REGISTRY] =
+      "import { defineLazyRoutes } from './lazyRouteFactory';\n" +
+      'export const LazyRoutes = defineLazyRoutes({\n' +
+      "  Public: { load: () => import('@/components/search/SearchLandingContent'), ssr: false },\n" +
+      "  Admin: { load: () => import('@/components/admin/AdminPanel'), ssr: false },\n" +
+      '});\n';
+    files['src/components/admin/AdminPanel.tsx'] = 'export default function AdminPanel() { return null; }\n';
+    files[ADMIN_PAGE] = "import { LazyRoutes } from '@/utils/lazyRoutes';\n" + pageBody;
+  };
+
+  test('Κ10α — σελίδα που ζητά ΑΛΛΟ κλειδί του μητρώου ⇒ ΚΑΜΙΑ παραβίαση', () => {
+    const { result } = miniRepo(withRegistry('const A = LazyRoutes.Admin;\nexport default function P() { return A; }\n'));
+    expect(blockingStates(result)).toEqual([]);
+  });
+
+  test('Κ10β — σελίδα που ζητά το κλειδί που φτάνει στο δημόσιο hook ⇒ public-surface-wearing-shell', () => {
+    const { result } = miniRepo(withRegistry('const A = LazyRoutes.Public;\nexport default function P() { return A; }\n'));
+    expect(GATE.blockingOf(result).map(f => `${f.file} [${f.state}]`))
+      .toEqual([`${ADMIN_PAGE} [${GATE.PAGE_STATES.PUBLIC_WEARING_SHELL}]`]);
+  });
+
+  test("Κ10β′ — ίδιο, με `LazyRoutes['Public']` ⇒ πιάνεται", () => {
+    const { result } = miniRepo(withRegistry("const A = LazyRoutes['Public'];\nexport default function P() { return A; }\n"));
+    expect(blockingStates(result)).toEqual([GATE.PAGE_STATES.PUBLIC_WEARING_SHELL]);
+  });
+
+  test('Κ10γ — αδιαφανής χρήση του μητρώου (ως τιμή) ⇒ fail-closed: φτάνει', () => {
+    const { result } = miniRepo(withRegistry('export default function P() { return Object.keys(LazyRoutes); }\n'));
+    expect(blockingStates(result)).toEqual([GATE.PAGE_STATES.PUBLIC_WEARING_SHELL]);
+  });
+
+  // Μετρημένο στο repo: `PublicPriceSlot` του `public-catalog-surfaces` «έφτανε» επειδή έφτασε εγγραφή ΑΛΛΟΥ μητρώου.
+  test('Κ10δ — αδιαφανής χρήση ΑΛΛΟΥ μητρώου, που δεν εκθέτει το κλειδί που έφτασε ⇒ ΚΑΜΙΑ παραβίαση', () => {
+    const SURFACES = 'src/components/prices/price-surfaces.tsx';
+    const { result } = miniRepo(files => {
+      withRegistry('const A = LazyRoutes.Admin;\nexport default function P() { return A; }\n')(files);
+      files['.i18n-shell-slice.json'] = JSON.stringify({ lazyRouteRegistries: [REGISTRY, SURFACES] });
+      files['src/components/prices/Price.tsx'] = 'export default function Price() { return null; }\n';
+      files[SURFACES] =
+        "import { defineLazyRoutes } from '@/utils/lazyRouteFactory';\n" +
+        "const S = defineLazyRoutes({ Price: { load: () => import('./Price'), ssr: false } });\n" +
+        'export const PriceSlot = () => S.Price;\n';
+      files['src/app/(app)/prices/page.tsx'] =
+        "import { PriceSlot } from '@/components/prices/price-surfaces';\n" +
+        'export default function P() { return PriceSlot; }\n';
+    });
+    expect(blockingStates(result)).toEqual([]);
+  });
+});
+
+/**
+ * ADR-783 ομάδα Ζ #2 — δηλωμένος παρατηρητής της δημόσιας προβολής (`publicReadObservers`). Αδήλωτος ⇒ η σελίδα
+ * του γραφείου κοκκινίζει (ο Κ2 ισχύει)· δηλωμένος με λόγο ⇒ καθαρό· μπαγιάτικη/ελλιπής δήλωση ⇒ `throw`.
+ */
+describe('Κ11 — παρατηρητής δημόσιας προβολής: κλειστό σύνολο, με λόγο', () => {
+  const OBSERVER = 'src/hooks/listings/useReach.ts';
+  const OFFICE_PAGE = 'src/app/(app)/property/page.tsx';
+  const declare = (files, observers) => {
+    const cfg = JSON.parse(files['.shell-boundary.json']);
+    cfg.publicReadObservers = observers;
+    files['.shell-boundary.json'] = JSON.stringify(cfg, null, 2);
+  };
+  const withObserver = (files) => {
+    files[OBSERVER] =
+      "import { usePublicListings } from '@/services/realtime/hooks/usePublicListings';\n" +
+      'export const useReach = () => usePublicListings();\n';
+    files[OFFICE_PAGE] =
+      "import { useReach } from '@/hooks/listings/useReach';\n" +
+      'export default function P() { return useReach(); }\n';
+  };
+
+  test('Κ11α — αδήλωτος παρατηρητής ⇒ η σελίδα του γραφείου κοκκινίζει (ο Κ2 ΔΕΝ χαλάρωσε)', () => {
+    const { result } = miniRepo(withObserver);
+    expect(blockingStates(result)).toEqual([GATE.PAGE_STATES.PUBLIC_WEARING_SHELL]);
+  });
+
+  test('Κ11β — δηλωμένος με λόγο ⇒ ΚΑΜΙΑ παραβίαση', () => {
+    const { result } = miniRepo(files => {
+      withObserver(files);
+      declare(files, [{ module: OBSERVER, why: 'το γραφείο ρωτά αν έφτασε η αγγελία του' }]);
+    });
+    expect(blockingStates(result)).toEqual([]);
+  });
+
+  test.each([
+    ['χωρίς why', [{ module: OBSERVER }], /why/],
+    ['σελίδα του src/app', [{ module: OFFICE_PAGE, why: 'x' }], /σελίδα\/layout/],
+    ['μπαγιάτικη (δεν καταναλώνει hook)', [{ module: 'src/components/internal/LedgerPanel.tsx', why: 'x' }], /μπαγιάτικη/],
+  ])('Κ11γ — %s ⇒ throw ΜΕ ΟΝΟΜΑ', (_label, observers, message) => {
+    expect(() => miniRepo(files => { withObserver(files); declare(files, observers); })).toThrow(message);
+  });
+});
+
 describe('Κ7 — αναφορά σε σχόλιο ΔΕΝ είναι εισαγωγή, εισαγωγή ΠΑΝΤΑ πιάνεται', () => {
   test('Κ7α — σχόλιο που ονομάζει το σύμβολο κελύφους ⇒ ΚΑΜΙΑ παραβίαση', () => {
     const { result } = miniRepo((files) => {

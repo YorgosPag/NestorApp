@@ -138,6 +138,24 @@ describe.each(KINDS)('Γ46 — φάκελος «%s»: κάθε παραδομέ�
     expect(tabsSeeing(fay)).toEqual(['documents']);
     expect(tabsSeeing(drawing)).toEqual(['documents']);
   });
+
+  /**
+   * ADR-866 §5.3.1 — το καταφύγιο μαζεύει αρχεία του **ανθρώπου**. Αρχείο **λειτουργίας** (ταυτότητα δημοσίευσης, π.χ. η
+   * πηγή εδάφους της αγγελίας, ADR-920 Δ2) με το ΙΔΙΟ εύρος δεν το βλέπει καμία καρτέλα — ούτε το hook ούτε η σελίδα.
+   */
+  it('το αρχείο ΛΕΙΤΟΥΡΓΙΑΣ (`publicationIdentity`) δεν πέφτει στο καταφύγιο', () => {
+    const drawing: FileScope = { domain: 'construction', category: 'drawings' };
+    const featureOwned = { ...drawing, publicationIdentity: 'terrain/measured' };
+    const hookSees = (file: typeof featureOwned | FileScope) => TABS.filter((tab) => {
+      const media = propertyDossierMediaTab(tab, kind);
+      const policy = mediaTabScopePolicy(DOSSIER, media);
+      return buildFileReadFilter(mediaTabUploadDefaults(DOSSIER, media).purpose, policy?.readScopes, policy?.readsUnclaimedBy)(file);
+    });
+    const dossier = { id: 'pdos_test', label: 'Δοκιμή', userId: 'uid_owner', type: kind } as const;
+    expect(hookSees(drawing)).toEqual(['documents']);
+    expect(hookSees(featureOwned)).toEqual([]);
+    expect(propertyDossierFileTabOf(dossier, featureOwned, TABS)).toBeNull();
+  });
 });
 
 describe('Α38.1 — αλλαγή είδους φακέλου δεν κρύβει ποτέ αρχείο', () => {

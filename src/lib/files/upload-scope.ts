@@ -108,16 +108,33 @@ export function matchesFileScopes(
     && (scope.purpose === undefined || file.purpose === scope.purpose));
 }
 
+/** Ό,τι χρειάζεται ο κριτής ανάγνωσης καρτέλας — εμβέλεια **και** κάτοχος (άνθρωπος ή λειτουργία). */
+export type TabReadFile = Pick<FileRecord, 'domain' | 'category' | 'purpose' | 'publicationIdentity'>;
+
+/**
+ * **Ανήκει το αρχείο σε ΛΕΙΤΟΥΡΓΙΑ, όχι σε άνθρωπο;** — έχει ταυτότητα δημοσίευσης (ADR-845 · ADR-920 Δ2), την οποία
+ * γράφει **μόνο** ο διακομιστής. Τέτοιο αρχείο το δείχνει και το διαχειρίζεται η λειτουργία που το κατέχει, όχι μια
+ * λίστα αρχείων: αν φαινόταν ως ελεύθερο έγγραφο, θα μετονομαζόταν ή θα μεταφερόταν χωρίς να το μάθει η επαναπροβολή.
+ * Πρότυπο: Google Drive `appDataFolder` · παράγωγα Revit/ArchiCAD εκτός του δέντρου αρχείων του χρήστη.
+ */
+function isFeatureOwnedFile(file: TabReadFile): boolean {
+  return typeof file.publicationIdentity === 'string' && file.publicationIdentity.length > 0;
+}
+
 /**
  * **Διαβάζει η καρτέλα αυτό το αρχείο;** — οι δικές της εμβέλειες **ή**, για την καρτέλα-καταφύγιο, «δεν το διεκδικεί
  * καμία αδελφή» (ADR-916 Φ-Γ3). Ο ΕΝΑΣ κριτής: τον ρωτούν το φίλτρο των hooks **και** το `propertyDossierFileTabOf`.
+ *
+ * 🔑 **Το καταφύγιο μαζεύει αρχεία του ΑΝΘΡΩΠΟΥ** (ADR-866 §5.3.1): ένα αρχείο λειτουργίας ({@link isFeatureOwnedFile})
+ * δεν πέφτει ποτέ σε αυτό. Οι **δηλωμένες** εμβέλειες μιας καρτέλας μένουν αμετάβλητες.
  */
 export function matchesTabRead(
-  file: Pick<FileRecord, 'domain' | 'category' | 'purpose'>,
+  file: TabReadFile,
   scopes: readonly FileScope[],
   unclaimedBy: readonly FileScope[] | undefined,
 ): boolean {
-  return matchesFileScopes(file, scopes) || (unclaimedBy !== undefined && !matchesFileScopes(file, unclaimedBy));
+  if (matchesFileScopes(file, scopes)) return true;
+  return unclaimedBy !== undefined && !isFeatureOwnedFile(file) && !matchesFileScopes(file, unclaimedBy);
 }
 
 /**
@@ -128,7 +145,7 @@ export function buildFileReadFilter(
   purpose: string | undefined,
   scopes: readonly FileScope[] | undefined,
   unclaimedBy?: readonly FileScope[],
-): (file: Pick<FileRecord, 'domain' | 'category' | 'purpose'>) => boolean {
+): (file: TabReadFile) => boolean {
   if (!scopes) return buildPurposeFilter(purpose);
   return (file) => matchesTabRead(file, scopes, unclaimedBy);
 }

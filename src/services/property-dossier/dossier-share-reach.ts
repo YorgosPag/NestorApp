@@ -27,7 +27,7 @@ import type { PropertyDossier } from '@/types/property-dossier';
 /** Ό,τι χρειάζεται η κρίση από το `FileRecord` — διαβασμένο από τον δίσκο, ποτέ από το σύρμα. */
 export type DossierReachFile = Pick<
   FileRecord,
-  'id' | 'userId' | 'entityType' | 'entityId' | 'status' | 'isDeleted' | 'domain' | 'category' | 'purpose'
+  'id' | 'userId' | 'entityType' | 'entityId' | 'status' | 'isDeleted' | 'domain' | 'category' | 'purpose' | 'publicationIdentity'
 >;
 
 /** Ο φάκελος όσο τον χρειάζεται η κρίση. */

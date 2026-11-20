@@ -91,17 +91,24 @@ function readEntry(property, registry, source, kind = 'route') {
   return { key, spec, registry, kind, namespaces, ssr: Boolean(ssrNode) && ssrNode.kind === ts.SyntaxKind.TrueKeyword };
 }
 
+/** Ο προεπιλεγμένος αναγνώστης: ο δίσκος. `null` = δεν υπάρχει. */
+const readDisk = abs => (fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : null);
+
 /**
  * Οι εγγραφές ενός μητρώου, με AST.
+ *
+ * `readText(abs) → string | null` — ADR-783 ομάδα Ζ #2: η CHECK 3.52 διαβάζει τα μητρώα από την **όψη** της
+ * (ADR-924, `--index` = το commit), όχι από τον δίσκο· ίδιος αναγνώστης, άλλη πηγή κειμένου.
  *
  * ⚠️ Ένα `...spread` μέσα στην κλήση **δεν** είναι εγγραφή: είναι άλλο μητρώο, που
  * διαβάζεται από το δικό του αρχείο. Μητρώο χωρίς καμία κλήση ⇒ `throw` — ένα αρχείο
  * που «δεν έχει διαδρομές» επειδή άλλαξε σχήμα θα έδινε άδειο, πράσινο χάρτη.
  */
-function readRegistry(projectRoot, registry) {
+function readRegistry(projectRoot, registry, readText = readDisk) {
   const abs = path.join(projectRoot, registry);
-  if (!fs.existsSync(abs)) throw new Error(`μητρώο τεμπέλικων διαδρομών δεν βρέθηκε: ${registry}`);
-  const source = parseSource(abs, fs.readFileSync(abs, 'utf8'));
+  const text = readText(abs);
+  if (text === null) throw new Error(`μητρώο τεμπέλικων διαδρομών δεν βρέθηκε: ${registry}`);
+  const source = parseSource(abs, text);
   const entries = [];
   let calls = 0;
   const visit = node => {

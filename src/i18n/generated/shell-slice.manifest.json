@@ -170,7 +170,7 @@
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
       "scripts/lib/i18n-shell-slice/key-tables.js": "aba6069f1ba2adbc3d696f1171d0967f5fd740c56b2e1866c08576737325ae45",
-      "scripts/lib/i18n-shell-slice/lazy-registry-read.js": "f109a93bae6b6f5d9a131ce71f70eba879553daf7510d16acc39a9761e5257ae",
+      "scripts/lib/i18n-shell-slice/lazy-registry-read.js": "060278a6e9a32d60d69119b7e40ec69cec5c765e764a541814e337f20dbff569",
       "scripts/lib/i18n-shell-slice/lazy-route-census.js": "5e9b21b8f964bc6c314dfbc7900d30bd157b2ebe9237cb95e7db72085b4328ca",
       "scripts/lib/i18n-shell-slice/lazy-routes.js": "e388430e068688c629a9a4b28d704dca1109a803e0d2b70b21aa1c51759ed61a",
       "scripts/lib/i18n-shell-slice/ledger.js": "365f9a9bf4f706fb56b83a7ba5a79665f7063dd45c6f7c26b9a0677c68fa5d77",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "bf76b7f3736ef99d46602b3fbc52438602ad7f83e565e1a59e24879a992eaae3",
+  "inputsSha256": "1ebad8fdeca0237563654b7c85d9620b61ff32ff20dac88e25744c315f10b7d2",
   "languages": [
     "el"
   ],

@@ -292,12 +292,28 @@ describe('επανάληψη — μόνο όταν ο πάροχος αρνήθ�
 });
 
 describe('scheduleRfqInviteDeliveries — έξω από αίτημα τρέχει αμέσως', () => {
+  /**
+   * ⏱️ **Κανένα πραγματικό ρολόι** (ADR-783 ομάδα Ζ): ο προγραμματιστής καλεί το `deliverRfqInvite` χωρίς ώρα ⇒
+   * `Date.now()`. Με το αληθινό ρολόι το test ήταν ωρολογιακή βόμβα: η πρόσκληση λήγει `NOW + 7 ημέρες` και από τις
+   * 2026-11-11 κρινόταν (σωστά) `invite_closed`. Και η αναμονή **του γεγονότος** (η κλήση του παρόχου), όχι 50ms.
+   */
   it('το `after` πετά ⇒ η απόπειρα γίνεται τώρα', async () => {
-    fake.seed(COLLECTIONS.CONTACTS, 'cont_v', { companyId: BUYER, email: 'v@vendor.gr', displayName: 'Vendor' });
-    seedInvite('inv_1', 'cont_v', { delivery: pendingInviteDelivery(Date.now() - 1000) });
-    scheduleRfqInviteDeliveries([{ inviteId: 'inv_1', link: LINK }]);
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(sentTo()).toEqual(['v@vendor.gr']);
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    try {
+      fake.seed(COLLECTIONS.CONTACTS, 'cont_v', { companyId: BUYER, email: 'v@vendor.gr', displayName: 'Vendor' });
+      seedInvite('inv_1', 'cont_v', { delivery: pendingInviteDelivery(NOW - 1000) });
+      const sent = new Promise<void>((resolve) => {
+        mockSend.mockImplementationOnce(async () => {
+          resolve();
+          return { success: true, providerMessageId: 'm1', errorReason: null, channel: 'email' };
+        });
+      });
+      scheduleRfqInviteDeliveries([{ inviteId: 'inv_1', link: LINK }]);
+      await sent;
+      expect(sentTo()).toEqual(['v@vendor.gr']);
+    } finally {
+      clock.mockRestore();
+    }
   });
 });
 
