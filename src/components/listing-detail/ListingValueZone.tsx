@@ -64,10 +64,14 @@ function ReadyBody({ verdict, context }: { readonly verdict: ReadyValueZone; rea
   );
 }
 
-/** Κάθε κατάσταση λέει κάτι — ποτέ κενό κουτί, ποτέ σιωπή που διαβάζεται ως «δεν υπάρχει ζώνη». */
+/**
+ * Κάθε κατάσταση **της θέσης** λέει κάτι — ποτέ κενό κουτί, ποτέ σιωπή που διαβάζεται ως «δεν υπάρχει ζώνη».
+ * Η μόνη σιωπή είναι το `notOffered` (ADR-898 §23.3): η διάθεση δεν είναι πώληση, άρα η ενότητα **δεν υπάρχει**.
+ */
 export function ListingValueZone({ context }: { readonly context: ListingMarketContext }) {
   const { t } = useTranslation([NS]);
   const verdict = context.valueZone;
+  if (verdict.kind === 'notOffered') return null;
   return (
     <section aria-labelledby={HEADING_ID} className="flex flex-col gap-2 border-t border-border pt-3">
       <h3 id={HEADING_ID} className="m-0 text-sm font-semibold text-foreground">{t(`${NS}:valueZone.title`)}</h3>

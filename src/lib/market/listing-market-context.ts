@@ -76,9 +76,23 @@ export type ListingContractsContext =
  * αγοράς — μόνο από τη θέση και τα στοιχεία της αγγελίας. Ένα οικόπεδο χωρίς συγκρίσιμα συμβόλαια έχει κι αυτό τιμή ζώνης.
  */
 export type ListingMarketContext = ListingContractsContext & {
-  readonly valueZone: ValueZoneVerdict;
+  readonly valueZone: ListingValueZoneVerdict;
   readonly objectiveValue: ListingObjectiveValue;
 };
+
+/**
+ * **Η ζώνη, όπως τη βλέπει η αγγελία** (ADR-898 §23.3): η ετυμηγορία της θέσης **ή** `notOffered` — η διάθεση δεν
+ * είναι πώληση (`objective-value-offer-kinds.ts`, ο ΕΝΑΣ κριτής) και η ζώνη **δεν διαβάζεται καν**.
+ *
+ * 🔑 **Γιατί κρύβεται και η τιμή ζώνης, όχι μόνο το ποσό**: η τιμή ζώνης είναι η βάση φόρων που πληρώνουν μόνο ο
+ * αγοραστής (μεταβίβαση) και ο κάτοχος (ΕΝΦΙΑ) — ποτέ ο ενοικιαστής. Το πρότυπο είναι το βρετανικό «material
+ * information» (Rightmove · Zoopla): στη μίσθωση δείχνεται ο φόρος που πληρώνει **ο ενοικιαστής** (council tax),
+ * γιατί αυτός τον αφορά. Δείχνεις στον αναγνώστη τη φορολογική τιμή **που τον αφορά** — καμία άλλη.
+ *
+ * ⚠️ Χωριστή κατάσταση και όχι `unavailable`/`outside`: εκείνες **λέγονται** στην οθόνη («δεν ξέρω» · «εκτός ζώνης»)·
+ * το `notOffered` δεν λέγεται, γιατί δεν είναι γεγονός της θέσης — είναι απόφαση για το ποιος διαβάζει.
+ */
+export type ListingValueZoneVerdict = ValueZoneVerdict | { readonly kind: 'notOffered' };
 
 /**
  * **Η ζητούμενη τιμή ως % της τιμής ζώνης** — στο ίδιο μέτρο με το `priceToZonePct` των συμβολαίων, ώστε τα δύο να

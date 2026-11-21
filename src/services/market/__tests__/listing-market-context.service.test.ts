@@ -98,6 +98,19 @@ describe('loadListingMarketContext — ζώνη αντικειμενικής α�
   });
 });
 
+describe('loadListingMarketContext — μόνο σε πώληση (ADR-898 §23.3)', () => {
+  it.each([['leaseOut'], ['leaseShort']] as const)('%s ⇒ notOffered + hidden, και η ζώνη ΔΕΝ διαβάζεται', async (kind) => {
+    const context = await loadListingMarketContext(listing({ id: 'prop_r', adminArea: null, offerKinds: [kind] }), DB, TODAY);
+    expect(context).toEqual({ kind: 'no-area', valueZone: { kind: 'notOffered' }, objectiveValue: { kind: 'hidden' } });
+    expect(mockValueZone).not.toHaveBeenCalled();
+  });
+
+  it('πώληση μαζί με μίσθωση ⇒ η ζώνη μένει (αρκεί μία διάθεση που τη σηκώνει)', async () => {
+    const subject = listing({ id: 'prop_m', adminArea: null, offerKinds: ['leaseOut', 'sell'] });
+    expect(await loadListingMarketContext(subject, DB, TODAY)).toMatchObject({ valueZone: READY });
+  });
+});
+
 /** ADR-898 Φ3 — η αντικειμενική της αγγελίας υπολογίζεται εδώ, κατά την ανάγνωση, πάνω στη ζώνη που μόλις διαβάστηκε. */
 describe('loadListingMarketContext — αντικειμενική αξία της αγγελίας', () => {
   it('ίδια ζώνη, ίδια μέρα αποτίμησης: η σύνθεση = `listingObjectiveValue` — καμία δεύτερη ανάγνωση', async () => {

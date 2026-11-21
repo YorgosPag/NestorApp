@@ -27,6 +27,7 @@ import { SEGMENT_METRIC, marketSegmentOfType, type MarketSegment } from '@/lib/m
 import { medianGapPct, type StatCell } from '@/lib/market/market-statistics';
 import type { SegmentSummary } from '@/lib/market/market-transactions-file';
 import { listingObjectiveValue } from '@/lib/objective-value/listing-objective-value';
+import { offersObjectiveValue } from '@/lib/objective-value/objective-value-offer-kinds';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readLatestAreaMarket } from '@/services/market/area-market-snapshot.reader';
 import { readAreaRows, readAreaSummary } from '@/services/market/market-transactions.reader';
@@ -37,6 +38,8 @@ import type { PublicListing } from '@/types/public-listing';
 const logger = createModuleLogger('listing-market-context');
 
 const EMPTY_POOL: ComparableSalesResult = { kind: 'suppressed', pool: 0 };
+const NOT_OFFERED = { kind: 'notOffered' } as const;
+const HIDDEN = { kind: 'hidden' } as const;
 
 type AskingBuckets = Readonly<Record<string, StatCell>>;
 
@@ -159,12 +162,19 @@ async function loadContracts(listing: PublicListing, source: AskingSource): Prom
  *
  * 🔑 **Η αντικειμενική υπολογίζεται εδώ, κατά την ανάγνωση** — ποτέ πεδίο της αγγελίας: οι τιμές ζωνών αναθεωρούνται
  * (ADR-889 §10.2). Καθαρή συνάρτηση πάνω στη ζώνη που μόλις διαβάστηκε, χωρίς δεύτερη ανάγνωση.
+ *
+ * 🔑 **Διάθεση χωρίς θέση για αντικειμενική** (μίσθωση · ADR-898 §23.3) ⇒ η ζώνη **δεν διαβάζεται**: `notOffered` και
+ * `hidden`. Ο κριτής είναι ο ΕΝΑΣ (`offersObjectiveValue`) — ο ίδιος που κρύβει το ποσό και την ερώτηση στον κάτοχο.
  */
 export async function loadListingMarketContext(
   listing: PublicListing,
   adminDb: AdminFirestore,
   today: string,
 ): Promise<ListingMarketContext | null> {
+  if (!offersObjectiveValue(listing.offerKinds)) {
+    const contracts = await loadContracts(listing, { adminDb, today });
+    return contracts === null ? null : { ...contracts, valueZone: NOT_OFFERED, objectiveValue: HIDDEN };
+  }
   const [contracts, valueZone] = await Promise.all([loadContracts(listing, { adminDb, today }), readValueZoneAt(listing.position)]);
   if (contracts === null) return null;
   return { ...contracts, valueZone, objectiveValue: listingObjectiveValue(listing, valueZone, today) };
