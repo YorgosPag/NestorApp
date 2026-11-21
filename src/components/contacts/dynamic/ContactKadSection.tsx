@@ -9,13 +9,14 @@
  * Pattern inspired by accounting KadSection.tsx (ADR-ACC-013).
  *
  * Reuses:
- * - KadCodePicker (searchable dropdown, 10.521 entries)
+ * - KadCodePicker (ο ΕΝΑΣ επιλογέας ΚΑΔ 2025 — δέσμευση μόνο με επιλογή/ακριβή κωδικό, ποτέ ανά πάτημα)
+ * - KadBulkPaste («Επικόλληση λίστας ΓΕΜΗ» για δευτερεύοντες)
  * - Radix UI components (Button, Input, Separator)
  *
  * @module components/contacts/dynamic/ContactKadSection
  */
 
-import { useCallback, useId } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
@@ -23,8 +24,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { KadCodePicker } from '@/components/shared/KadCodePicker';
-import { Plus, Trash2 } from 'lucide-react';
+import { KadBulkPaste } from '@/components/contacts/dynamic/KadBulkPaste';
+import { ClipboardPaste, Plus, Trash2 } from 'lucide-react';
 import type { KadActivity } from '@/types/ContactFormTypes';
+import type { KadSelection } from '@/lib/kad/kad-types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { cn } from '@/lib/utils';
@@ -52,6 +55,26 @@ function createEmptySecondary(): KadActivity {
     type: 'secondary',
     activeFrom: nowISO().split('T')[0],
   };
+}
+
+/** Η επιλογή του καταλόγου πάνω σε υπάρχουσα γραμμή· `null` = καθαρισμός (χωρίς σημαία καταλόγου). */
+function applySelection(activity: KadActivity, selection: KadSelection | null): KadActivity {
+  const base: KadActivity = {
+    code: '',
+    description: '',
+    type: activity.type,
+    ...(activity.activeFrom ? { activeFrom: activity.activeFrom } : {}),
+  };
+  return selection === null ? base : { ...base, ...selection };
+}
+
+/** Ίδια τιμή = ίδιος κωδικός, ίδια περιγραφή ΚΑΙ ίδιος κατάλογος (αλλιώς η αναβάθμιση ΚΑΔ 2008 → 2025 θα χανόταν). */
+function isSameSelection(activity: KadActivity, selection: KadSelection): boolean {
+  return (
+    activity.code.trim() === selection.code &&
+    activity.description === selection.description &&
+    activity.catalog === selection.catalog
+  );
 }
 
 function hasDuplicateCode(
@@ -90,6 +113,7 @@ export function ContactKadSection({
   const primaryHeadingId = useId();
   const colors = useSemanticColors();
   const { success, info, warning, showConfirmDialog } = useNotifications();
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Derive primary from array (first 'primary', or first entry, or empty)
   const primary: KadActivity = activities.find((a) => a.type === 'primary') ?? {
@@ -105,102 +129,82 @@ export function ContactKadSection({
     [],
   );
 
-  const handlePrimaryChange = useCallback(
-    async (val: { code: string; description: string }) => {
-      const nextCode = val.code.trim();
-      const previousCode = primary.code.trim();
+  /** Επιβεβαίωση αλλαγής κύριου ΚΑΔ — ανοίγει ΜΙΑ φορά ανά πραγματική αλλαγή (ο επιλογέας δεν εκπέμπει ανά πάτημα). */
+  const confirmPrimaryChange = useCallback(
+    (oldCode: string, newCode: string) =>
+      showConfirmDialog(
+        t('kad.confirmPrimaryChange.message', { oldCode, newCode }),
+        () => undefined,
+        undefined,
+        {
+          title: t('kad.confirmPrimaryChange.title'),
+          confirmText: t('kad.confirmPrimaryChange.confirm'),
+          cancelText: t('kad.confirmPrimaryChange.cancel'),
+          type: 'warning',
+        },
+      ),
+    [showConfirmDialog, t],
+  );
 
-      if (!nextCode) {
+  const handlePrimaryChange = useCallback(
+    async (selection: KadSelection | null) => {
+      if (selection === null) {
         warning(t('kad.notifications.primaryRequired'));
         return;
       }
-
+      const nextCode = selection.code;
+      const previousCode = primary.code.trim();
       if (hasDuplicateCode('', secondaries, nextCode)) {
         warning(t('kad.notifications.duplicateCode', { code: nextCode }));
         return;
       }
+      if (isSameSelection(primary, selection)) return;
+      const codeChanged = previousCode !== nextCode;
+      if (previousCode && codeChanged && !(await confirmPrimaryChange(previousCode, nextCode))) return;
 
-      if (previousCode === nextCode && primary.description === val.description) {
-        return;
-      }
-
-      if (previousCode && previousCode !== nextCode) {
-        const confirmed = await showConfirmDialog(
-          t('kad.confirmPrimaryChange.message', {
-            oldCode: previousCode,
-            newCode: nextCode,
-          }),
-          () => undefined,
-          undefined,
-          {
-            title: t('kad.confirmPrimaryChange.title'),
-            confirmText: t('kad.confirmPrimaryChange.confirm'),
-            cancelText: t('kad.confirmPrimaryChange.cancel'),
-            type: 'warning',
-          },
-        );
-
-        if (!confirmed) {
-          return;
-        }
-      }
-
-      const updated = { ...primary, code: val.code, description: val.description };
-      onChange({ activities: rebuildActivities(updated, secondaries), chamber });
-
-      success(
-        t(
-          previousCode
-            ? 'kad.notifications.primaryUpdated'
-            : 'kad.notifications.primarySet',
-          { code: nextCode },
-        ),
-      );
-
-      if (!previousCode || previousCode !== nextCode) {
-        info(t('kad.notifications.primaryImpact'));
-      }
+      onChange({ activities: rebuildActivities(applySelection(primary, selection), secondaries), chamber });
+      success(t(previousCode ? 'kad.notifications.primaryUpdated' : 'kad.notifications.primarySet', { code: nextCode }));
+      if (codeChanged) info(t('kad.notifications.primaryImpact'));
     },
-    [primary, secondaries, chamber, onChange, rebuildActivities, showConfirmDialog, success, info, warning, t],
+    [primary, secondaries, chamber, onChange, rebuildActivities, confirmPrimaryChange, success, info, warning, t],
   );
 
   const handleSecondaryChange = useCallback(
-    (index: number, val: { code: string; description: string }) => {
+    (index: number, selection: KadSelection | null) => {
       const existing = secondaries[index];
-      if (!existing) {
-        return;
-      }
-
+      if (!existing) return;
       const previousCode = existing.code.trim();
-      const nextCode = val.code.trim();
-      if (previousCode === nextCode && existing.description === val.description) {
-        return;
-      }
-
+      const nextCode = selection?.code ?? '';
+      if (selection !== null && isSameSelection(existing, selection)) return;
       if (hasDuplicateCode(primary.code.trim(), secondaries, nextCode, index)) {
         warning(t('kad.notifications.duplicateCode', { code: nextCode }));
         return;
       }
 
       const updated = [...secondaries];
-      updated[index] = { ...updated[index], code: val.code, description: val.description };
+      updated[index] = applySelection(existing, selection);
       onChange({ activities: rebuildActivities(primary, updated), chamber });
 
       if (!previousCode && nextCode) {
         success(t('kad.notifications.secondaryAdded', { code: nextCode }));
-        return;
-      }
-
-      if (previousCode && nextCode && previousCode !== nextCode) {
-        info(
-          t('kad.notifications.secondaryUpdated', {
-            oldCode: previousCode,
-            newCode: nextCode,
-          }),
-        );
+      } else if (previousCode && nextCode && previousCode !== nextCode) {
+        info(t('kad.notifications.secondaryUpdated', { oldCode: previousCode, newCode: nextCode }));
       }
     },
     [primary, secondaries, chamber, onChange, rebuildActivities, success, info, warning, t],
+  );
+
+  /** «Επικόλληση λίστας ΓΕΜΗ»: οι κενές γραμμές φεύγουν, οι νέοι ΚΑΔ μπαίνουν στο τέλος. */
+  const handleBulkAdd = useCallback(
+    (selections: KadSelection[]) => {
+      const activeFrom = nowISO().split('T')[0];
+      const kept = secondaries.filter((activity) => activity.code.trim() !== '');
+      const added = selections.map((selection): KadActivity => ({ ...selection, type: 'secondary', activeFrom }));
+      onChange({ activities: rebuildActivities(primary, [...kept, ...added]), chamber });
+      setBulkOpen(false);
+      success(t('kad.bulk.added', { count: added.length }));
+    },
+    [primary, secondaries, chamber, onChange, rebuildActivities, success, t],
   );
 
   const addSecondary = useCallback(() => {
@@ -270,8 +274,9 @@ export function ContactKadSection({
         <KadCodePicker
           aria-labelledby={primaryHeadingId}
           value={primary.code}
+          catalog={primary.catalog}
           disabled={disabled}
-          onChange={handlePrimaryChange}
+          onChange={(selection) => void handlePrimaryChange(selection)}
         />
         {primary.description && (
           <p className={cn('mt-1 text-sm', colors.text.muted)}>{primary.description}</p>
@@ -286,17 +291,39 @@ export function ContactKadSection({
           <h3 className="text-sm font-semibold text-foreground">
             {t('kad.secondaryActivities')}
           </h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addSecondary}
-            disabled={disabled}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            {t('kad.addActivity')}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkOpen((open) => !open)}
+              disabled={disabled}
+              aria-expanded={bulkOpen}
+            >
+              <ClipboardPaste className="mr-1 h-4 w-4" />
+              {t('kad.bulk.open')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addSecondary}
+              disabled={disabled}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              {t('kad.addActivity')}
+            </Button>
+          </div>
         </header>
+
+        {bulkOpen && !disabled && (
+          <KadBulkPaste
+            primaryCode={primary.code}
+            secondaryCodes={secondaries.map((activity) => activity.code)}
+            onConfirm={handleBulkAdd}
+            onCancel={() => setBulkOpen(false)}
+          />
+        )}
 
         {secondaries.length === 0 ? (
           <p className={cn('text-sm py-2 text-center', colors.text.muted)}>
@@ -310,8 +337,9 @@ export function ContactKadSection({
                   <KadCodePicker
                     aria-label={t('kad.secondaryActivityItem', { position: index + 1 })}
                     value={kad.code}
+                    catalog={kad.catalog}
                     disabled={disabled}
-                    onChange={(val) => void handleSecondaryChange(index, val)}
+                    onChange={(selection) => handleSecondaryChange(index, selection)}
                   />
                   {kad.description && (
                     <p className={cn('text-sm', colors.text.muted)}>{kad.description}</p>

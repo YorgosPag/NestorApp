@@ -33,6 +33,13 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 ENTERPRISE: Import centralized utilities
 import { getRelationshipDisplayProps } from './utils/relationship-types';
+import { resolveDepartmentLabel, resolvePositionLabel } from './config/relationship-form-presets';
+import {
+  isRelationshipType,
+  otherContactIdOf,
+  otherSideOf,
+  relationshipRoleLabelKey,
+} from '@/types/contacts/relationships/core/relationship-orientation';
 import type { RelationshipCardProps } from './types/relationship-manager.types';
 import { useContactName } from './hooks/useContactName';
 import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -71,9 +78,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
 
   // 🔧 ENTERPRISE FIX: Show the "other" contact in the relationship
   // Determine which contact to show based on which one is NOT the current contact
-  const contactIdToShow = relationship.sourceContactId === currentContactId
-    ? relationship.targetContactId
-    : relationship.sourceContactId;
+  const contactIdToShow = otherContactIdOf(relationship, currentContactId);
 
 
   const { contactName, contactStatus } = useContactName(contactIdToShow);
@@ -85,8 +90,11 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
 
   const displayProps = getRelationshipDisplayProps(relationship.relationshipType);
   const Icon = displayProps.icon;
-  // 🏢 ENTERPRISE: Translate i18n label key
-  const translatedTypeLabel = t(displayProps.label);
+  // ADR-372 §Β2: the role of the OTHER contact, read from THIS card's side —
+  // «Εργαζόμενος» on the company card, «Εργαζόμενος σε» on the person card.
+  const translatedTypeLabel = isRelationshipType(relationship.relationshipType)
+    ? t(relationshipRoleLabelKey(relationship.relationshipType, otherSideOf(relationship, currentContactId)))
+    : t(displayProps.label);
 
   // ============================================================================
   // RENDER
@@ -185,10 +193,10 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                       </Badge>
                     )}
                     {relationship.position && (
-                      <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
+                      <span className={`text-xs ${colors.text.muted}`}>• {resolvePositionLabel(relationship.position, t)}</span>
                     )}
                     {relationship.department && (
-                      <span className={`text-xs ${colors.text.muted}`}>• {relationship.department}</span>
+                      <span className={`text-xs ${colors.text.muted}`}>• {resolveDepartmentLabel(relationship.department, t)}</span>
                     )}
                   </>
                 ) : (
@@ -214,7 +222,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {relationship.department && (
               <div className="flex items-center space-x-2">
                 <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
-                <span className="text-sm">{relationship.department}</span>
+                <span className="text-sm">{resolveDepartmentLabel(relationship.department, t)}</span>
               </div>
             )}
 

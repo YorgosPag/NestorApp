@@ -22,19 +22,38 @@
       "representative": "Representative",
       "partner": "Partner",
       "vendor": "Vendor",
-      "client": "Client",
       "electedOfficial": "Elected Official",
       "appointedOfficial": "Appointed Official",
       "ministryOfficial": "Ministry Official",
       "mayor": "Mayor",
       "deputyMayor": "Deputy Mayor",
       "regionalGovernor": "Regional Governor",
-      "advisor": "Advisor",
       "mentor": "Mentor",
-      "protege": "Protégé",
-      "supplier": "Supplier",
-      "customer": "Customer",
       "competitor": "Competitor"
+    },
+    "inverseTypes": {
+      "employee": "Employee at",
+      "manager": "Manager at",
+      "director": "Director at",
+      "executive": "Executive at",
+      "intern": "Intern at",
+      "contractor": "Contractor for",
+      "consultant": "Consultant to",
+      "shareholder": "Shareholder in",
+      "boardMember": "Board Member at",
+      "chairman": "Chairman at",
+      "ceo": "CEO at",
+      "representative": "Representative for",
+      "vendor": "Client",
+      "civilServant": "Civil Servant at",
+      "electedOfficial": "Elected Official at",
+      "appointedOfficial": "Appointed Official at",
+      "departmentHead": "Department Head at",
+      "ministryOfficial": "Ministry Official at",
+      "mayor": "Mayor of",
+      "deputyMayor": "Deputy Mayor of",
+      "regionalGovernor": "Regional Governor of",
+      "mentor": "Mentee"
     },
     "presets": {
       "positions": {
@@ -112,7 +131,9 @@
         "duplicateRelationship": "This relationship already exists between these contacts",
         "missingRequiredFields": "Missing required fields: source contact, target contact, relationship type",
         "contactsNotFound": "One or both contacts were not found",
-        "relationshipNotFound": "Relationship not found"
+        "relationshipNotFound": "Relationship not found",
+        "sameContactSameType": "A «{type}» relationship with this contact already exists.",
+        "crossingNotAllowed": "The «{type}» relationship is not allowed between these two kinds of contacts."
       },
       "buttons": {
         "cancel": "Cancel",
@@ -228,7 +249,7 @@
       "simpleStructure": "Simple Organization Structure",
       "simpleStructureDescription": "This company has a basic organizational structure without complex hierarchy.",
       "departmentsAndEmployees": "Departments & Employees",
-      "generalDepartment": "General Department",
+      "noDepartment": "No department",
       "recentAdditions": "Recent Additions",
       "moreItems": "+{count} more",
       "lastUpdated": "Last updated",
@@ -242,8 +263,7 @@
       "confirmDeleteBody": "The relationship will be permanently deleted from the profile and related summaries.",
       "impact": {
         "protectedRole": "This role is treated as critical company data and must remain in history.",
-        "hierarchy": "This action affects the organization tree and related personnel metrics.",
-        "reciprocal": "This action also affects the reciprocal relationship on the linked contact."
+        "hierarchy": "This action affects the organization tree and related personnel metrics."
       }
     },
     "errors": {

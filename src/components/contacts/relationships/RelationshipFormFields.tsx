@@ -283,7 +283,9 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
             id={fieldId('position')}
             value={formData.position || ''}
             onValueChange={(value, option) => {
-              setFormData(prev => ({ ...prev, position: option?.label || value }));
+              // ADR-372 §Β3: a preset is stored as its KEY (rendered per locale by
+              // resolvePositionLabel); free text is stored verbatim.
+              setFormData(prev => ({ ...prev, position: option?.value ?? value }));
             }}
             options={positionOptions}
             placeholder={t('relationships.form.placeholders.position')}
@@ -307,7 +309,9 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
             id={fieldId('department')}
             value={formData.department || ''}
             onValueChange={(value, option) => {
-              setFormData(prev => ({ ...prev, department: option?.label || value }));
+              // ADR-372 §Β3: a preset is stored as its KEY (rendered per locale by
+              // resolveDepartmentLabel); free text is stored verbatim.
+              setFormData(prev => ({ ...prev, department: option?.value ?? value }));
             }}
             options={departmentOptions}
             placeholder={t('relationships.form.placeholders.department')}

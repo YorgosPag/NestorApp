@@ -10,7 +10,6 @@
 
 // Import related types
 import type { ContactRelationship } from '../interfaces/relationship';
-import type { RelationshipType } from '../core/relationship-types';
 import { RELATIONSHIP_TYPE_PRIORITY_SCORES } from '../core/relationship-types';
 import { COLOR_BRIDGE } from '../../../../design-system/color-bridge';
 
@@ -31,93 +30,6 @@ export function getRelationshipPriorityScore(relationship: ContactRelationship):
   else if (relationship.relationshipStrength === 'moderate') score += 5;
 
   return score;
-}
-
-/**
- * 🏷️ Generate relationship display label
- */
-export function getRelationshipDisplayLabel(relationship: ContactRelationship): string {
-  const baseLabels: Record<RelationshipType, string> = {
-    'employee': 'Εργαζόμενος',
-    'manager': 'Προϊστάμενος',
-    'director': 'Διευθυντής',
-    'executive': 'Ανώτερο Στέλεχος',
-    'intern': 'Εσωτερικός Εργαζόμενος',
-    'contractor': 'Εξωτερικός Συνεργάτης',
-    'consultant': 'Σύμβουλος',
-    'shareholder': 'Μέτοχος',
-    'board_member': 'Μέλος ΔΣ',
-    'chairman': 'Πρόεδρος ΔΣ',
-    'ceo': 'Γενικός Διευθυντής',
-    'representative': 'Εκπρόσωπος',
-    'partner': 'Συνεργάτης/Εταίρος',
-    'vendor': 'Προμηθευτής',
-    'client': 'Πελάτης',
-    'civil_servant': 'Δημόσιος Υπάλληλος',
-    'elected_official': 'Εκλεγμένο Πρόσωπο',
-    'appointed_official': 'Διορισμένο Πρόσωπο',
-    'department_head': 'Προϊστάμενος Τμήματος',
-    'ministry_official': 'Στέλεχος Υπουργείου',
-    'mayor': 'Δήμαρχος',
-    'deputy_mayor': 'Αντιδήμαρχος',
-    'regional_governor': 'Περιφερειάρχης',
-    'advisor': 'Σύμβουλος',
-    'mentor': 'Μέντορας',
-    'protege': 'Προστατευόμενος',
-    'colleague': 'Συνάδελφος',
-    'supplier': 'Προμηθευτής',
-    'customer': 'Πελάτης',
-    'competitor': 'Ανταγωνιστής',
-    'friend': 'Φίλος',
-    'family': 'Οικογένεια',
-    'property_buyer': 'Αγοραστής Ακινήτου',
-    'property_co_buyer': 'Συν-αγοραστής Ακινήτου',
-    'property_landowner': 'Οικοπεδούχος',
-    'business_contact': 'Επαγγελματική Επαφή',
-    'other': 'Άλλο'
-  };
-
-  return baseLabels[relationship.relationshipType] || relationship.relationshipType;
-}
-
-/**
- * ✅ ENTERPRISE: DEPRECATED - Use useSemanticColors().getRelationshipBadgeClass() instead
- *
- * Migration path:
- * ```typescript
- * // OLD (DEPRECATED):
- * className={getRelationshipBadgeColor(relationship)}
- *
- * // NEW (CENTRALIZED):
- * import { useSemanticColors } from '@/hooks/useSemanticColors';
- * const colors = useSemanticColors();
- * className={colors.getRelationshipBadgeClass(relationship.relationshipType)}
- * ```
- *
- * @deprecated Use colors.getRelationshipBadgeClass(relationshipType) from useSemanticColors hook
- */
-export function getRelationshipBadgeColor(relationship: ContactRelationship): string {
-  // Fallback implementation that now uses hardcoded values (for backward compatibility)
-  const colorMap: Partial<Record<RelationshipType, string>> = {
-    // ✅ ENTERPRISE: Semantic color mapping
-    'employee': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,           // Blue -> Info semantic
-    'manager': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,            // Purple -> Info semantic
-    'director': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,           // Purple -> Info semantic
-    'executive': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,          // Purple -> Info semantic
-    'ceo': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,                // Purple -> Info semantic
-    'shareholder': `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,  // Green -> Success semantic
-    'board_member': `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`, // Orange -> Warning semantic
-    'chairman': `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,         // Red -> Error semantic
-    'civil_servant': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,      // Indigo -> Info semantic
-    'department_head': `${COLOR_BRIDGE.bg.error} ${COLOR_BRIDGE.text.error}`,  // Red -> Error semantic
-    'consultant': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,         // Teal -> Info semantic
-    'contractor': `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning}`,   // Yellow -> Warning semantic
-    'vendor': `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`, // ✅ ALREADY MIGRATED
-    'client': `${COLOR_BRIDGE.bg.success} ${COLOR_BRIDGE.text.success}`,       // Emerald -> Success semantic
-    'partner': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`             // Pink -> Info semantic
-  };
-
-  return colorMap[relationship.relationshipType] || `${COLOR_BRIDGE.bg.neutralSubtle} ${COLOR_BRIDGE.text.secondary}`;
 }
 
 /**
@@ -167,7 +79,7 @@ export function searchRelationships(
     rel.department?.toLowerCase().includes(term) ||
     rel.relationshipNotes?.toLowerCase().includes(term) ||
     rel.tags?.some(tag => tag.toLowerCase().includes(term)) ||
-    getRelationshipDisplayLabel(rel).toLowerCase().includes(term)
+    rel.relationshipType.toLowerCase().includes(term)
   );
 }
 

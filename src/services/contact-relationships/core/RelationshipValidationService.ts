@@ -15,6 +15,13 @@ import {
   RelationshipType,
   isEmploymentRelationship
 } from '@/types/contacts/relationships';
+import type { ContactType } from '@/types/contacts/contracts';
+import {
+  isRelationshipType,
+  isStoredCrossingValid,
+  isSymmetricRelationshipType,
+  relationshipRoleLabelKey,
+} from '@/types/contacts/relationships/core/relationship-orientation';
 import { isValidEmail as isValidEmailFn } from '@/lib/validation/email-validation';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isValidPhone as isValidPhoneFn } from '@/lib/validation/phone-validation';
@@ -25,22 +32,30 @@ import { Contact } from '@/types/contacts';
 // VALIDATION ERROR TYPES
 // ============================================================================
 
+/**
+ * `message` is an i18n KEY. `labelParams` maps ICU placeholders to i18n KEYS
+ * that the UI translates first (e.g. `{ type: 'relationships.types.shareholder' }`).
+ */
 export class RelationshipValidationError extends Error {
-  constructor(message: string, public code?: string) {
+  constructor(
+    message: string,
+    public code?: string,
+    public labelParams?: Readonly<Record<string, string>>
+  ) {
     super(message);
     this.name = 'RelationshipValidationError';
   }
 }
 
 export class DuplicateRelationshipError extends RelationshipValidationError {
-  constructor(message: string) {
-    super(message, 'DUPLICATE_RELATIONSHIP');
+  constructor(message: string, labelParams?: Readonly<Record<string, string>>) {
+    super(message, 'DUPLICATE_RELATIONSHIP', labelParams);
   }
 }
 
 export class InvalidRelationshipError extends RelationshipValidationError {
-  constructor(message: string) {
-    super(message, 'INVALID_RELATIONSHIP');
+  constructor(message: string, labelParams?: Readonly<Record<string, string>>) {
+    super(message, 'INVALID_RELATIONSHIP', labelParams);
   }
 }
 
@@ -129,78 +144,25 @@ export class RelationshipValidationService {
   }
 
   /**
-   * 🎯 Validate Business Rules - Simplified to avoid circular dependencies
+   * 🎯 Validate Business Rules — ADR-372 §Β2
    *
-   * Validates business-specific rules για relationship creation
+   * ONE rule: the STORED direction (source → target) must be a crossing the
+   * metadata registry declares for this type. No hand-written type lists, no
+   * "which side" special cases — the card the user started from is irrelevant
+   * because every writer orients the record via `orientRelationship()` first.
+   * Custom (registry) types carry no declared crossings ⇒ not checked here.
    */
   static validateBusinessRules(
-    sourceType: string,
-    targetType: string,
-    relationshipType: RelationshipType
+    sourceType: ContactType,
+    targetType: ContactType,
+    relationshipType: string
   ): void {
-    // Employment relationship types
-    const employmentTypes = ['employee', 'manager', 'director', 'executive', 'intern', 'contractor', 'civil_servant', 'department_head', 'ministry_official'];
-    const isEmployment = employmentTypes.includes(relationshipType);
-
-    // Government relationship types
-    const governmentTypes = ['civil_servant', 'elected_official', 'appointed_official', 'department_head', 'ministry_official', 'mayor', 'deputy_mayor', 'regional_governor'];
-    const isGovernment = governmentTypes.includes(relationshipType);
-
-    // Individual can't be an employee of another individual
-    if (sourceType === 'individual' && targetType === 'individual' && isEmployment) {
+    if (!isRelationshipType(relationshipType)) return;
+    if (!isStoredCrossingValid(relationshipType, sourceType, targetType)) {
       throw new InvalidRelationshipError(
-        'relationships.form.validation.individualEmploymentIndividual'
+        'relationships.form.validation.crossingNotAllowed',
+        { type: relationshipRoleLabelKey(relationshipType, 'source') }
       );
-    }
-
-    // Service contacts can only have government, employment, or approved general relationships
-    if (targetType === 'service' && !isGovernment && !isEmployment) {
-      const allowedForServices = ['representative', 'advisor', 'consultant', 'client'];
-      if (!allowedForServices.includes(relationshipType)) {
-        throw new InvalidRelationshipError(
-          'relationships.form.validation.invalidTypeForService'
-        );
-      }
-    }
-
-    // Company ownership validation
-    if (relationshipType === 'shareholder' && targetType !== 'company') {
-      throw new InvalidRelationshipError(
-        'relationships.form.validation.shareholderRequiresCompany'
-      );
-    }
-
-    // Employment relationship validation
-    if (isEmployment) {
-      // Company cannot be employee of another company
-      if (sourceType === 'company') {
-        throw new InvalidRelationshipError(
-          'relationships.form.validation.companyCannotBeEmployee'
-        );
-      }
-
-      // Service cannot be employee of company
-      if (sourceType === 'service') {
-        throw new InvalidRelationshipError(
-          'relationships.form.validation.serviceCannotBeEmployee'
-        );
-      }
-
-      // Original rule: Employment relationships require a company or service as target
-      if (targetType === 'individual') {
-        throw new InvalidRelationshipError(
-          'relationships.form.validation.employmentRequiresCompanyTarget'
-        );
-      }
-    }
-
-    // Government relationship validation
-    if (isGovernment) {
-      if (targetType !== 'service') {
-        throw new InvalidRelationshipError(
-          'relationships.form.validation.governmentRequiresService'
-        );
-      }
     }
   }
 
@@ -301,39 +263,40 @@ export class RelationshipValidationService {
    * Prevents the same contact from being added multiple times with the same relationship type.
    * E.g., prevents the same person from being "Employee" twice, or same company from being "Consultant" twice.
    *
-   * @param existingRelationships - Array of existing relationships for the source contact
-   * @param targetContactId - The target contact ID to check
-   * @param relationshipType - The relationship type to check
-   * @param editingId - Optional ID of relationship being edited (to exclude from duplicate check)
+   * ADR-372 §Β2: compares ORIENTED records. For a directed type, «A is shareholder
+   * of B» and «B is shareholder of A» are different facts; for a symmetric type
+   * the order is irrelevant.
+   *
+   * @param existingRelationships - Existing relationships of the current contact
+   * @param candidate - The oriented record about to be written
+   * @param editingId - Optional ID of relationship being edited (excluded)
    */
   static validateSameContactSameType(
     existingRelationships: ContactRelationship[],
-    targetContactId: string,
-    relationshipType: RelationshipType,
+    candidate: { sourceContactId: string; targetContactId: string; relationshipType: string },
     editingId?: string
   ): void {
-    // Check if the same contact already has the same relationship type
+    const symmetric = !isRelationshipType(candidate.relationshipType)
+      || isSymmetricRelationshipType(candidate.relationshipType);
+    const sameEndpoints = (rel: ContactRelationship): boolean => {
+      const forward = rel.sourceContactId === candidate.sourceContactId
+        && rel.targetContactId === candidate.targetContactId;
+      const backward = rel.sourceContactId === candidate.targetContactId
+        && rel.targetContactId === candidate.sourceContactId;
+      return forward || (symmetric && backward);
+    };
     const duplicate = existingRelationships.find(rel =>
-      rel.id !== editingId && // Exclude the relationship being edited
-      (rel.sourceContactId === targetContactId || rel.targetContactId === targetContactId) &&
-      rel.relationshipType === relationshipType
+      rel.id !== editingId
+      && rel.relationshipType === candidate.relationshipType
+      && sameEndpoints(rel)
     );
 
     if (duplicate) {
       throw new DuplicateRelationshipError(
-        `Αυτή η επαφή έχει ήδη δηλωθεί ως "${this.getRelationshipTypeLabel(relationshipType)}". ` +
-        `Δεν μπορείτε να προσθέσετε την ίδια επαφή με τον ίδιο τύπο σχέσης δύο φορές.`
+        'relationships.form.validation.sameContactSameType',
+        { type: relationshipRoleLabelKey(candidate.relationshipType, 'source') }
       );
     }
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Get Greek label for relationship type (centralized configuration)
-   */
-  private static getRelationshipTypeLabel(relationshipType: RelationshipType): string {
-    // Import here to avoid circular dependencies
-    const { RoleMappingsUtils } = require('@/config/role-mappings-config');
-    return RoleMappingsUtils.getRelationshipTypeLabel(relationshipType);
   }
 
   // ========================================================================
@@ -366,20 +329,11 @@ export class RelationshipValidationService {
   }
 
   /**
-   * 🔄 Validate Relationship Type
+   * 🔄 Validate Relationship Type — derived from the metadata registry (ADR-372 §Β1),
+   * never from a hand-written list (the old one had silently drifted to 31 of 37).
    */
   static isValidRelationshipType(type: string): type is RelationshipType {
-    const validTypes: RelationshipType[] = [
-      'employee', 'manager', 'director', 'executive', 'intern', 'contractor',
-      'consultant', 'advisor', 'shareholder', 'board_member', 'chairman', 'ceo',
-      'client', 'vendor', 'supplier', 'customer', 'partner', 'colleague',
-      'mentor', 'protege', 'representative', 'competitor',
-      'civil_servant', 'elected_official', 'appointed_official',
-      'department_head', 'ministry_official', 'mayor', 'deputy_mayor',
-      'regional_governor', 'other'
-    ];
-
-    return validTypes.includes(type as RelationshipType);
+    return isRelationshipType(type);
   }
 
   // ========================================================================

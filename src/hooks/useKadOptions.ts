@@ -1,63 +1,54 @@
 'use client';
 
 /**
- * @fileoverview **Οι ΚΑΔ ως επιλογές combobox** — φόρτωση, μετατροπή και cache, μία φορά.
- * @related ADR-ACC-013 · CLAUDE.md N.0.2 / N.18 (CHECK 3.28)
+ * @fileoverview **Ο κατάλογος ΚΑΔ 2025 ως επιλογές combobox** — ΕΝΑΣ για επαφές, λογιστήριο και κάθε οθόνη.
+ * @related lib/kad/kad-catalog-source.ts (φόρτωση) · hooks/useLazySnapshot.ts · components/shared/KadCodePicker.tsx
  *
- * 🔴 **Γιατί υπάρχει**: ο ίδιος hook ζούσε **δύο φορές**, στο `shared/KadCodePicker` και στο
- * accounting `KadSection`, με **δύο** caches (`shared-kad-options`, `accounting-kad-options`).
- * Το ίδιο αρχείο ~1.000 ΚΑΔ φορτωνόταν και κρατιόταν στη μνήμη δύο φορές, και η μορφή της
- * ετικέτας («κωδικός — περιγραφή») μπορούσε να αποκλίνει ανάμεσα στις δύο οθόνες.
- * Το CHECK 3.28 το είδε τη στιγμή που τα δύο αρχεία άλλαξαν μαζί (2026-09-21).
+ * 🔑 **Η φόρτωση ζει στην κοινή μηχανή** (`useLazySnapshot` + `createLazyJsonSnapshot`): single-flight,
+ * επανάληψη μετά από αποτυχία, και ταυτότητα που αλλάζει όταν φτάσουν τα δεδομένα. Ο παλιός hook είχε
+ * δικό του `createStaleCache` + `useEffect` — δεύτερος μηχανισμός για το ίδιο πρόβλημα.
+ *
+ * Επιλογές = μόνο οι **επιλέξιμες** γραμμές (τάξη και βαθύτερα — `isSelectableKad`).
+ * Τιμή = κωδικός με τελείες · ετικέτα = «κωδικός — περιγραφή» · δευτερεύουσα = τα 8 ψηφία ΓΕΜΗ,
+ * ώστε η αναζήτηση `41001100` να βρίσκει τον `41.00.11`.
  */
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
-import type { KadCode } from '@/subapps/accounting/data/greek-kad-codes';
-import { createStaleCache } from '@/lib/stale-cache';
-import { createModuleLogger } from '@/lib/telemetry';
+import { useLazySnapshot } from '@/hooks/useLazySnapshot';
+import { KAD_CATALOG_SOURCE } from '@/lib/kad/kad-catalog-source';
+import { EMPTY_KAD_CATALOG } from '@/lib/kad/kad-catalog-shape';
+import { isSelectableKad } from '@/lib/kad/kad-resolve';
+import type { KadCatalog } from '@/lib/kad/kad-types';
 
-const logger = createModuleLogger('useKadOptions');
-const kadOptionsCache = createStaleCache<ComboboxOption[]>('shared-kad-options');
+/** Μία μετατροπή ανά κατάλογο, κοινή για όλα τα πεδία της σελίδας (10.000+ γραμμές). */
+const optionsByCatalog = new WeakMap<KadCatalog, ComboboxOption[]>();
 
-/** Ετικέτα «κωδικός — περιγραφή», τιμή ο κωδικός, δευτερεύουσα η περιγραφή. */
-function kadCodesToOptions(codes: readonly KadCode[]): ComboboxOption[] {
-  return codes.map((kad) => ({
-    value: kad.code,
-    label: `${kad.code} — ${kad.description}`,
-    secondaryLabel: kad.description,
-  }));
+function optionsOf(catalog: KadCatalog): ComboboxOption[] {
+  const cached = optionsByCatalog.get(catalog);
+  if (cached) return cached;
+  const options = catalog.entries.filter(isSelectableKad).map(
+    (entry): ComboboxOption => ({
+      value: entry.code,
+      label: `${entry.code} — ${entry.description}`,
+      ...(entry.gemi === null ? {} : { secondaryLabel: entry.gemi }),
+    }),
+  );
+  optionsByCatalog.set(catalog, options);
+  return options;
 }
 
-/** Οι ΚΑΔ, φορτωμένοι τεμπέλικα (code-splitting) και κοινοί για κάθε οθόνη. */
-export function useKadOptions(): { options: ComboboxOption[]; isLoading: boolean } {
-  const [options, setOptions] = useState<ComboboxOption[]>(kadOptionsCache.get() ?? []);
-  const [isLoading, setIsLoading] = useState(!kadOptionsCache.hasLoaded());
+export interface KadOptionsState {
+  readonly options: ComboboxOption[];
+  readonly isLoading: boolean;
+  /** Ο κατάλογος — `EMPTY_KAD_CATALOG` όσο φορτώνει ή αν απέτυχε («δεν ξέρω»). */
+  readonly catalog: KadCatalog;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadKadCodes(): Promise<void> {
-      try {
-        if (!kadOptionsCache.hasLoaded()) setIsLoading(true);
-        const { GREEK_KAD_CODES } = await import('@/subapps/accounting/data/greek-kad-codes');
-        if (!cancelled) {
-          const loaded = kadCodesToOptions(GREEK_KAD_CODES);
-          kadOptionsCache.set(loaded);
-          setOptions(loaded);
-        }
-      } catch (error) {
-        logger.error('Failed to load KAD codes', { error });
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    void loadKadCodes();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { options, isLoading };
+/** Ο κατάλογος ΚΑΔ 2025, φορτωμένος τεμπέλικα, με τις επιλογές του. */
+export function useKadOptions(): KadOptionsState {
+  const snapshot = useLazySnapshot(KAD_CATALOG_SOURCE, EMPTY_KAD_CATALOG);
+  const catalog = snapshot ?? EMPTY_KAD_CATALOG;
+  const options = useMemo(() => optionsOf(catalog), [catalog]);
+  return { options, isLoading: snapshot === null, catalog };
 }

@@ -822,7 +822,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
           relationshipType: {
             type: ['string', 'null'],
-            description: 'Type: family, friend, colleague, employee, manager, director, contractor, consultant, advisor, mentor, partner, shareholder, client, vendor, property_buyer. Also accepts Greek (σύζυγος, συνάδελφος, etc.).',
+            description: 'Role, read as «sourceContactId IS <role> OF targetContactId»: family, friend, colleague, employee, manager, director, executive, contractor, consultant, mentor, partner, shareholder, board_member, chairman, ceo, representative, vendor, competitor, property_buyer… Aliases: client/customer (= inverse of vendor), supplier (= vendor), advisor (= consultant). Also accepts the Greek UI labels (μέτοχος, εργαζόμενος σε, πελάτης…) and kinship words (σύζυγος, αδελφός…). Direction is validated against the contact types and corrected when the role only fits the other way.',
           },
           relationshipId: {
             type: ['string', 'null'],
@@ -969,15 +969,15 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
       strict: true,
     },
   },
-  // ── KAD Activities: Manage business activity codes (NACE Rev.2) ──
+  // ── KAD Activities: Manage business activity codes (ΚΑΔ 2025 — NACE Rev 2.1) ──
   {
     type: 'function',
     function: {
       name: 'manage_activities',
-      description: 'Διαχείριση κωδικών δραστηριότητας ΚΑΔ (NACE Rev.2) σε εταιρεία. '
+      description: 'Διαχείριση κωδικών δραστηριότητας ΚΑΔ (κατάλογος ΚΑΔ 2025, NACE Rev 2.1) σε εταιρεία. '
         + 'Operations: add (προσθήκη ΚΑΔ), list (λίστα δραστηριοτήτων), remove (αφαίρεση ΚΑΔ), '
         + 'set_primary (ορισμός κύριας δραστηριότητας). '
-        + 'Αν ο χρήστης πει "δραστηριότητα 41.20.20" ή "ΚΑΔ 41.20.20" → add. '
+        + 'Αν ο χρήστης πει "δραστηριότητα 41.00.11" ή "ΚΑΔ 41001100" (μορφή ΓΕΜΗ) → add. '
         + 'Αν πει "τι δραστηριότητες έχει" → list. Admin only.',
       parameters: {
         type: 'object',
@@ -993,7 +993,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
           },
           kadCode: {
             type: ['string', 'null'],
-            description: 'KAD code (e.g. "41.20.20"). Required for add/remove/set_primary. Null for list.',
+            description: 'KAD 2025 code, dotted (e.g. "41.00.11") or 8-digit GEMI form (e.g. "41001100"). Required for add/remove/set_primary. Null for list.',
           },
           activityType: {
             type: ['string', 'null'],

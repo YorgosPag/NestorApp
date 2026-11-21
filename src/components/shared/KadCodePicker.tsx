@@ -2,87 +2,89 @@
 
 /**
  * ============================================================================
- * KAD Code Picker (Company GEMI — Δραστηριότητες & ΚΑΔ)
+ * KAD Code Picker — ο ΕΝΑΣ επιλογέας ΚΑΔ (επαφές + λογιστήριο)
  * ============================================================================
  *
- * Searchable dropdown for selecting Greek ΚΑΔ (Κωδικός Αριθμός Δραστηριότητας)
- * codes from the official AADE/forin.gr list (10.521 entries).
+ * Κατάλογος: **ΚΑΔ 2025** (ΑΑΔΕ Α.1003/2026, Παράρτημα Ι — ΦΕΚ Β΄ 235/22.01.2026), μέσω `useKadOptions`.
  *
- * Features:
- * - Lazy-loads KAD data via dynamic import (code-splitting)
- * - Accent-insensitive Greek search (via SearchableCombobox)
- * - Auto-fills both code + description on selection
- * - Free text allowed (new KAD codes may exist)
+ * 🔑 **Δέσμευση μόνο με πρόθεση** (commit-on-select): η πληκτρολόγηση ΦΙΛΤΡΑΡΕΙ· το `onChange` καλείται
+ * όταν επιλεγεί γραμμή, ή όταν επικολλημένο/πληκτρολογημένο κείμενο επιλύεται ΑΚΡΙΒΩΣ σε ΚΑΔ
+ * (`useKadTextCommit`) — ποτέ ανά πάτημα. Καμία ελεύθερη τιμή.
  *
- * Architecture:
- * - Follows same pattern as EscoOccupationPicker (ADR-132)
- * - Reuses SearchableCombobox (ADR-ACC-013)
- * - Integrated via custom renderer in UnifiedContactTabbedSection
+ * 🔑 **Τιμή χωρίς σημαία καταλόγου = ΚΑΔ 2008**: δείχνεται αυτούσια με σήμα «απαιτεί αντιστοίχιση»
+ * και δεν ξαναγράφεται ποτέ σιωπηλά — μόνο όταν ο άνθρωπος διαλέξει νέο ΚΑΔ.
  *
  * @module components/shared/KadCodePicker
  */
 
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SearchableCombobox, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
-// ΚΑΔ ως επιλογές — ΕΝΑ SSoT με μία cache, κοινό με το accounting `KadSection`.
+import { Badge } from '@/components/ui/badge';
+import { SearchableCombobox, type ComboboxOption, type FieldAccessibleName } from '@/components/ui/searchable-combobox';
 import { useKadOptions } from '@/hooks/useKadOptions';
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { isLegacyKadValue, toKadSelection } from '@/lib/kad/kad-resolve';
+import { KAD_CATALOG_VERSION, type KadCatalogEntry, type KadSelection } from '@/lib/kad/kad-types';
+import { useKadTextCommit } from './useKadTextCommit';
 
 interface KadCodePickerOwnProps {
-  /** Current KAD code value */
+  /** Ο αποθηκευμένος κωδικός (με τελείες). */
   value: string;
-  /** Disabled state */
+  /** Η σημαία καταλόγου της αποθηκευμένης τιμής — απουσία ⇒ ΚΑΔ 2008. */
+  catalog?: string;
   disabled?: boolean;
-  /** Callback when a KAD code is selected or typed */
-  onChange: (val: { code: string; description: string }) => void;
+  error?: string;
+  /** Νέα επιλογή από τον κατάλογο· `null` = ο άνθρωπος καθάρισε το πεδίο. */
+  onChange: (selection: KadSelection | null) => void;
 }
 
 /** Own props + the combobox NAME, forwarded untouched (ADR-598 G11 · `FieldAccessibleName`). */
 export type KadCodePickerProps = KadCodePickerOwnProps & FieldAccessibleName;
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
-export function KadCodePicker({
-  value,
-  disabled = false,
-  onChange,
-  ...accessibleName
-}: KadCodePickerProps) {
+export function KadCodePicker({ value, catalog: valueCatalog, disabled = false, error, onChange, ...accessibleName }: KadCodePickerProps) {
   const { t } = useTranslation('forms');
-  const { options, isLoading } = useKadOptions();
+  const { options, isLoading, catalog } = useKadOptions();
+
+  const isCurrent = useCallback(
+    (entry: KadCatalogEntry) => entry.code === value && valueCatalog === KAD_CATALOG_VERSION,
+    [value, valueCatalog],
+  );
+  const commit = useCallback((entry: KadCatalogEntry) => onChange(toKadSelection(entry)), [onChange]);
+  const textCommit = useKadTextCommit(catalog, isCurrent, commit);
+
+  const handleValueChange = useCallback(
+    (selectedValue: string, option: ComboboxOption | null) => {
+      if (option === null) {
+        if (selectedValue === '') onChange(null);
+        return;
+      }
+      const entry = catalog.byCode.get(selectedValue);
+      if (entry && !isCurrent(entry)) commit(entry);
+    },
+    [catalog, isCurrent, commit, onChange],
+  );
+
+  const legacy = !isLoading && isLegacyKadValue({ code: value, catalog: valueCatalog });
 
   return (
-    <SearchableCombobox
-      {...accessibleName}
-      value={value}
-      onValueChange={(selectedValue, option) => {
-        if (option) {
-          // Selected from dropdown → fill code + description
-          onChange({
-            code: selectedValue,
-            description: option.secondaryLabel ?? '',
-          });
-        } else {
-          // Free text → treat as code only
-          onChange({
-            code: selectedValue,
-            description: '',
-          });
-        }
-      }}
-      options={options}
-      placeholder={t('kad.searchPlaceholder')}
-      emptyMessage={t('kad.noResults')}
-      isLoading={isLoading}
-      allowFreeText
-      maxDisplayed={30}
-      disabled={disabled}
-    />
+    <div className="space-y-1" {...textCommit}>
+      <SearchableCombobox
+        {...accessibleName}
+        value={value}
+        onValueChange={handleValueChange}
+        options={options}
+        placeholder={t('kad.searchPlaceholder')}
+        emptyMessage={t('kad.noResults')}
+        isLoading={isLoading}
+        maxDisplayed={30}
+        disabled={disabled}
+        error={error}
+      />
+      {legacy && (
+        <p>
+          <Badge variant="warning">{t('kad.legacyBadge')}</Badge>
+        </p>
+      )}
+    </div>
   );
 }
 

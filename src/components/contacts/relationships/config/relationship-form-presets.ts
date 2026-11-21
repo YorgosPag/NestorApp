@@ -15,48 +15,63 @@
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import type { ContactType } from '@/types/contacts/contracts';
 import {
-  getAvailableRelationshipTypes,
-  getRelationshipTypeConfig
-} from '../utils/relationship-types';
+  UNASSIGNED_DEPARTMENT_KEY,
+  departmentGroupKey,
+} from '@/types/contacts/relationships/structures/organization';
+import {
+  decodeOrientedRole,
+  encodeOrientedRole,
+  getOfferedOrientedRoles,
+  relationshipRoleLabelKey,
+  type OrientedRole,
+} from '@/types/contacts/relationships/core/relationship-orientation';
 
 // ============================================================================
-// RELATIONSHIP TYPE OPTIONS — Built from centralized config + ADR-372 matrix
+// RELATIONSHIP ROLE OPTIONS — ADR-372 §Β1/§Β2 reciprocal-role model
 // ============================================================================
+
+function toOption(role: OrientedRole, t: (key: string) => string): ComboboxOption {
+  return { value: encodeOrientedRole(role), label: t(relationshipRoleLabelKey(role.type, role.pickedSide)) };
+}
 
 /**
- * Builds ComboboxOption[] for relationship types filtered by crossing.
+ * Role options when, on `currentType`'s card, the user links a `pickedType` contact.
+ * Each option reads «the picked contact is <label> of the current one» — e.g. on a
+ * company card «Εργαζόμενος», on a person card «Εργαζόμενος σε». The value encodes
+ * the ORIENTED role (`encodeOrientedRole`), so the stored direction never depends
+ * on which card the user started from. Labels are unique by construction (CHECK 3.73).
  *
- * @param sourceType   - contact type of the page owner (source side)
- * @param t            - i18n translation function
- * @param currentValue - already-saved type; prepended if absent from filtered list
- * @param targetType   - contact type of the selected target (ADR-372: enables 2D matrix filter)
- *                       When provided, only types valid for the (source→target) crossing are shown.
- *                       When absent, falls back to source-only filter (backward compat).
+ * @param currentValue - saved encoded role; prepended if absent from the filtered list
+ * @param pickedType   - contact type of the picked contact; when absent, every role the
+ *                       current contact can take part in is offered.
  */
 export function getRelationshipTypeOptions(
-  sourceType: ContactType,
+  currentType: ContactType,
   t: (key: string) => string,
   currentValue?: string,
-  targetType?: ContactType
+  pickedType?: ContactType
 ): ComboboxOption[] {
-  const types = getAvailableRelationshipTypes(sourceType, targetType);
-
-  const options: ComboboxOption[] = types.map(typeKey => {
-    const config = getRelationshipTypeConfig(typeKey);
-    const label = config?.label ? t(config.label) : typeKey;
-    return { value: typeKey, label };
-  });
-
-  // When editing a relationship from the opposite contact's side, the saved type may not be
-  // in the filtered list (e.g. 'business_contact' was set from person's side, but a company
-  // is opening the form). Prepend it with its proper label so the UI never shows raw keys.
+  const options = getOfferedOrientedRoles(currentType, pickedType).map(role => toOption(role, t));
   if (currentValue && !options.some(o => o.value === currentValue)) {
-    const fallbackConfig = getRelationshipTypeConfig(currentValue);
-    const fallbackLabel = fallbackConfig?.label ? t(fallbackConfig.label) : currentValue;
-    options.unshift({ value: currentValue, label: fallbackLabel });
+    const decoded = decodeOrientedRole(currentValue);
+    options.unshift({ value: currentValue, label: t(relationshipRoleLabelKey(decoded.type, decoded.pickedSide)) });
   }
-
   return options;
+}
+
+/**
+ * Only the roles the PICKED contact HOLDS (plain type values) — for flows whose
+ * semantics are «the role of X at Y» (e.g. a quote signatory at the vendor).
+ * The server orients the record with `pickedSide: 'source'`.
+ */
+export function getHolderRoleOptions(
+  currentType: ContactType,
+  t: (key: string) => string,
+  pickedType: ContactType
+): ComboboxOption[] {
+  return getOfferedOrientedRoles(currentType, pickedType)
+    .filter(role => role.pickedSide === 'source')
+    .map(role => ({ value: role.type, label: t(relationshipRoleLabelKey(role.type, 'source')) }));
 }
 
 // ============================================================================
@@ -117,4 +132,38 @@ export function getDepartmentOptions(t: (key: string) => string): ComboboxOption
     value,
     label: t(labelKey)
   }));
+}
+
+/**
+ * ADR-372 §Β3 — «preset key OR free text» (Salesforce/HubSpot «Title», LinkedIn):
+ * a chosen preset is stored as a stable, locale-independent KEY and translated at
+ * display time; anything the user typed is user data and is shown verbatim.
+ * ONE resolver for every preset-backed free-text field (department, position).
+ */
+function resolvePresetOrFreeText(
+  value: string,
+  presets: ReadonlyArray<{ value: string; labelKey: string }>,
+  t: (key: string) => string
+): string {
+  const preset = presets.find(p => p.value === value);
+  return preset ? t(preset.labelKey) : value;
+}
+
+/** Display a stored department; blank / `UNASSIGNED_DEPARTMENT_KEY` → «Χωρίς τμήμα». */
+export function resolveDepartmentLabel(
+  value: string | null | undefined,
+  t: (key: string) => string
+): string {
+  const key = departmentGroupKey(value);
+  if (key === UNASSIGNED_DEPARTMENT_KEY) return t('relationships.organizationTree.noDepartment');
+  return resolvePresetOrFreeText(key, DEPARTMENT_PRESET_KEYS, t);
+}
+
+/** Display a stored position (preset key → i18n, free text verbatim); `''` when absent. */
+export function resolvePositionLabel(
+  value: string | null | undefined,
+  t: (key: string) => string
+): string {
+  const trimmed = value?.trim();
+  return trimmed ? resolvePresetOrFreeText(trimmed, POSITION_PRESET_KEYS, t) : '';
 }

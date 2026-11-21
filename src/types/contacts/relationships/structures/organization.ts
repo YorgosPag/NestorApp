@@ -13,6 +13,21 @@ import type { Contact } from '../../contracts';
 import type { ContactRelationship } from '../interfaces/relationship';
 
 /**
+ * 🏢 Grouping key for members WITHOUT a department (ADR-372 §Β3).
+ *
+ * The domain never produces a UI label (it used to emit the English literal
+ * `'Unknown'`, which reached the screen untranslated). It emits this stable
+ * sentinel; the UI translates it via `resolveDepartmentLabel()`.
+ */
+export const UNASSIGNED_DEPARTMENT_KEY = '__unassigned__';
+
+/** Normalizes a stored department into its grouping key (blank → sentinel). */
+export function departmentGroupKey(department: string | null | undefined): string {
+  const trimmed = department?.trim();
+  return trimmed ? trimmed : UNASSIGNED_DEPARTMENT_KEY;
+}
+
+/**
  * 📊 Organizational Hierarchy Node
  *
  * Represents a single node in an organizational hierarchy tree
@@ -36,7 +51,8 @@ export interface OrganizationHierarchyNode {
 
   /** 🏢 Department/division info */
   departmentInfo?: {
-    name: string;
+    /** Stored department value (preset key or free text); `null` = no department. */
+    name: string | null;
     size: number;
     budget?: number;
   };

@@ -10,6 +10,12 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { resolveOwnedToolDoc } from '../tool-tenant-guard';
+import type { ContactType } from '@/types/contacts/contracts';
+import {
+  describeAcceptedRelationshipTypes,
+  orientAiRelationship,
+  resolveAiRelationshipType,
+} from './relationship-type-input';
 import {
   type AgenticContext,
   type ToolHandler,
@@ -20,38 +26,11 @@ import {
   nullableString,
 } from '../executor-shared';
 
-// ============================================================================
-// CONSTANTS — Allowed relationship types for AI agent (subset of full list)
-// ============================================================================
-
-const ALLOWED_RELATIONSHIP_TYPES = [
-  // Personal
-  'family', 'friend',
-  // Professional
-  'colleague', 'employee', 'manager', 'director', 'contractor',
-  'consultant', 'advisor', 'mentor', 'partner',
-  // Corporate
-  'shareholder', 'board_member', 'representative', 'client', 'vendor',
-  // Property
-  'property_buyer', 'property_co_buyer', 'property_landowner',
-] as const;
-
-type AllowedRelationshipType = typeof ALLOWED_RELATIONSHIP_TYPES[number];
-
-/** Greek → English relationship type mapping */
-const GREEK_RELATIONSHIP_MAP: Record<string, AllowedRelationshipType> = {
-  'οικογένεια': 'family', 'σύζυγος': 'family', 'αδερφός': 'family',
-  'αδελφός': 'family', 'αδερφή': 'family', 'αδελφή': 'family',
-  'γονέας': 'family', 'πατέρας': 'family', 'μητέρα': 'family',
-  'παιδί': 'family', 'γιος': 'family', 'κόρη': 'family',
-  'φίλος': 'friend', 'φίλη': 'friend',
-  'συνάδελφος': 'colleague', 'εργαζόμενος': 'employee',
-  'διευθυντής': 'director', 'μέτοχος': 'shareholder',
-  'σύμβουλος': 'advisor', 'εργολάβος': 'contractor',
-  'πελάτης': 'client', 'προμηθευτής': 'vendor',
-  'συνεργάτης': 'partner', 'εκπρόσωπος': 'representative',
-  'αγοραστής': 'property_buyer', 'οικοπεδούχος': 'property_landowner',
-};
+/** Contact documents store their kind in `type`; anything unknown is treated as an individual. */
+function contactTypeOf(data: { type?: unknown } | undefined): ContactType {
+  const value = data?.type;
+  return value === 'company' || value === 'service' ? value : 'individual';
+}
 
 // ============================================================================
 // HANDLER
@@ -108,13 +87,14 @@ export class RelationshipHandler implements ToolHandler {
     }
 
     const rawType = String(args.relationshipType ?? '').trim().toLowerCase();
-    const relationshipType = this.resolveRelationshipType(rawType);
-    if (!relationshipType) {
+    const resolvedType = resolveAiRelationshipType(rawType);
+    if (!resolvedType) {
       return {
         success: false,
-        error: `Invalid relationshipType "${rawType}". Valid: ${ALLOWED_RELATIONSHIP_TYPES.join(', ')}`,
+        error: `Invalid relationshipType "${rawType}". Valid: ${describeAcceptedRelationshipTypes()}`,
       };
     }
+    const relationshipType = resolvedType.type;
 
     const db = getAdminFirestore();
 
@@ -163,6 +143,20 @@ export class RelationshipHandler implements ToolHandler {
     });
     if (!ownedTarget.ok) return ownedTarget.result;
 
+    // ADR-372 §Β2: «source IS <role> OF target», oriented by the crossing matrix
+    // (an inverse-reading input such as «πελάτης» flips the pair).
+    const stored = orientAiRelationship(
+      resolvedType,
+      { sourceContactId, targetContactId },
+      { source: contactTypeOf(sourceSnap.data()), target: contactTypeOf(targetSnap.data()) }
+    );
+    if (!stored) {
+      return {
+        success: false,
+        error: `Relationship type "${relationshipType}" is not valid between these two contacts.`,
+      };
+    }
+
     // Check duplicate — both directions (A→B or B→A) since UI queries bidirectionally
     //
     // tenant-scope-exempt: **ο γονέας ελέγχθηκε ΠΡΙΝ** — και οι δύο επαφές πέρασαν από
@@ -172,13 +166,13 @@ export class RelationshipHandler implements ToolHandler {
     // η **ταυτότητα των επαφών**, ήδη περιορισμένη.
     const col = db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS);
     const [forwardSnap, reverseSnap] = await Promise.all([
-      col.where('sourceContactId', '==', sourceContactId)
-        .where('targetContactId', '==', targetContactId)
+      col.where('sourceContactId', '==', stored.sourceContactId)
+        .where('targetContactId', '==', stored.targetContactId)
         .where('relationshipType', '==', relationshipType)
         .where('status', '==', 'active')
         .limit(1).get(),
-      col.where('sourceContactId', '==', targetContactId)
-        .where('targetContactId', '==', sourceContactId)
+      col.where('sourceContactId', '==', stored.targetContactId)
+        .where('targetContactId', '==', stored.sourceContactId)
         .where('relationshipType', '==', relationshipType)
         .where('status', '==', 'active')
         .limit(1).get(),
@@ -198,8 +192,8 @@ export class RelationshipHandler implements ToolHandler {
     const attribution = buildAttribution(ctx);
 
     await col.doc(relationshipId).set({
-      sourceContactId,
-      targetContactId,
+      sourceContactId: stored.sourceContactId,
+      targetContactId: stored.targetContactId,
       relationshipType,
       status: 'active',
       notes: note,
@@ -209,17 +203,17 @@ export class RelationshipHandler implements ToolHandler {
     });
 
     await auditWrite(ctx, 'contact_relationships', relationshipId, 'create', {
-      sourceContactId, targetContactId, relationshipType,
+      sourceContactId: stored.sourceContactId, targetContactId: stored.targetContactId, relationshipType,
     });
 
     logger.info('Relationship created via AI agent', {
-      relationshipId, sourceContactId, targetContactId, relationshipType,
+      relationshipId, sourceContactId: stored.sourceContactId, targetContactId: stored.targetContactId, relationshipType,
       requestId: ctx.requestId,
     });
 
     return {
       success: true,
-      data: { relationshipId, sourceContactId, targetContactId, relationshipType },
+      data: { relationshipId, sourceContactId: stored.sourceContactId, targetContactId: stored.targetContactId, relationshipType },
     };
   }
 
@@ -327,16 +321,5 @@ export class RelationshipHandler implements ToolHandler {
     });
 
     return { success: true, data: { relationshipId, status: 'inactive' } };
-  }
-
-  // ── HELPERS ──
-
-  private resolveRelationshipType(raw: string): AllowedRelationshipType | null {
-    // Direct match
-    if (ALLOWED_RELATIONSHIP_TYPES.includes(raw as AllowedRelationshipType)) {
-      return raw as AllowedRelationshipType;
-    }
-    // Greek mapping
-    return GREEK_RELATIONSHIP_MAP[raw] ?? null;
   }
 }

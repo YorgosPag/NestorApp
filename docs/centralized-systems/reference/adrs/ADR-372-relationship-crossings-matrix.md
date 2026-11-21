@@ -158,8 +158,41 @@ All 9 crossings (catch-all / generic).
 
 ---
 
+## 8. Reciprocal-role model — §Β1 (one vocabulary) · §Β2 (direction) · §Β3 (no «Unknown») — 2026-11-21
+
+### 8.1 Problem (measured, 2026-11-21)
+- **§Β1** — four pairs shared one Greek label in the dropdown (`manager`/`director` «Διευθυντής», `consultant`/`advisor` «Σύμβουλος», `vendor`/`supplier` «Προμηθευτής», `client`/`customer` «Πελάτης»). Eleven hand-written lists enumerated the types (validator ×3, AI ×2, registry labels EL/EN, legacy label/colour maps, `role-mappings-config`, reciprocal map, hierarchy) and had drifted (`isValidRelationshipType` knew 31 of 37).
+- **§Β2** — direction lived only in `useRelationshipForm` (a hard-coded 4-type swap) while the validator judged "sides": shareholder worked only from the person card, employee only from the company card. **4 of the 6** stored relationships were company→person (inverted).
+- **§Β3** — the hierarchy services emitted the English literal `'Unknown'` as a department name; the UI's i18n fallback was dead code. The form stored the *translated label* of a preset department, not its key.
+
+### 8.2 Industry practice → Nestor decision
+HubSpot *paired association labels*, Dynamics 365 *reciprocal connection roles*, Salesforce FSC `ReciprocalRole.InverseRole`: a directed relationship is **one role with two readings**; synonyms are one role. FSC stores a **second record** for the inverse and syncs it with triggers.
+**Nestor stores exactly ONE record in CANONICAL direction** (`source` IS <role> OF `target`) and derives the inverse reading at display time from the viewer's side — no twin record, nothing to sync, nothing to drift.
+
+### 8.3 Model
+- `RelationshipTypeMetadata.symmetric` (new). Directed types declare crossings **once, canonical** (`PAIR(holder → other)`), symmetric types keep `BIDIR`.
+- Merged synonyms (removed from the union; input aliases only, `RELATIONSHIP_TYPE_INPUT_ALIASES`): `supplier`→`vendor`; `client`,`customer`→ inverse of `vendor`; `protege`→ inverse of `mentor`; `advisor`→`consultant`. Data using them: **0**.
+- Labels: `relationships.types.<segment>` (holder) + `relationships.inverseTypes.<segment>` (other side: «Εργαζόμενος σε», «Μέτοχος σε», «Πελάτης», «Καθοδηγούμενος»). `manager` = «Υπεύθυνος», `director` = «Διευθυντής». Uniqueness asserted when the locale was generated.
+- SSoT `src/types/contacts/relationships/core/relationship-orientation.ts`: `getOrientedRolesForCrossing`, `orientRelationship`, `isStoredCrossingValid`, `otherContactIdOf`/`otherSideOf`/`orientedRoleOf`, `relationshipRoleLabelKey`, `encode/decodeOrientedRole`, `resolveRelationshipTypeInput`.
+- Writers that now orient through it: contact form (`useRelationshipForm` + `relationship-form-orientation.ts`), `RelationshipCRUDService` (validates the stored crossing; duplicate check oriented — the old one threw inside its own try/catch and never rejected), AI `relationship-handler` (+ `relationship-type-input.ts`: Greek words from the locale, kinship aliases, auto-flip when only the reverse crossing is valid), procurement `commit-signatory-service` (signatory = holder; static metadata from the registry, not a hand-written ANY copy).
+- Validator: `validateBusinessRules` = `isStoredCrossingValid` (one rule); messages are i18n keys with `labelParams` (`crossingNotAllowed`, `sameContactSameType`); `isValidRelationshipType` derived.
+- Removed: `RECIPROCAL_MAPPINGS`, `createReciprocalRelationship`, `relationship-reciprocal-ops.ts`, governance `affectsReciprocal`, `role-mappings-config.ts` (+ `NEXT_PUBLIC_ROLE_*` in `.env.example`; `.ssot-registry.json` module re-pointed to `relationship-role-labels`, forbidding `Record<RelationshipType, string>`), dead `getRelationshipDisplayLabel`/`getRelationshipBadgeColor`.
+- Display: `RelationshipCard`, `RecentRelationshipsSection` read the role of the OTHER contact from the viewer's side; dropdown disables used **oriented** values. Edit-load now loads the OTHER contact (it used to load the stored target, i.e. possibly the current contact itself).
+- Server registry labels derive from the locale JSON; inverse labels are matched too («Πελάτης» → `vendor`). Custom types are `symmetric: true`.
+
+### 8.4 §Β3 departments
+`UNASSIGNED_DEPARTMENT_KEY` + `departmentGroupKey()` (domain, `structures/organization.ts`); `departmentInfo.name: string | null`; UI `resolveDepartmentLabel()` (preset key → i18n, sentinel → «Χωρίς τμήμα», free text verbatim). The form stores the preset **key**. CSV export: empty cell + ID columns instead of `'Unknown'`.
+
+### 8.5 Open (not done in this pass)
+- Data migration of the 4 inverted records (needs Giorgio's explicit OK).
+- CHECK 3.73 registration of the `relationship-type` vocabulary and deriving the hierarchy lists (`organization-hierarchy-helpers.ts`) from metadata flags.
+- ~~`position` label-vs-key~~ → done 2026-11-21: `resolvePositionLabel` + shared `resolvePresetOrFreeText` (preset KEY stored, free text verbatim — Salesforce/HubSpot «Title» model).
+
+---
+
 ## 7. Changelog
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-05-23 | AI Agent | Initial implementation — ADR-372 |
+| 2026-11-21 | AI Agent (Opus) | §8 reciprocal-role model: directed crossings + `symmetric`, synonyms merged (supplier/client/customer/advisor/protege), `inverseTypes` labels, `relationship-orientation.ts` SSoT, twin records removed, oriented duplicate check, «Unknown» → `UNASSIGNED_DEPARTMENT_KEY` (Β1/Β2/Β3) |

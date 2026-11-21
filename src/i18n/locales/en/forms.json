@@ -297,6 +297,21 @@
     "merged": "Merged"
   },
   "kad": {
+    "legacyBadge": "KAD 2008 — needs re-mapping",
+    "bulk": {
+      "open": "Paste GEMI list",
+      "title": "Paste a KAD list from GEMI",
+      "inputLabel": "KAD codes (8-digit or dotted, any separator)",
+      "previewTitle": "Preview",
+      "empty": "No codes found in the text.",
+      "statusAdd": "Will be added",
+      "statusUnresolved": "Not found in the KAD 2025 catalogue",
+      "statusDuplicate": "Already present — skipped",
+      "statusPrimary": "Is the primary KAD — skipped",
+      "confirm": "{count, plural, one {Add # KAD} other {Add # KADs}}",
+      "cancel": "Cancel",
+      "added": "{count, plural, one {Added # secondary KAD.} other {Added # secondary KADs.}}"
+    },
     "searchPlaceholder": "Search KAD (code or description)...",
     "noResults": "No KAD code found",
     "primaryActivity": "Primary Activity",

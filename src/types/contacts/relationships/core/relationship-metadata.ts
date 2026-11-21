@@ -51,6 +51,13 @@ export interface CrossingPair {
 
 export interface RelationshipTypeMetadata {
   category: RelationshipCategory;
+  /**
+   * ADR-372 §Β2 — reciprocal-role model. `true` = the role reads the same from
+   * both sides (partner, colleague, friend…). `false` = DIRECTED: `source` IS
+   * <role> OF `target` (employee → employer); the other side reads the INVERSE
+   * label (`relationships.inverseTypes.*`). One stored record, never two.
+   */
+  symmetric: boolean;
   derivesWorkAddress: WorkAddressDerivation;
   isEmployment: boolean;
   isOwnership: boolean;
@@ -73,13 +80,14 @@ const BIDIR = (a: ContactType, b: ContactType): CrossingPair[] =>
   a === b ? [PAIR(a, b)] : [PAIR(a, b), PAIR(b, a)];
 
 /** Cartesian product between two contact-type sets. */
-const BETWEEN = (sources: ContactType[], targets: ContactType[]): CrossingPair[] =>
+const BETWEEN = (sources: readonly ContactType[], targets: readonly ContactType[]): CrossingPair[] =>
   sources.flatMap(s => targets.map(t => PAIR(s, t)));
 
-const ALL_CONTACT_TYPES: ContactType[] = ['individual', 'company', 'service'];
+/** The three contact kinds every crossing is drawn from (pure — no UI constants). */
+export const CROSSING_CONTACT_TYPES: readonly ContactType[] = ['individual', 'company', 'service'];
 
 /** All 9 possible crossings — catch-all types use this. */
-const ANY_CROSSING: CrossingPair[] = BETWEEN(ALL_CONTACT_TYPES, ALL_CONTACT_TYPES);
+const ANY_CROSSING: CrossingPair[] = BETWEEN(CROSSING_CONTACT_TYPES, CROSSING_CONTACT_TYPES);
 
 /** Concatenate crossing lists and dedupe by `source|target` key. */
 const COMBINE = (...lists: CrossingPair[][]): CrossingPair[] => {
@@ -109,12 +117,14 @@ const META = (
     ownership?: boolean;
     government?: boolean;
     property?: boolean;
+    symmetric?: boolean;
   },
   allowedCrossings: CrossingPair[]
 ): RelationshipTypeMetadata => {
   const allowedFor = [...new Set(allowedCrossings.map(c => c.source))] as ContactType[];
   return {
     category,
+    symmetric: flags.symmetric ?? false,
     derivesWorkAddress,
     isEmployment: flags.employment ?? false,
     isOwnership: flags.ownership ?? false,
@@ -129,20 +139,24 @@ const META = (
 // COMMON CROSSING PRESETS (named for the registry below)
 // ----------------------------------------------------------------------------
 
-// Employment: an individual works for a company or a public service.
-const EMPLOYMENT_CROSSINGS: CrossingPair[] = COMBINE(
-  BIDIR('individual', 'company'),
-  BIDIR('individual', 'service'),
-);
+// ADR-372 §Β2: DIRECTED crossings are written ONCE, in canonical direction
+// (role-holder → other party). The card the user starts from no longer matters:
+// `relationship-orientation.ts` derives the stored direction from this matrix.
 
-// Ownership / corporate governance — board / shareholder.
-const BOARD_LEVEL_CROSSINGS: CrossingPair[] = BIDIR('individual', 'company');
+// Employment: an individual (source) works for a company or a public service (target).
+const EMPLOYMENT_CROSSINGS: CrossingPair[] = [
+  PAIR('individual', 'company'),
+  PAIR('individual', 'service'),
+];
 
-// Shareholder — a company may also hold shares of another company.
-const SHAREHOLDER_CROSSINGS: CrossingPair[] = COMBINE(
-  BIDIR('individual', 'company'),
-  BIDIR('company', 'company'),
-);
+// Corporate governance — board member / chairman / CEO (source) of a company (target).
+const BOARD_LEVEL_CROSSINGS: CrossingPair[] = [PAIR('individual', 'company')];
+
+// Shareholder (source) of a company (target) — a company may also hold shares.
+const SHAREHOLDER_CROSSINGS: CrossingPair[] = [
+  PAIR('individual', 'company'),
+  PAIR('company', 'company'),
+];
 
 // Partner — wide partnership: ind↔company, company↔company, company↔service.
 const PARTNER_CROSSINGS: CrossingPair[] = COMBINE(
@@ -151,21 +165,21 @@ const PARTNER_CROSSINGS: CrossingPair[] = COMBINE(
   BIDIR('company', 'service'),
 );
 
-// Consulting / advisory — flexible across all business entity pairings.
+// Consultant (source: a person or a firm) advises a company or a public service
+// (target); a firm may also advise a private individual.
 const PROFESSIONAL_SERVICES_CROSSINGS: CrossingPair[] = COMBINE(
-  BIDIR('individual', 'company'),
-  BIDIR('individual', 'service'),
-  BIDIR('company', 'company'),
-  BIDIR('company', 'service'),
+  BETWEEN(['individual', 'company'], ['company', 'service']),
+  [PAIR('company', 'individual')],
 );
 
-// Representative — represents a company or a public service.
-const REPRESENTATIVE_CROSSINGS: CrossingPair[] = PROFESSIONAL_SERVICES_CROSSINGS;
+// Representative (source) represents a company or a public service (target).
+const REPRESENTATIVE_CROSSINGS: CrossingPair[] = BETWEEN(['individual', 'company'], ['company', 'service']);
 
-// Government roles — strictly between an individual and a public service.
-const GOVERNMENT_CROSSINGS: CrossingPair[] = BIDIR('individual', 'service');
+// Government roles — an individual (source) holds office in a public service (target).
+const GOVERNMENT_CROSSINGS: CrossingPair[] = [PAIR('individual', 'service')];
 
-// Vendor / Client / Supplier / Customer — any business pairing, including ind↔ind freelancer cases.
+// Vendor (source) supplies a customer (target) — any pairing, incl. freelancers.
+// The customer side reads the INVERSE label («Πελάτης»): one role, two readings.
 const COMMERCIAL_CROSSINGS: CrossingPair[] = ANY_CROSSING;
 
 // Competitor — companies, freelancers, mixed; services don't compete with others here.
@@ -181,7 +195,7 @@ const PERSONAL_CROSSINGS: CrossingPair[] = [PAIR('individual', 'individual')];
 // Property roles — buyer/landowner sits on the ind/company side.
 const PROPERTY_CROSSINGS: CrossingPair[] = BETWEEN(
   ['individual', 'company'],
-  ALL_CONTACT_TYPES,
+  CROSSING_CONTACT_TYPES,
 );
 
 // ============================================================================
@@ -203,10 +217,9 @@ export const RELATIONSHIP_METADATA: Record<RelationshipType, RelationshipTypeMet
   board_member:       META('ownership',    'always',   { ownership: true },   BOARD_LEVEL_CROSSINGS),
   chairman:           META('ownership',    'always',   { ownership: true },   BOARD_LEVEL_CROSSINGS),
   ceo:                META('ownership',    'always',   { ownership: true },   BOARD_LEVEL_CROSSINGS),
-  partner:            META('ownership',    'always',   { ownership: true },   PARTNER_CROSSINGS),
+  partner:            META('ownership',    'always',   { ownership: true, symmetric: true }, PARTNER_CROSSINGS),
   representative:     META('professional', 'optional', {},                    REPRESENTATIVE_CROSSINGS),
   vendor:             META('professional', 'never',    {},                    COMMERCIAL_CROSSINGS),
-  client:             META('professional', 'never',    {},                    COMMERCIAL_CROSSINGS),
 
   // Government
   civil_servant:      META('government',   'always',   { employment: true, government: true }, GOVERNMENT_CROSSINGS),
@@ -219,19 +232,15 @@ export const RELATIONSHIP_METADATA: Record<RelationshipType, RelationshipTypeMet
   regional_governor:  META('government',   'never',    { government: true },                   GOVERNMENT_CROSSINGS),
 
   // Professional (other)
-  advisor:            META('professional', 'optional', {}, PROFESSIONAL_SERVICES_CROSSINGS),
-  supplier:           META('professional', 'never',    {}, COMMERCIAL_CROSSINGS),
-  customer:           META('professional', 'never',    {}, COMMERCIAL_CROSSINGS),
-  competitor:         META('professional', 'never',    {}, COMPETITOR_CROSSINGS),
-  business_contact:   META('professional', 'optional', {}, ANY_CROSSING),
+  competitor:         META('professional', 'never',    { symmetric: true }, COMPETITOR_CROSSINGS),
+  business_contact:   META('professional', 'optional', { symmetric: true }, ANY_CROSSING),
 
-  // Personal
+  // Personal — mentor → mentee is DIRECTED (inverse «Καθοδηγούμενος»); the rest symmetric.
   mentor:             META('personal',     'never',    {}, PERSONAL_CROSSINGS),
-  protege:            META('personal',     'never',    {}, PERSONAL_CROSSINGS),
-  colleague:          META('personal',     'never',    {}, PERSONAL_CROSSINGS),
-  friend:             META('personal',     'never',    {}, PERSONAL_CROSSINGS),
-  family:             META('personal',     'never',    {}, PERSONAL_CROSSINGS),
-  other:              META('personal',     'never',    {}, ANY_CROSSING),
+  colleague:          META('personal',     'never',    { symmetric: true }, PERSONAL_CROSSINGS),
+  friend:             META('personal',     'never',    { symmetric: true }, PERSONAL_CROSSINGS),
+  family:             META('personal',     'never',    { symmetric: true }, PERSONAL_CROSSINGS),
+  other:              META('personal',     'never',    { symmetric: true }, ANY_CROSSING),
 
   // Property (ADR-244)
   property_buyer:     META('property',     'never',    { property: true }, PROPERTY_CROSSINGS),
@@ -248,7 +257,7 @@ export const RELATIONSHIP_METADATA: Record<RelationshipType, RelationshipTypeMet
  * only the source contact types are known. All targets are permitted.
  */
 export function buildCrossingsForSources(sources: ContactType[]): CrossingPair[] {
-  return sources.flatMap(source => ALL_CONTACT_TYPES.map(target => ({ source, target })));
+  return sources.flatMap(source => CROSSING_CONTACT_TYPES.map(target => ({ source, target })));
 }
 
 export function getRelationshipMetadata(type: string): RelationshipTypeMetadata | undefined {

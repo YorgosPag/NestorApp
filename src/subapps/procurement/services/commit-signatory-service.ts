@@ -52,6 +52,8 @@ import type {
 } from '@/types/contacts/contracts';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
+import { RELATIONSHIP_METADATA } from '@/types/contacts/relationships/core/relationship-metadata';
+import { orientRelationship } from '@/types/contacts/relationships/core/relationship-orientation';
 import type { SignatoryFieldSet } from '@/subapps/procurement/types/signatory-fields';
 import { contactEmailKeys } from '@/lib/contacts/contact-email-keys';
 
@@ -174,11 +176,19 @@ async function findOrCreateRelationship(
   rolePosition: string | null,
   ctx: AuthContext
 ): Promise<{ id: string; reused: boolean }> {
+  // ADR-372 §Β2: the signatory HOLDS the role at the vendor ⇒ canonical direction
+  // from the crossing matrix (employee: person → company). Symmetric / custom
+  // types keep vendor → signatory.
+  const { sourceContactId, targetContactId } = orientRelationship(
+    { type: relType, pickedSide: 'source' },
+    vendorContactId,
+    signatoryContactId
+  );
   return safeFirestoreOperation(async (db) => {
     const existing = await db
       .collection(COLLECTIONS.CONTACT_RELATIONSHIPS)
-      .where('sourceContactId', '==', vendorContactId)
-      .where('targetContactId', '==', signatoryContactId)
+      .where('sourceContactId', '==', sourceContactId)
+      .where('targetContactId', '==', targetContactId)
       .where('relationshipType', '==', relType)
       .where('companyId', '==', ctx.companyId)
       .limit(1)
@@ -193,8 +203,8 @@ async function findOrCreateRelationship(
 
     const relationship: Partial<ContactRelationship> & { companyId: string } = {
       id,
-      sourceContactId: vendorContactId,
-      targetContactId: signatoryContactId,
+      sourceContactId,
+      targetContactId,
       relationshipType: relType,
       status: 'active',
       position: rolePosition ?? null,
@@ -311,23 +321,7 @@ export async function commitSignatory(
       labelEl: input.relationshipType.type,
       labelEn: input.relationshipType.type,
       reverseKey: null,
-      metadata: {
-        category: 'professional',
-        derivesWorkAddress: 'never',
-        isEmployment: false, isOwnership: false, isGovernment: false, isProperty: false,
-        allowedFor: ['individual', 'company', 'service'],
-        allowedCrossings: [
-          { source: 'individual', target: 'individual' },
-          { source: 'individual', target: 'company' },
-          { source: 'individual', target: 'service' },
-          { source: 'company', target: 'individual' },
-          { source: 'company', target: 'company' },
-          { source: 'company', target: 'service' },
-          { source: 'service', target: 'individual' },
-          { source: 'service', target: 'company' },
-          { source: 'service', target: 'service' },
-        ],
-      },
+      metadata: RELATIONSHIP_METADATA[input.relationshipType.type],
       isStatic: true,
     };
   } else {

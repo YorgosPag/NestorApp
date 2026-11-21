@@ -11,6 +11,7 @@ import {
   ContactWithRelationship,
   RelationshipType
 } from '@/types/contacts/relationships';
+import { departmentGroupKey } from '@/types/contacts/relationships/structures/organization';
 import { Contact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
@@ -156,7 +157,7 @@ export async function buildHierarchyNodes(employees: ContactWithRelationship[]):
     subordinates: [],
     level: 0,
     departmentInfo: {
-      name: employee.relationship.department || 'Unknown',
+      name: employee.relationship.department ?? null,
       size: 0
     },
     manager: undefined,
@@ -185,7 +186,7 @@ export function buildDepartmentBreakdown(nodes: OrganizationHierarchyNode[]): Or
   const departmentGroups = new Map<string, OrganizationHierarchyNode[]>();
 
   nodes.forEach(node => {
-    const deptName = node.relationship.department || 'Unknown';
+    const deptName = departmentGroupKey(node.relationship.department);
     if (!departmentGroups.has(deptName)) {
       departmentGroups.set(deptName, []);
     }

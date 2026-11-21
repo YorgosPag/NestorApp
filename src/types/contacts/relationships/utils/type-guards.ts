@@ -74,7 +74,7 @@ export function isManagerialRelationship(relationship: ContactRelationship): boo
  */
 export function isExternalRelationship(relationship: ContactRelationship): boolean {
   const externalTypes: RelationshipType[] = [
-    'vendor', 'client', 'supplier', 'customer', 'competitor', 'consultant', 'contractor'
+    'vendor', 'competitor', 'consultant', 'contractor'
   ];
   return externalTypes.includes(relationship.relationshipType);
 }

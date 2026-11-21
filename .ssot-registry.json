@@ -1430,14 +1430,14 @@
         "src/constants/domains/"
       ]
     },
-    "role-mappings-config": {
-      "ssotFile": "src/config/role-mappings-config.ts",
-      "description": "Role mappings must use centralized config — no inline role mapping definitions",
+    "relationship-role-labels": {
+      "ssotFile": "src/types/contacts/relationships/core/relationship-orientation.ts",
+      "description": "ADR-372 §Β1: a relationship role is named ONLY in the locale files (relationships.types / relationships.inverseTypes), resolved via relationshipRoleLabelKey(). No hand-written RelationshipType→label maps (three had drifted: manager=director=«Διευθυντής»).",
       "forbiddenPatterns": [
-        "(ROLE_MAPPINGS_CONFIG)\\s*(=|:)\\s*(\\{|\\[|Record)"
+        "Record<RelationshipType,\\s*string>"
       ],
       "allowlist": [
-        "src/config/role-mappings-config.ts"
+        "src/types/contacts/relationships/core/relationship-orientation.ts"
       ]
     },
     "address-config": {

@@ -40,54 +40,47 @@
       "useFreeText": "Χρήση ελεύθερου κειμένου"
     },
     "individual": {
-      "fields": {
-        "projectParticipation": "Συμμετοχή σε Έργα"
-      },
       "placeholders": {
         "profession": "π.χ. Μηχανικός"
       }
     },
-    "persona": {
-      "options": {
-        "engineerSpecialty": {
-          "architect": "Αρχιτέκτονας Μηχανικός",
-          "chemical": "Χημικός Μηχανικός",
-          "civil": "Πολιτικός Μηχανικός",
-          "electrical": "Ηλεκτρολόγος Μηχανικός",
-          "mechanical": "Μηχανολόγος Μηχανικός",
-          "mining": "Μεταλλειολόγος Μηχανικός",
-          "surveyor": "Τοπογράφος Μηχανικός"
-        },
-        "licenseClass": {
-          "A": "Τάξη Α (Μεγάλα Έργα)",
-          "B": "Τάξη Β",
-          "C": "Τάξη Γ",
-          "D": "Τάξη Δ (Μικρά Έργα)"
-        },
-        "supplierCategory": {
-          "equipment": "Εξοπλισμός",
-          "materials": "Υλικά Κατασκευής",
-          "other": "Άλλο",
-          "services": "Υπηρεσίες",
-          "subcontractor": "Υπεργολάβος"
-        }
-      }
-    },
     "relationships": {
+      "organizationTree": {
+        "noDepartment": "Χωρίς τμήμα"
+      },
+      "presets": {
+        "departments": {
+          "engineering": "Τεχνικό",
+          "finance": "Οικονομικό",
+          "hr": "Ανθρώπινο Δυναμικό",
+          "it": "Πληροφορική",
+          "legal": "Νομικό",
+          "management": "Διοίκηση",
+          "operations": "Λειτουργίες",
+          "sales": "Πωλήσεις"
+        },
+        "positions": {
+          "accountant": "Λογιστής",
+          "director": "Διευθυντής",
+          "engineer": "Μηχανικός",
+          "manager": "Προϊστάμενος",
+          "salesRep": "Πωλητής",
+          "secretary": "Γραμματέας",
+          "supervisor": "Επόπτης",
+          "technician": "Τεχνικός"
+        }
+      },
       "types": {
-        "advisor": "Σύμβουλος",
         "appointedOfficial": "Διορισμένος Αξιωματούχος",
         "boardMember": "Μέλος Διοικητικού Συμβουλίου",
         "businessContact": "Επαγγελματική Επαφή",
         "ceo": "Διευθύνων Σύμβουλος",
         "chairman": "Πρόεδρος",
         "civilServant": "Δημόσιος Υπάλληλος",
-        "client": "Πελάτης",
         "colleague": "Συνάδελφος",
         "competitor": "Ανταγωνιστής",
         "consultant": "Σύμβουλος",
         "contractor": "Εργολάβος",
-        "customer": "Πελάτης",
         "departmentHead": "Προϊστάμενος Τμήματος",
         "deputyMayor": "Αντιδήμαρχος",
         "director": "Διευθυντής",
@@ -97,17 +90,15 @@
         "family": "Οικογένεια",
         "friend": "Φίλος",
         "intern": "Ασκούμενος",
-        "manager": "Διευθυντής",
+        "manager": "Υπεύθυνος",
         "mayor": "Δήμαρχος",
         "mentor": "Μέντορας",
         "ministryOfficial": "Υπουργικός Αξιωματούχος",
         "other": "Άλλο",
         "partner": "Συνεργάτης",
-        "protege": "Προστατευόμενος",
         "regionalGovernor": "Περιφερειάρχης",
         "representative": "Εκπρόσωπος",
         "shareholder": "Μέτοχος",
-        "supplier": "Προμηθευτής",
         "vendor": "Προμηθευτής"
       }
     }

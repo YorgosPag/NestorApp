@@ -20,6 +20,18 @@ import { ContactRelationshipService } from '@/services/contact-relationships/Con
 import { ContactsService } from '@/services/contacts.service';
 import { RelationshipValidationService } from '@/services/contact-relationships/core/RelationshipValidationService';
 import {
+  encodeOrientedRole,
+  isRelationshipType,
+  orientedRoleOf,
+  otherContactIdOf,
+} from '@/types/contacts/relationships/core/relationship-orientation';
+import {
+  describeValidationError,
+  orientFormRole,
+  translateValidationMessage,
+  type ValidationMessage,
+} from './relationship-form-orientation';
+import {
   createRelationshipWithPolicy,
   updateRelationshipWithPolicy,
 } from '@/services/contact-relationships/relationship-mutation-gateway';
@@ -88,17 +100,17 @@ export const useRelationshipForm = (
    * 🔍 Validate form data before submission using centralized validation service
    * 🌐 i18n: All validation messages converted to i18n keys - 2026-01-18
    */
-  const validateFormData = async (): Promise<string | null> => {
+  const validateFormData = async (): Promise<ValidationMessage | null> => {
     if (!contactId || contactId === 'new-contact') {
-      return 'relationships.form.validation.contactRequired';
+      return { key: 'relationships.form.validation.contactRequired' };
     }
 
     if (!formData.targetContactId) {
-      return 'relationships.form.validation.contactRequired';
+      return { key: 'relationships.form.validation.contactRequired' };
     }
 
     if (!formData.relationshipType) {
-      return 'relationships.form.validation.relationshipTypeRequired';
+      return { key: 'relationships.form.validation.relationshipTypeRequired' };
     }
 
     // 🏢 Business Logic Validation using CENTRALIZED RelationshipValidationService
@@ -116,17 +128,16 @@ export const useRelationshipForm = (
       ]);
 
       if (!targetContact) {
-        return 'relationships.validation.targetNotFound';
+        return { key: 'relationships.validation.targetNotFound' };
       }
 
       if (!sourceContact) {
-        return 'relationships.validation.sourceLoadError';
+        return { key: 'relationships.validation.sourceLoadError' };
       }
 
-      // 🔧 FIX: Contact object uses 'type' field, not 'contactType'
-      // Type assertions needed because TypeScript can't infer non-null after checks
-      const sourceType = (sourceContact as NonNullable<typeof sourceContact>).type || (sourceContact as NonNullable<typeof sourceContact> & { contactType?: string }).contactType;
-      const targetType = (targetContact as NonNullable<typeof targetContact>).type || (targetContact as NonNullable<typeof targetContact> & { contactType?: string }).contactType;
+      // `sourceContact` = the card's contact, `targetContact` = the picked one.
+      const sourceType = sourceContact.type;
+      const targetType = targetContact.type;
 
       logger.info('VALIDATION: Contact details for centralized validation:', { data: {
         source: {
@@ -142,28 +153,15 @@ export const useRelationshipForm = (
         relationshipType: formData.relationshipType
       } });
 
-      // For employment relationships, the employee should be source, company should be target
-      // So we need to swap the validation parameters
-      const isEmploymentRelation = ['employee', 'manager', 'director', 'executive'].includes(formData.relationshipType);
-
-      // Cast to RelationshipType for validation (custom types skip business rule checks)
-      const relType = formData.relationshipType as RelationshipType;
-
-      if (isEmploymentRelation) {
-        // Employee = target contact, Company = source contact (current contact being viewed)
-        RelationshipValidationService.validateBusinessRules(
-          targetType,
-          sourceType,
-          relType
-        );
-      } else {
-        // For non-employment relationships, use normal order
-        RelationshipValidationService.validateBusinessRules(
-          sourceType,
-          targetType,
-          relType
-        );
-      }
+      // ADR-372 §Β2: orient FIRST (the card the user started from is irrelevant),
+      // then validate the STORED direction against the crossing matrix.
+      const oriented = orientFormRole(formData.relationshipType, contactId, formData.targetContactId);
+      const sourceIsCurrent = oriented.sourceContactId === contactId;
+      RelationshipValidationService.validateBusinessRules(
+        sourceIsCurrent ? sourceType : targetType,
+        sourceIsCurrent ? targetType : sourceType,
+        oriented.relationshipType
+      );
 
       // 🔍 DUPLICATE VALIDATION: Check for same contact - same relationship type
       logger.info('DUPLICATE VALIDATION: Checking for duplicate relationships...');
@@ -174,8 +172,7 @@ export const useRelationshipForm = (
 
         RelationshipValidationService.validateSameContactSameType(
           existingRelationships,
-          formData.targetContactId,
-          relType,
+          oriented,
           editingId ?? undefined // Exclude current relationship if editing
         );
 
@@ -185,23 +182,14 @@ export const useRelationshipForm = (
         const dupMessage = duplicateError instanceof Error ? duplicateError.message : String(duplicateError);
         logger.warn('DUPLICATE VALIDATION: Duplicate relationship detected', { data: { message: dupMessage } });
 
-        if (duplicateError instanceof Error) {
-          return duplicateError.message;
-        }
-
-        return 'relationships.validation.duplicateRelationship';
+        return describeValidationError(duplicateError, 'relationships.form.validation.duplicateRelationship');
       }
 
     } catch (error) {
       const errMessage = error instanceof Error ? error.message : String(error);
       logger.warn('CENTRALIZED VALIDATION: Business rule violation', { data: { message: errMessage } });
 
-      if (error instanceof Error) {
-        // Return the validation error message directly
-        return error.message;
-      }
-
-      return 'relationships.validation.checkError';
+      return describeValidationError(error, 'relationships.validation.checkError');
     }
 
     logger.info('CENTRALIZED VALIDATION: All business rules passed, relationship is valid');
@@ -236,7 +224,7 @@ export const useRelationshipForm = (
       // Validate form data
       const validationError = await validateFormData();
       if (validationError) {
-        setError(t(validationError, { defaultValue: validationError }));
+        setError(translateValidationMessage(validationError, t));
         return;
       }
 
@@ -246,10 +234,8 @@ export const useRelationshipForm = (
         contactId
       } });
 
-      // Prepare relationship data
-      // 🔧 FIX: For employment relationships (employee, manager, director),
-      // the employee should be source, company should be target
-      const isEmploymentRelation = ['employee', 'manager', 'director', 'executive'].includes(formData.relationshipType);
+      // ADR-372 §Β2: ONE orientation path for every type — no hand-written swap list.
+      const oriented = orientFormRole(formData.relationshipType, contactId, formData.targetContactId);
 
       // Build contactInfo from centralized phones/emails arrays (backward compat)
       const primaryPhone = formData.phones?.find(p => p.isPrimary) || formData.phones?.[0];
@@ -265,9 +251,9 @@ export const useRelationshipForm = (
       const hasContactInfo = builtContactInfo.businessPhone || builtContactInfo.businessEmail;
 
       const relationshipData: Partial<ContactRelationship> = {
-        sourceContactId: isEmploymentRelation ? formData.targetContactId : contactId,
-        targetContactId: isEmploymentRelation ? contactId : formData.targetContactId,
-        relationshipType: formData.relationshipType as RelationshipType,
+        sourceContactId: oriented.sourceContactId,
+        targetContactId: oriented.targetContactId,
+        relationshipType: oriented.relationshipType as RelationshipType,
         position: formData.position || null,
         department: formData.department || null,
         startDate: formData.startDate || null,
@@ -279,13 +265,6 @@ export const useRelationshipForm = (
           : null
       };
 
-      logger.info('RELATIONSHIP DIRECTION FIX:', { data: {
-        isEmploymentRelation,
-        relationshipType: formData.relationshipType,
-        source: relationshipData.sourceContactId,
-        target: relationshipData.targetContactId,
-        'Expected for OrganizationTree': 'source=employee, target=company'
-      } });
 
       // Create or update relationship
       if (editingId) {
@@ -422,8 +401,12 @@ export const useRelationshipForm = (
     }
 
     setFormData({
-      targetContactId: relationship.targetContactId,
-      relationshipType: relationship.relationshipType,
+      // ADR-372 §Β2: «the other contact» and the oriented role are derived from the
+      // viewer's side — the stored target may be the current contact itself.
+      targetContactId: otherContactIdOf(relationship, contactId),
+      relationshipType: isRelationshipType(relationship.relationshipType)
+        ? encodeOrientedRole(orientedRoleOf(relationship, contactId))
+        : relationship.relationshipType,
       position: relationship.position || '',
       department: relationship.department || '',
       startDate: relationship.startDate || '',
@@ -440,7 +423,7 @@ export const useRelationshipForm = (
 
     setError(null);
     setSuccessMessage(null);
-  }, []);
+  }, [contactId]);
 
   /**
    * ❌ Cancel form editing

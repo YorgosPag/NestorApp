@@ -9,6 +9,7 @@
  */
 
 import type { InvoiceSeries } from './invoice';
+import type { KadCatalogVersion } from '@/lib/kad/kad-types';
 import type { EntityType, Partner, Member, Shareholder } from './entity';
 
 // ============================================================================
@@ -25,6 +26,8 @@ export interface KadEntry {
   type: 'primary' | 'secondary';
   /** Ημερομηνία έναρξης (ISO 8601) */
   activeFrom: string;
+  /** Κατάλογος προέλευσης· απουσία ⇒ ΚΑΔ 2008 (δείχνεται με σήμα «απαιτεί αντιστοίχιση»). */
+  catalog?: KadCatalogVersion;
 }
 
 /** Κατηγορία βιβλίων: Β' Απλογραφικά (`simplified`) ή Γ' Διπλογραφικά (`double_entry`) */

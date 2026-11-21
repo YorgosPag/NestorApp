@@ -4,12 +4,12 @@
 //
 // 🎨 Visual properties only (icon, label, color) for every RelationshipType.
 // 🔗 Filtering logic is DELEGATED entirely to the SSoT in relationship-metadata.ts:
-//    - getRelationshipTypesForCrossing(source, target)  → 2D matrix (ADR-372)
-//    - allowedFor                                       → source-only (back-compat)
+//    - getOfferedOrientedRoles(current, picked)      → oriented roles (ADR-372 §Β2,
+//      relationship-orientation.ts — pure, so forms don't pull this UI module)
+//    - labels: relationshipRoleLabelKey(type, side)   → locale files only (§Β1)
 //
 // ============================================================================
 
-import type { ContactType } from '@/types/contacts';
 import {
   User,
   Crown,
@@ -24,11 +24,7 @@ import {
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { hardcodedColorValues } from '@/design-system/tokens/colors';
 import { getStatusColor } from '@/lib/design-system';
-import {
-  getRelationshipTypesForCrossing,
-  getRelationshipMetadata,
-  type RelationshipTypeMetadata,
-} from '@/types/contacts/relationships/core/relationship-metadata';
+import { relationshipRoleLabelKey } from '@/types/contacts/relationships/core/relationship-orientation';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -77,52 +73,47 @@ const getRelationshipColors = (colors?: ReturnType<typeof useSemanticColors>) =>
 // VISUAL CONFIG — ALL RELATIONSHIP TYPES
 // ============================================================================
 
-type VisualConfig = { icon: React.ComponentType<{ className?: string }>; label: string; colorKey: keyof ReturnType<typeof getRelationshipColors> };
+type VisualConfig = { icon: React.ComponentType<{ className?: string }>; colorKey: keyof ReturnType<typeof getRelationshipColors> };
 
 const VISUAL_REGISTRY: Record<string, VisualConfig> = {
   // Employment
-  employee:           { icon: User,       label: 'relationships.types.employee',        colorKey: 'employment' },
-  manager:            { icon: Crown,      label: 'relationships.types.manager',         colorKey: 'employment' },
-  director:           { icon: Crown,      label: 'relationships.types.director',        colorKey: 'employment' },
-  executive:          { icon: Crown,      label: 'relationships.types.executive',       colorKey: 'employment' },
-  intern:             { icon: User,       label: 'relationships.types.intern',          colorKey: 'muted' },
-  contractor:         { icon: Briefcase,  label: 'relationships.types.contractor',      colorKey: 'employment' },
+  employee:           { icon: User,       colorKey: 'employment' },
+  manager:            { icon: Crown,      colorKey: 'employment' },
+  director:           { icon: Crown,      colorKey: 'employment' },
+  executive:          { icon: Crown,      colorKey: 'employment' },
+  intern:             { icon: User,       colorKey: 'muted' },
+  contractor:         { icon: Briefcase,  colorKey: 'employment' },
 
   // Ownership / Corporate
-  shareholder:        { icon: TrendingUp, label: 'relationships.types.shareholder',     colorKey: 'ownership' },
-  board_member:       { icon: Users,      label: 'relationships.types.boardMember',     colorKey: 'board' },
-  chairman:           { icon: Crown,      label: 'relationships.types.chairman',        colorKey: 'ownership' },
-  ceo:                { icon: Crown,      label: 'relationships.types.ceo',             colorKey: 'ownership' },
-  partner:            { icon: Handshake,  label: 'relationships.types.partner',         colorKey: 'partner' },
-  representative:     { icon: User,       label: 'relationships.types.representative',  colorKey: 'professional' },
-  vendor:             { icon: Briefcase,  label: 'relationships.types.vendor',          colorKey: 'commercial' },
-  client:             { icon: User,       label: 'relationships.types.client',          colorKey: 'commercial' },
+  shareholder:        { icon: TrendingUp, colorKey: 'ownership' },
+  board_member:       { icon: Users,      colorKey: 'board' },
+  chairman:           { icon: Crown,      colorKey: 'ownership' },
+  ceo:                { icon: Crown,      colorKey: 'ownership' },
+  partner:            { icon: Handshake,  colorKey: 'partner' },
+  representative:     { icon: User,       colorKey: 'professional' },
+  vendor:             { icon: Briefcase,  colorKey: 'commercial' },
 
   // Government
-  civil_servant:      { icon: UserCheck,  label: 'relationships.types.civilServant',    colorKey: 'government' },
-  department_head:    { icon: Crown,      label: 'relationships.types.departmentHead',  colorKey: 'government' },
-  ministry_official:  { icon: ShieldCheck,label: 'relationships.types.ministryOfficial',colorKey: 'government' },
-  elected_official:   { icon: ShieldCheck,label: 'relationships.types.electedOfficial', colorKey: 'government' },
-  appointed_official: { icon: ShieldCheck,label: 'relationships.types.appointedOfficial',colorKey: 'government' },
-  mayor:              { icon: ShieldCheck,label: 'relationships.types.mayor',           colorKey: 'government' },
-  deputy_mayor:       { icon: ShieldCheck,label: 'relationships.types.deputyMayor',     colorKey: 'government' },
-  regional_governor:  { icon: ShieldCheck,label: 'relationships.types.regionalGovernor',colorKey: 'government' },
+  civil_servant:      { icon: UserCheck,  colorKey: 'government' },
+  department_head:    { icon: Crown,      colorKey: 'government' },
+  ministry_official:  { icon: ShieldCheck,colorKey: 'government' },
+  elected_official:   { icon: ShieldCheck,colorKey: 'government' },
+  appointed_official: { icon: ShieldCheck,colorKey: 'government' },
+  mayor:              { icon: ShieldCheck,colorKey: 'government' },
+  deputy_mayor:       { icon: ShieldCheck,colorKey: 'government' },
+  regional_governor:  { icon: ShieldCheck,colorKey: 'government' },
 
   // Professional (other)
-  consultant:         { icon: User,       label: 'relationships.types.consultant',      colorKey: 'professional' },
-  advisor:            { icon: User,       label: 'relationships.types.advisor',         colorKey: 'professional' },
-  supplier:           { icon: Briefcase,  label: 'relationships.types.supplier',        colorKey: 'commercial' },
-  customer:           { icon: User,       label: 'relationships.types.customer',        colorKey: 'commercial' },
-  competitor:         { icon: TrendingUp, label: 'relationships.types.competitor',      colorKey: 'competitor' },
-  business_contact:   { icon: Briefcase,  label: 'relationships.types.businessContact', colorKey: 'muted' },
+  consultant:         { icon: User,       colorKey: 'professional' },
+  competitor:         { icon: TrendingUp, colorKey: 'competitor' },
+  business_contact:   { icon: Briefcase,  colorKey: 'muted' },
 
   // Personal
-  mentor:             { icon: Heart,      label: 'relationships.types.mentor',          colorKey: 'personal' },
-  protege:            { icon: User,       label: 'relationships.types.protege',         colorKey: 'personal' },
-  colleague:          { icon: Users,      label: 'relationships.types.colleague',       colorKey: 'partner' },
-  friend:             { icon: Heart,      label: 'relationships.types.friend',          colorKey: 'personal' },
-  family:             { icon: Users,      label: 'relationships.types.family',          colorKey: 'personal' },
-  other:              { icon: User,       label: 'relationships.types.other',           colorKey: 'muted' },
+  mentor:             { icon: Heart,      colorKey: 'personal' },
+  colleague:          { icon: Users,      colorKey: 'partner' },
+  friend:             { icon: Heart,      colorKey: 'personal' },
+  family:             { icon: Users,      colorKey: 'personal' },
+  other:              { icon: User,       colorKey: 'muted' },
 
   // Property types (ADR-244) are managed by the property module — excluded from contact relationship dropdown.
 };
@@ -144,33 +135,9 @@ export const getRelationshipTypeConfig = (
   const colorMap = getRelationshipColors(colors);
   return {
     icon: visual.icon,
-    label: visual.label,
+    label: relationshipRoleLabelKey(type, 'source'),
     color: colorMap[visual.colorKey],
   };
-};
-
-/**
- * Returns all relationship type keys valid for the given crossing.
- *
- * When `targetType` is provided → ADR-372 bidirectional matrix (strict).
- * When `targetType` is omitted  → source-only filter (backward compat).
- */
-export const getAvailableRelationshipTypes = (
-  sourceType: ContactType,
-  targetType?: ContactType,
-  _colors?: ReturnType<typeof useSemanticColors>
-): string[] => {
-  if (targetType) {
-    // Ο πίνακας ADR-372 ξέρει και τους τύπους ακινήτου (ADR-244, `PROPERTY_CROSSINGS`), που ΔΕΝ
-    // προσφέρονται εδώ — ίδιο φίλτρο με τον κλάδο μόνο-πηγής. Χωρίς αυτό: `property_buyer` ωμό στο dropdown
-    // εταιρεία → φυσικό πρόσωπο (καμία ετικέτα στο `VISUAL_REGISTRY`, μετρημένο 2026-10-28, ADR-327).
-    return getRelationshipTypesForCrossing(sourceType, targetType).filter(type => type in VISUAL_REGISTRY);
-  }
-  // Backward-compat: filter by source only (reads SSoT `allowedFor`).
-  return Object.keys(VISUAL_REGISTRY).filter(type => {
-    const meta: RelationshipTypeMetadata | undefined = getRelationshipMetadata(type);
-    return meta ? meta.allowedFor.includes(sourceType) : false;
-  });
 };
 
 /**
@@ -186,7 +153,6 @@ export const getRelationshipDisplayProps = (
   const colorMap = getRelationshipColors(colors);
   return {
     icon: User,
-    label: 'relationships.types.other',
     color: colorMap.muted,
   };
 };

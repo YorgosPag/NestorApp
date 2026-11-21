@@ -35,7 +35,6 @@ export type RelationshipType =
   | 'representative'
   | 'partner'
   | 'vendor'
-  | 'client'
 
   // 🏛️ Government/Service Relationships
   | 'civil_servant'
@@ -48,12 +47,12 @@ export type RelationshipType =
   | 'regional_governor'
 
   // 🔗 Other Professional Relationships
-  | 'advisor'
+  // ADR-372 §Β1: synonyms are ONE role. `client`/`customer` = the INVERSE reading
+  // of `vendor`, `protege` = inverse of `mentor`, `supplier` = `vendor`,
+  // `advisor` = `consultant` — accepted only as INPUT aliases
+  // (`RELATIONSHIP_TYPE_INPUT_ALIASES` in relationship-orientation.ts).
   | 'mentor'
-  | 'protege'
   | 'colleague'
-  | 'supplier'
-  | 'customer'
   | 'competitor'
   | 'business_contact'
   | 'friend'
@@ -118,19 +117,14 @@ export const RELATIONSHIP_TYPE_PRIORITY_SCORES: Record<RelationshipType, number>
   'civil_servant': 40,
   'contractor': 35,
   'consultant': 35,
-  'advisor': 30,
   'partner': 25,
   'vendor': 20,
-  'client': 20,
   'colleague': 15,
   'intern': 10,
   'other': 5,
   'appointed_official': 60,
   'deputy_mayor': 65,
   'mentor': 25,
-  'protege': 15,
-  'supplier': 20,
-  'customer': 20,
   'competitor': 5,
   'business_contact': 20,
   'friend': 10,

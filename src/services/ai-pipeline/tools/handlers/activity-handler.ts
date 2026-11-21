@@ -1,7 +1,9 @@
 /**
  * ACTIVITY HANDLER — Manage KAD business activity codes on contacts via AI agent.
  * Operations: add, list, remove, set_primary.
- * Validates KAD codes against the official Greek registry (10521 NACE Rev.2 codes).
+ * Validates KAD codes against the official ΚΑΔ 2025 catalogue (ΑΑΔΕ Α.1003/2026, Παράρτημα Ι — NACE Rev 2.1),
+ * read on the server from the SAME `public/data/kad/kad-2025.json` the UI uses. Accepts dotted (`41.00.11`)
+ * or 8-digit ΓΕΜΗ (`41001100`) codes; stores the dotted code + official description + `catalog: 'KAD2025'`.
  *
  * @module services/ai-pipeline/tools/handlers/activity-handler
  * @see ADR-171 (Autonomous AI Agent)
@@ -20,8 +22,11 @@ import {
   logger,
 } from '../executor-shared';
 import { aiAgentAuditActor, aiAgentStamp } from '../../shared/ai-performer';
-import { loadAgentContact } from './agent-contact-doc';
-import { toKadActivityType } from '@/types/ContactFormTypes';
+import { loadAgentContact, type AgentContactDoc } from './agent-contact-doc';
+import { toKadActivityType, type KadActivity } from '@/types/ContactFormTypes';
+import { readKadCatalogOnServer } from '@/services/kad/kad-catalog.reader';
+import { isSelectableKad, resolveKad, toKadSelection } from '@/lib/kad/kad-resolve';
+import type { KadCatalogEntry } from '@/lib/kad/kad-types';
 
 /** ADR-195: local wrapper that records a CONTACT entity audit entry (SSoT). */
 async function recordContactAudit(
@@ -42,27 +47,31 @@ async function recordContactAudit(
   });
 }
 
-// KAD code validation — lazy-loaded to avoid importing 10K entries at module level
-let kadCodeSet: Set<string> | null = null;
-
-async function loadKadCodes(): Promise<Set<string>> {
-  if (kadCodeSet) return kadCodeSet;
-  const { GREEK_KAD_CODES } = await import('@/subapps/accounting/data/greek-kad-codes');
-  kadCodeSet = new Set(GREEK_KAD_CODES.map(k => k.code));
-  return kadCodeSet;
+/**
+ * ΚΑΔ του ορίσματος → γραμμή του καταλόγου ΚΑΔ 2025, ή η άρνηση που επιστρέφεται αυτούσια.
+ * ⚠️ Κατάλογος που δεν διαβάστηκε = «δεν ξέρω» — ποτέ «άκυρος ΚΑΔ».
+ */
+async function resolveCatalogKad(kadCode: string): Promise<KadCatalogEntry | ToolResult> {
+  const catalog = await readKadCatalogOnServer();
+  if (catalog === null) {
+    return { success: false, error: 'Ο κατάλογος ΚΑΔ 2025 δεν είναι διαθέσιμος αυτή τη στιγμή. Δοκίμασε ξανά.' };
+  }
+  const entry = resolveKad(catalog, kadCode);
+  if (entry === null || !isSelectableKad(entry)) {
+    return { success: false, error: `Ο κωδικός ΚΑΔ "${kadCode}" δεν υπάρχει στον κατάλογο ΚΑΔ 2025. Χρησιμοποίησε έγκυρο ΚΑΔ (π.χ. "41.00.11" ή "41001100").` };
+  }
+  return entry;
 }
 
-async function lookupKadDescription(code: string): Promise<string | null> {
-  const { GREEK_KAD_CODES } = await import('@/subapps/accounting/data/greek-kad-codes');
-  const match = GREEK_KAD_CODES.find(k => k.code === code);
-  return match?.description ?? null;
-}
-
-interface KadActivity {
-  code: string;
-  description: string;
-  type: 'primary' | 'secondary';
-  activeFrom?: string;
+/**
+ * Ο αποθηκευμένος κωδικός που εννοεί το όρισμα: ακριβώς ίδιος, ή (για 8ψήφιο/κωδικό ΚΑΔ 2025) ο
+ * κωδικός με τελείες στον οποίο επιλύεται. Οι τιμές ΚΑΔ 2008 ταιριάζουν μόνο αυτούσιες.
+ */
+async function storedCodeFor(activities: readonly KadActivity[], kadCode: string): Promise<string | null> {
+  if (activities.some((a) => a.code === kadCode)) return kadCode;
+  const catalog = await readKadCatalogOnServer();
+  const entry = catalog === null ? null : resolveKad(catalog, kadCode);
+  return entry !== null && activities.some((a) => a.code === entry.code) ? entry.code : null;
 }
 
 // ============================================================================
@@ -114,13 +123,9 @@ export class ActivityHandler implements ToolHandler {
     const kadCode = requiredKadCode(args, 'add');
     if (typeof kadCode !== 'string') return kadCode;
 
-    // Validate KAD code
-    const validCodes = await loadKadCodes();
-    if (!validCodes.has(kadCode)) {
-      return { success: false, error: `Ο κωδικός ΚΑΔ "${kadCode}" δεν υπάρχει στο μητρώο. Χρησιμοποίησε έγκυρο ΚΑΔ.` };
-    }
-
-    const description = await lookupKadDescription(kadCode);
+    const entry = await resolveCatalogKad(kadCode);
+    if (!('code' in entry)) return entry;
+    const selection = toKadSelection(entry);
     const activityType = toKadActivityType(args.activityType, 'secondary');
 
     const contact = await loadAgentContact(contactId);
@@ -132,30 +137,22 @@ export class ActivityHandler implements ToolHandler {
     const activities = activitiesOf(contact.data);
 
     // Check duplicate
-    if (activities.some(a => a.code === kadCode)) {
-      return { success: true, data: { message: `Ο ΚΑΔ ${kadCode} υπάρχει ήδη.`, activities } };
+    if (activities.some(a => a.code === selection.code)) {
+      return { success: true, data: { message: `Ο ΚΑΔ ${selection.code} υπάρχει ήδη.`, activities } };
     }
 
-    // If adding as primary, demote existing primary
-    if (activityType === 'primary') {
-      for (const a of activities) {
-        if (a.type === 'primary') a.type = 'secondary';
-      }
-    }
+    appendActivity(activities, { ...selection, type: activityType });
 
-    activities.push({ code: kadCode, description: description ?? kadCode, type: activityType });
-
-    await writeActivities(ctx, contactId, contact, activities, { action: 'add_activity', kadCode, activityType },
-      { field: 'activities', oldValue: null, newValue: `+${kadCode} (${activityType})`, label: 'Δραστηριότητα ΚΑΔ' });
+    await writeActivities(ctx, contactId, contact, activities,
+      { action: 'add_activity', kadCode: selection.code, activityType },
+      { field: 'activities', oldValue: null, newValue: `+${selection.code} (${activityType})`, label: 'Δραστηριότητα ΚΑΔ' });
 
     logger.info('KAD activity added via AI agent', {
-      contactId, kadCode, activityType, requestId: ctx.requestId,
+      contactId, kadCode: selection.code, activityType, requestId: ctx.requestId,
     });
 
-    return {
-      success: true,
-      data: { contactId, kadCode, description, activityType, totalActivities: activities.length },
-    };
+    const { code, description, catalog } = selection;
+    return { success: true, data: { contactId, kadCode: code, description, catalog, activityType, totalActivities: activities.length } };
   }
 
   // ── LIST ──
@@ -174,17 +171,10 @@ export class ActivityHandler implements ToolHandler {
     contactId: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const kadCode = requiredKadCode(args, 'remove');
-    if (typeof kadCode !== 'string') return kadCode;
-
-    const contact = await loadAgentContact(contactId);
-    if (!contact.found) return contact.result;
-    const activities = activitiesOf(contact.data);
+    const target = await locateStoredActivity(args, contactId, 'remove', 'δεν βρέθηκε στις δραστηριότητες.');
+    if ('success' in target) return target;
+    const { contact, activities, kadCode } = target;
     const filtered = activities.filter(a => a.code !== kadCode);
-
-    if (filtered.length === activities.length) {
-      return { success: false, error: `Ο ΚΑΔ ${kadCode} δεν βρέθηκε στις δραστηριότητες.` };
-    }
 
     await writeActivities(ctx, contactId, contact, filtered, { action: 'remove_activity', kadCode },
       { field: 'activities', oldValue: kadCode, newValue: null, label: 'Δραστηριότητα ΚΑΔ' });
@@ -199,16 +189,9 @@ export class ActivityHandler implements ToolHandler {
     contactId: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const kadCode = requiredKadCode(args, 'set_primary');
-    if (typeof kadCode !== 'string') return kadCode;
-
-    const contact = await loadAgentContact(contactId);
-    if (!contact.found) return contact.result;
-    const activities = activitiesOf(contact.data);
-
-    if (!activities.some(a => a.code === kadCode)) {
-      return { success: false, error: `Ο ΚΑΔ ${kadCode} δεν βρέθηκε. Πρόσθεσέ τον πρώτα.` };
-    }
+    const target = await locateStoredActivity(args, contactId, 'set_primary', 'δεν βρέθηκε. Πρόσθεσέ τον πρώτα.');
+    if ('success' in target) return target;
+    const { contact, activities, kadCode } = target;
 
     // Demote all to secondary, promote target to primary
     for (const a of activities) {
@@ -230,6 +213,40 @@ export class ActivityHandler implements ToolHandler {
 function requiredKadCode(args: Record<string, unknown>, operation: string): string | ToolResult {
   const kadCode = String(args.kadCode ?? '').trim();
   return kadCode || { success: false, error: `kadCode is required for ${operation}.` };
+}
+
+/** Η δραστηριότητα που ήδη έχει η επαφή και στην οποία στοχεύει μια πράξη (remove · set_primary). */
+interface StoredActivityTarget {
+  readonly contact: Extract<AgentContactDoc, { found: true }>;
+  readonly activities: KadActivity[];
+  readonly kadCode: string;
+}
+
+/** Όρισμα → επαφή → αποθηκευμένος κωδικός· ή η άρνηση που επιστρέφεται αυτούσια. */
+async function locateStoredActivity(
+  args: Record<string, unknown>,
+  contactId: string,
+  operation: string,
+  notFound: string,
+): Promise<StoredActivityTarget | ToolResult> {
+  const requested = requiredKadCode(args, operation);
+  if (typeof requested !== 'string') return requested;
+  const contact = await loadAgentContact(contactId);
+  if (!contact.found) return contact.result;
+  const activities = activitiesOf(contact.data);
+  const kadCode = await storedCodeFor(activities, requested);
+  if (kadCode === null) return { success: false, error: `Ο ΚΑΔ ${requested} ${notFound}` };
+  return { contact, activities, kadCode };
+}
+
+/** Προσθήκη στο τέλος· νέα ΚΥΡΙΑ ⇒ η προηγούμενη κύρια υποβιβάζεται σε δευτερεύουσα. */
+function appendActivity(activities: KadActivity[], activity: KadActivity): void {
+  if (activity.type === 'primary') {
+    for (const a of activities) {
+      if (a.type === 'primary') a.type = 'secondary';
+    }
+  }
+  activities.push(activity);
 }
 
 function activitiesOf(data: Record<string, unknown>): KadActivity[] {

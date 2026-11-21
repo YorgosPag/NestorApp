@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getRelationshipTypeOptions } from '@/components/contacts/relationships/config/relationship-form-presets';
+import { getHolderRoleOptions } from '@/components/contacts/relationships/config/relationship-form-presets';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
 import type { RelationshipTypeChoice } from './types';
@@ -46,7 +46,7 @@ interface RelationshipTypePickerProps {
 }
 
 /**
- * Οι επιλογές τύπου έρχονται από το SSoT των σχέσεων επαφής (`getRelationshipTypeOptions`: πίνακας ADR-372 +
+ * Οι επιλογές τύπου έρχονται από το SSoT των σχέσεων επαφής (`getHolderRoleOptions`: πίνακας ADR-372 +
  * `VISUAL_REGISTRY`) — ΟΧΙ από δικό μας κατάλογο. Ο παλιός τοπικός χάρτης `STATIC_KEY_TO_I18N` πρόσφερε ΟΛΟ το
  * `RELATIONSHIP_METADATA`, μαζί με τους τύπους ακινήτου (ADR-244) που δεν έχουν ετικέτα σχέσης ⇒ ωμά κλειδιά.
  */
@@ -58,10 +58,11 @@ export function RelationshipTypePicker({
 }: RelationshipTypePickerProps) {
   const { t } = useTranslation('contacts-relationships');
   const { t: tQuotes } = useTranslation('quotes');
-  const staticValue = value?.kind === 'static' ? value.type : undefined;
   const typeOptions = useMemo(
-    () => getRelationshipTypeOptions(vendorContactType, t, staticValue, 'individual'),
-    [vendorContactType, t, staticValue],
+    // ADR-372 §Β2: the signatory HOLDS the role at the vendor («Εργαζόμενος», «Νόμιμος
+    // εκπρόσωπος»…) — only holder roles, plain type values; the server orients the record.
+    () => getHolderRoleOptions(vendorContactType, t, 'individual'),
+    [vendorContactType, t],
   );
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [customLabel, setCustomLabel] = useState('');

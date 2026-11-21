@@ -85,6 +85,17 @@ npx tsx scripts/fetch-kad-codes.ts
 
 Fetches paginated data from forin.gr DataTables API and outputs full TypeScript file.
 
+## ΚΑΔ 2025 — new official catalogue (2026-11-21, supersedes «ΚΑΔ Data Source» / «Fetch Script» above)
+
+- **Source**: ΑΑΔΕ Α.1003/2026 Annex I, ΦΕΚ Β΄ 235/22.01.2026 (NACE Rev. 2.1), effective 2026-03-01. The old list (10,521 rows, scraped from forin.gr) was ΚΑΔ 2008 — e.g. `41.00` (ΓΕΜΗ `41000000`) did not exist.
+- **Generator**: `scripts/kad/build-kad-2025.mjs` (`npm run build:kad -- <pdf>`, pdfjs-dist) → `public/data/kad/kad-2025.json` (10,756 rows; `meta` = source, ΦΕΚ, URL, sha256 `c477e199…aaf`, effectiveFrom, count). Fails on duplicate codes, missing parents, count out of range, or any of the 33 reference ΓΕΜΗ codes not resolving. Two ΦΕΚ typos corrected explicitly (`22.26.9104`, Latin «T» section).
+- **ΓΕΜΗ 8-digit form** = dotted code without dots, right-padded with `0`. Collisions (`41`/`41.0`/`41.00` → `41000000`) resolve to the **shallowest level ≥ class (NN.NN)** — verified against ΓΕΜΗ descriptions.
+- **SSoT** `src/lib/kad/*` (types, `normalizeKadInput`, `resolveKad`, list-paste parser, shape reader) + `src/services/kad/kad-catalog.reader.ts` (server). Client loads lazily via `lib/data/lazy-json-snapshot` (no 2 MB chunk in the bundle). Selectable = class and deeper.
+- **One picker** (`KadCodePicker`) for contacts (primary/secondary) and accounting setup: commit-on-select / exact-resolve on paste·Enter·blur — fixes the confirm-toast **on every keystroke** (free-text `allowFreeText` emitted per key). Bulk «Επικόλληση λίστας ΓΕΜΗ» with preview for secondary ΚΑΔ.
+- **Storage**: `catalog: 'KAD2025'` on `KadActivity` / `KadEntry`; values without it are ΚΑΔ 2008, shown with a «ΚΑΔ 2008 — απαιτεί αντιστοίχιση» badge, never rewritten silently (no public 2008→2025 table exists; AADE issues per-taxpayer mapping certificates).
+- **AI** `activity-handler` resolves dotted or 8-digit codes through the same SSoT.
+- Removed: `src/subapps/accounting/data/greek-kad-codes.{ts,json}`, `scripts/fetch-kad-codes.ts`.
+
 ## Consequences
 
 ### Positive
@@ -102,3 +113,4 @@ Fetches paginated data from forin.gr DataTables API and outputs full TypeScript 
 | Date | Change |
 |------|--------|
 | 2026-02-10 | Initial implementation — ADR-ACC-013 |
+| 2026-11-21 | ΚΑΔ 2025 (ΦΕΚ Β΄ 235/2026) catalogue + generator, `src/lib/kad` SSoT, single commit-on-select picker (fixes per-keystroke confirm), ΓΕΜΗ list paste, legacy-2008 badge |

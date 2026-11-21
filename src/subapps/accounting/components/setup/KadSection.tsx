@@ -12,17 +12,17 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`, no inline styles, semantic HTML
  */
 
-import { useMemo, useCallback, useId } from 'react';
+import { useCallback, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { SearchableCombobox, type ComboboxOption } from '@/components/ui/searchable-combobox';
 import { Plus, Trash2 } from 'lucide-react';
 import type { CompanySetupInput, KadEntry } from '../../types';
-// ΚΑΔ ως επιλογές — ΕΝΑ SSoT με μία cache, κοινό με το `shared/KadCodePicker`.
-import { useKadOptions } from '@/hooks/useKadOptions';
+// Ο ΕΝΑΣ επιλογέας ΚΑΔ 2025 (κοινός με τις επαφές): δέσμευση μόνο με επιλογή ή ακριβή κωδικό.
+import { KadCodePicker } from '@/components/shared/KadCodePicker';
+import type { KadSelection } from '@/lib/kad/kad-types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
@@ -51,6 +51,12 @@ function createEmptyKad(): KadEntry {
   };
 }
 
+/** Η επιλογή του καταλόγου πάνω σε γραμμή· `null` = καθαρισμός (χωρίς σημαία καταλόγου). */
+function applySelection(entry: KadEntry, selection: KadSelection | null): KadEntry {
+  const base: KadEntry = { code: '', description: '', type: entry.type, activeFrom: entry.activeFrom };
+  return selection === null ? base : { ...base, ...selection };
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -59,53 +65,16 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
   const { t } = useTranslation(['accounting', 'accounting-tax-offices']);
   const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το combobox (ADR-598 G11)
   const colors = useSemanticColors();
-  const { options: kadOptions, isLoading: kadLoading } = useKadOptions();
 
-  /**
-   * Handle main ΚΑΔ selection — auto-fills both code + description
-   */
   const handleMainKadSelect = useCallback(
-    (value: string, option: ComboboxOption | null) => {
-      if (option) {
-        // Selected from dropdown → fill code + description
-        onChange({
-          mainKad: {
-            ...data.mainKad,
-            code: value,
-            description: option.secondaryLabel ?? '',
-          },
-        });
-      } else {
-        // Free text → treat as code
-        onChange({
-          mainKad: {
-            ...data.mainKad,
-            code: value,
-          },
-        });
-      }
-    },
+    (selection: KadSelection | null) => onChange({ mainKad: applySelection(data.mainKad, selection) }),
     [data.mainKad, onChange],
   );
 
-  /**
-   * Handle secondary ΚΑΔ selection — auto-fills both code + description
-   */
   const handleSecondaryKadSelect = useCallback(
-    (index: number, value: string, option: ComboboxOption | null) => {
+    (index: number, selection: KadSelection | null) => {
       const updated = [...data.secondaryKads];
-      if (option) {
-        updated[index] = {
-          ...updated[index],
-          code: value,
-          description: option.secondaryLabel ?? '',
-        };
-      } else {
-        updated[index] = {
-          ...updated[index],
-          code: value,
-        };
-      }
+      updated[index] = applySelection(updated[index], selection);
       onChange({ secondaryKads: updated });
     },
     [data.secondaryKads, onChange],
@@ -123,15 +92,6 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
     [data.secondaryKads, onChange],
   );
 
-  // Memoize currently selected display for main KAD
-  const mainKadDisplayValue = useMemo(() => {
-    if (!data.mainKad.code) return '';
-    if (data.mainKad.description) {
-      return `${data.mainKad.code} — ${data.mainKad.description}`;
-    }
-    return data.mainKad.code;
-  }, [data.mainKad.code, data.mainKad.description]);
-
   return (
     <Card>
       <CardHeader>
@@ -146,16 +106,11 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
             </h3>
             <div className="space-y-2">
               <Label htmlFor={`${idBase}-main`}>{t('setup.kadCode')}</Label>
-              <SearchableCombobox
+              <KadCodePicker
                 id={`${idBase}-main`}
                 value={data.mainKad.code}
-                onValueChange={handleMainKadSelect}
-                options={kadOptions}
-                placeholder={t('setup.searchKad')}
-                emptyMessage={t('setup.noKadFound')}
-                isLoading={kadLoading}
-                allowFreeText
-                maxDisplayed={30}
+                catalog={data.mainKad.catalog}
+                onChange={handleMainKadSelect}
                 error={errors.mainKad}
               />
               {errors.mainKad && (
@@ -198,18 +153,11 @@ export function KadSection({ data, onChange, errors }: KadSectionProps) {
                   <li key={index} className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-start">
                     <div className="space-y-1">
                       <Label htmlFor={`${idBase}-secondary-${index}`}>{t('setup.kadCode')}</Label>
-                      <SearchableCombobox
+                      <KadCodePicker
                         id={`${idBase}-secondary-${index}`}
                         value={kad.code}
-                        onValueChange={(value, option) =>
-                          handleSecondaryKadSelect(index, value, option)
-                        }
-                        options={kadOptions}
-                        placeholder={t('setup.searchKad')}
-                        emptyMessage={t('setup.noKadFound')}
-                        isLoading={kadLoading}
-                        allowFreeText
-                        maxDisplayed={30}
+                        catalog={kad.catalog}
+                        onChange={(selection) => handleSecondaryKadSelect(index, selection)}
                       />
                       {kad.description && (
                         <p className={cn("text-sm", colors.text.muted)}>

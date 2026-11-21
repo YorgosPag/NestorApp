@@ -11,26 +11,14 @@
 // ============================================================================
 
 import { ContactRelationship, RelationshipType } from '@/types/contacts/relationships';
-import { Contact, IndividualContact, CompanyContact, ServiceContact } from '@/types/contacts';
+import { Contact } from '@/types/contacts';
+import { getContactDisplayName } from '@/types/contacts/helpers';
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { getErrorMessage } from '@/lib/error-utils';
 import { BulkRelationshipService } from './BulkRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('ImportExportService');
-
-// 🏢 ENTERPRISE: Type guards for Contact union type
-function isIndividualContact(contact: Contact): contact is IndividualContact {
-  return contact.type === 'individual';
-}
-
-function isCompanyContact(contact: Contact): contact is CompanyContact {
-  return contact.type === 'company';
-}
-
-function isServiceContact(contact: Contact): contact is ServiceContact {
-  return contact.type === 'service';
-}
 
 export type {
   ImportResult,
@@ -395,7 +383,7 @@ export class ImportExportService {
    */
   private static async convertRelationshipsToCSV(relationships: ContactRelationship[]): Promise<string> {
     const headers = [
-      'Source Contact', 'Target Contact', 'Relationship Type', 'Position',
+      'Source Contact ID', 'Source Contact', 'Target Contact ID', 'Target Contact', 'Relationship Type', 'Position',
       'Department', 'Start Date', 'End Date', 'Status', 'Notes'
     ];
 
@@ -407,8 +395,10 @@ export class ImportExportService {
       const targetContact = await ContactsService.getContact(rel.targetContactId);
 
       const row = [
-        this.getContactDisplayName(sourceContact),
-        this.getContactDisplayName(targetContact),
+        rel.sourceContactId,
+        this.csvContactName(sourceContact),
+        rel.targetContactId,
+        this.csvContactName(targetContact),
         rel.relationshipType,
         rel.position || '',
         rel.department || '',
@@ -453,23 +443,12 @@ export class ImportExportService {
     throw new Error('Contact creation from email not yet implemented');
   }
 
-  private static getContactDisplayName(contact: Contact | null): string {
-    if (!contact) return 'Unknown';
-
-    // 🏢 ENTERPRISE: Type-safe access using type guards
-    if (isIndividualContact(contact)) {
-      return `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
-    }
-
-    if (isCompanyContact(contact)) {
-      return contact.companyName || 'Unknown';
-    }
-
-    if (isServiceContact(contact)) {
-      return contact.serviceName || 'Unknown';
-    }
-
-    return 'Unknown';
+  /**
+   * CSV is DATA, not UI (ADR-372 §Β3): a missing contact is an empty cell —
+   * never an English literal like 'Unknown'. The ID column keeps the row traceable.
+   */
+  private static csvContactName(contact: Contact | null): string {
+    return contact ? getContactDisplayName(contact).trim() : '';
   }
 
   private static generateDownloadUrl(content: string, fileName: string): string {

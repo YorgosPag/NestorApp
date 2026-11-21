@@ -46,6 +46,11 @@ import { useRelationshipContext } from './context/RelationshipProvider';
 import { useRelationshipForm } from './hooks/useRelationshipForm';
 import { useOrganizationTree } from './hooks/useOrganizationTree';
 import { getRelationshipGovernanceInfo } from '@/services/contact-relationships/core/relationship-governance';
+import {
+  encodeOrientedRole,
+  isRelationshipType,
+  orientedRoleOf,
+} from '@/types/contacts/relationships/core/relationship-orientation';
 
 // 🏢 ENTERPRISE: Import types
 import type { ContactRelationshipManagerProps } from './types/relationship-manager.types';
@@ -180,8 +185,12 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         // Exclude the relationship being edited (so its type remains selectable)
         rel.id !== editingId
       )
-      .map(rel => rel.relationshipType);
-  }, [relationships, formData.targetContactId, editingId]);
+      // ADR-372 §Β2: the dropdown offers ORIENTED roles — disable the same oriented
+      // value (A «Μέτοχος» of B ≠ A «Μέτοχος σε» B), not the bare type.
+      .map(rel => isRelationshipType(rel.relationshipType)
+        ? encodeOrientedRole(orientedRoleOf(rel, contactId))
+        : rel.relationshipType);
+  }, [relationships, formData.targetContactId, editingId, contactId]);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -208,7 +217,6 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
     if (governance.isProtectedRole) messages.push(t('relationships.governance.impact.protectedRole'));
     if (governance.affectsHierarchy) messages.push(t('relationships.governance.impact.hierarchy'));
-    if (governance.affectsReciprocal) messages.push(t('relationships.governance.impact.reciprocal'));
 
     return messages;
   }, [t]);

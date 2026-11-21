@@ -209,7 +209,7 @@ export class OrganizationHierarchyService {
               subordinates: [],
               level: 0,
               departmentInfo: {
-                name: relationship.department || 'Unknown',
+                name: relationship.department ?? null,
                 size: 0
               }
             });

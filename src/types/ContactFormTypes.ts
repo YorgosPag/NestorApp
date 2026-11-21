@@ -12,6 +12,7 @@ import type { ContactAddressType } from '@/types/contacts/address-types';
 import type { StoredAddressPosition } from '@/types/address-position';
 import type { ContactLicence } from '@/types/contacts/contact-licences';
 import { NO_LICENCE_DRAFTS, type LicenceDrafts } from '@/lib/professional/licence-drafts';
+import type { KadCatalogVersion } from '@/lib/kad/kad-types';
 
 export interface AddNewContactDialogProps {
   open: boolean;
@@ -179,6 +180,11 @@ export interface KadActivity {
   description: string;
   type: KadActivityType;
   activeFrom?: string;
+  /**
+   * Ο κατάλογος από τον οποίο επιλέχθηκε ο κωδικός. Απουσία ⇒ **ΚΑΔ 2008** (ο παλιός κατάλογος):
+   * δείχνεται αυτούσιος με σήμα «απαιτεί αντιστοίχιση», ποτέ δεν ξαναγράφεται σιωπηλά.
+   */
+  catalog?: KadCatalogVersion;
 }
 
 export interface ContactFormData {

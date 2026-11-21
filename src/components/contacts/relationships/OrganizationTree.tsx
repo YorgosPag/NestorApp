@@ -28,6 +28,7 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 
 // 🪝 Import contact name hook
 import { useContactName } from './hooks/useContactName';
+import { resolveDepartmentLabel, resolvePositionLabel } from './config/relationship-form-presets';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { gridPatterns } from '@/styles/design-tokens';
 
@@ -258,7 +259,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
             >
               <div className="flex items-center justify-between mb-2">
                 <p className={`font-medium ${colors.text.primary}`}>
-                  {department || t('relationships.organizationTree.generalDepartment')}
+                  {resolveDepartmentLabel(department, t)}
                 </p>
                 <Badge variant="secondary" className="text-xs">
                   {employees.employees.length}
@@ -269,7 +270,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
                 <div className="space-y-1">
                   {employees.employees.slice(0, 3).map((employee, index) => (
                     <p key={index} className={`text-xs ${colors.text.muted}`}>
-                      • {employee.relationship?.position || t('relationships.organizationTree.employee')}
+                      • {resolvePositionLabel(employee.relationship?.position, t) || t('relationships.organizationTree.employee')}
                     </p>
                   ))}
                   {employees.employees.length > 3 && (

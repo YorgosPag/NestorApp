@@ -20,13 +20,12 @@ import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipA
 import { recordRelationshipAudit } from './relationship-audit';
 import { buildUpdateChangeEntry, buildTerminationChangeEntry } from './relationship-change-history';
 import { RelationshipValidationService } from './RelationshipValidationService';
+import { isSymmetricRelationshipType } from '@/types/contacts/relationships/core/relationship-orientation';
 import {
   getContactById,
-  createReciprocalRelationship,
   updateOrganizationalHierarchy
 } from './relationship-helpers';
 import { getRelationshipGovernanceInfo } from './relationship-governance';
-import { deleteReciprocalRelationship, terminateReciprocalRelationship } from './relationship-reciprocal-ops';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -61,12 +60,11 @@ export class RelationshipCRUDService {
    *
    * Creates a new relationship με full validation και business rules
    */
-  static async createRelationship(data: Partial<ContactRelationship>, options?: { skipReciprocal?: boolean }): Promise<ContactRelationship> {
+  static async createRelationship(data: Partial<ContactRelationship>): Promise<ContactRelationship> {
     logger.info('🔗 CRUD: Creating relationship', {
       sourceId: data.sourceContactId,
       targetId: data.targetContactId,
-      type: data.relationshipType,
-      skipReciprocal: options?.skipReciprocal ?? false
+      type: data.relationshipType
     });
 
     // ====================================================================
@@ -83,39 +81,13 @@ export class RelationshipCRUDService {
       throw new Error('relationships.form.validation.selfRelationship');
     }
 
-    // Check for duplicate relationships (handle Firebase index errors gracefully)
-    try {
-      const existing = await FirestoreRelationshipAdapter.getSpecificRelationship(
-        data.sourceContactId,
-        data.targetContactId,
-        data.relationshipType
-      );
-      if (existing) {
-        throw new Error('relationships.form.validation.duplicateRelationship');
-      }
-    } catch (error) {
-      // 🔧 If Firebase index is missing, log warning but continue with creation
-      // This prevents the relationship creation from failing due to missing composite index
-      const errorMessage = getErrorMessage(error);
-      const errorCode = (error as { code?: string })?.code;
-
-      // 🔧 FIX: Removed 'FirebaseError' match — it caught ALL Firebase errors (permissions, etc.)
-      const isIndexError = errorMessage.includes('query requires an index') ||
-                          errorCode === 'failed-precondition';
-
-      if (isIndexError) {
-        logger.warn('⚠️ Firebase index missing for duplicate check - proceeding with relationship creation');
-        logger.warn('📋 Create the composite index at Firebase Console for better performance');
-        logger.warn('🔗 Index URL:', errorMessage.match(/https:\/\/[^\s]+/)?.[0] || 'Check Firebase Console');
-        logger.info('✅ Skipping duplicate check due to missing index - relationship creation will continue');
-        // DO NOT re-throw this error - just continue with relationship creation
-      } else if (errorMessage.includes('already exists')) {
-        // This is an actual duplicate relationship error
-        throw error;
-      } else {
-        // For any other error, also log but continue (don't block relationship creation)
-        logger.warn('⚠️ Duplicate check failed with unexpected error - continuing with creation:', errorMessage);
-      }
+    // Duplicate check (ADR-372 §Β2). The record arrives ORIENTED (canonical
+    // direction); a symmetric type is the same fact in either order.
+    // NOTE: the previous version threw INSIDE its own try/catch and the catch
+    // swallowed every non-"already exists" message — so a duplicate was never
+    // actually rejected. The query is guarded; the verdict is not.
+    if (await this.hasDuplicate(data.sourceContactId, data.targetContactId, data.relationshipType)) {
+      throw new Error('relationships.form.validation.duplicateRelationship');
     }
 
     // Validate contacts exist
@@ -184,19 +156,8 @@ export class RelationshipCRUDService {
     // Save to database (Firebase/backend implementation)
     await this.saveRelationship(relationship);
 
-    // Create reciprocal relationship if needed (skip if this IS a reciprocal)
-    if (!options?.skipReciprocal) {
-      logger.info('🔄 CRUD: Creating reciprocal relationship...');
-      try {
-        await this.createReciprocalRelationship(relationship, sourceContact, targetContact);
-        logger.info('✅ CRUD: Reciprocal relationship created successfully');
-      } catch (reciprocalError) {
-        logger.error('❌ CRUD: Reciprocal relationship creation failed:', reciprocalError);
-        // Don't fail the main operation - reciprocal relationships are optional
-      }
-    } else {
-      logger.info('ℹ️ CRUD: Skipping reciprocal creation (this IS a reciprocal)');
-    }
+    // ADR-372 §Β2: ONE record per relationship. The inverse reading («Εργαζόμενος σε»,
+    // «Πελάτης») is derived at display time — no twin record to create or keep in sync.
 
     // Update organizational hierarchy if employment relationship
     // 🔧 FIX: Inline check instead of isEmploymentRelationship() to avoid
@@ -377,12 +338,6 @@ export class RelationshipCRUDService {
 
     await FirestoreRelationshipAdapter.updateRelationship(relationshipId, updates);
 
-    try {
-      await terminateReciprocalRelationship(relationship, terminatedBy, terminationDate);
-    } catch (reciprocalError) {
-      logger.warn('⚠️ CRUD: Reciprocal termination failed (non-blocking):', reciprocalError);
-    }
-
     const terminatedRelationship: ContactRelationship = {
       ...relationship,
       ...updates
@@ -429,13 +384,6 @@ export class RelationshipCRUDService {
 
       logger.info('✅ CRUD: Relationship hard-deleted:', relationshipId);
 
-      // Cascade: delete reciprocal relationship (reverse direction, same type or mapped type)
-      try {
-        await deleteReciprocalRelationship(relationship);
-      } catch (reciprocalError) {
-        logger.warn('⚠️ CRUD: Reciprocal deletion failed (non-blocking):', reciprocalError);
-      }
-
       return true;
 
     } catch (error) {
@@ -452,17 +400,6 @@ export class RelationshipCRUDService {
     return getContactById(contactId);
   }
 
-  private static async createReciprocalRelationship(
-    relationship: ContactRelationship,
-    _sourceContact: Contact,
-    _targetContact: Contact
-  ): Promise<void> {
-    return createReciprocalRelationship(
-      relationship,
-      (data, opts) => this.createRelationship(data, opts)
-    );
-  }
-
   private static async updateOrganizationalHierarchy(relationship: ContactRelationship): Promise<void> {
     return updateOrganizationalHierarchy(relationship);
   }
@@ -474,6 +411,28 @@ export class RelationshipCRUDService {
 
   private static generateId(): string {
     return generateRelationshipId();
+  }
+
+  /** Oriented duplicate lookup; a missing composite index degrades to "no duplicate" (logged). */
+  private static async hasDuplicate(
+    sourceContactId: string,
+    targetContactId: string,
+    relationshipType: RelationshipType
+  ): Promise<boolean> {
+    try {
+      const forward = await FirestoreRelationshipAdapter.getSpecificRelationship(
+        sourceContactId, targetContactId, relationshipType
+      );
+      if (forward) return true;
+      if (!isSymmetricRelationshipType(relationshipType)) return false;
+      const backward = await FirestoreRelationshipAdapter.getSpecificRelationship(
+        targetContactId, sourceContactId, relationshipType
+      );
+      return backward !== null && backward !== undefined;
+    } catch (error) {
+      logger.warn('⚠️ Duplicate check unavailable — proceeding', { error: getErrorMessage(error) });
+      return false;
+    }
   }
 
   private static async validateBusinessRules(

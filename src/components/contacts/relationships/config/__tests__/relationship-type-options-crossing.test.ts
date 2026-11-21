@@ -1,44 +1,78 @@
 /**
- * Επιλογές τύπου σχέσης ανά διασταύρωση (ADR-372) — καμία χωρίς ετικέτα (ADR-327, 2026-10-28).
+ * Επιλογές ρόλου σχέσης ανά διασταύρωση (ADR-372 §8) — καμία χωρίς ετικέτα (ADR-327, 2026-10-28),
+ * καμία ΔΙΠΛΗ ετικέτα (§Β1) και φορά ανεξάρτητη από την καρτέλα (§Β2).
  *
- * 🔴 Η αφορμή: ο πίνακας ADR-372 επιτρέπει τους τύπους ακινήτου (ADR-244) σε κάθε διασταύρωση εταιρείας/φυσικού
- * προσώπου, αλλά το `VISUAL_REGISTRY` τους εξαιρεί ρητά («managed by the property module»). Ο κλάδος μόνο-πηγής
- * φιλτράριζε, ο κλάδος διασταύρωσης ΟΧΙ ⇒ `property_buyer` ωμό στο dropdown εταιρεία → φυσικό πρόσωπο
- * (φόρμα σχέσεων επαφής ΚΑΙ πρόταση υπογράφοντα στον έλεγχο σάρωσης προσφοράς).
+ * 🔴 Αφορμές:
+ * - ADR-327: ο πίνακας επιτρέπει τους τύπους ακινήτου (ADR-244), που το `VISUAL_REGISTRY` εξαιρεί ⇒
+ *   `property_buyer` ωμό στο dropdown εταιρεία → φυσικό πρόσωπο.
+ * - ADR-372 §Β1: τέσσερα ζεύγη με ΙΔΙΑ ελληνική ετικέτα στο dropdown.
+ * - ADR-372 §Β2: «Μέτοχος» δούλευε μόνο από την καρτέλα προσώπου, «Εργαζόμενος» μόνο από της εταιρείας.
  */
 
 /* global describe, it, expect */
 
 import type { ContactType } from '@/types/contacts/contracts';
+import elRelationships from '@/i18n/locales/el/contacts-relationships.json';
 import { getRelationshipTypeOptions } from '../relationship-form-presets';
-import { getAvailableRelationshipTypes, getRelationshipTypeConfig } from '../../utils/relationship-types';
+import {
+  decodeOrientedRole,
+  getOfferedOrientedRoles,
+  orientRelationship,
+  relationshipRoleLabelKey,
+  relationshipTypeI18nSegment,
+} from '@/types/contacts/relationships/core/relationship-orientation';
 
 const echo = (key: string): string => key;
 const TYPES: ContactType[] = ['individual', 'company', 'service'];
 
-describe('getAvailableRelationshipTypes — διασταύρωση', () => {
-  it('🔴 Τ1 — σε ΚΑΘΕ διασταύρωση, κάθε τύπος έχει ετικέτα (κανένας τύπος ακινήτου)', () => {
-    for (const source of TYPES) {
-      for (const target of TYPES) {
-        for (const type of getAvailableRelationshipTypes(source, target)) {
-          expect([source, target, type, getRelationshipTypeConfig(type)?.label ?? null])
-            .toEqual([source, target, type, expect.stringMatching(/^relationships\.types\./)]);
+type Bundle = { relationships: { types: Record<string, string>; inverseTypes: Record<string, string> } };
+const el = elRelationships as Bundle;
+const translateEl = (key: string): string => {
+  const [, block, segment] = key.split('.');
+  return block === 'inverseTypes' ? el.relationships.inverseTypes[segment] : el.relationships.types[segment];
+};
+
+describe('Επιλογές ρόλου — διασταύρωση (ADR-372 §8)', () => {
+  it('🔴 Τ1 — σε ΚΑΘΕ διασταύρωση, κάθε ρόλος έχει ελληνική ετικέτα (κανένας τύπος ακινήτου)', () => {
+    for (const current of TYPES) {
+      for (const picked of TYPES) {
+        for (const role of getOfferedOrientedRoles(current, picked)) {
+          expect(role.type).not.toMatch(/^property_/);
+          const label = translateEl(relationshipRoleLabelKey(role.type, role.pickedSide));
+          expect([current, picked, role.type, role.pickedSide, typeof label]).toEqual(
+            [current, picked, role.type, role.pickedSide, 'string']
+          );
         }
       }
     }
   });
 
-  it('🔴 Τ2 — εταιρεία → φυσικό πρόσωπο (υπογράφων προσφοράς): ούτε ωμό κλειδί, ούτε `property_*`', () => {
-    const options = getRelationshipTypeOptions('company', echo, undefined, 'individual');
-    expect(options.length).toBeGreaterThan(0);
-    for (const option of options) {
-      expect(option.value).not.toMatch(/^property_/);
-      expect(option.label).toMatch(/^relationships\.types\./);
+  it('🔴 Τ2 — §Β1: σε ΚΑΘΕ διασταύρωση οι ελληνικές ετικέτες του dropdown είναι ΜΟΝΑΔΙΚΕΣ', () => {
+    for (const current of TYPES) {
+      for (const picked of TYPES) {
+        const labels = getRelationshipTypeOptions(current, translateEl, undefined, picked).map(o => o.label);
+        expect([current, picked, labels.length]).toEqual([current, picked, new Set(labels).size]);
+      }
     }
   });
 
-  it('Τ3 — η αποθηκευμένη τιμή εκτός λίστας μπαίνει πρώτη, με ετικέτα (συμβόλαιο που διατηρείται)', () => {
+  it('🔴 Τ3 — §Β2: «Μέτοχος» ίδια αποθήκευση από ΟΠΟΙΑΔΗΠΟΤΕ καρτέλα (πρόσωπο → εταιρεία)', () => {
+    const fromCompany = getRelationshipTypeOptions('company', echo, undefined, 'individual')
+      .find(o => o.value === 'shareholder');
+    const fromPerson = getRelationshipTypeOptions('individual', echo, undefined, 'company')
+      .find(o => decodeOrientedRole(o.value).type === 'shareholder');
+    expect(fromCompany).toBeDefined();
+    expect(fromPerson).toBeDefined();
+    const a = decodeOrientedRole(fromCompany!.value);
+    const b = decodeOrientedRole(fromPerson!.value);
+    const viaCompanyCard = orientRelationship({ type: 'shareholder', pickedSide: a.pickedSide }, 'COMPANY', 'PERSON');
+    const viaPersonCard = orientRelationship({ type: 'shareholder', pickedSide: b.pickedSide }, 'PERSON', 'COMPANY');
+    expect(viaCompanyCard).toEqual({ sourceContactId: 'PERSON', targetContactId: 'COMPANY' });
+    expect(viaPersonCard).toEqual(viaCompanyCard);
+  });
+
+  it('Τ4 — η αποθηκευμένη τιμή εκτός λίστας μπαίνει πρώτη, με ετικέτα (συμβόλαιο που διατηρείται)', () => {
     const options = getRelationshipTypeOptions('company', echo, 'family', 'individual');
-    expect(options.some(o => o.value === 'family')).toBe(true);
+    expect(options[0]).toEqual({ value: 'family', label: `relationships.types.${relationshipTypeI18nSegment('family')}` });
   });
 });

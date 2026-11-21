@@ -26,6 +26,7 @@
     "test:market-data-real-files": "jest src/lib/market/__tests__/price-map-real-files.test.ts src/lib/market/__tests__/market-transactions-file.test.ts src/lib/market/__tests__/value-zone-file.test.ts",
     "test:market-data-refresh": "jest scripts/__tests__/market-data-refresh",
     "build:basemap": "node mcp-server/node_modules/tsx/dist/cli.mjs scripts/build-basemap.ts",
+    "build:kad": "node scripts/kad/build-kad-2025.mjs",
     "basemap:serve": "node mcp-server/node_modules/tsx/dist/cli.mjs scripts/serve-basemap.ts",
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev --turbopack --port 3000",
     "dev:watch": "pnpm run build:tokens && concurrently -k -n next,tokens -c blue,yellow \"next dev --turbopack\" \"node scripts/build-design-tokens.js --watch\"",

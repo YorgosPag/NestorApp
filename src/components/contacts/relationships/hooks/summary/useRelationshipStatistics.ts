@@ -74,6 +74,7 @@ export function useRelationshipStatistics(
           (rel.position && (
             rel.position.toLowerCase().includes('διευθυντής') ||
             rel.position.toLowerCase().includes('manager') ||
+            rel.position.toLowerCase().includes('director') || // preset KEY (ADR-372 §Β3)
             rel.position.toLowerCase().includes('ceo')
           ));
       }).map(r => ({ type: r.relationshipType, position: r.position }))

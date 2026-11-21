@@ -2,7 +2,7 @@
   "relationships": {
     "types": {
       "employee": "Εργαζόμενος",
-      "manager": "Διευθυντής",
+      "manager": "Υπεύθυνος",
       "shareholder": "Μέτοχος",
       "boardMember": "Μέλος Διοικητικού Συμβουλίου",
       "civilServant": "Δημόσιος Υπάλληλος",
@@ -22,19 +22,38 @@
       "representative": "Εκπρόσωπος",
       "partner": "Συνεργάτης",
       "vendor": "Προμηθευτής",
-      "client": "Πελάτης",
       "electedOfficial": "Αιρετός Αξιωματούχος",
       "appointedOfficial": "Διορισμένος Αξιωματούχος",
       "ministryOfficial": "Υπουργικός Αξιωματούχος",
       "mayor": "Δήμαρχος",
       "deputyMayor": "Αντιδήμαρχος",
       "regionalGovernor": "Περιφερειάρχης",
-      "advisor": "Σύμβουλος",
       "mentor": "Μέντορας",
-      "protege": "Προστατευόμενος",
-      "supplier": "Προμηθευτής",
-      "customer": "Πελάτης",
       "competitor": "Ανταγωνιστής"
+    },
+    "inverseTypes": {
+      "employee": "Εργαζόμενος σε",
+      "manager": "Υπεύθυνος σε",
+      "director": "Διευθυντής σε",
+      "executive": "Στέλεχος σε",
+      "intern": "Ασκούμενος σε",
+      "contractor": "Εργολάβος για",
+      "consultant": "Σύμβουλος σε",
+      "shareholder": "Μέτοχος σε",
+      "boardMember": "Μέλος Δ.Σ. σε",
+      "chairman": "Πρόεδρος σε",
+      "ceo": "Διευθύνων Σύμβουλος σε",
+      "representative": "Εκπρόσωπος για",
+      "vendor": "Πελάτης",
+      "civilServant": "Δημόσιος Υπάλληλος σε",
+      "electedOfficial": "Αιρετός Αξιωματούχος σε",
+      "appointedOfficial": "Διορισμένος Αξιωματούχος σε",
+      "departmentHead": "Προϊστάμενος Τμήματος σε",
+      "ministryOfficial": "Υπουργικός Αξιωματούχος σε",
+      "mayor": "Δήμαρχος σε",
+      "deputyMayor": "Αντιδήμαρχος σε",
+      "regionalGovernor": "Περιφερειάρχης σε",
+      "mentor": "Καθοδηγούμενος"
     },
     "presets": {
       "positions": {
@@ -112,7 +131,9 @@
         "duplicateRelationship": "Αυτή η σχέση υπάρχει ήδη μεταξύ αυτών των επαφών",
         "missingRequiredFields": "Λείπουν υποχρεωτικά πεδία: επαφή-πηγή, επαφή-στόχος, τύπος σχέσης",
         "contactsNotFound": "Μία ή και οι δύο επαφές δεν βρέθηκαν",
-        "relationshipNotFound": "Η σχέση δεν βρέθηκε"
+        "relationshipNotFound": "Η σχέση δεν βρέθηκε",
+        "sameContactSameType": "Υπάρχει ήδη σχέση «{type}» με αυτή την επαφή.",
+        "crossingNotAllowed": "Ο τύπος σχέσης «{type}» δεν επιτρέπεται ανάμεσα σε αυτά τα δύο είδη επαφών."
       },
       "buttons": {
         "cancel": "Ακύρωση",
@@ -228,7 +249,7 @@
       "simpleStructure": "Απλό Οργανωτικό Σχήμα",
       "simpleStructureDescription": "Αυτή η εταιρεία έχει βασική οργανωσιακή δομή χωρίς πολύπλοκη ιεραρχία.",
       "departmentsAndEmployees": "Τμήματα & Εργαζόμενοι",
-      "generalDepartment": "Γενικό Τμήμα",
+      "noDepartment": "Χωρίς τμήμα",
       "recentAdditions": "Πρόσφατες Προσθήκες",
       "moreItems": "+{count} επιπλέον",
       "lastUpdated": "Τελευταία ενημέρωση",
@@ -242,8 +263,7 @@
       "confirmDeleteBody": "Η σχέση θα διαγραφεί οριστικά από το προφίλ και τα σχετικά summaries.",
       "impact": {
         "protectedRole": "Ο ρόλος θεωρείται κρίσιμο εταιρικό στοιχείο και πρέπει να διατηρηθεί στο ιστορικό.",
-        "hierarchy": "Η ενέργεια επηρεάζει το οργανόγραμμα και τις σχετικές μετρήσεις προσωπικού.",
-        "reciprocal": "Η ενέργεια επηρεάζει και την αντίστροφη σχέση στη συνδεδεμένη επαφή."
+        "hierarchy": "Η ενέργεια επηρεάζει το οργανόγραμμα και τις σχετικές μετρήσεις προσωπικού."
       }
     },
     "errors": {

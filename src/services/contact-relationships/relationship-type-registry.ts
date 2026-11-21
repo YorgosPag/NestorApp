@@ -36,6 +36,9 @@ import {
   type WorkAddressDerivation,
 } from '@/types/contacts/relationships/core/relationship-metadata';
 import type { RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
+import { relationshipTypeI18nSegment } from '@/types/contacts/relationships/core/relationship-orientation';
+import elRelationships from '@/i18n/locales/el/contacts-relationships.json';
+import enRelationships from '@/i18n/locales/en/contacts-relationships.json';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { AuthContext } from '@/lib/auth';
 import { inferRelationshipTypeAttributes } from './relationship-type-ai-inference';
@@ -96,101 +99,40 @@ export function normalizeKey(label: string): string {
 }
 
 // ============================================================================
-// STATIC TYPE LABELS
+// STATIC TYPE LABELS — derived from the locale files (ADR-372 §Β1)
 // ============================================================================
 //
-// Greek labels for the 31 static types. Mirrors `contacts-relationships.json`
-// entries used client-side. Server-side i18n loaders are expensive; keeping a
-// static map here avoids round-trips while still letting locale files drive
-// the UI. If labels diverge, the locale file wins for display — this map is
-// only used to *match* user input against existing static types.
+// The locale JSON is the ONE place a relationship role is named. This module
+// used to keep two hand-written 37-entry copies (EL/EN) that had already
+// drifted (e.g. `manager` = «Διευθυντής» here, «Προϊστάμενος» elsewhere).
+// Static JSON imports are cheap server-side and keep zero duplication.
 //
-const STATIC_LABELS_EL: Record<RelationshipType, string> = {
-  employee: 'Εργαζόμενος',
-  manager: 'Διευθυντής',
-  director: 'Διευθυντής',
-  executive: 'Στέλεχος',
-  intern: 'Ασκούμενος',
-  contractor: 'Εργολάβος',
-  consultant: 'Σύμβουλος',
-  shareholder: 'Μέτοχος',
-  board_member: 'Μέλος Διοικητικού Συμβουλίου',
-  chairman: 'Πρόεδρος',
-  ceo: 'Διευθύνων Σύμβουλος',
-  representative: 'Εκπρόσωπος',
-  partner: 'Συνεργάτης',
-  vendor: 'Προμηθευτής',
-  client: 'Πελάτης',
-  civil_servant: 'Δημόσιος Υπάλληλος',
-  elected_official: 'Αιρετός Αξιωματούχος',
-  appointed_official: 'Διορισμένος Αξιωματούχος',
-  department_head: 'Προϊστάμενος Τμήματος',
-  ministry_official: 'Υπουργικός Αξιωματούχος',
-  mayor: 'Δήμαρχος',
-  deputy_mayor: 'Αντιδήμαρχος',
-  regional_governor: 'Περιφερειάρχης',
-  advisor: 'Σύμβουλος',
-  mentor: 'Μέντορας',
-  protege: 'Προστατευόμενος',
-  colleague: 'Συνάδελφος',
-  supplier: 'Προμηθευτής',
-  customer: 'Πελάτης',
-  competitor: 'Ανταγωνιστής',
-  business_contact: 'Επαγγελματική Επαφή',
-  friend: 'Φίλος',
-  family: 'Οικογένεια',
-  other: 'Άλλο',
-  property_buyer: 'Αγοραστής Ακινήτου',
-  property_co_buyer: 'Συναγοραστής Ακινήτου',
-  property_landowner: 'Οικοπεδούχος',
+type RoleLabelBundle = {
+  relationships: {
+    types: Record<string, string>;
+    inverseTypes: Record<string, string>;
+  };
 };
 
-const STATIC_LABELS_EN: Record<RelationshipType, string> = {
-  employee: 'Employee',
-  manager: 'Manager',
-  director: 'Director',
-  executive: 'Executive',
-  intern: 'Intern',
-  contractor: 'Contractor',
-  consultant: 'Consultant',
-  shareholder: 'Shareholder',
-  board_member: 'Board Member',
-  chairman: 'Chairman',
-  ceo: 'CEO',
-  representative: 'Representative',
-  partner: 'Partner',
-  vendor: 'Vendor',
-  client: 'Client',
-  civil_servant: 'Civil Servant',
-  elected_official: 'Elected Official',
-  appointed_official: 'Appointed Official',
-  department_head: 'Department Head',
-  ministry_official: 'Ministry Official',
-  mayor: 'Mayor',
-  deputy_mayor: 'Deputy Mayor',
-  regional_governor: 'Regional Governor',
-  advisor: 'Advisor',
-  mentor: 'Mentor',
-  protege: 'Protégé',
-  colleague: 'Colleague',
-  supplier: 'Supplier',
-  customer: 'Customer',
-  competitor: 'Competitor',
-  business_contact: 'Business Contact',
-  friend: 'Friend',
-  family: 'Family',
-  other: 'Other',
-  property_buyer: 'Property Buyer',
-  property_co_buyer: 'Property Co-buyer',
-  property_landowner: 'Property Landowner',
-};
+const LABELS_EL = elRelationships as RoleLabelBundle;
+const LABELS_EN = enRelationships as RoleLabelBundle;
+
+function roleLabel(bundle: RoleLabelBundle, type: RelationshipType): string {
+  return bundle.relationships.types[relationshipTypeI18nSegment(type)] ?? type;
+}
+
+/** Inverse reading (directed types only) — matched too, so «Πελάτης» resolves to `vendor`. */
+function inverseRoleLabel(bundle: RoleLabelBundle, type: RelationshipType): string | null {
+  if (RELATIONSHIP_METADATA[type].symmetric) return null;
+  return bundle.relationships.inverseTypes[relationshipTypeI18nSegment(type)] ?? null;
+}
 
 function staticEntries(): RegistryEntry[] {
   return (Object.keys(RELATIONSHIP_METADATA) as RelationshipType[]).map((type) => ({
     key: type,
     type,
-    labelEl: STATIC_LABELS_EL[type] ?? type,
-    labelEn: STATIC_LABELS_EN[type] ?? type,
+    labelEl: roleLabel(LABELS_EL, type),
+    labelEn: roleLabel(LABELS_EN, type),
     reverseKey: null,
     metadata: RELATIONSHIP_METADATA[type],
     isStatic: true,
@@ -218,6 +160,8 @@ export function buildDefaultMetadata(category: RelationshipCategory): Relationsh
   const allowedCrossings = buildCrossingsForSources(allowedFor);
   return {
     category,
+    // Custom types carry no declared direction (ADR-372 §Β2) — read the same from both sides.
+    symmetric: true,
     derivesWorkAddress: DEFAULT_DERIVES_WORK_ADDRESS,
     isEmployment: category === 'employment',
     isOwnership:  category === 'ownership',
@@ -278,7 +222,11 @@ export async function findOrCreateRelationshipType(
 
   // 1. Static collision check — match against normalized static labels.
   const statics = staticEntries();
-  const staticHit = statics.find((s) => normalizeKey(s.labelEl) === key);
+  const staticHit = statics.find((s) => {
+    if (normalizeKey(s.labelEl) === key) return true;
+    const inverse = inverseRoleLabel(LABELS_EL, s.type as RelationshipType);
+    return inverse !== null && normalizeKey(inverse) === key;
+  });
   if (staticHit) {
     logger.info('Reusing static relationship type', { key, type: staticHit.type });
     return staticHit;

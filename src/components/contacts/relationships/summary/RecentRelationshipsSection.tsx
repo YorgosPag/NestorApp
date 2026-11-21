@@ -21,6 +21,12 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import { getRelationshipDisplayProps } from '../utils/relationship-types';
+import { resolvePositionLabel } from '../config/relationship-form-presets';
+import {
+  isRelationshipType,
+  otherSideOf,
+  relationshipRoleLabelKey,
+} from '@/types/contacts/relationships/core/relationship-orientation';
 import type { ContactNamesMap } from '../utils/summary/contact-navigation';
 import type { FlexibleDateInput } from '@/types/common/date-types'; // 🏢 ENTERPRISE: Type-safe dates
 import { formatFlexibleDateTime } from '@/lib/intl-utils'; // 🏢 ENTERPRISE: Centralized date formatting (ADR-208)
@@ -125,8 +131,10 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
     const displayProps = getRelationshipDisplayProps(relationship.relationshipType);
     const Icon = displayProps.icon;
     const { targetContactId: _targetContactId, contactName } = getTargetContactInfo(relationship);
-    // 🏢 ENTERPRISE: Translate i18n label key
-    const translatedTypeLabel = t(displayProps.label);
+    // ADR-372 §Β2: role of the OTHER contact, read from this contact's side.
+    const translatedTypeLabel = isRelationshipType(relationship.relationshipType)
+      ? t(relationshipRoleLabelKey(relationship.relationshipType, otherSideOf(relationship, contactId)))
+      : t(displayProps.label);
 
     return (
       <div
@@ -147,7 +155,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
                     {translatedTypeLabel}
                   </Badge>
                   {relationship.position && (
-                    <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
+                    <span className={`text-xs ${colors.text.muted}`}>• {resolvePositionLabel(relationship.position, t)}</span>
                   )}
                 </>
               ) : (
