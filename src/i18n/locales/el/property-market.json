@@ -1932,7 +1932,11 @@
       "placeLabel": "Έδρα",
       "placeUnknown": "Δεν δηλώθηκε",
       "legalTitle": "Νομικά στοιχεία",
-      "legalSeat": "Καταστατική έδρα: {seat}",
+      "legalSeat": {
+        "full": "Καταστατική έδρα: {seat}",
+        "business-address": "Διεύθυνση επιχείρησης: {seat}",
+        "municipality": "Περιοχή έδρας: {seat}"
+      },
       "legalForm": {
         "sole_proprietor": "Ατομική επιχείρηση",
         "oe": "Ομόρρυθμη Εταιρεία (Ο.Ε.)",

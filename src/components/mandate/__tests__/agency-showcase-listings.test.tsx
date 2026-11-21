@@ -24,7 +24,7 @@ import { render, screen, within } from '@testing-library/react';
 import React from 'react';
 
 import { AgencyProfileContent } from '../AgencyProfileContent';
-import { CREDIBILITY_KEYS, LEGAL_FORM_KEYS, PROFILE_KEYS } from '../agency-directory-labels';
+import { CREDIBILITY_KEYS, LEGAL_FORM_KEYS, PROFILE_KEYS, SEAT_LABEL_KEYS } from '../agency-directory-labels';
 import { SHOWCASE_REGISTRY_DOOR_KEYS } from '../agency-showcase-registry-labels';
 import { formatLongDate } from '@/lib/intl-formatting';
 import type { PublicShowcase } from '@/types/agency-profile';
@@ -362,7 +362,7 @@ describe('Ν. Νομικά στοιχεία (ADR-841 §7 Α23 Φ4 Α2)', () => {
     expect(screen.getByText(PROFILE_KEYS.legalTitle)).toBeInTheDocument();
     expect(screen.getByText('ΠΑΓΩΝΗΣ ΑΝΩΝΥΜΗ ΕΤΑΙΡΕΙΑ')).toBeInTheDocument();
     expect(screen.getByText(LEGAL_FORM_KEYS.ae)).toBeInTheDocument();
-    expect(mockTranslateCalls).toContainEqual([PROFILE_KEYS.legalSeat, { seat: 'Θεσσαλονίκη' }]);
+    expect(mockTranslateCalls).toContainEqual([SEAT_LABEL_KEYS.municipality, { seat: 'Θεσσαλονίκη' }]);
     expect(mockTranslateCalls).toContainEqual([PROFILE_KEYS.legalVerifiedOn, { date: formatLongDate(VERIFIED_AT) }]);
     expect(screen.getAllByText(CREDIBILITY_KEYS.claimNational)).toHaveLength(1);
     expect(screen.queryByText(CREDIBILITY_KEYS.claimDeclared)).not.toBeInTheDocument();
@@ -386,5 +386,21 @@ describe('Ν. Νομικά στοιχεία (ADR-841 §7 Α23 Φ4 Α2)', () => {
     paint({ listings: [] }, withIdentity(legalIdentityFixture({ gemiNumber: '999999999000' })));
 
     expect(screen.getAllByText(CREDIBILITY_KEYS.claimNational)).toHaveLength(2);
+  });
+
+  // ⚖️ Α23.14.2 — η ετικέτα λέει ΑΚΡΙΒΩΣ ό,τι δείχνεται: «καταστατική» ΜΟΝΟ για την καταστατική.
+  it.each([
+    ['full', { disclosure: 'full', streetLine: 'Εγνατίας 1', postalCode: '54630', locality: 'Θεσσαλονίκη' }],
+    ['business-address', { disclosure: 'business-address', streetLine: 'Τσιμισκή 10', postalCode: '54624', locality: 'Θεσσαλονίκη' }],
+    ['municipality', { disclosure: 'municipality', streetLine: null, postalCode: null, locality: 'Θεσσαλονίκη' }],
+  ] as const)('⚖️ Ν5 — %s ⇒ η δική του ετικέτα, καμία άλλη', (disclosure, seat) => {
+    mockTranslateCalls.length = 0;
+    paint({ listings: [] }, withIdentity(legalIdentityFixture({ seat })));
+
+    const asked = new Set(mockTranslateCalls.map(([key]) => key));
+    expect(asked.has(SEAT_LABEL_KEYS[disclosure])).toBe(true);
+    for (const other of Object.values(SEAT_LABEL_KEYS)) {
+      if (other !== SEAT_LABEL_KEYS[disclosure]) expect(asked.has(other)).toBe(false);
+    }
   });
 });

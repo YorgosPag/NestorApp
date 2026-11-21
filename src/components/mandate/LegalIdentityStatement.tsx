@@ -22,7 +22,13 @@ import { seatLineOf } from '@/lib/agency/showcase-legal-presentation';
 import { formatLongDate } from '@/lib/intl-formatting';
 import type { ShowcaseLegalIdentity } from '@/types/showcase-legal-identity';
 
-import { AGENCY_PUBLIC_NS, CREDIBILITY_KEYS, LEGAL_FORM_KEYS, PROFILE_KEYS } from './agency-directory-labels';
+import {
+  AGENCY_PUBLIC_NS,
+  CREDIBILITY_KEYS,
+  LEGAL_FORM_KEYS,
+  PROFILE_KEYS,
+  SEAT_LABEL_KEYS,
+} from './agency-directory-labels';
 import { Fact } from './AgencyFact';
 
 function AttestationLine({ identity }: { readonly identity: ShowcaseLegalIdentity }): React.JSX.Element {
@@ -59,7 +65,8 @@ export function LegalIdentityStatement({ identity }: { readonly identity: Showca
           })}
         </span>
       )}
-      <span>{t(PROFILE_KEYS.legalSeat, { seat: seatLineOf(identity.seat) })}</span>
+      {/* ⚖️ Α23.14.2 — η ετικέτα ανά επιλογή: ποτέ «καταστατική» για κάτι που δεν είναι. */}
+      <span>{t(SEAT_LABEL_KEYS[identity.seat.disclosure], { seat: seatLineOf(identity.seat) })}</span>
       <AttestationLine identity={identity} />
     </Fact>
   );

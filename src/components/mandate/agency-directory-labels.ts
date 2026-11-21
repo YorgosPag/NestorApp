@@ -18,7 +18,7 @@
 import type { CredibilityNote } from '@/lib/professional/professional-credibility';
 import type { GreekPublicHolidayId } from '@/lib/calendar/greek-public-holidays';
 import type { ShowcaseLocationRole } from '@/types/showcase-card';
-import type { ShowcaseLegalForm } from '@/types/showcase-legal-identity';
+import type { SeatDisclosure, ShowcaseLegalForm } from '@/types/showcase-legal-identity';
 import type { OccupationFamilyId } from '@/config/occupation-families';
 
 /** Το namespace — **`property-market`**, το ίδιο με τη βιτρίνα και τις αγγελίες. */
@@ -268,6 +268,18 @@ export const LEGAL_FORM_KEYS: Record<ShowcaseLegalForm, string> = {
   ae: `${P}.legalForm.ae`,
 };
 
+/**
+ * ⚖️ **ADR-841 §7 Α23.14.2 — η ετικέτα λέει ΑΚΡΙΒΩΣ ό,τι δείχνεται.** «Καταστατική έδρα» μόνο όταν δείχνεται η
+ * καταστατική· η διεύθυνση της κάρτας είναι «Διεύθυνση επιχείρησης» (Οδηγία 2000/31 άρθ. 5(1)(β): «γεωγραφική
+ * διεύθυνση εγκατάστασης»)· μόνο ο δήμος = «Περιοχή έδρας» (Google Business Profile: κρυμμένη διεύθυνση ⇒ περιοχή).
+ * Ο τύπος αναγκάζει γραμμή για **κάθε** επιλογή — νέα επιλογή χωρίς ετικέτα δεν μεταγλωττίζεται.
+ */
+export const SEAT_LABEL_KEYS: Record<SeatDisclosure, string> = {
+  full: `${P}.legalSeat.full`,
+  'business-address': `${P}.legalSeat.business-address`,
+  municipality: `${P}.legalSeat.municipality`,
+};
+
 /** Η μία βιτρίνα — `/pro/<ψευδώνυμο>`. */
 export const PROFILE_KEYS = {
   loading: `${P}.loading`,
@@ -340,7 +352,7 @@ export const PROFILE_KEYS = {
   // 🔑 Μόνο τίτλος, έδρα και ονόματα μορφής είναι νέα· αριθμός και βεβαίωση **επαναχρησιμοποιούν** υπάρχοντα κλειδιά
   // (`CREDIBILITY_KEYS.claimNational` / `.claimDeclared` · `legalVerifiedOn`) — καμία δεύτερη πρόταση για το ίδιο γεγονός.
   legalTitle: `${P}.legalTitle`,
-  legalSeat: `${P}.legalSeat`,
+  // ⚖️ Η ετικέτα της έδρας ζει στο `SEAT_LABEL_KEYS` — εξαρτάται από **ό,τι** δείχνεται (Α23.14.2).
   /** Η **ίδια** πρόταση με την υποσελίδα «Στοιχεία ΓΕΜΗ» του κατόχου (Α23.10) — κάτοχος και επισκέπτης δεν αποκλίνουν. */
   legalVerifiedOn: 'property-market:mandate.showcase.registry.verifiedOn',
   requestCta: `${P}.requestCta`,

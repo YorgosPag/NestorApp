@@ -1932,7 +1932,11 @@
       "placeLabel": "Base",
       "placeUnknown": "Not declared",
       "legalTitle": "Legal details",
-      "legalSeat": "Registered office: {seat}",
+      "legalSeat": {
+        "full": "Registered office: {seat}",
+        "business-address": "Business address: {seat}",
+        "municipality": "Based in: {seat}"
+      },
       "legalForm": {
         "sole_proprietor": "Sole proprietorship",
         "oe": "General partnership (O.E.)",

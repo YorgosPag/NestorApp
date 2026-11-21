@@ -71,7 +71,11 @@
           "oe": "Ομόρρυθμη Εταιρεία (Ο.Ε.)",
           "sole_proprietor": "Ατομική επιχείρηση"
         },
-        "legalSeat": "Καταστατική έδρα: {seat}",
+        "legalSeat": {
+          "business-address": "Διεύθυνση επιχείρησης: {seat}",
+          "full": "Καταστατική έδρα: {seat}",
+          "municipality": "Περιοχή έδρας: {seat}"
+        },
         "legalTitle": "Νομικά στοιχεία",
         "listingsCount": "{count, plural, one {# αγγελία} other {# αγγελίες}}",
         "listingsEmpty": "Αυτό το γραφείο δεν έχει δημοσιευμένες αγγελίες αυτή τη στιγμή.",

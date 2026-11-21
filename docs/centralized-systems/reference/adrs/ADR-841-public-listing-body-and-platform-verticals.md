@@ -3416,6 +3416,7 @@ OwnerPropertyMedia.kind  ──►  PublicShelfSource.material  ──►  Publi
 
 | Ημ/νία | Τι |
 |---|---|
+| **2026-11-21** | ⚖️ **§7 Α23.14.2 — η ετικέτα της έδρας ανά επιλογή.** «Καταστατική έδρα» μόνο για `full`· `business-address` ⇒ «Διεύθυνση επιχείρησης», `municipality` ⇒ «Περιοχή έδρας» (Οδηγία 2000/31 άρθ. 5(1)(β)). `SEAT_LABEL_KEYS: Record<SeatDisclosure, …>`, ίδιο component για `/pro` και προεπισκόπηση. Άγκυρα Ν5. Επίσης Α23.14.1: κοινό `useWorkspaceGet` (CHECK 3.28). |
 | **2026-11-21** | 🔴 **§7 Α23.14.1 — η βιτρίνα δηλώνει χώρο.** Ζωντανά: σε ξένο χώρο η προεπισκόπηση έδειξε την εταιρεία του λογαριασμού. 7 hooks των `/api/agency-profile/*` από ωμό `fetch` → `apiClient` (κεφαλίδα χώρου, ADR-787 §5.3 ζ)· ανάγνωση βιτρίνας, ανέβασμα σήματος, αγγελίες κάλυψης από `user.companyId` → `useCompanyId()` (ADR-849 Β1). Άγκυρα `showcase-workspace-declaration.test.ts`. |
 | **2026-11-21** | ⚖️ **§7 Α23.14 — οθόνη «Τι θα δει ο κόσμος» (Φ3.3): δημόσιο όνομα + πόση έδρα, με ζωντανή προεπισκόπηση.** Εύρημα ζωντανής προσομοίωσης: η φόρμα έστελνε **πάντα** `seatDisclosure: null` ⇒ **κάθε** ατομική/ΟΕ αποτύγχανε στη δημοσίευση με `agency-profile-seat-disclosure-missing`, χωρίς πεδίο στην οθόνη· και το πεδίο «Επωνυμία» ήταν **νεκρό** (δεν έφευγε στο σύρμα από τη Δ5). Νέο `previewShowcaseLegalIdentity` στον **ίδιο** κριτή (κάθε έδρα περνά από το `resolveShowcaseLegalIdentity` της δημοσίευσης · κοινός συναρμολογητής `baseIdentityOf` · τύπος `ShowcaseLegalIdentityBase`) · `GET /api/agency-profile/legal-identity-preview` (`ADMINISTRATIVE_ROLES`, `standard`, συναλλαγή μόνο-ανάγνωσης) · ενότητα με 3 επιλογές έδρας (ακριβές κείμενο ή ο ίδιος λόγος άρνησης + σύνδεσμος διόρθωσης, ανενεργή) · επωνυμία ή τίτλοι **μόνο** του ΓΕΜΗ · προεπισκόπηση με το `LegalIdentityStatement` της δημόσιας σελίδας · προσυμπλήρωση μόνο από τη βιτρίνα (`declarationOfStored`). Ατομική/ΟΕ: **καμία** προεπιλογή, «Μόνο ο δήμος» = «Προτείνεται». |
 | **2026-10-25** | 🧪 **§7 Α21.13 — η άγκυρα «σαρώνει το Tailwind το πλαίσιο;» ρωτά πλέον το GLOB, όχι τη ρίζα του.** Ήταν ψευδώς κόκκινη από τότε που μπήκε το `./src/lib/**/*.tsx` στο `content` (ADR-777 §8.70.8, ADR-242 Βήμα 4): ρωτούσε «απαριθμείται ο φάκελος `lib`;», ενώ το `src/lib/agency/showcase-mark-surfaces.ts` εξακολουθεί να **μη** σαρώνεται. Νέο SSoT `src/test-utils/tailwind-content.ts` → `isScannedByTailwind(path)`: `loadConfig` + `resolveConfig` του ίδιου του Tailwind και το `micromatch` όπως το λύνει το πακέτο `tailwindcss` (καμία νέα εξάρτηση). Οι τρεις άγκυρες που έκαναν την ίδια ερώτηση με σύγκριση κειμένου (`showcase-mark-fidelity` · `link-style-tailwind` · `design-system-status-classes`) περνούν από αυτό· καλύπτουν **και τις δύο** κατευθύνσεις (`false` για το `lib/agency/*.ts`, `true` για τα σαρωμένα), άρα σταθερή απάντηση του βοηθού κοκκινίζει. |
@@ -9297,7 +9298,29 @@ Handoff: `HANDOFFS/2026-09-15_platform-operator-legal-versions_F1_handoff.md`. D
 - **Άγκυρες**: `hooks/mandate/__tests__/showcase-workspace-declaration.test.ts` (η προεπισκόπηση ρωτά μέσω `apiClient` χωρίς επανάληψη ·
   401/403 ⇒ forbidden · 503 ⇒ unavailable · κανένα από τα 7 hooks με ωμό `fetch`) · `agency-showcase-denial.test.tsx`: το σύνορο του mock
   ανέβηκε ένα σκαλί (`ApiClientError` με `errorBody`, όπως το παράγει το `handleResponse`).
+- **Κοινός κύκλος GET** *(CHECK 3.28)*: κάρτα και εισαγωγή στοιχείων είχαν τον **ίδιο** κύκλο `idle → loading → ερμηνεία` ⇒ ένα
+  `hooks/mandate/useWorkspaceGet.ts` (`apiClient.get` + `retry: false` + ακύρωση)· κάθε hook δίνει μόνο τον **ερμηνευτή** του
+  (`answered` / `refused`, επίπεδο αρχείου). Η άγκυρα δέχεται `apiClient.*` **ή** `useWorkspaceGet` και ελέγχει και το ίδιο το κοινό hook.
 - **Εκτός**: ο server να **αρνείται** εγγραφή χωρίς δήλωση = ADR-787 Φάση Γ.
+
+###### Α23.14.2 ⚖️ Η ετικέτα της έδρας λέει **ακριβώς** ό,τι δείχνεται *(ζωντανή επαλήθευση · 2026-11-21)*
+
+- **Εύρημα**: το `legalSeat` («Καταστατική έδρα: {seat}») έμπαινε για **κάθε** επιλογή έδρας — και στη **δημόσια** `/pro`. Με
+  «διεύθυνση γραφείου» δημοσιευόταν ως «καταστατική έδρα» κάτι που **δεν** είναι· με «μόνο ο δήμος», μια πόλη ως «καταστατική έδρα».
+- **Απόφαση** (Οδηγία 2000/31 άρθ. 5(1)(β): «γεωγραφική διεύθυνση **εγκατάστασης**», όχι «καταστατική έδρα» · Google Business
+  Profile: κρυμμένη διεύθυνση ⇒ δείχνεται **περιοχή**):
+
+  | `SeatDisclosure` | el | en |
+  |---|---|---|
+  | `full` | Καταστατική έδρα: {seat} | Registered office: {seat} |
+  | `business-address` | Διεύθυνση επιχείρησης: {seat} | Business address: {seat} |
+  | `municipality` | Περιοχή έδρας: {seat} | Based in: {seat} |
+
+- **Υλοποίηση**: `SEAT_LABEL_KEYS: Record<SeatDisclosure, string>` στο `agency-directory-labels.ts` (ιδίωμα `LEGAL_FORM_KEYS` ·
+  ο τύπος αναγκάζει γραμμή για **κάθε** επιλογή)· το `PROFILE_KEYS.legalSeat` **αφαιρέθηκε**· locale `mandate.profile.legalSeat.{full,
+  business-address,municipality}`. Το `LegalIdentityStatement` είναι **το ίδιο** στη δημόσια `/pro` και στην προεπισκόπηση ⇒ μία
+  αλλαγή, δύο επιφάνειες. Το JSON-LD (`PostalAddress`) **δεν** αλλάζει — δεν ισχυρίζεται «καταστατική».
+- **Άγκυρα**: `agency-showcase-listings.test.tsx` Ν5 — ανά επιλογή ζητείται **η δική της** ετικέτα και **καμία** άλλη.
 
 #### Α21.6 🔶 ΤΑ ΕΠΟΜΕΝΑ ΣΤΑΔΙΑ — ΔΗΛΩΜΕΝΑ, ΟΧΙ ΞΕΧΑΣΜΕΝΑ
 
