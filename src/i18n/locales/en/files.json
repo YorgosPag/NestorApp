@@ -109,7 +109,7 @@
     "fileLargeWarning": "File is large and may take longer to upload",
     "filenameSpecialChars": "Filename contains special characters that may cause problems",
     "invalidFile": "Invalid file",
-    "fileTooSmall": "File too small"
+    "fileEmpty": "File {fileName} is empty (0 bytes)"
   },
   "upload": {
     "typeQuestion": "What type of document will you upload?",

@@ -48,9 +48,41 @@ handleMultiplePhotosChange (functional updater) → setEditedData
 - **`individualMapper.ts`** (lines 43-81): ΜΟΝΑΔΙΚΟ σημείο μετατροπής `multiplePhotoURLs[]` → `PhotoSlot[]`
 - **`ContactDetails.tsx`**: Χρησιμοποιεί ΜΟΝΟ το output του mapper, χωρίς πρόσθετη μετατροπή
 
+### Κάτω όριο μεγέθους — «άδειο» = 0 bytes (2026-11-20)
+
+- `UPLOAD_LIMITS.MIN_FILE_SIZE` = **1** (`src/config/file-upload-config.ts`): η ζώνη αρνείται **μόνο** το κενό αρχείο.
+  Πάνω από το κενό, το αν ένα αρχείο «λέει κάτι» το κρίνει ο αναγνώστης του από το **περιεχόμενο**, όχι πήχης bytes.
+  Ίδιο με τους servers της εφαρμογής (`file.size === 0`) και το Uppy (`restrictions.minFileSize` = `null`)· κανένας
+  μεγάλος (Drive, Dropbox, Uppy) δεν έχει πήχη 1 KB.
+- `FileUploadZone` prop **`minSize`** (συμμετρικό με `maxSize`, προεπιλογή η σταθερά). `0` = ο καταναλωτής κρίνει μόνος του
+  την κενότητα και τη λέει inline — έτσι το τοπογραφικό (`SurveyFilePicker`, άρνηση `empty` του `survey-file-read`).
+- Άρνηση: `files:validation.fileEmpty` («… είναι κενό (0 bytes)»)· αντικατέστησε το `validation.fileTooSmall`.
+
+### Αρνήσεις inline, όχι toast (2026-11-20)
+
+- Οι αρνήσεις επικύρωσης της `FileUploadZone` (κενό · πολύ μεγάλο) δείχνονται από το **`FileUploadRefusals`**
+  (`src/components/shared/files/FileUploadRefusals.tsx`) **κάτω από τη ζώνη**, με το κοινό `Alert` (`destructive` +
+  εικονίδιο, `role="alert"`) — ένα στοιχείο ανά απορριφθέν αρχείο, με όνομα και πράξη («Μέγιστο μέγεθος: …»).
+- Μένουν ορατές μέχρι την **επόμενη** προσπάθεια (κάθε επιλογή αντικαθιστά τις προηγούμενες)· τα έγκυρα αρχεία της ίδιας
+  επιλογής προχωρούν. Το πεδίο τις δείχνει με `aria-describedby` + `aria-invalid`.
+- Έξω από το κλικάρισιμο `<section>`: κλικ στο μήνυμα δεν ξανανοίγει τον επιλογέα.
+- Πρότυπο GOV.UK Design System (file upload: «The selected file is empty» / «must be smaller than …») και Carbon
+  (file uploader: σφάλμα ανά αρχείο που λέει πώς διορθώνεται). Toast μένει μόνο για συμπίεση, προειδοποίηση μεγάλου
+  αρχείου και αποτυχία ανεβάσματος.
+- ⚠️ Η ζώνη **δεν** ελέγχει τύπο αρχείου (μόνο το `accept` του επιλογέα, που το σύρσιμο παρακάμπτει) — ανοιχτό.
+
 ---
 
 ## Changelog
+
+### 2026-11-20 — «Άδειο» = 0 bytes, όχι «κάτω από 1 KB» (ADR-920 §13.10)
+
+Ζωντανά, ένα έγκυρο τοπογραφικό 728 bytes (117 σημεία) δεν έφτανε ποτέ στον αναγνώστη: ο πήχης 1024 του `FileUploadZone`
+το απέρριπτε ως «πολύ μικρό» με toast που χάνεται — ίδιο σφάλμα για κάθε μικρό `.txt`/`.csv`/`.svg` στα έγγραφα.
+`MIN_FILE_SIZE` 1024 → 1 · νέο prop `minSize` · `SurveyFilePicker` `minSize={0}` · κλειδί `validation.fileEmpty` (el + en).
+Στο ίδιο βήμα: οι αρνήσεις (κενό · πολύ μεγάλο) έγιναν **inline** (`FileUploadRefusals`, `aria-describedby`) αντί για toast.
+Άγκυρα: `src/components/shared/files/__tests__/upload-zone-min-size.test.tsx` (τρέχει η αληθινή ζώνη, Ζ1–Ζ4) ⇒ πράσινη· μεταλλάξεις
+3/3 κόκκινες (όριο 1024 · χωρίς `minSize={0}` · πίσω σε toast).
 
 ### 2026-09-17 — Το έντυπο βεβαίωσης παγώνει σε ρίζα `server-only` (ADR-864 §19)
 

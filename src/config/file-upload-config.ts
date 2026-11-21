@@ -137,7 +137,13 @@ export const PURPOSE_CONFIG: Record<UploadPurpose, PurposeConfig> = {
 export const UPLOAD_LIMITS = {
   DEFAULT_MAX_SIZE: 5 * 1024 * 1024, // 5MB
   MAX_FILE_SIZE: 50 * 1024 * 1024,   // 50MB
-  MIN_FILE_SIZE: 1024,               // 1KB
+  /**
+   * «Άδειο» = 0 bytes — ο μόνος πήχης κάτω ορίου (ADR-054 §min-size · ADR-920 §13.10).
+   * Πάνω από το άδειο, το αν ένα αρχείο «λέει κάτι» το κρίνει ο αναγνώστης του από το ΠΕΡΙΕΧΟΜΕΝΟ, όχι πήχης bytes:
+   * ένα έγκυρο τοπογραφικό 117 σημείων είναι 728 bytes. Ίδιο με τους servers (`file.size === 0`) και το Uppy
+   * (`restrictions.minFileSize` = `null`). Ήταν 1024 ⇒ απέρριπτε σιωπηλά μικρά έγκυρα αρχεία.
+   */
+  MIN_FILE_SIZE: 1,
   /**
    * 🏢 ENTERPRISE: Telegram Bot API technical constraint (NOT policy)
    * @see https://core.telegram.org/bots/api#getfile

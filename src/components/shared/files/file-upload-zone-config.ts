@@ -36,6 +36,11 @@ export interface FileUploadZoneProps {
   accept?: string;
   /** Maximum file size in bytes */
   maxSize?: number;
+  /**
+   * Minimum file size in bytes (default `UPLOAD_LIMITS.MIN_FILE_SIZE` = 1 ⇒ only an EMPTY file is refused).
+   * `0` = the consumer's reader judges emptiness from the content and says so itself (e.g. the survey import).
+   */
+  minSize?: number;
   /** Allow multiple file selection */
   multiple?: boolean;
   /** Disabled state */

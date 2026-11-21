@@ -9,6 +9,8 @@
  *
  * 🔑 **Η άρνηση λέει την ΠΡΑΞΗ** («αποθήκευσέ το ως .xlsx», «αποθήκευσε DXF κειμένου»), όχι «μη υποστηριζόμενο αρχείο».
  *   Ανακοινώνεται (`role="alert"`) τη στιγμή που εμφανίζεται.
+ * 🔑 **Κανένας πήχης bytes** (`minSize={0}`): ένα έγκυρο τοπογραφικό χωρά σε λίγες εκατοντάδες bytes· ακόμη και το κενό
+ *   φτάνει στον αναγνώστη, που το κρίνει από το περιεχόμενο και το λέει inline (`read.refusals.empty`), όχι σε toast.
  * 🔑 **Τίποτα δεν φεύγει από τον browser εδώ**: η ανάγνωση γίνεται τοπικά· στον διακομιστή πηγαίνει μόνο η κανονική πηγή,
  *   μετά τη δήλωση Δ2.
  */
@@ -42,6 +44,7 @@ export function SurveyFilePicker({ survey, disabled = false }: SurveyFilePickerP
           onUpload={onUpload}
           accept={SURVEY_FILE_ACCEPT}
           multiple={false}
+          minSize={0}
           enableCompression={false}
           disabled={disabled}
           uploading={reading}

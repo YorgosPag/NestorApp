@@ -18,7 +18,7 @@
 
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useId, useRef, useState } from 'react';
 import { Upload, FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -44,6 +44,8 @@ import {
   type FileUploadZoneProps,
   type UsageContext,
 } from './file-upload-zone-config';
+
+import { FileUploadRefusals } from './FileUploadRefusals';
 
 // Re-export props interface for backward compatibility
 export type { FileUploadZoneProps };
@@ -79,6 +81,7 @@ export function FileUploadZone({
   onUpload,
   accept = DEFAULT_ACCEPT,
   maxSize = DEFAULT_MAX_SIZE,
+  minSize = UPLOAD_LIMITS.MIN_FILE_SIZE,
   multiple = true,
   disabled = false,
   uploading = false,
@@ -95,6 +98,9 @@ export function FileUploadZone({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  /** Why the last choice's files were refused — inline until the next attempt (ADR-054 «Αρνήσεις inline»). */
+  const [refusals, setRefusals] = useState<readonly string[]>([]);
+  const refusalsId = useId();
 
   // =========================================================================
   // 🏢 ENTERPRISE FILE VALIDATION (Type-specific limits)
@@ -127,10 +133,10 @@ export function FileUploadZone({
       return { valid: false, error: errorMsg };
     }
 
-    // 🔒 Minimum size validation (prevent empty files)
-    if (file.size < UPLOAD_LIMITS.MIN_FILE_SIZE) {
-      const errorMsg = t('validation.fileTooSmall', { fileName: file.name });
-      logger.warn('File too small', { name: file.name, size: file.size });
+    // 🔒 Empty file (0 bytes) — above that, the consumer's reader judges the content
+    if (file.size < minSize) {
+      const errorMsg = t('validation.fileEmpty', { fileName: file.name });
+      logger.warn('File empty', { name: file.name, size: file.size, min: minSize });
       return { valid: false, error: errorMsg };
     }
 
@@ -143,7 +149,7 @@ export function FileUploadZone({
     }
 
     return { valid: true };
-  }, [maxSize, t]);
+  }, [maxSize, minSize, t]);
 
   /**
    * Validate multiple files
@@ -284,9 +290,9 @@ export function FileUploadZone({
     // Step 1: Validate files
     const { valid, errors, warnings } = validateFiles(files);
 
-    // Show validation errors
+    // Refusals stay visible next to the zone (not a toast) — every attempt replaces the previous ones
+    setRefusals(errors);
     if (errors.length > 0) {
-      errors.forEach((error) => showError(error));
       logger.warn('Validation errors', { count: errors.length, errors });
     }
 
@@ -397,7 +403,10 @@ export function FileUploadZone({
 
   const bgStyle = isDragActive ? 'bg-accent/20' : 'bg-muted/20';
 
+  const hasRefusals = refusals.length > 0;
+
   return (
+    <>
     <section
       className={`${borderStyle} ${quick.card} p-2 text-center cursor-pointer ${bgStyle} ${INTERACTIVE_PATTERNS.DROPZONE_HOVER} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       role="region"
@@ -417,6 +426,8 @@ export function FileUploadZone({
         onChange={handleFileSelect}
         disabled={isDisabled}
         aria-label={t('uploadZone.fileInput')}
+        aria-invalid={hasRefusals || undefined}
+        aria-describedby={hasRefusals ? refusalsId : undefined}
       />
 
       {/* Upload icon */}
@@ -466,5 +477,8 @@ export function FileUploadZone({
         </Button>
       )}
     </section>
+    {/* Outside the clickable <section>: clicking the message must not reopen the file picker */}
+    <FileUploadRefusals id={refusalsId} refusals={refusals} />
+    </>
   );
 }
