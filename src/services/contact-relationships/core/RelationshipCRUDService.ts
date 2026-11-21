@@ -18,7 +18,12 @@ import { Contact } from '@/types/contacts';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { recordRelationshipAudit } from './relationship-audit';
-import { buildUpdateChangeEntry, buildTerminationChangeEntry, diffChangedFields } from './relationship-change-history';
+import {
+  buildUpdateChangeEntry,
+  buildTerminationChangeEntry,
+  diffChangedFields,
+  pickChangedFields,
+} from './relationship-change-history';
 import { normalizeUpdateDays, relationshipCalendarDay, todayRelationshipDay } from './relationship-field-codec';
 import { RelationshipValidationService } from './RelationshipValidationService';
 import { isSymmetricRelationshipType } from '@/types/contacts/relationships/core/relationship-orientation';
@@ -270,16 +275,20 @@ export class RelationshipCRUDService {
         return existing;
       }
 
+      // Field mask (Google AIP-134): only what changed is written — never the merged record.
+      const changes = pickChangedFields(normalized, changedFields);
+      const lastModifiedBy = updates.lastModifiedBy || SYSTEM_IDENTITY.ID;
+
       // Validate updates
-      const updatedData = { ...existing, ...normalized };
+      const updatedData = { ...existing, ...changes };
       RelationshipValidationService.validateDataIntegrity(updatedData);
 
       // Build updated relationship
       const updated: ContactRelationship = {
         ...existing,
-        ...normalized,
+        ...changes,
         updatedAt: new Date(),
-        lastModifiedBy: updates.lastModifiedBy || SYSTEM_IDENTITY.ID
+        lastModifiedBy,
       };
 
       // Add change history entry
@@ -287,15 +296,19 @@ export class RelationshipCRUDService {
       // nesting (changeHistory → oldValue → changeHistory → ...) which exceeds
       // Firestore's max depth → "Property array contains an invalid nested entity"
       const changeEntry = buildUpdateChangeEntry({
-        changedBy: updates.lastModifiedBy || SYSTEM_IDENTITY.ID,
+        changedBy: lastModifiedBy,
         changedFields,
         notes: updates.relationshipNotes,
       });
 
       updated.changeHistory = [...(existing.changeHistory || []), changeEntry];
 
-      // Update in database
-      await FirestoreRelationshipAdapter.updateRelationship(relationshipId, updated);
+      // Update in database — the changed fields + bookkeeping (the adapter stamps `updatedAt`)
+      await FirestoreRelationshipAdapter.updateRelationship(relationshipId, {
+        ...changes,
+        lastModifiedBy,
+        changeHistory: updated.changeHistory,
+      });
 
       // Audit trail for both contacts (fire-and-forget)
       recordRelationshipAudit({

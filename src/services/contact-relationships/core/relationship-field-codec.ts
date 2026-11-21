@@ -109,6 +109,30 @@ export function projectContactInfo(
   return hasAny ? stripUndefined(projected) : null;
 }
 
+/**
+ * Fields whose **absence has a declared meaning** (protobuf proto3 «implicit presence»: an
+ * unset `bool` IS `false`). A record written before the field existed means the same as one
+ * that stores the default — the edit form materialises `false`, the store says nothing.
+ */
+const RELATIONSHIP_FIELD_DEFAULTS: Readonly<Record<string, unknown>> = { isWorkplace: false };
+
+/**
+ * **What does this field of a relationship MEAN?** — the value change detection compares
+ * (Salesforce Field History compares values, not spellings). Same codec as the edit form:
+ * - `phones` / `emails` → the structured channels, legacy display strings included;
+ * - `contactInfo` → the projection of those channels (it is derived, so it is compared derived);
+ * - a field with a declared default → that default when absent.
+ */
+export function relationshipFieldMeaning(record: Partial<ContactRelationship>, field: string): unknown {
+  if (field === 'phones') return relationshipPhonesOf(record);
+  if (field === 'emails') return relationshipEmailsOf(record);
+  if (field === 'contactInfo') {
+    return projectContactInfo(record.contactInfo, relationshipPhonesOf(record), relationshipEmailsOf(record));
+  }
+  const value: unknown = (record as Readonly<Record<string, unknown>>)[field];
+  return value ?? RELATIONSHIP_FIELD_DEFAULTS[field];
+}
+
 /** Firestore rejects `undefined`; a projection must not carry it. */
 function stripUndefined(info: ProfessionalContactInfo): ProfessionalContactInfo {
   return Object.fromEntries(

@@ -141,9 +141,11 @@ export class FirestoreRelationshipAdapter {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatch('RELATIONSHIP_UPDATED', {
         relationshipId,
+        // A save writes only its changed fields (field mask, ADR-372 §8.6): announce only
+        // what was written — an absent key must not reach the listener's `{...rel, ...updates}`.
         updates: {
-          type: updates.relationshipType,
-          notes: updates.notes ?? undefined,
+          ...('relationshipType' in updates ? { type: updates.relationshipType } : {}),
+          ...('notes' in updates ? { notes: updates.notes ?? undefined } : {}),
         },
         timestamp: Date.now(),
       });

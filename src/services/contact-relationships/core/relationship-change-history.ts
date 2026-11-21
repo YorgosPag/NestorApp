@@ -14,6 +14,7 @@
 import { dequal } from 'dequal';
 import { nowISO } from '@/lib/date-local';
 import type { ContactRelationship } from '@/types/contacts/relationships';
+import { relationshipFieldMeaning } from './relationship-field-codec';
 
 type ChangeHistoryEntry = NonNullable<ContactRelationship['changeHistory']>[number];
 
@@ -61,15 +62,36 @@ function isAbsent(value: unknown): boolean {
  * **Which fields did this save ACTUALLY change?** (Salesforce Field History pattern.)
  * A form sends every field on every save; recording all of them made the history say
  * «10 fields changed» when two did, so the trail could not answer «what happened?».
+ *
+ * Both sides are read through the ONE field codec (`relationshipFieldMeaning`): a record
+ * that never stored `isWorkplace`, or still keeps its phone only as a display string, is
+ * not «changed» by a form that spells the same meaning differently (measured live
+ * 2026-11-21, rel_dc28b4ea: an untouched save logged `changedFields: ["isWorkplace"]`).
  */
-export function diffChangedFields<T extends object>(existing: T, updates: Partial<T>): string[] {
-  const beforeRecord: Readonly<Record<string, unknown>> = { ...existing };
-  const afterRecord: Readonly<Record<string, unknown>> = { ...updates };
-  return Object.keys(afterRecord).filter((field) => {
+export function diffChangedFields(
+  existing: Partial<ContactRelationship>,
+  updates: Partial<ContactRelationship>,
+): string[] {
+  return Object.keys(updates).filter((field) => {
     if (BOOKKEEPING_FIELDS.has(field)) return false;
-    const before = beforeRecord[field];
-    const after = afterRecord[field];
+    const before = relationshipFieldMeaning(existing, field);
+    const after = relationshipFieldMeaning(updates, field);
     if (isAbsent(before) && isAbsent(after)) return false;
     return !dequal(before, after);
   });
+}
+
+/**
+ * The **field mask** of a save (Google AIP-134 `update_mask`): only the fields that changed
+ * are written. Writing the whole merged record materialised defaults the store never held
+ * (`notes: null`, `isWorkplace: false`) on every save.
+ */
+export function pickChangedFields(
+  updates: Partial<ContactRelationship>,
+  changedFields: readonly string[],
+): Partial<ContactRelationship> {
+  const source: Readonly<Record<string, unknown>> = updates;
+  return Object.fromEntries(
+    changedFields.filter((field) => field in source).map((field) => [field, source[field]]),
+  ) as Partial<ContactRelationship>;
 }
