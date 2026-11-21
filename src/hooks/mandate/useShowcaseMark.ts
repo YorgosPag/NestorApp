@@ -61,6 +61,8 @@
 import { useCallback, useState } from 'react';
 
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
+import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -175,28 +177,19 @@ async function postMark(
   privateStoragePath: string,
 ): Promise<ShowcaseMarkState> {
   try {
-    const response = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind, privateStoragePath }),
-    });
-
-    const rejection = await rejectionOf(response);
-    if (rejection !== null) return { state: 'rejected', verdict: rejection };
-    if (!response.ok) return { state: 'failed', at: 'declare' };
-
+    // 🔴 **Μέσω `apiClient`** (ADR-787 §5.3 ζ): το σήμα δηλώνεται στην εταιρεία **του χώρου**.
+    await apiClient.post(ENDPOINT, { kind, privateStoragePath });
     return { state: 'idle' };
-  } catch {
-    // Δίκτυο που δεν απάντησε — **όχι** άρνηση της πόρτας.
-    return { state: 'failed', at: 'declare' };
+  } catch (error) {
+    // Ονομασμένη άρνηση ⇒ `rejected`· οτιδήποτε άλλο (και δίκτυο) ⇒ `failed`.
+    const rejection = rejectionOf(error);
+    return rejection !== null ? { state: 'rejected', verdict: rejection } : { state: 'failed', at: 'declare' };
   }
 }
 
-/** Η άρνηση του διακομιστή, ονομαστικά — ή `null` όταν πέτυχε. */
-async function rejectionOf(response: Response): Promise<AgencyProfileRejection | null> {
-  if (response.ok) return null;
-
-  const body = (await response.json().catch(() => null)) as {
+/** Η άρνηση του διακομιστή, ονομαστικά — ή `null` όταν δεν ονομάστηκε (ή δεν απάντησε). */
+function rejectionOf(error: unknown): AgencyProfileRejection | null {
+  const body = apiErrorBodyOf(error) as {
     error?: string;
     reason?: AgencyProfileRejection;
   } | null;
@@ -290,19 +283,19 @@ async function uploadMarkToPrivate(
  */
 async function deleteMark(): Promise<ShowcaseMarkState> {
   try {
-    const response = await fetch(ENDPOINT, { method: 'DELETE' });
-    const rejection = await rejectionOf(response);
-
-    if (rejection !== null) return { state: 'rejected', verdict: rejection };
-    return response.ok ? { state: 'idle' } : { state: 'failed', at: 'remove' };
-  } catch {
-    return { state: 'failed', at: 'remove' };
+    await apiClient.delete(ENDPOINT);
+    return { state: 'idle' };
+  } catch (error) {
+    const rejection = rejectionOf(error);
+    return rejection !== null ? { state: 'rejected', verdict: rejection } : { state: 'failed', at: 'remove' };
   }
 }
 
 export function useShowcaseMark(): ShowcaseMark {
   const { user } = useAuth();
-  const companyId = user?.companyId ?? null;
+  // 🔑 **Η εταιρεία του ΧΩΡΟΥ** (ADR-849 Β1): το ανέβασμα πρέπει να πάει εκεί που θα το ζητήσει η δήλωση — ο
+  //    φρουρός κατοχής του server ρωτά `parseStoragePath(…).companyId === ctx.companyId` (του χώρου).
+  const companyId = useCompanyId()?.companyId ?? null;
   const createdBy = user?.uid ?? null;
 
   const [state, setState] = useState<ShowcaseMarkState>({ state: 'idle' });

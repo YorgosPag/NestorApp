@@ -12,11 +12,17 @@
 
 import { useEffect, useState } from 'react';
 
+import { ApiClientError, apiClient } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { LegalIdentityPreview } from '@/lib/agency/showcase-legal-identity';
 
 const logger = createModuleLogger('useShowcaseLegalPreview');
 
+/**
+ * 🔴 **Μέσω `apiClient`, ποτέ ωμό `fetch`** (ADR-787 §5.3 ζ): μόνο ο client δηλώνει **σε ποιον χώρο** ενεργείς.
+ * Χωρίς τη δήλωση ο server κρίνει την εταιρεία **του λογαριασμού** — μετρημένο ζωντανά 2026-11-21: στον χώρο
+ * `dokimastiko-mixaniko-pea` η προεπισκόπηση έδειξε άλλη εταιρεία.
+ */
 export const SHOWCASE_LEGAL_PREVIEW_ENDPOINT = '/api/agency-profile/legal-identity-preview' as const;
 
 export type ShowcaseLegalPreviewState =
@@ -28,21 +34,23 @@ export type ShowcaseLegalPreviewState =
 const FORBIDDEN: ShowcaseLegalPreviewState = { kind: 'forbidden' };
 const UNAVAILABLE: ShowcaseLegalPreviewState = { kind: 'unavailable' };
 
-async function stateOf(response: Response): Promise<ShowcaseLegalPreviewState> {
-  if (response.status === 401 || response.status === 403) return FORBIDDEN;
-  if (!response.ok) return UNAVAILABLE;
-  const body = (await response.json().catch(() => null)) as { data?: LegalIdentityPreview } | null;
-  return body?.data ? { kind: 'ready', preview: body.data } : UNAVAILABLE;
+/** Η άρνηση → κατάσταση. 401/403 = δεν είσαι διαχειριστής (ή δεν ανήκεις στον χώρο)· όλα τα άλλα = δεν απάντησε. */
+function refusedStateOf(error: unknown): ShowcaseLegalPreviewState {
+  if (ApiClientError.isApiClientError(error) && (error.statusCode === 401 || error.statusCode === 403)) return FORBIDDEN;
+  logger.error('Η προεπισκόπηση της νομικής ταυτότητας δεν διαβάστηκε', {
+    error: error instanceof Error ? error.message : String(error),
+  });
+  return UNAVAILABLE;
 }
 
 async function requestPreview(): Promise<ShowcaseLegalPreviewState> {
   try {
-    return await stateOf(await fetch(SHOWCASE_LEGAL_PREVIEW_ENDPOINT, { method: 'GET' }));
+    // `retry: false`: το 503 `PREVIEW_UNAVAILABLE` είναι **απάντηση**, όχι σφάλμα δικτύου — δεν ξαναρωτάμε.
+    // Ο client ξετυλίγει το `{ success, data }` ⇒ εδώ φτάνει κατευθείαν το ωφέλιμο.
+    const preview = await apiClient.get<LegalIdentityPreview>(SHOWCASE_LEGAL_PREVIEW_ENDPOINT, { retry: false });
+    return preview ? { kind: 'ready', preview } : UNAVAILABLE;
   } catch (error) {
-    logger.error('Η προεπισκόπηση της νομικής ταυτότητας δεν διαβάστηκε', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return UNAVAILABLE;
+    return refusedStateOf(error);
   }
 }
 

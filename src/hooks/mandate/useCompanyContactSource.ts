@@ -9,8 +9,8 @@
  * `failed` = «δεν μάθαμε» (πρόταση: ξαναδοκιμάστε). Και οι δύο αφήνουν την κάρτα **άθικτη** — είναι βοήθεια, όχι προϋπόθεση.
  */
 
-import { useEffect, useState } from 'react';
-
+import { useWorkspaceGet } from '@/hooks/mandate/useWorkspaceGet';
+import { ApiClientError, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { CompanyContactSource, CompanyContactSourceResponse } from '@/types/showcase-card-import';
 
 export type CompanyContactSourceLoad =
@@ -22,35 +22,23 @@ export type CompanyContactSourceLoad =
 
 const ENDPOINT = '/api/agency-profile/card/import-source' as const;
 
-function loadOf(status: number, body: CompanyContactSourceResponse | null): CompanyContactSourceLoad {
-  if (body !== null && 'source' in body) return { phase: 'present', source: body.source };
-  if (status === 404 && body !== null && body.error === 'NO_COMPANY_DATA') return { phase: 'absent' };
-  return { phase: 'failed' };
+function loadOf(body: CompanyContactSourceResponse | null): CompanyContactSourceLoad {
+  return body !== null && 'source' in body ? { phase: 'present', source: body.source } : { phase: 'failed' };
 }
 
+/** Η άρνηση → κατάσταση. Μόνο το ονομασμένο 404 `NO_COMPANY_DATA` είναι «δεν υπάρχουν στοιχεία»· όλα τα άλλα = δεν μάθαμε. */
+function refusedLoadOf(error: unknown): CompanyContactSourceLoad {
+  const absent = ApiClientError.isApiClientError(error)
+    && error.statusCode === 404
+    && apiErrorBodyOf(error)?.error === 'NO_COMPANY_DATA';
+  return absent ? { phase: 'absent' } : { phase: 'failed' };
+}
+
+/** Ο ερμηνευτής ζει σε επίπεδο αρχείου ⇒ σταθερή ταυτότητα. */
+const INTERPRETER = { answered: loadOf, refused: refusedLoadOf } as const;
+
 export function useCompanyContactSource(enabled: boolean): CompanyContactSourceLoad {
-  const [load, setLoad] = useState<CompanyContactSourceLoad>({ phase: 'idle' });
-
-  useEffect(() => {
-    if (!enabled) {
-      setLoad({ phase: 'idle' });
-      return;
-    }
-    let cancelled = false;
-    setLoad({ phase: 'loading' });
-    void (async () => {
-      try {
-        const response = await fetch(ENDPOINT);
-        const body = (await response.json().catch(() => null)) as CompanyContactSourceResponse | null;
-        if (!cancelled) setLoad(loadOf(response.status, body));
-      } catch {
-        if (!cancelled) setLoad({ phase: 'failed' });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled]);
-
+  // 🔴 **Μέσω `useWorkspaceGet` ⇒ `apiClient`** (ADR-787 §5.3 ζ): τα στοιχεία της εταιρείας **του χώρου**.
+  const [load] = useWorkspaceGet<CompanyContactSourceResponse, CompanyContactSourceLoad>(enabled, ENDPOINT, INTERPRETER);
   return load;
 }

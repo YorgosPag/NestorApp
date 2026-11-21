@@ -13,8 +13,13 @@
  * τον άνθρωπο να τη γράψει από την αρχή — και η αποθήκευση θα **έσβηνε** την αληθινή.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
+import { useWorkspaceGet } from '@/hooks/mandate/useWorkspaceGet';
+
+// 🔴 **Μέσω `apiClient`, ποτέ ωμό `fetch`** (ADR-787 §5.3 ζ): μόνο ο client δηλώνει τον χώρο — αλλιώς η κάρτα
+//    διαβάζεται/γράφεται στην εταιρεία **του λογαριασμού**, όχι του χώρου που βλέπει ο άνθρωπος.
+import { ApiClientError, apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import type { OwnedShowcaseLocation, ShowcaseCardWire, ShowcaseEmailReturn } from '@/types/showcase-card';
 
@@ -56,8 +61,10 @@ interface CardBody {
   readonly locationIndex?: number;
 }
 
-/** Η απάντηση της πόρτας → λόγος αποτυχίας — **με όνομα**, ποτέ σκέτο «απέτυχε». */
-function failureOf(status: number, body: CardBody | null): ShowcaseCardFailure {
+/** Η άρνηση της πόρτας → λόγος αποτυχίας — **με όνομα**, ποτέ σκέτο «απέτυχε». Μη-`ApiClientError` = δίκτυο. */
+function failureOf(error: unknown): ShowcaseCardFailure {
+  const body = apiErrorBodyOf(error) as CardBody | null;
+  const status = ApiClientError.isApiClientError(error) ? error.statusCode : null;
   switch (body?.error) {
     case 'INVALID_CARD':
       return body.reason !== undefined ? { kind: 'rejected', reason: body.reason } : { kind: 'failed' };
@@ -70,62 +77,43 @@ function failureOf(status: number, body: CardBody | null): ShowcaseCardFailure {
   }
 }
 
-async function readBody(response: Response): Promise<CardBody | null> {
-  return (await response.json().catch(() => null)) as CardBody | null;
-}
-
-/** Σώμα με κάρτα → φορτωμένη κατάσταση. ⚠️ Απών `emailReturns` ⇒ `null` («δεν μάθαμε»), ποτέ `[]`. */
-function loadedOf(body: CardBody & { readonly locations: readonly OwnedShowcaseLocation[] }): ShowcaseCardLoad {
+/**
+ * Σώμα με κάρτα → φορτωμένη κατάσταση, αλλιώς `null`. ⚠️ Απών `emailReturns` ⇒ `null` («δεν μάθαμε»), ποτέ `[]`.
+ */
+function loadedOf(body: CardBody | null | undefined): ShowcaseCardLoad | null {
+  if (!body?.locations) return null;
   return { phase: 'loaded', locations: body.locations, website: body.website ?? null, emailReturns: body.emailReturns ?? null };
 }
 
+const FAILED: ShowcaseCardLoad = { phase: 'failed' };
+
+/** Σώμα χωρίς κάρτα ή οποιαδήποτε άρνηση ⇒ `failed` (ποτέ κενή κάρτα). Επίπεδο αρχείου ⇒ σταθερή ταυτότητα. */
+const LOAD_INTERPRETER = {
+  answered: (body: CardBody | null): ShowcaseCardLoad => loadedOf(body) ?? FAILED,
+  refused: (): ShowcaseCardLoad => FAILED,
+} as const;
+
 export function useShowcaseCard(enabled: boolean): ShowcaseCardApi {
-  const [load, setLoad] = useState<ShowcaseCardLoad>({ phase: 'idle' });
+  // Μία ερώτηση (`retry: false`) μέσω `useWorkspaceGet`· το «δεν μάθαμε» κλειδώνει τη φόρμα.
+  const [load, setLoad] = useWorkspaceGet<CardBody, ShowcaseCardLoad>(enabled, ENDPOINT, LOAD_INTERPRETER);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<ShowcaseCardFailure | null>(null);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (!enabled) {
-      setLoad({ phase: 'idle' });
-      return;
-    }
-    let cancelled = false;
-    setLoad({ phase: 'loading' });
-    void (async () => {
-      try {
-        const response = await fetch(ENDPOINT);
-        const body = await readBody(response);
-        if (cancelled) return;
-        setLoad(response.ok && body?.locations ? loadedOf({ ...body, locations: body.locations }) : { phase: 'failed' });
-      } catch {
-        if (!cancelled) setLoad({ phase: 'failed' });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled]);
 
   const save = useCallback(async (wire: ShowcaseCardWire) => {
     setBusy(true);
     setFailure(null);
     setSaved(false);
     try {
-      const response = await fetch(ENDPOINT, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(wire),
-      });
-      const body = await readBody(response);
-      if (response.ok && body?.locations) {
-        setLoad(loadedOf({ ...body, locations: body.locations }));
+      const loaded = loadedOf(await apiClient.put<CardBody>(ENDPOINT, wire));
+      if (loaded !== null) {
+        setLoad(loaded);
         setSaved(true);
       } else {
-        setFailure(failureOf(response.status, body));
+        setFailure({ kind: 'failed' });
       }
-    } catch {
-      setFailure({ kind: 'failed' });
+    } catch (error) {
+      setFailure(failureOf(error));
     } finally {
       setBusy(false);
     }

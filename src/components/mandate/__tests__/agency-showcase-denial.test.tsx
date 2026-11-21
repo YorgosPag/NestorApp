@@ -49,6 +49,21 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));
 
+// Οι πραγματικοί `ApiClientError` / `apiErrorBodyOf` (ζουν στο `api-client-types`)· ψεύτικος μόνο ο μεταφορέας.
+jest.mock('@/lib/api/enterprise-api-client', () => ({
+  ...jest.requireActual('@/lib/api/api-client-types'),
+  apiClient: { get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() },
+}));
+
+interface MockApiClient {
+  readonly get: jest.Mock;
+  readonly post: jest.Mock;
+}
+const { apiClient: mockApiClient } = jest.requireMock<{ apiClient: MockApiClient }>('@/lib/api/enterprise-api-client');
+const { ApiClientError: ActualApiClientError } = jest.requireActual<typeof import('@/lib/api/api-client-types')>(
+  '@/lib/api/api-client-types',
+);
+
 jest.mock('@/auth/hooks/useAuth', () => ({
   useAuth: () => ({ user: { companyId: 'comp_test' } }),
 }));
@@ -123,11 +138,12 @@ function denialBody(status: CapabilityStatus): string {
  * σειριοποίησης είναι μέρος του συμβολαίου που δοκιμάζεται.
  */
 function answerWith(body: string): void {
-  global.fetch = jest.fn(async () => ({
-    ok: false,
-    status: 403,
-    json: async () => JSON.parse(body) as unknown,
-  })) as unknown as typeof fetch;
+  // 🔑 Από 2026-11-21 η πόρτα ρωτιέται **μέσω `apiClient`** (ADR-787 §5.3 ζ — δήλωση χώρου). Το σύνορο του mock
+  //    μετακινείται **ένα** σκαλί, στο σημείο όπου ο πραγματικός client έχει ήδη διαβάσει το σώμα: η άρνηση φτάνει
+  //    ως `ApiClientError` με `errorBody` — ακριβώς όπως την παράγει το `handleResponse`.
+  const refusal = new ActualApiClientError('refused', 403, 'HTTP_403', undefined, undefined, undefined, JSON.parse(body));
+  mockApiClient.post.mockRejectedValue(refusal);
+  mockApiClient.get.mockRejectedValue(refusal);
 }
 
 /** Πατά «Δημοσίευση» και επιστρέφει **ό,τι διάβασε ο άνθρωπος**. */

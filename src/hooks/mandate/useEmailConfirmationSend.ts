@@ -13,6 +13,7 @@
 import { useCallback, useState } from 'react';
 
 import { EMAIL_CONFIRMATION_ISSUE_PATH } from '@/components/mandate/showcase-card-paths';
+import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { refusalOf } from '@/lib/http/response-refusal';
 import {
   SHOWCASE_EMAIL_CONFIRMATION_ISSUE_REFUSALS,
@@ -35,17 +36,13 @@ export function useEmailConfirmationSend(): {
   const send = useCallback(async (locationId: string, email: string, acknowledgeReturned = false) => {
     setPhase({ kind: 'sending' });
     try {
-      const response = await fetch(EMAIL_CONFIRMATION_ISSUE_PATH, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locationId, email, acknowledgeReturned }),
-      });
-      const body: unknown = await response.json().catch(() => null);
-      if (response.ok) return setPhase({ kind: 'sent' });
-      const reason = refusalOf(body, SHOWCASE_EMAIL_CONFIRMATION_ISSUE_REFUSALS);
+      // 🔴 **Μέσω `apiClient`** (ADR-787 §5.3 ζ): η επιβεβαίωση φεύγει για την κάρτα **του χώρου**.
+      await apiClient.post(EMAIL_CONFIRMATION_ISSUE_PATH, { locationId, email, acknowledgeReturned });
+      setPhase({ kind: 'sent' });
+    } catch (error) {
+      // ⚠️ Ο λόγος ζει στο `reason`, όχι στο `error` ⇒ `refusalOf`, όχι `apiErrorCodeOf`. Δίκτυο ⇒ `null` ⇒ `failed`.
+      const reason = refusalOf(apiErrorBodyOf(error), SHOWCASE_EMAIL_CONFIRMATION_ISSUE_REFUSALS);
       setPhase(reason === null ? { kind: 'failed' } : { kind: 'refused', reason });
-    } catch {
-      setPhase({ kind: 'failed' });
     }
   }, []);
 

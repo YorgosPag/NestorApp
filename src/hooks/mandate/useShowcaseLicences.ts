@@ -11,6 +11,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import type { ShowcaseLicencesWire } from '@/lib/agency/showcase-wire';
 import type { ShowcaseLicenceRejection } from '@/lib/agency/showcase-licence';
 
@@ -49,18 +50,12 @@ export function useShowcaseLicences(): ShowcaseLicencesApi {
     setFailure(null);
     setSaved(false);
     try {
-      const response = await fetch(ENDPOINT, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(wire),
-      });
-      if (response.ok) {
-        setSaved(true);
-      } else {
-        setFailure(failureOf((await response.json().catch(() => null)) as LicencesBody | null));
-      }
-    } catch {
-      setFailure({ kind: 'failed' });
+      // 🔴 **Μέσω `apiClient`** (ADR-787 §5.3 ζ): αλλιώς οι άδειες γράφονται στην εταιρεία του λογαριασμού.
+      await apiClient.put(ENDPOINT, wire);
+      setSaved(true);
+    } catch (error) {
+      // Μη-`ApiClientError` ⇒ `null` σώμα ⇒ `failed` (δίκτυο), ποτέ άρνηση.
+      setFailure(failureOf(apiErrorBodyOf(error) as LicencesBody | null));
     } finally {
       setBusy(false);
     }

@@ -40,8 +40,8 @@
 
 import React from 'react';
 
-import { useAuth } from '@/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -97,8 +97,8 @@ export function CoverageAgreementNotice({
   value,
   onChange,
 }: CoverageAgreementNoticeProps): React.ReactElement | null {
-  const { user } = useAuth();
-  const { listings, loading } = usePublicAgencyListings(user?.companyId ?? null);
+  // 🔑 Οι αγγελίες **του χώρου** (ADR-849 Β1), όχι του λογαριασμού — ίδια εταιρεία με τη βιτρίνα που δημοσιεύεται.
+  const { listings, loading } = usePublicAgencyListings(useCompanyId()?.companyId ?? null);
   // 🔑 **Οι αναγνώστες έρχονται από τον SSoT** *(ADR-846 §8.8.14)*: η ταυτότητά τους
   //    κρέμεται από το στιγμιότυπο των αποτυπωμάτων, ώστε τα `useMemo` παρακάτω να
   //    ξαναγίνονται **ακριβώς όταν** φτάσουν τα δεδομένα — και όχι ποτέ.

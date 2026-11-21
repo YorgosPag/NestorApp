@@ -30,7 +30,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAuth } from '@/auth/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
+import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 // 🔴 **Ο ΚΑΝΟΝΙΚΟΣ ΣΥΝΔΡΟΜΗΤΗΣ, ποτέ ωμό `onSnapshot`** (CHECK 3.7, module
 //    `firestore-realtime`). Δεν είναι τελετουργικό: από το **ADR-361** η υπηρεσία
 //    επιβάλλει **φρουρό ισότητας περιεχομένου** σε κάθε εκπομπή — ένα σκέτο
@@ -146,10 +147,9 @@ const ENDPOINT = '/api/agency-profile' as const;
  * **ονόματα** *(`ALIAS_NOT_OWNED` ≠ `ALIAS_UNVERIFIED`)* ακριβώς για να μπορεί η οθόνη
  * να πει το σωστό — ένα σκέτο «απέτυχε» θα πετούσε αυτή την πληροφορία.
  */
-async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
-  if (response.ok) return null;
-
-  const body = (await response.json().catch(() => null)) as {
+function failureOf(error: unknown): ShowcaseFailure {
+  // Μη-`ApiClientError` (ή χωρίς σώμα) ⇒ δίκτυο που δεν απάντησε — **όχι** άρνηση της πόρτας.
+  const body = apiErrorBodyOf(error) as {
     error?: string;
     reason?: AgencyProfileRejection;
     /**
@@ -159,6 +159,7 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
      * `isCapabilityStatus` είναι που τη μετατρέπει σε γνώση.
      */
     capabilityStatus?: unknown;
+    defect?: CoverageOutlineDefect;
   } | null;
 
   switch (body?.error) {
@@ -185,7 +186,9 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
     // ⚠️ **Και εδώ χωριστό, για τον ίδιο λόγο** — αλλά με το `defect` μαζί: το
     //    πολύγωνο έχει **πέντε** τρόπους να μην περνά, ο κύκλος **έναν**.
     case 'COVERAGE_OUTLINE_INVALID':
-      return { kind: 'coverage-outline-invalid', defect: body.defect };
+      return body.defect !== undefined
+        ? { kind: 'coverage-outline-invalid', defect: body.defect }
+        : { kind: 'failed' };
     // 🔑 **Δύο κωδικοί, ΜΙΑ θεραπεία** — και είναι σωστό να ενωθούν *εδώ*: ο
     //    άνθρωπος δεν χρειάζεται να ξέρει αν έπεσε η ταξινομία ή ο χάρτης· η
     //    πράξη του είναι η ίδια. Ό,τι δεν ενώνεται είναι *«διόρθωσε»* με
@@ -210,8 +213,9 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
 }
 
 export function useAgencyShowcase(): AgencyShowcase {
-  const { user } = useAuth();
-  const companyId = user?.companyId ?? null;
+  // 🔑 **Η εταιρεία του ΧΩΡΟΥ, όχι του λογαριασμού** (ADR-849 Β1): το `useCompanyId` δίνει την ίδια απάντηση με
+  //    την κεφαλίδα που στέλνει ο `apiClient` ⇒ διαβάζουμε τη βιτρίνα που θα γράψει η δημοσίευση.
+  const companyId = useCompanyId()?.companyId ?? null;
 
   const [state, setState] = useState<ShowcaseState>({ phase: 'loading' });
   const [busy, setBusy] = useState<AgencyShowcase['busy']>(null);
@@ -268,19 +272,15 @@ export function useAgencyShowcase(): AgencyShowcase {
     );
   }, [companyId]);
 
+  // 🔴 **Μέσω `apiClient`, ποτέ ωμό `fetch`** (ADR-787 §5.3 ζ): μόνο ο client δηλώνει τον χώρο. Χωρίς δήλωση ο
+  //    server έγραφε τη βιτρίνα στην εταιρεία **του λογαριασμού** — όχι σε αυτήν που διαβάστηκε παραπάνω.
   const publish = useCallback(async (declaration: ShowcaseWireDeclaration) => {
     setBusy('publishing');
     setFailure(null);
     try {
-      const response = await fetch(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(declaration),
-      });
-      setFailure(await failureOf(response));
-    } catch {
-      // Δίκτυο που δεν απάντησε — **όχι** άρνηση της πόρτας.
-      setFailure({ kind: 'failed' });
+      await apiClient.post(ENDPOINT, declaration);
+    } catch (error) {
+      setFailure(failureOf(error));
     } finally {
       setBusy(null);
     }
@@ -290,9 +290,9 @@ export function useAgencyShowcase(): AgencyShowcase {
     setBusy('withdrawing');
     setFailure(null);
     try {
-      setFailure(await failureOf(await fetch(ENDPOINT, { method: 'DELETE' })));
-    } catch {
-      setFailure({ kind: 'failed' });
+      await apiClient.delete(ENDPOINT);
+    } catch (error) {
+      setFailure(failureOf(error));
     } finally {
       setBusy(null);
     }
