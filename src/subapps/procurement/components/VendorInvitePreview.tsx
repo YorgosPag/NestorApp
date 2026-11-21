@@ -4,14 +4,15 @@
  * @fileoverview **«Προεπισκόπηση ως: <παραλήπτης>» — το email όπως θα το λάβει** (ADR-327 §7.5).
  * @module subapps/procurement/components/VendorInvitePreview
  *
- * Το HTML έρχεται από τον server (ίδιος composer με την αποστολή) και αποδίδεται σε `<iframe sandbox>`:
- * κανένα script, καμία πλοήγηση (`pointer-events-none`· ο σύνδεσμος είναι δείγμα), και τα styles του email
- * δεν διαρρέουν στην εφαρμογή. Κάθε παραλήπτης μπορεί να έχει **άλλη γλώσσα** — γι' αυτό διαλέγεις «ως ποιον».
+ * Το HTML έρχεται από τον server (ίδιος composer με την αποστολή) και αποδίδεται στο ΕΝΑ `SandboxedHtmlFrame`:
+ * κανένα script, και τα styles του email δεν διαρρέουν στην εφαρμογή. Το πλαίσιο **κυλά** με τη ροδέλα — το
+ * παλιό `pointer-events-none` την έκοβε και φαινόταν μόνο η κορυφή του email (ζωντανός έλεγχος 21/11). Κάθε παραλήπτης μπορεί να έχει **άλλη γλώσσα** — γι' αυτό διαλέγεις «ως ποιον».
  */
 
 import { useId, useState } from 'react';
 
 import { Label } from '@/components/ui/label';
+import { SandboxedHtmlFrame } from '@/components/ui/sandboxed-html-frame';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Translate } from '@/i18n/hooks/useTranslation';
 
@@ -43,13 +44,11 @@ function PreviewBody({ state, t }: { state: VendorInvitePreviewState; t: Transla
         <span className="text-muted-foreground">{t('rfqs.invite.preview.subject')}: </span>
         <strong>{data.subject}</strong>
       </p>
-      <iframe
-        // Προσβάσιμο όνομα πλαισίου με `aria-label`, όχι `title` (CHECK 3.23: χωρίς native tooltip).
-        aria-label={t('rfqs.invite.preview.frameTitle')}
-        sandbox=""
-        srcDoc={data.html}
-        className="pointer-events-none h-96 w-full"
-        aria-busy={state.kind === 'loading'}
+      <SandboxedHtmlFrame
+        html={data.html}
+        title={t('rfqs.invite.preview.frameTitle')}
+        className="h-96"
+        busy={state.kind === 'loading'}
       />
     </>
   );

@@ -22,13 +22,21 @@ interface SandboxedHtmlFrameProps {
   readonly title: string;
   /** Διαστάσεις/περίγραμμα από τον καταναλωτή· το λευκό χαρτί το εγγυάται το στοιχείο. */
   readonly className?: string;
+  /** Το περιεχόμενο ανανεώνεται (το παλιό μένει ορατό) — `aria-busy`. */
+  readonly busy?: boolean;
 }
 
-export function SandboxedHtmlFrame({ html, title, className }: SandboxedHtmlFrameProps): React.ReactElement {
+/**
+ * ⚠️ ΜΗΝ προσθέσεις `pointer-events-none` για να «κλειδώσεις» συνδέσμους: κόβει και τη ροδέλα, άρα το
+ * email δεν κυλά και ο άνθρωπος βλέπει μόνο την κορυφή του (ADR-327 §7.5, ζωντανός έλεγχος 21/11).
+ * Σενάρια, φόρμες και αναδυόμενα τα κόβει ήδη το `sandbox`.
+ */
+export function SandboxedHtmlFrame({ html, title, className, busy }: SandboxedHtmlFrameProps): React.ReactElement {
   return (
     <iframe
       srcDoc={html}
       aria-label={title}
+      aria-busy={busy}
       className={cn('w-full border-0 bg-white', className)}
       sandbox="allow-same-origin"
     />
