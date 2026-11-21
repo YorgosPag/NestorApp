@@ -1,10 +1,22 @@
-// /home/user/studio/src/app/api/communications/email/route.ts
+/**
+ * `POST /api/communications/email` — το κουμπί «Αποστολή Email» της σελίδας lead.
+ *
+ * 🔴 **ΕΣΤΕΛΝΕ ΣΕ CLOUD FUNCTION ΠΟΥ ΔΕΝ ΥΠΗΡΞΕ ΠΟΤΕ** (ADR-876 §5.8 Σ22, μετρημένο 2026-11-03):
+ * καλούσε το `EMAIL_FUNCTION_URL`, που δεν υπάρχει ούτε στο Coolify ούτε στο `functions/src`
+ * ⇒ κάθε αποστολή ήταν `500` πριν φτάσει στο δίκτυο. Πλέον περνά από την **ΕΝΑ** αλυσίδα
+ * παρόχων (`defaultEmailChain`) — μετάπτωση, όριο χρόνου, και σε emulator outbox, όχι δίκτυο.
+ *
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ * @see ADR-876 §5.8 Σ22 · ADR-016 (ιστορικό επικοινωνιών lead)
+ */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getRequiredEmailFunctionUrl } from '@/config/admin-env';
+import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { chainFailureReasons, sendThroughChain } from '@/server/comms/email-provider-chain';
+import { defaultEmailChain } from '@/server/comms/email-providers';
 import { recordSentEmail } from './record-sent-email';
 // Ensure Firebase Admin is initialized
 import '@/server/admin/admin-guards';
@@ -32,103 +44,87 @@ interface EmailResponse {
   error?: string;
 }
 
+function errorResponse(status: number, message: string, error: string): NextResponse<EmailResponse> {
+  return NextResponse.json({ status: 'error', message, error }, { status });
+}
+
+/** Ό,τι γίνεται **μετά** την αποστολή: ίχνος ελέγχου + γραμμή στο ιστορικό της επαφής. */
+async function recordDelivery(
+  request: NextRequest,
+  ctx: AuthContext,
+  payload: EmailPayload,
+  messageId: string | undefined,
+): Promise<void> {
+  await logAuditEvent(ctx, 'email_sent', 'communications.email.send', 'api', {
+    newValue: { type: 'status', value: { recipient: payload.to, messageId } },
+    metadata: extractRequestMetadata(request),
+  });
+  if (typeof payload.contactId === 'string' && payload.contactId) {
+    await recordSentEmail({
+      auth: ctx,
+      contactId: payload.contactId,
+      opportunityId: payload.leadId,
+      to: payload.to,
+      subject: payload.subject,
+      content: payload.message,
+      providerMessageId: messageId,
+    });
+  }
+}
+
+async function handleSend(request: NextRequest, ctx: AuthContext): Promise<NextResponse<EmailResponse>> {
+  const payload: EmailPayload = await request.json();
+  if (!payload.to || !payload.subject || !payload.message) {
+    return errorResponse(400, 'Missing required fields', 'Missing required fields: to, subject, message');
+  }
+
+  // ADR-857 Φ9 — χωρίς `from`: ο κρίκος ρωτά τη ρίζα ταυτότητας αποστολέα (`resolveSenderHeader`).
+  const outcome = await sendThroughChain(defaultEmailChain(), {
+    to: payload.to,
+    subject: payload.subject,
+    text: payload.message,
+  });
+
+  if (outcome.kind !== 'delivered') {
+    const reason = chainFailureReasons(outcome).join(' | ');
+    logger.error('Email not delivered', { outcome: outcome.kind, reason, companyId: ctx.companyId });
+    return outcome.kind === 'no-provider'
+      ? errorResponse(503, 'Email provider not configured', reason)
+      : errorResponse(502, 'Failed to send email', reason);
+  }
+
+  logger.info('Email sent', {
+    to: payload.to,
+    provider: outcome.provider,
+    messageId: outcome.messageId,
+    companyId: ctx.companyId,
+    userId: ctx.uid,
+  });
+  await recordDelivery(request, ctx, payload, outcome.messageId);
+
+  return NextResponse.json({
+    id: outcome.messageId,
+    status: 'sent',
+    message: 'Email sent successfully',
+    production: true,
+    messageId: outcome.messageId,
+  });
+}
+
 /**
  * Send email endpoint - requires authentication and comm:messages:send permission.
  * RFC v6 Authorization: Communications vertical slice.
- * @rateLimit STANDARD (60 req/min) - CRUD
  */
 export const POST = withStandardRateLimit(
   withAuth<EmailResponse>(
-  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-    try {
-      const payload: EmailPayload = await request.json();
-
-      // Validation
-      if (!payload.to || !payload.subject || !payload.message) {
-        return NextResponse.json(
-          { status: 'error', message: 'Missing required fields', error: 'Missing required fields: to, subject, message' },
-          { status: 400 }
-        );
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      try {
+        return await handleSend(request, ctx);
+      } catch (error) {
+        logger.error('Error in email API', { error: getErrorMessage(error) });
+        return errorResponse(500, 'Internal server error', 'Internal server error');
       }
-
-      // Call Firebase Function (from centralized config)
-      const functionUrl = getRequiredEmailFunctionUrl();
-
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: payload.to,
-          subject: payload.subject,
-          message: payload.message,
-          templateId: payload.templateId,
-          leadId: payload.leadId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        logger.error('Firebase Function error', { error: errorData });
-        return NextResponse.json(
-          { status: 'error', message: 'Failed to send email', error: errorData.error || 'Failed to send email' },
-          { status: response.status }
-        );
-      }
-
-      const result = await response.json();
-
-      // Log successful send with tenant context
-      logger.info('PRODUCTION Email sent via Mailgun', {
-        to: payload.to,
-        messageId: result.messageId,
-        status: result.status,
-        companyId: ctx.companyId,
-        userId: ctx.uid,
-      });
-
-      // Audit log for email send action
-      await logAuditEvent(
-        ctx,
-        'email_sent',
-        'communications.email.send',
-        'api',
-        {
-          newValue: { type: 'status', value: { recipient: payload.to, messageId: result.messageId } },
-          metadata: extractRequestMetadata(request),
-        }
-      );
-
-      if (typeof payload.contactId === 'string' && payload.contactId) {
-        await recordSentEmail({
-          auth: ctx,
-          contactId: payload.contactId,
-          opportunityId: payload.leadId,
-          to: payload.to,
-          subject: payload.subject,
-          content: payload.message,
-          providerMessageId: result.messageId,
-        });
-      }
-
-      return NextResponse.json({
-        id: result.messageId,
-        status: 'sent',
-        message: 'Email sent successfully via Mailgun',
-        production: true,
-        messageId: result.messageId,
-      });
-    } catch (error) {
-      logger.error('Error in email API', { error });
-      return NextResponse.json(
-        { status: 'error', message: 'Internal server error', error: 'Internal server error' },
-        { status: 500 }
-      );
-    }
-  },
-  {
-    permissions: 'comm:messages:send',
-  }
-  )
+    },
+    { permissions: 'comm:messages:send' },
+  ),
 );
