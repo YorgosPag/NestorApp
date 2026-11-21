@@ -18,7 +18,8 @@ import { Contact } from '@/types/contacts';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { recordRelationshipAudit } from './relationship-audit';
-import { buildUpdateChangeEntry, buildTerminationChangeEntry } from './relationship-change-history';
+import { buildUpdateChangeEntry, buildTerminationChangeEntry, diffChangedFields } from './relationship-change-history';
+import { normalizeUpdateDays, relationshipCalendarDay, todayRelationshipDay } from './relationship-field-codec';
 import { RelationshipValidationService } from './RelationshipValidationService';
 import { isSymmetricRelationshipType } from '@/types/contacts/relationships/core/relationship-orientation';
 import {
@@ -27,7 +28,6 @@ import {
 } from './relationship-helpers';
 import { getRelationshipGovernanceInfo } from './relationship-governance';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
-import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('RelationshipCRUDService');
@@ -122,13 +122,16 @@ export class RelationshipCRUDService {
       employmentStatus: data.employmentStatus,
       employmentType: data.employmentType,
 
-      // Timeline
-      startDate: data.startDate || nowISO(),
-      endDate: data.endDate,
+      // Timeline — a calendar day, or null = «unknown». Never an invented «now»
+      // (ADR-372 §8.6: `|| nowISO()` stored the creation instant as the start day).
+      startDate: relationshipCalendarDay(data.startDate),
+      endDate: relationshipCalendarDay(data.endDate),
       expectedDuration: data.expectedDuration,
 
-      // Contact and financial info
+      // Contact and financial info — structured channels are the truth (ADR-372 §8.6)
       contactInfo: data.contactInfo,
+      phones: data.phones ?? null,
+      emails: data.emails ?? null,
       financialInfo: data.financialInfo,
       performanceInfo: data.performanceInfo,
 
@@ -261,14 +264,24 @@ export class RelationshipCRUDService {
         throw new Error('relationships.form.validation.relationshipNotFound');
       }
 
+      const normalized = normalizeUpdateDays(updates);
+
+      // ADR-372 §8.6: record what ACTUALLY changed; a save that changes nothing
+      // writes nothing (idempotent — no empty history entry, no audit noise).
+      const changedFields = diffChangedFields(existing, normalized);
+      if (changedFields.length === 0) {
+        logger.info('CRUD: Relationship update is a no-op:', relationshipId);
+        return existing;
+      }
+
       // Validate updates
-      const updatedData = { ...existing, ...updates };
+      const updatedData = { ...existing, ...normalized };
       RelationshipValidationService.validateDataIntegrity(updatedData);
 
       // Build updated relationship
       const updated: ContactRelationship = {
         ...existing,
-        ...updates,
+        ...normalized,
         updatedAt: new Date(),
         lastModifiedBy: updates.lastModifiedBy || SYSTEM_IDENTITY.ID
       };
@@ -277,9 +290,6 @@ export class RelationshipCRUDService {
       // 🔧 FIX: Don't store full objects in oldValue/newValue — causes recursive
       // nesting (changeHistory → oldValue → changeHistory → ...) which exceeds
       // Firestore's max depth → "Property array contains an invalid nested entity"
-      const changedFields = Object.keys(updates).filter(
-        k => k !== 'lastModifiedBy' && k !== 'updatedAt'
-      );
       const changeEntry = buildUpdateChangeEntry({
         changedBy: updates.lastModifiedBy || SYSTEM_IDENTITY.ID,
         changedFields,
@@ -321,7 +331,8 @@ export class RelationshipCRUDService {
       throw new Error('relationships.form.validation.relationshipNotFound');
     }
 
-    const terminationDate = relationship.endDate || nowISO();
+    // A day, not an instant (ADR-372 §8.6): termination ends on today's operator day.
+    const terminationDate = relationshipCalendarDay(relationship.endDate) ?? todayRelationshipDay();
     const changeEntry = buildTerminationChangeEntry({ changedBy: terminatedBy });
 
     const updates: Partial<ContactRelationship> = {

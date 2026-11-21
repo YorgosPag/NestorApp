@@ -184,7 +184,19 @@ HubSpot *paired association labels*, Dynamics 365 *reciprocal connection roles*,
 `UNASSIGNED_DEPARTMENT_KEY` + `departmentGroupKey()` (domain, `structures/organization.ts`); `departmentInfo.name: string | null`; UI `resolveDepartmentLabel()` (preset key → i18n, sentinel → «Χωρίς τμήμα», free text verbatim). The form stores the preset **key**. CSV export: empty cell + ID columns instead of `'Unknown'`.
 
 ### 8.5 Open (not done in this pass)
-- Data migration of the 4 inverted records (needs Giorgio's explicit OK).
+- Data migration of the 4 inverted records — **no new writer**: re-oriented from the edit form (`orientRelationship()` → `updateRelationshipWithPolicy` → `changeHistory` + `recordRelationshipAudit`). 3/4 done live 2026-11-21 (`rel_8123…`, `rel_0cb0…`, `rel_5613…`); `rel_2646…` waits for §8.6 to deploy (the form would have corrupted it).
+
+### 8.6 Lossless edit round trip — structured channels · calendar days · real diff (2026-11-21)
+**Measured live** (`rel_2646…`): opening + saving a relationship UNCHANGED would have (α) written `«+30 +30 2310686440 (13)»` — the stored display string was loaded into `PhoneInfo.number` and re-prefixed by `formatPhoneDisplay`; (β) wiped `startDate` — `createRelationship` stored `startDate || nowISO()`, an invented **instant** that `<input type="date">` cannot show; (γ) logged all 10 form fields as changed when 2 were.
+
+**Industry practice** (HubSpot / Salesforce): channels are structured and the display string is a projection; an empty date is «unknown», never «now»; field history records only real changes.
+
+**Decision** — SSoT `services/contact-relationships/core/relationship-field-codec.ts` (pure):
+- `ContactRelationship.phones[]` / `emails[]` (`PhoneInfo` / `EmailInfo`) = **truth**; `contactInfo.businessPhone|businessEmail` = `projectContactInfo()` projection (other `contactInfo` fields preserved; a removed phone is removed — the old fallback kept the stale string).
+- Legacy records (string only) are read via `parsePhoneDisplay()` — the exact inverse of `formatPhoneDisplay`, next to it in `utils/contacts/formatPhoneDisplay.ts`. The formatter no longer prefixes a number that is already international (`+…`) ⇒ an already-doubled value heals on the next save.
+- Days: `relationshipCalendarDay()` = `normalizeCalendarDay` (SSoT) or, for a legacy instant, the operator day it named (`calendarDayOf`). Create stores `null` when blank (no `nowISO()`); termination uses `todayRelationshipDay()`; updates go through `normalizeUpdateDays()`.
+- `diffChangedFields()` (`relationship-change-history.ts`, `dequal`): `changedFields` = only real changes (`null`/`''`/`[]` equivalent); **a save that changes nothing writes nothing** (idempotent, no history/audit noise).
+- ⚠️ Not touched (reported): the same `|| nowISO()` start-day invention in `BulkRelationshipService.ts:344` and `ImportExportService.ts:372`.
 - CHECK 3.73 registration of the `relationship-type` vocabulary and deriving the hierarchy lists (`organization-hierarchy-helpers.ts`) from metadata flags.
 - ~~`position` label-vs-key~~ → done 2026-11-21: `resolvePositionLabel` + shared `resolvePresetOrFreeText` (preset KEY stored, free text verbatim — Salesforce/HubSpot «Title» model).
 
@@ -196,3 +208,4 @@ HubSpot *paired association labels*, Dynamics 365 *reciprocal connection roles*,
 |------|--------|--------|
 | 2026-05-23 | AI Agent | Initial implementation — ADR-372 |
 | 2026-11-21 | AI Agent (Opus) | §8 reciprocal-role model: directed crossings + `symmetric`, synonyms merged (supplier/client/customer/advisor/protege), `inverseTypes` labels, `relationship-orientation.ts` SSoT, twin records removed, oriented duplicate check, «Unknown» → `UNASSIGNED_DEPARTMENT_KEY` (Β1/Β2/Β3) |
+| 2026-11-21 | AI Agent (Opus) | §8.6 lossless edit round trip: structured `phones[]`/`emails[]` + `contactInfo` projection, `parsePhoneDisplay` inverse, calendar-day codec (no invented `nowISO()` start day), real-diff `changedFields` + no-op save; §8.5 re-orientation via the edit form (3/4 live) |

@@ -1,0 +1,102 @@
+// ============================================================================
+// RELATIONSHIP FIELD CODEC — stored record ⇄ structured values (ADR-372 §8.6) · SSoT
+// ============================================================================
+//
+// ONE place that answers «what does this stored relationship field MEAN?» for every
+// writer (form, CRUD) and reader (edit form). Pure — no React, no I/O.
+//
+// 🔴 Why it exists (measured live, 2026-11-21, rel_2646…): a record kept its phone
+// ONLY as a display string (`contactInfo.businessPhone: "+30 2310686440 (13)"`) and
+// its start day as an invented instant (`"2026-11-21T11:38:14.504Z"`, from
+// `startDate || nowISO()`). Opening + saving it, unchanged, would have written
+// «+30 +30 2310686440 (13)» and wiped the day — a round trip that destroyed data.
+//
+// Industry practice (HubSpot / Salesforce): channels are STRUCTURED, the display
+// string is a PROJECTION, and an empty date means «unknown», never «now».
+// ============================================================================
+
+import type { EmailInfo, PhoneInfo } from '@/types/contacts';
+import type { ContactRelationship, ProfessionalContactInfo } from '@/types/contacts/relationships';
+import { normalizeCalendarDay, normalizeToDate } from '@/lib/date-local';
+import { calendarDayOf } from '@/constants/platform-operator';
+import { formatPhoneDisplay, parsePhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
+
+/**
+ * A relationship day (`startDate` / `endDate`) as `YYYY-MM-DD`, or `null` = unknown.
+ * Accepts a calendar day, and — for legacy records — an instant, read as the day it
+ * named in the operator's time zone (what the card already showed). Never invents one.
+ */
+export function relationshipCalendarDay(raw: unknown): string | null {
+  const day = normalizeCalendarDay(raw);
+  if (day) return day;
+  if (typeof raw !== 'string' || raw.trim() === '') return null;
+  const instant = normalizeToDate(raw);
+  return instant ? calendarDayOf(instant) : null;
+}
+
+/** Today, as the operator's calendar day — for writers that legitimately mean «today». */
+export function todayRelationshipDay(): string {
+  return calendarDayOf(new Date());
+}
+
+/** An update's days, normalized; fields the update does not carry stay absent. */
+export function normalizeUpdateDays(updates: Partial<ContactRelationship>): Partial<ContactRelationship> {
+  const normalized: Partial<ContactRelationship> = { ...updates };
+  if ('startDate' in updates) normalized.startDate = relationshipCalendarDay(updates.startDate);
+  if ('endDate' in updates) normalized.endDate = relationshipCalendarDay(updates.endDate);
+  return normalized;
+}
+
+type ChannelSource =Pick<ContactRelationship, 'phones' | 'emails' | 'contactInfo'>;
+
+/** Structured phones of a stored record; legacy records are read from the display string. */
+export function relationshipPhonesOf(rel: ChannelSource): PhoneInfo[] {
+  if (rel.phones?.length) return rel.phones.map((phone) => ({ ...phone }));
+  const parsed = parsePhoneDisplay(rel.contactInfo?.businessPhone);
+  return parsed ? [{ ...parsed, type: 'work', isPrimary: true, label: '' }] : [];
+}
+
+/** Structured e-mails of a stored record; legacy records are read from `businessEmail`. */
+export function relationshipEmailsOf(rel: ChannelSource): EmailInfo[] {
+  if (rel.emails?.length) return rel.emails.map((email) => ({ ...email }));
+  const email = rel.contactInfo?.businessEmail?.trim();
+  return email ? [{ email, type: 'work', isPrimary: true, label: '' }] : [];
+}
+
+/** Drops rows the user left empty — an empty row is not a channel. */
+export function compactChannels(phones: readonly PhoneInfo[], emails: readonly EmailInfo[]): {
+  phones: PhoneInfo[];
+  emails: EmailInfo[];
+} {
+  return {
+    phones: phones.filter((phone) => phone.number?.trim()),
+    emails: emails.filter((email) => email.email?.trim()),
+  };
+}
+
+/**
+ * The flat `contactInfo` PROJECTION of the structured channels (read by cards,
+ * search, org chart). Other `contactInfo` fields are preserved; `null` when empty.
+ */
+export function projectContactInfo(
+  base: Partial<ProfessionalContactInfo> | null | undefined,
+  phones: readonly PhoneInfo[],
+  emails: readonly EmailInfo[],
+): ProfessionalContactInfo | null {
+  const primaryPhone = phones.find((phone) => phone.isPrimary) ?? phones[0];
+  const primaryEmail = emails.find((email) => email.isPrimary) ?? emails[0];
+  const projected: ProfessionalContactInfo = {
+    ...(base ?? {}),
+    businessPhone: primaryPhone ? formatPhoneDisplay(primaryPhone) : undefined,
+    businessEmail: primaryEmail?.email || undefined,
+  };
+  const hasAny = Object.values(projected).some((value) => value !== undefined && value !== null && value !== '');
+  return hasAny ? stripUndefined(projected) : null;
+}
+
+/** Firestore rejects `undefined`; a projection must not carry it. */
+function stripUndefined(info: ProfessionalContactInfo): ProfessionalContactInfo {
+  return Object.fromEntries(
+    Object.entries(info).filter(([, value]) => value !== undefined),
+  ) as ProfessionalContactInfo;
+}

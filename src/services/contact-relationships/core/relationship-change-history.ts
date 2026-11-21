@@ -11,6 +11,7 @@
 //
 // ============================================================================
 
+import { dequal } from 'dequal';
 import { nowISO } from '@/lib/date-local';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 
@@ -46,4 +47,29 @@ export function buildTerminationChangeEntry(params: {
     changedBy: params.changedBy,
     notes: 'Relationship terminated via governed UI flow',
   };
+}
+
+/** Bookkeeping keys a writer stamps on every save — never a change of the relationship. */
+const BOOKKEEPING_FIELDS: ReadonlySet<string> = new Set(['lastModifiedBy', 'updatedAt', 'changeHistory']);
+
+/** `null` / `undefined` / `''` / `[]` all mean «no value» — the form and the store spell it differently. */
+function isAbsent(value: unknown): boolean {
+  return value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+}
+
+/**
+ * **Which fields did this save ACTUALLY change?** (Salesforce Field History pattern.)
+ * A form sends every field on every save; recording all of them made the history say
+ * «10 fields changed» when two did, so the trail could not answer «what happened?».
+ */
+export function diffChangedFields<T extends object>(existing: T, updates: Partial<T>): string[] {
+  const beforeRecord: Readonly<Record<string, unknown>> = { ...existing };
+  const afterRecord: Readonly<Record<string, unknown>> = { ...updates };
+  return Object.keys(afterRecord).filter((field) => {
+    if (BOOKKEEPING_FIELDS.has(field)) return false;
+    const before = beforeRecord[field];
+    const after = afterRecord[field];
+    if (isAbsent(before) && isAbsent(after)) return false;
+    return !dequal(before, after);
+  });
 }

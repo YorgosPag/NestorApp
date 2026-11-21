@@ -42,11 +42,14 @@ export function formatPhoneDisplay(
 
   const { extensionShort, defaultCountryCode = '+30', omitCountryCode } = options;
 
+  const number = String(phone.number).trim();
   const parts: string[] = [];
-  if (!omitCountryCode) {
+  // A number that is already international (`+30 2310…`) carries its own code —
+  // prefixing another one is how «+30 +30 2310…» was born (ADR-372 §8.6).
+  if (!omitCountryCode && !number.startsWith('+')) {
     parts.push((phone.countryCode || defaultCountryCode).trim());
   }
-  parts.push(String(phone.number).trim());
+  parts.push(number);
 
   const ext = phone.extension?.trim();
   if (ext) {
@@ -54,4 +57,30 @@ export function formatPhoneDisplay(
   }
 
   return parts.filter(Boolean).join(' ');
+}
+
+/** `+30 2310686440 (13)` ⇒ code · number · extension (the bare-suffix form only). */
+const DISPLAY_PATTERN = /^(?:(\+\d{1,4})\s+)?(.+?)(?:\s+\(([^()\s]+)\))?$/;
+
+/**
+ * **The exact inverse of `formatPhoneDisplay`** (no `extensionShort`) — turns a stored
+ * display string back into its parts, so a legacy record that kept ONLY the string
+ * (`ProfessionalContactInfo.businessPhone`) can be edited without being re-prefixed.
+ *
+ * Structural, not semantic: it splits what the formatter joined and judges nothing
+ * (validity lives in `lib/contact/channel-phone`). A number written without a code
+ * keeps `countryCode` undefined ⇒ the formatter's default applies, as before.
+ * `null` for a blank string.
+ */
+export function parsePhoneDisplay(display: string | null | undefined): PhoneLike | null {
+  const trimmed = display?.trim();
+  if (!trimmed) return null;
+  const match = DISPLAY_PATTERN.exec(trimmed);
+  if (!match) return { number: trimmed };
+  const [, countryCode, number, extension] = match;
+  return {
+    number: number.trim(),
+    ...(countryCode ? { countryCode } : {}),
+    ...(extension ? { extension } : {}),
+  };
 }

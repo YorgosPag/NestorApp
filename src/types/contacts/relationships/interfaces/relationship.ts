@@ -9,7 +9,7 @@
 // ============================================================================
 
 // Import related types from other modules
-import type { Contact, ContactType } from '../../contracts';
+import type { Contact, ContactType, EmailInfo, PhoneInfo } from '../../contracts';
 import type { FirestoreishTimestamp } from '../../contracts';
 import type { RelationshipType, RelationshipStatus, EmploymentStatus } from '../core/relationship-types';
 import type { ProfessionalContactInfo } from './contact-info';
@@ -105,8 +105,17 @@ export interface ContactRelationship {
   // PROFESSIONAL INFORMATION
   // ========================================================================
 
-  /** 📞 Professional contact information */
+  /**
+   * 📞 Professional contact information — its `businessPhone` / `businessEmail` are a
+   * PROJECTION of `phones` / `emails` (ADR-372 §8.6), kept for the readers that use them.
+   */
   contactInfo?: ProfessionalContactInfo | null;
+
+  /** ☎️ Structured professional phones — the source of truth (ADR-372 §8.6). */
+  phones?: PhoneInfo[] | null;
+
+  /** ✉️ Structured professional e-mails — the source of truth (ADR-372 §8.6). */
+  emails?: EmailInfo[] | null;
 
   /** 💰 Financial information */
   financialInfo?: FinancialInfo;

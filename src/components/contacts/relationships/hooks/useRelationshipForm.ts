@@ -12,10 +12,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type {
   ContactRelationship,
-  RelationshipType,
-  ProfessionalContactInfo
+  RelationshipType
 } from '@/types/contacts/relationships';
-import type { ContactType, PhoneInfo, EmailInfo } from '@/types/contacts';
+import type { ContactType } from '@/types/contacts';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import { ContactsService } from '@/services/contacts.service';
 import { RelationshipValidationService } from '@/services/contact-relationships/core/RelationshipValidationService';
@@ -39,7 +38,13 @@ import type {
   RelationshipFormData,
   UseRelationshipFormReturn
 } from '../types/relationship-manager.types';
-import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
+import {
+  compactChannels,
+  projectContactInfo,
+  relationshipCalendarDay,
+  relationshipEmailsOf,
+  relationshipPhonesOf,
+} from '@/services/contact-relationships/core/relationship-field-codec';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('useRelationshipForm');
 
@@ -237,18 +242,9 @@ export const useRelationshipForm = (
       // ADR-372 §Β2: ONE orientation path for every type — no hand-written swap list.
       const oriented = orientFormRole(formData.relationshipType, contactId, formData.targetContactId);
 
-      // Build contactInfo from centralized phones/emails arrays (backward compat)
-      const primaryPhone = formData.phones?.find(p => p.isPrimary) || formData.phones?.[0];
-      const primaryEmail = formData.emails?.find(e => e.isPrimary) || formData.emails?.[0];
-      const builtContactInfo: Partial<ProfessionalContactInfo> = {
-        ...formData.contactInfo,
-        businessPhone: primaryPhone
-          ? formatPhoneDisplay(primaryPhone)
-          : formData.contactInfo?.businessPhone ?? undefined,
-        businessEmail: primaryEmail?.email || (formData.contactInfo?.businessEmail ?? undefined)
-      };
-
-      const hasContactInfo = builtContactInfo.businessPhone || builtContactInfo.businessEmail;
+      // ADR-372 §8.6: structured channels are the truth; `contactInfo` is their PROJECTION
+      // (a removed phone is removed — the old fallback kept the stale string alive).
+      const { phones, emails } = compactChannels(formData.phones ?? [], formData.emails ?? []);
 
       const relationshipData: Partial<ContactRelationship> = {
         sourceContactId: oriented.sourceContactId,
@@ -256,13 +252,13 @@ export const useRelationshipForm = (
         relationshipType: oriented.relationshipType as RelationshipType,
         position: formData.position || null,
         department: formData.department || null,
-        startDate: formData.startDate || null,
-        endDate: formData.endDate || null,
+        startDate: relationshipCalendarDay(formData.startDate),
+        endDate: relationshipCalendarDay(formData.endDate),
         notes: formData.notes || null,
         isWorkplace: formData.isWorkplace ?? null,
-        contactInfo: hasContactInfo
-          ? builtContactInfo as ProfessionalContactInfo
-          : null
+        phones,
+        emails,
+        contactInfo: projectContactInfo(formData.contactInfo, phones, emails)
       };
 
 
@@ -377,28 +373,10 @@ export const useRelationshipForm = (
 
     setEditingId(relationship.id!);
 
-    // Build phones array from existing contactInfo for backward compatibility
-    const existingPhones: PhoneInfo[] = [];
-    if (relationship.contactInfo?.businessPhone) {
-      existingPhones.push({
-        number: relationship.contactInfo.businessPhone,
-        type: 'work',
-        isPrimary: true,
-        label: '',
-        countryCode: '+30'
-      });
-    }
-
-    // Build emails array from existing contactInfo
-    const existingEmails: EmailInfo[] = [];
-    if (relationship.contactInfo?.businessEmail) {
-      existingEmails.push({
-        email: relationship.contactInfo.businessEmail,
-        type: 'work',
-        isPrimary: true,
-        label: ''
-      });
-    }
+    // ADR-372 §8.6: read through the codec — structured channels first, a legacy
+    // display string parsed back into its parts (never re-prefixed on save).
+    const existingPhones = relationshipPhonesOf(relationship);
+    const existingEmails = relationshipEmailsOf(relationship);
 
     setFormData({
       // ADR-372 §Β2: «the other contact» and the oriented role are derived from the
@@ -409,13 +387,12 @@ export const useRelationshipForm = (
         : relationship.relationshipType,
       position: relationship.position || '',
       department: relationship.department || '',
-      startDate: relationship.startDate || '',
-      endDate: relationship.endDate || '',
+      // A legacy instant is shown as the day it named — never silently wiped on save.
+      startDate: relationshipCalendarDay(relationship.startDate) ?? '',
+      endDate: relationshipCalendarDay(relationship.endDate) ?? '',
       notes: relationship.notes || '',
-      contactInfo: {
-        businessPhone: relationship.contactInfo?.businessPhone || '',
-        businessEmail: relationship.contactInfo?.businessEmail || ''
-      },
+      // Every stored field rides along (fax, office…) — the projection only rewrites the two it owns.
+      contactInfo: { ...relationship.contactInfo },
       phones: existingPhones,
       emails: existingEmails,
       isWorkplace: relationship.isWorkplace === true
