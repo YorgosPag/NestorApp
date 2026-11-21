@@ -260,6 +260,20 @@ export const LISTING_FEATURE_SET_KEYS: readonly ListingFeatureSetKey[] = keysWit
   'feature-set'
 ) as readonly ListingFeatureSetKey[];
 
+/** Τα πεδία με ρόλο `'media'`: όσα κουβαλούν αρχείο προς το κοινό (ADR-898 §23.2). */
+export type ListingMediaKey = KeysWithTreatment<'media'>;
+
+/**
+ * Ο κατάλογος των πεδίων μέσων, **στη σειρά του πίνακα**.
+ *
+ * 🔴 Υπάρχει επειδή ένας χειρόγραφος κατάλογος ξέχασε το `floorPlates`: μετά την αποκατάσταση του §23.2 τρεις
+ * αγγελίες φάνηκαν χωρίς μέσα («floorplans 0») ενώ η κάτοψη ορόφου τους ήταν στη θέση της. Παράγεται από τον πίνακα,
+ * άρα νέο πεδίο μέσων μπαίνει εδώ μόλις κάποιος του δώσει τον ρόλο.
+ */
+export const LISTING_MEDIA_KEYS: readonly ListingMediaKey[] = keysWithTreatment(
+  'media'
+) as readonly ListingMediaKey[];
+
 /**
  * ⚠️ **Μία υλοποίηση για δύο καταλόγους** — δες το {@link KeysWithTreatment} για τον
  * λόγο. Ο ισχυρισμός τύπου στους δύο καταναλωτές είναι η **μετάφραση** του φίλτρου

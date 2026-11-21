@@ -19,6 +19,7 @@ import {
   LISTING_DISCLOSURE,
   LISTING_ATTRIBUTE_KEYS,
   LISTING_FEATURE_SET_KEYS,
+  LISTING_MEDIA_KEYS,
   LISTING_OPEN_SUBJECTS,
   type ListingAttributeKey,
 } from '../listing-disclosure';
@@ -203,6 +204,16 @@ describe('Κ2 — οι ιδιότητες παράγονται από τον π�
 
   it('η σειρά είναι η σειρά δήλωσης — είδος πρώτο (5ο βασικό πεδίο του §25.6)', () => {
     expect(LISTING_ATTRIBUTE_KEYS[0]).toBe<ListingAttributeKey>('type');
+  });
+});
+
+describe('Κ2β — τα πεδία μέσων παράγονται από τον πίνακα (ADR-898 §23.2)', () => {
+  // ⚠️ Γραμμένα στο χέρι, επίτηδες: πεδίο μέσων που χάνει τον ρόλο του πρέπει να κοκκινίσει ΕΔΩ.
+  //    Το `floorPlates` είναι το πεδίο που ξέχασε ο χειρόγραφος κατάλογος του script αποκατάστασης.
+  it('περιέχει ακριβώς τα πεδία που κουβαλούν αρχείο — μαζί με το `floorPlates`', () => {
+    expect([...LISTING_MEDIA_KEYS]).toEqual(
+      ['coverImage', 'gallery', 'floorplans', 'models', 'videos', 'floorPlates', 'terrain'],
+    );
   });
 });
 

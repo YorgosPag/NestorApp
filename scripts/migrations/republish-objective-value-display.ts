@@ -7,8 +7,9 @@
  *
  * Ως τις 2026-11-21 ο κρίκος 15 των μεταπτώσεων διάβαζε την **απουσία** του πεδίου ως «εμφάνιση», και έγραφε ρητό
  * `display: 'shown'` σε δημόσιες αγγελίες των οποίων η **πηγή** δεν το είχε ποτέ. Ο κρίκος διορθώθηκε, αλλά είναι
- * (σωστά) ιδιοδύναμος: ρητό `shown` το αφήνει αυτούσιο. Άρα το `shown` αυτό **δεν το έγραψε ποτέ άνθρωπος** — και η
- * αναφορά `objective-value-display-consent.report.ts` μέτρησε 13 τέτοιες αγγελίες, ορατές στο κοινό.
+ * (σωστά) ιδιοδύναμος: ρητό `shown` το αφήνει αυτούσιο. Άρα το `shown` αυτό **δεν το έγραψε ποτέ άνθρωπος**. Η
+ * εκτέλεση της 2026-11-21 στην παραγωγή βρήκε 21 αγγελίες με `shown`: 19 που η πηγή τους δεν στηρίζει (ξαναπροβλήθηκαν)
+ * και 2 με ρητή επιλογή του κατόχου (έμειναν).
  *
  * 🔑 **Η θεραπεία είναι ΕΠΑΝΑΠΡΟΒΟΛΗ, όχι γραφή στο ακίνητο.** Η πηγή λέει ήδη την αλήθεια· μπαγιάτικο είναι μόνο το
  * παράγωγο. Καμία πλαστή συναίνεση, κανένας δρώντας «σύστημα» στη θεματοφυλακή (CHECK 3.56): γράφουν οι **ίδιοι**
@@ -40,6 +41,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import type { ObjectiveValueDisplay } from '@/lib/objective-value/objective-value-declarations';
 import { offersObjectiveValue } from '@/lib/objective-value/objective-value-offer-kinds';
+import { LISTING_MEDIA_KEYS } from '@/lib/listings/listing-disclosure';
 import { readStoredOwnerProperty } from '@/lib/owner-property/owner-property-from-document';
 import {
   placeKnowledgeFromOwnerProperty,
@@ -61,7 +63,6 @@ const { initAdminApp } = require('../_shared/firebaseAdminOps');
 const ARGS = process.argv.slice(2);
 const APPLY = ARGS.includes('--apply');
 const SHOWN_FIELD = 'objectiveValueDeclarations.display';
-const MEDIA_FIELDS = ['gallery', 'floorplans', 'videos', 'models'] as const;
 
 /**
  * 🔴 **ΦΡΕΝΟ (περιστατικό 2026-11-21)**: η επαναπροβολή ξαναχτίζει ΟΛΗ την αγγελία, μαζί με τα μέσα. Χωρίς
@@ -83,12 +84,21 @@ function republishIdsArg(): readonly string[] | null {
   return ids;
 }
 
-/** **Καθαρό**: πόσα μέσα κρατά μια αποθηκευμένη αγγελία, ανά είδος — π.χ. `gallery 9 · floorplans 1 · videos 0 · models 0`. */
+/**
+ * **Καθαρό**: πόσα μέσα κρατά μια αποθηκευμένη αγγελία, ανά πεδίο — π.χ. `coverImage 1 · gallery 9 · … · floorPlates 1`.
+ *
+ * Τα πεδία έρχονται από το {@link LISTING_MEDIA_KEYS} (ρόλος `'media'` του πίνακα αποκάλυψης), όχι από χειρόγραφη λίστα:
+ * η προηγούμενη ξεχνούσε το `floorPlates` και έδειχνε «0» σε αγγελίες που είχαν κάτοψη ορόφου.
+ * Πίνακας ⇒ πλήθος · ενικό πεδίο (`coverImage`, `terrain`) ⇒ 1 ή 0 · απόν ⇒ `—` (έγγραφο παλιότερο από το πεδίο).
+ */
 export function mediaCountsOf(listing: Readonly<Record<string, unknown>> | undefined): string {
-  return MEDIA_FIELDS.map((field) => {
-    const value = listing?.[field];
-    return `${field} ${Array.isArray(value) ? value.length : '—'}`;
-  }).join(' · ');
+  return LISTING_MEDIA_KEYS.map((field) => `${field} ${mediaCountOf(listing?.[field])}`).join(' · ');
+}
+
+function mediaCountOf(value: unknown): string {
+  if (value === undefined) return '—';
+  if (Array.isArray(value)) return String(value.length);
+  return value === null ? '0' : '1';
 }
 
 /** Η απόφαση για μία αγγελία — **ονομασμένη**, ποτέ `boolean`. */
