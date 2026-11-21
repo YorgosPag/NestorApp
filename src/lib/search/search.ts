@@ -47,8 +47,10 @@ export function normalizeSearchText(value: Searchable): string {
     : typeof value === "boolean" ? String(value)
     : String(value);
 
-  return stripDiacritics(raw)
-    .toLowerCase()
+  // Πεζά ΠΡΙΝ από το `ς→σ` (ADR-372 §8.7): η JS γράφει το κεφαλαίο τελικό Σ ως `ς`
+  // («ΚΟΥΤΣΙΝΤΑΣ» → «κουτσιντας»), άρα με την ανάποδη σειρά το `ς` επιβίωνε.
+  // Ίδια σειρά με το Lucene `GreekLowerCaseFilter` / Unicode case folding.
+  return stripDiacritics(raw.toLowerCase())
     .trim()
     .replace(/\s+/g, " "); // Collapse multiple spaces
 }

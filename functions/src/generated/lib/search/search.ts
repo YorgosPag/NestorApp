@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/search/search.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:9c08baee21ebf59877b9454864be3ad27b1da9886fa0587ffa4e8f89d5cf50c1
+// sha256:28b4f3e190b52c50305ed074a701e95bb18ec7fb202ac5103b84d308b3ae0bde
 
 /**
  * 🏢 ENTERPRISE SEARCH v1
@@ -51,8 +51,10 @@ export function normalizeSearchText(value: Searchable): string {
     : typeof value === "boolean" ? String(value)
     : String(value);
 
-  return stripDiacritics(raw)
-    .toLowerCase()
+  // Πεζά ΠΡΙΝ από το `ς→σ` (ADR-372 §8.7): η JS γράφει το κεφαλαίο τελικό Σ ως `ς`
+  // («ΚΟΥΤΣΙΝΤΑΣ» → «κουτσιντας»), άρα με την ανάποδη σειρά το `ς` επιβίωνε.
+  // Ίδια σειρά με το Lucene `GreekLowerCaseFilter` / Unicode case folding.
+  return stripDiacritics(raw.toLowerCase())
     .trim()
     .replace(/\s+/g, " "); // Collapse multiple spaces
 }

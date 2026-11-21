@@ -218,6 +218,18 @@ Remaining (plan + file:line in `HANDOFFS/2026-11-21_ΕΠΑΦΕΣ_ΤΑΥΤΟΤΗ�
 
 ---
 
+### 8.7 Final sigma in upper-case input (2026-11-22)
+**Measured live** (after b4): «ΚΟΥΤΣΙΝΤΑΣ» found 0 contacts. Root: `normalizeSearchText` ran `stripDiacritics` (which holds `ς→σ`) **before** `toLowerCase()`, and JS lower-cases a word-final «Σ» to «ς» ⇒ `κουτσιντας` ≠ `κουτσιντασ`.
+
+**Industry practice**: Lucene `GreekLowerCaseFilter` / Unicode case folding — lower-case first, then fold `ς→σ`.
+
+**Decision**: `stripDiacritics(raw.toLowerCase())` in `src/lib/search/search.ts` (one line; projected to `functions/src/generated/lib/search/search.ts`, CHECK 3.93).
+
+**Stored derivatives (measured in Firestore, 2026-11-22, read-only)**:
+- `search_documents`: **56/293** have `ς` in `search.normalized`, **26** in `search.prefixes` (52 in `comp_9c7c1a50…`, 4 in `comp_28e28fca…`; floor 18 · file 14 · project 9 · contact 8 · property 4 · building 2 · parking 1). `/api/search` filters `search.normalized.includes(query)` ⇒ these miss full words with final sigma until re-indexed. Re-index = `POST /api/admin/search-backfill` (app code, after deploy) **and** `firebase deploy --only functions` (the triggers keep writing the old form otherwise — the Netcup push does **not** deploy Functions).
+- `supplier_brand_claims`: **0** documents ⇒ no deterministic id (`brandKeyOf`) changes.
+- `catalog_products.derived.tradeKeys.brandKey`: 7 values, all `mfp` ⇒ unaffected. Catalog sort/search keys already lower-cased first (`catalogSortKey`, `value-text-codec`, `search-prefixes`).
+
 ## 7. Changelog
 
 | Date | Author | Change |
@@ -233,3 +245,4 @@ Remaining (plan + file:line in `HANDOFFS/2026-11-21_ΕΠΑΦΕΣ_ΤΑΥΤΟΤΗ�
 | 2026-11-21 | AI Agent (Opus) | §8.5 b4: contact search per word — `matchesAllSearchTokens` + `contactSearchFields` replace 4 divergent engines (`JSON.stringify` scan in `searchContacts`, display-name-only `toLowerCase` in `contactsPageFilters`, whole-phrase `matchesSearchTerm` in `ContactsList`, `toLowerCase` OR in `employee-selector.service`); procurement `quote-search` free text now uses the same engine (same semantics). Tests: `search.test.ts`, `contactsPageFilters.test.ts` (Google Contacts / Gmail model: AND of words, any field, any order) |
 | 2026-11-21 | AI Agent (Opus) | §8.5 b1: relationship channels owned by the role holder (`relationshipChannelOwnerSide`, `formChannelOwner`), `RelationshipChannelsSection` (explicit «Copy from contact», structured copy, cleared on a new pick; projection via `projectContactInfo`), auto-copy on pick removed, `typeOptionsWithStored` + root-wide label tables (no empty «Type» for a stored value the owner does not offer — every communication form), edit mode learns the other contact's type (`useContactName.contactType`). +4 i18n keys `relationships.form.channels.*`. Research: Google People API (a «work phone» is the person's), Salesforce `AccountContactRelation` (no account channels on the relation) |
 | 2026-11-22 | AI Agent (Opus) | §8.6 live check found an untouched save logging `isWorkplace` (absent in store, `false` in form) and writing `notes: null`: `relationshipFieldMeaning()` (codec: channels, `contactInfo` projection, declared defaults) drives `diffChangedFields`; `pickChangedFields()` field mask — only changed fields are written; adapter event carries only written keys. Tests: `relationship-change-history.test.ts`. Research: proto3 implicit presence, Google AIP-134, Salesforce Field History |
+| 2026-11-22 | AI Agent (Opus) | §8.7 final sigma: `normalizeSearchText` lower-cases before `ς→σ` (Lucene `GreekLowerCaseFilter` order) — «ΚΟΥΤΣΙΝΤΑΣ» now matches «Κουτσιντάς»; Functions projection regenerated. Measured stored derivatives: 56/293 `search_documents` need re-index (backfill + Functions deploy), brand claims 0, catalog brand keys unaffected. Test: `search.test.ts` (final-sigma case) |

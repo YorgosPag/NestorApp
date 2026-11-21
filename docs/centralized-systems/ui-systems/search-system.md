@@ -267,10 +267,12 @@ GET /api/search?q=παγώνης&types=contact,project&limit=5
 
 ```typescript
 // Input: "ΓΙΏΡΓΟΣ Παγώνης"
-// Output: "γιωργος παγωνης"
+// Output: "γιωργοσ παγωνησ"
 
 const normalized = normalizeSearchText(query);
 ```
+
+⚠️ **Σειρά**: πρώτα `toLowerCase()`, μετά αφαίρεση τόνων και `ς→σ` (ADR-372 §8.7). Η JS γράφει το κεφαλαίο τελικό «Σ» ως «ς», άρα με την ανάποδη σειρά το «ΚΟΥΤΣΙΝΤΑΣ» δεν ταίριαζε με το «Κουτσιντάς».
 
 ### **Features**
 
