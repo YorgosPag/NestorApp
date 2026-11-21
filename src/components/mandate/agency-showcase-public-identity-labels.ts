@@ -32,6 +32,8 @@ export const SHOWCASE_PUBLIC_IDENTITY_KEYS = {
   willShow: `${K}.willShow`,
   fixProfile: `${K}.fixProfile`,
   fixCard: `${K}.fixCard`,
+  /** 🔑 Α23.14.4 — η «διεύθυνση γραφείου» θέλει **οδό** στην έδρα της κάρτας· ονομάζει τον διακόπτη που την ανοίγει. */
+  cardStreetMissing: `${K}.cardStreetMissing`,
   previewTitle: `${K}.previewTitle`,
   previewEmpty: `${K}.previewEmpty`,
   /** ⚖️ GDPR άρθ. 13/14 — η πλήρης έδρα φυλάσσεται και **δεν** δημοσιεύεται χωρίς επιλογή. */

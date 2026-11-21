@@ -123,9 +123,14 @@ function SeatOutcome({
   if (outcome.kind === 'ok') {
     return <span className="text-sm text-foreground">{t(SHOWCASE_PUBLIC_IDENTITY_KEYS.willShow, { seat: seatLineOf(outcome.seat) })}</span>;
   }
+  // 🔑 Α23.14.4 — για τη «διεύθυνση γραφείου» το γενικό «συμπληρώστε τη» δεν λέει ΠΟΥ: η έδρα της κάρτας
+  //    μετρά μόνο με ανοιχτό το «Δημοσίευση οδού και αριθμού» (`headquartersStreetOf`). Το μήνυμα το ονομάζει.
+  const reasonKey = disclosure === 'business-address' && outcome.reason === 'agency-profile-seat-address-missing'
+    ? SHOWCASE_PUBLIC_IDENTITY_KEYS.cardStreetMissing
+    : SHOWCASE_REJECTION_KEYS[outcome.reason];
   return (
     <span className="flex flex-col gap-1 text-xs text-muted-foreground">
-      <span>{t(SHOWCASE_REJECTION_KEYS[outcome.reason])}</span>
+      <span>{t(reasonKey)}</span>
       <SeatFix disclosure={disclosure} />
     </span>
   );

@@ -285,6 +285,22 @@ describe('Δ — η απόφαση', () => {
     const forged = `${token.slice(0, -2)}${token.endsWith('A') ? 'B' : 'A'}A`;
     expect(await decideShowcaseEmailConfirmation(given.admin, forged, 'confirm', CLICKED)).toEqual({ ok: false, reason: 'link-invalid' });
   });
+
+  it('🔴 Δ7 — επιβεβαίωση ΚΑΙ bounce αφήνουν ανέγγιχτο τον ιδιωτικό τόπο `premises` (Α23.14.4)', async () => {
+    const given = await givenCard();
+    const premisesOf = async (): Promise<unknown> =>
+      (await doc(given.fake, COLLECTIONS.SHOWCASE_CARD_CHANNELS, COMPANY))?.premises;
+    const before = await premisesOf();
+    expect(before).toEqual({ [given.locationId]: expect.objectContaining({ landId: 'land_thessaloniki' }) });
+
+    await issue(given);
+    await decideShowcaseEmailConfirmation(given.admin, lastToken(), 'confirm', CLICKED);
+    expect(await premisesOf()).toEqual(before);
+
+    const absence = { email: 'office@vafes.gr', evidenceAt: BOUNCED, evidenceEventId: 'evt-bounce-premises' };
+    expect(await revokeShowcaseEmailConfirmations(given.admin, absence)).toEqual({ revoked: 1 });
+    expect(await premisesOf()).toEqual(before);
+  });
 });
 
 async function confirmed(emails?: readonly string[]): Promise<Given> {

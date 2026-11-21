@@ -74,6 +74,11 @@ export async function readCardWithEmail(
 /**
  * **Γράψε τις επιβεβαιώσεις ενός καταστήματος** — ιδιωτικό κανάλι **και** δημόσιο `emailConfirmedAt`,
  * από την **ίδια** λίστα, στην **ίδια** συναλλαγή.
+ *
+ * 🔴 `update`, ΠΟΤΕ `set` χωρίς merge: το ιδιωτικό έγγραφο έχει και **αδέλφια** του `locations` — τον τόπο
+ * `premises` των καταστημάτων «μόνο περιοχή» (ADR-896 §6). Το `set` τα έσβηνε σε **κάθε** επιβεβαίωση ή
+ * bounce (ADR-841 §7 Α23.14.4). Το `update` αντικαθιστά **μόνο** το `locations`, όπως πριν· το έγγραφο
+ * υπάρχει πάντα εδώ, αφού η {@link readCardWithEmail} μόλις βρήκε μέσα του τη διεύθυνση.
  */
 export function writeLocationConfirmations(
   adminDb: AdminFirestore,
@@ -83,7 +88,7 @@ export function writeLocationConfirmations(
   confirmations: readonly ShowcaseEmailConfirmation[],
 ): void {
   const emailConfirmedAt = latestConfirmedAt(confirmations);
-  tx.set(adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(address.companyId), {
+  tx.update(adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(address.companyId), {
     locations: { ...card.storedLocations, [address.locationId]: { ...card.channels, emailConfirmations: confirmations } },
   });
   tx.update(adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(address.companyId), {

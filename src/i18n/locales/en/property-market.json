@@ -1547,6 +1547,7 @@
         "willShow": "Will show: {seat}",
         "fixProfile": "Complete your business details",
         "fixCard": "Complete your card",
+        "cardStreetMissing": "Your card’s head office does not publish a street. On the card, at the head office, turn on “Publish street and number” and enter the street and number — or pick another option.",
         "previewTitle": "Preview",
         "previewEmpty": "Choose how much of the address is shown to see the preview.",
         "privacy": "Your full registered address stays in your business details and is published only if you choose “Full registered address”.",
