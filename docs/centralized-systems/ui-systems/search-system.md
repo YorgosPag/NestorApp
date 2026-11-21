@@ -279,6 +279,15 @@ const normalized = normalizeSearchText(query);
 - ✅ Whitespace normalization
 - ✅ Greek-specific character handling
 
+### **Client-side matching** (`src/lib/search/search.ts`)
+
+| Συνάρτηση | Σημασιολογία | Πότε |
+|---|---|---|
+| `matchesSearchTerm(fields, term)` | ολόκληρη η φράση ως υποσυμβολοσειρά **ενός** πεδίου | ιστορικές λίστες |
+| `matchesAllSearchTokens(fields, term)` | **κάθε λέξη** σε **κάποιο** πεδίο (AND λέξεων, OR πεδίων), οποιαδήποτε σειρά — υπερσύνολο του παραπάνω | αναζήτηση επαφών (με `contactSearchFields(contact)`, `src/types/contacts/helpers.ts`), ελεύθερο κείμενο προσφορών (`quote-search.ts`) — ADR-372 §8.5 b4 |
+
+⚠️ Οι επαφές **δεν** ψάχνονται με `JSON.stringify` (έβρισκε ids/ημερομηνίες): τα πεδία ορίζει **μόνο** το `contactSearchFields`.
+
 ---
 
 ## 📊 **FIRESTORE INDEXES**

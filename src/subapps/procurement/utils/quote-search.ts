@@ -1,4 +1,4 @@
-import { normalizeSearchText } from '@/lib/search/search';
+import { normalizeSearchText, matchesAllSearchTokens } from '@/lib/search/search';
 import { parseLocaleNumber } from '@/lib/number/locale-number';
 import type { Quote } from '../types/quote';
 import { quoteVendorDisplayName } from './quote-vendor-identity';
@@ -54,19 +54,19 @@ function matchesNumeric(quote: Quote, numericValue: number): boolean {
   );
 }
 
-function matchesFreeText(quote: Quote, tokens: string[]): boolean {
-  const vendorName = quoteVendorDisplayName(quote) ?? '';
-  const lineDescs = quote.lines.map((l) => l.description).join(' ');
-  const fields = [
-    vendorName,
-    lineDescs,
-    quote.paymentTerms ?? '',
-    quote.deliveryTerms ?? '',
-    quote.warranty ?? '',
-    quote.notes ?? '',
-  ].map(normalizeSearchText);
-
-  return tokens.every((token) => fields.some((field) => field.includes(token)));
+/** Ανά λέξη (AND λέξεων, OR πεδίων) — η ΜΙΑ μηχανή `matchesAllSearchTokens` (ADR-372 §8.5 b4). */
+function matchesFreeText(quote: Quote, query: string): boolean {
+  return matchesAllSearchTokens(
+    [
+      quoteVendorDisplayName(quote),
+      quote.lines.map((l) => l.description).join(' '),
+      quote.paymentTerms,
+      quote.deliveryTerms,
+      quote.warranty,
+      quote.notes,
+    ],
+    query,
+  );
 }
 
 /**
@@ -96,9 +96,7 @@ export function matchesQuote(quote: Quote, query: string): boolean {
       return matchesNumeric(quote, numericValue);
     }
     case 'free-text':
-    default: {
-      const tokens = trimmed.split(/\s+/).map(normalizeSearchText).filter(Boolean);
-      return matchesFreeText(quote, tokens);
-    }
+    default:
+      return matchesFreeText(quote, trimmed);
   }
 }

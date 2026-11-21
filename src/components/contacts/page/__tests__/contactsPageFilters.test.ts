@@ -114,6 +114,11 @@ describe('filterContactsForPage', () => {
     expect(run({ filters: { ...NO_FILTERS, searchTerm: 'αλίκη' } }).map(c => c.id)).toEqual(['c1']);
   });
 
+  it('η αναζήτηση είναι ανά λέξη: άλλη σειρά, χωρίς τόνους (ADR-372 §8.5 b4)', () => {
+    expect(run({ filters: { ...NO_FILTERS, searchTerm: 'παπαδοπουλου αλικη' } }).map(c => c.id)).toEqual(['c1']);
+    expect(run({ filters: { ...NO_FILTERS, searchTerm: 'αλίκη ανύπαρκτο' } }).map(c => c.id)).toEqual([]);
+  });
+
   it('το φίλτρο τύπου αγνοείται όσο υπάρχει ενεργή κάρτα', () => {
     const result = run({
       activeCardFilter: 'page.dashboard.legalEntities',

@@ -5,7 +5,44 @@
  * Based on local_4.log requirements (lines 156-169)
  */
 
-import { normalizeSearchText, matchesSearchTerm } from './search';
+import { normalizeSearchText, matchesSearchTerm, matchesAllSearchTokens } from './search';
+
+describe('Enterprise Search - matchesAllSearchTokens (ADR-372 §8.5 b4)', () => {
+  const fields = ['Δημήτριος Κουτσιντάς', 'ARIES Α.Ε.', 'dimitrioskoutsintas@aries.gr', '6979793929'];
+
+  test('κενός όρος ⇒ όλα', () => {
+    expect(matchesAllSearchTokens(fields, '')).toBe(true);
+    expect(matchesAllSearchTokens(fields, '   ')).toBe(true);
+  });
+
+  test('οι λέξεις βρίσκονται με οποιαδήποτε σειρά', () => {
+    expect(matchesAllSearchTokens(fields, 'Κουτσιντάς Δημήτριος')).toBe(true);
+  });
+
+  test('λέξεις από διαφορετικά πεδία συνδυάζονται', () => {
+    expect(matchesAllSearchTokens(fields, 'aries δημητρ')).toBe(true);
+  });
+
+  test('χωρίς τόνους, πεζά/κεφαλαία, τελικό σίγμα', () => {
+    expect(matchesAllSearchTokens(fields, 'ΚΟΥΤΣΙΝΤΑΣ')).toBe(true);
+    expect(matchesAllSearchTokens(fields, 'κουτσιντασ')).toBe(true);
+  });
+
+  test('μία λέξη που λείπει ⇒ κανένα ταίριασμα (AND, όχι OR)', () => {
+    expect(matchesAllSearchTokens(fields, 'δημήτριος παπαδόπουλος')).toBe(false);
+  });
+
+  test('κενά/null πεδία αγνοούνται', () => {
+    expect(matchesAllSearchTokens([null, undefined, '', 'Αλίκη'], 'αλίκη')).toBe(true);
+    expect(matchesAllSearchTokens([null, undefined], 'αλίκη')).toBe(false);
+  });
+
+  test('υπερσύνολο του matchesSearchTerm: ό,τι βρίσκει εκείνο το βρίσκει και αυτό', () => {
+    for (const term of ['δημήτριος κουτσ', 'aries.gr', '697', 'α.ε.']) {
+      if (matchesSearchTerm(fields, term)) expect(matchesAllSearchTokens(fields, term)).toBe(true);
+    }
+  });
+});
 
 describe('Enterprise Search - normalizeSearchText', () => {
   // Test 1: Τόνοι - "Αλέξης" matches "Αλεξης"

@@ -13,7 +13,7 @@ import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar
 import { ContactTypeQuickFilters } from '@/components/shared/TypeQuickFilters';
 import type { Contact } from '@/types/contacts';
 import { Users } from 'lucide-react';
-import { getContactDisplayName } from '@/types/contacts';
+import { getContactDisplayName, contactSearchFields } from '@/types/contacts';
 import {
   createContactWithPolicy,
   toggleContactFavoriteWithPolicy,
@@ -21,7 +21,7 @@ import {
 import { useNotifications } from '@/providers/NotificationProvider';
 import { EntityListColumn } from '@/core/containers';
 import { ENTITY_TYPES } from '@/config/domain-constants';
-import { matchesSearchTerm } from '@/lib/search/search';
+import { matchesAllSearchTokens } from '@/lib/search/search';
 // 🏢 ENTERPRISE: Unified sharing system — ADR-315 (SSoT)
 import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
@@ -139,18 +139,8 @@ export function ContactsList({
         }
       }
 
-      // Search filter using enterprise search
-      return matchesSearchTerm(
-        [
-          getContactDisplayName(contact),
-          contact.companyName,
-          contact.serviceName,
-          // Flatten emails and phones
-          ...(contact.emails?.map(e => e.email) || []),
-          ...(contact.phones?.map(p => p.number) || [])
-        ],
-        searchTerm
-      );
+      // Αναζήτηση ανά λέξη — ΜΙΑ μηχανή για κάθε αναζήτηση επαφών (ADR-372 §8.5 b4)
+      return matchesAllSearchTokens(contactSearchFields(contact), searchTerm);
     });
   }, [contacts, selectedTypes, searchTerm]);
 

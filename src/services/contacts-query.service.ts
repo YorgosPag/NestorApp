@@ -15,8 +15,9 @@ import {
 import { db } from '@/lib/firebase';
 import {
   Contact, ContactType, isIndividualContact, isCompanyContact,
-  AddressInfo, ContactStatus,
+  AddressInfo, ContactStatus, contactSearchFields,
 } from '@/types/contacts';
+import { matchesAllSearchTokens } from '@/lib/search/search';
 
 import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -224,9 +225,11 @@ export async function searchContacts(searchOptions: {
   const result = await firestoreQueryService.getAll<DocumentData>('CONTACTS', { constraints });
   let contacts = result.documents.map(toContact);
 
-  const term = (searchOptions.searchTerm || '').toLowerCase();
-  if (term) {
-    contacts = contacts.filter((c) => JSON.stringify(c).toLowerCase().includes(term));
+  // Ανά λέξη στα πεδία ταυτότητας (ADR-372 §8.5 b4) — ΟΧΙ `JSON.stringify`, που
+  // έβρισκε ids/ημερομηνίες και ήθελε τις λέξεις με τη σειρά που αποθηκεύτηκαν.
+  const term = searchOptions.searchTerm ?? '';
+  if (term.trim()) {
+    contacts = contacts.filter((c) => matchesAllSearchTokens(contactSearchFields(c), term));
   }
   if (searchOptions.tags?.length) {
     contacts = contacts.filter((c) => (c.tags ?? []).some((t: string) => searchOptions.tags!.includes(t)));

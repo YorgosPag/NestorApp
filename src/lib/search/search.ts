@@ -127,3 +127,23 @@ export function matchesSearchTerm(
 
   return false;
 }
+
+/**
+ * **Αναζήτηση ανά λέξη** — κάθε λέξη του όρου πρέπει να βρεθεί σε **κάποιο** πεδίο
+ * (AND λέξεων, OR πεδίων· μοτίβο Google Contacts / Gmail). Η σειρά των λέξεων δεν
+ * μετρά: «Κουτσιντάς Δημήτριος» βρίσκει τον «Δημήτριος Κουτσιντάς», και λέξεις από
+ * διαφορετικά πεδία συνδυάζονται («aries δημητρ»).
+ *
+ * Υπερσύνολο του `matchesSearchTerm`: ό,τι βρίσκει εκείνο, το βρίσκει και αυτό.
+ * Κενός όρος ⇒ `true` (όλα).
+ */
+export function matchesAllSearchTokens(
+  itemFields: readonly Searchable[],
+  term: string
+): boolean {
+  const tokens = normalizeSearchText(term).split(" ").filter(Boolean);
+  if (tokens.length === 0) return true;
+
+  const fields = itemFields.map(normalizeSearchText).filter(Boolean);
+  return tokens.every((token) => fields.some((field) => field.includes(token)));
+}

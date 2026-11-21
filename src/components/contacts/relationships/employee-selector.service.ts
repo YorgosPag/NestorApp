@@ -14,8 +14,10 @@ import type { ContactType } from '@/types/contacts';
 import {
   isIndividualContact,
   isCompanyContact,
-  isServiceContact
+  isServiceContact,
+  contactSearchFields
 } from '@/types/contacts';
+import { matchesAllSearchTokens } from '@/lib/search/search';
 import { ContactsService } from '@/services/contacts.service';
 
 // ============================================================================
@@ -63,7 +65,12 @@ export const searchContacts = async (
       return [];
     }
 
-    let filtered = allContacts.map(contact => {
+    // Ανά λέξη, ΠΡΙΝ τη σύνοψη — η ΜΙΑ μηχανή αναζήτησης επαφών (ADR-372 §8.5 b4).
+    const matching = allContacts.filter(contact =>
+      matchesAllSearchTokens(contactSearchFields(contact), query)
+    );
+
+    let filtered = matching.map(contact => {
       let name = '';
       let company: string | undefined;
       let department: string | undefined;
@@ -110,17 +117,6 @@ export const searchContacts = async (
     }).filter(contact => contact.name.length > 0);
 
     logger.info('After mapping, valid contacts', { count: filtered.length });
-
-    if (query.trim()) {
-      const searchTerm = query.toLowerCase();
-      filtered = filtered.filter(contact =>
-        contact.name.toLowerCase().includes(searchTerm) ||
-        contact.email?.toLowerCase().includes(searchTerm) ||
-        contact.company?.toLowerCase().includes(searchTerm) ||
-        contact.department?.toLowerCase().includes(searchTerm)
-      );
-      logger.info('After text filter', { count: filtered.length });
-    }
 
     if (filters.allowedTypes?.length) {
       filtered = filtered.filter(contact =>

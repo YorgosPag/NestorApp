@@ -1,6 +1,6 @@
 // ⚠️ GENERATED — DO NOT EDIT. Verbatim projection of src/lib/search/search.ts (ADR-874 · CHECK 3.93).
 // Edit the source, then run: npm run generate:functions-projection
-// sha256:af2596ca4e001410fb548a53c0ef8b1f0c3571fda29144b8b0a772a13eb064c9
+// sha256:9c08baee21ebf59877b9454864be3ad27b1da9886fa0587ffa4e8f89d5cf50c1
 
 /**
  * 🏢 ENTERPRISE SEARCH v1
@@ -130,4 +130,24 @@ export function matchesSearchTerm(
   }
 
   return false;
+}
+
+/**
+ * **Αναζήτηση ανά λέξη** — κάθε λέξη του όρου πρέπει να βρεθεί σε **κάποιο** πεδίο
+ * (AND λέξεων, OR πεδίων· μοτίβο Google Contacts / Gmail). Η σειρά των λέξεων δεν
+ * μετρά: «Κουτσιντάς Δημήτριος» βρίσκει τον «Δημήτριος Κουτσιντάς», και λέξεις από
+ * διαφορετικά πεδία συνδυάζονται («aries δημητρ»).
+ *
+ * Υπερσύνολο του `matchesSearchTerm`: ό,τι βρίσκει εκείνο, το βρίσκει και αυτό.
+ * Κενός όρος ⇒ `true` (όλα).
+ */
+export function matchesAllSearchTokens(
+  itemFields: readonly Searchable[],
+  term: string
+): boolean {
+  const tokens = normalizeSearchText(term).split(" ").filter(Boolean);
+  if (tokens.length === 0) return true;
+
+  const fields = itemFields.map(normalizeSearchText).filter(Boolean);
+  return tokens.every((token) => fields.some((field) => field.includes(token)));
 }

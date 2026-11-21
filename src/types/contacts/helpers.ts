@@ -1,5 +1,6 @@
 import { Contact, ServiceContact, AddressInfo, isIndividualContact, isCompanyContact, isServiceContact } from './contracts';
 import { PHONE_REGEX } from '@/lib/validation/phone-validation';
+import type { Searchable } from '@/lib/search/search';
 
 // 🏢 ENTERPRISE: Type-safe interface for legacy service contact fields
 // These fields may exist in older service contacts but are not in the standard schema
@@ -91,6 +92,32 @@ export function getInitials(name: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/gu, '')
     .normalize('NFC');
+}
+
+/**
+ * **ΤΑ ΠΕΔΙΑ ΣΤΑ ΟΠΟΙΑ ΨΑΧΝΕΙ Η ΑΝΑΖΗΤΗΣΗ ΕΠΑΦΩΝ** — ένα σημείο για κάθε αναζήτηση
+ * επαφών (λίστα, σελίδα, φόρμα σχέσης, επιλογέας υπαλλήλου), μαζί με το
+ * `matchesAllSearchTokens` (ADR-372 §8.5 b4).
+ *
+ * Μόνο ό,τι **αναγνωρίζει** την επαφή: ονόματα, επωνυμίες, ΑΦΜ, εργοδότης/θέση, κανάλια.
+ * ΟΧΙ ids, ημερομηνίες ή μεταδεδομένα — η παλιά σάρωση `JSON.stringify` έβρισκε
+ * κάθε επαφή για «2026».
+ */
+export function contactSearchFields(contact: Contact): Searchable[] {
+  const fields: Searchable[] = [
+    getContactDisplayName(contact),
+    contact.displayName,
+    contact.tradeName,
+    contact.legalName,
+  ];
+  if (isIndividualContact(contact)) {
+    fields.push(contact.fatherName, contact.nickname, contact.vatNumber, contact.employer, contact.position);
+  } else if (isCompanyContact(contact)) {
+    fields.push(contact.vatNumber);
+  }
+  for (const email of contact.emails ?? []) fields.push(email.email);
+  for (const phone of contact.phones ?? []) fields.push(phone.countryCode, phone.number);
+  return fields;
 }
 
 export function getContactInitials(contact: Contact): string {

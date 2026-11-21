@@ -11,7 +11,8 @@
  */
 
 import type { Contact } from '@/types/contacts';
-import { getContactDisplayName } from '@/types/contacts';
+import { contactSearchFields } from '@/types/contacts';
+import { matchesAllSearchTokens } from '@/lib/search/search';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { normalizeToDate } from '@/lib/date-local';
 import type { ContactFilterState } from '@/components/core/AdvancedFilters';
@@ -123,10 +124,9 @@ export function filterContactsForPage({
 
     if (activeCardFilter && !matchesCardFilter(contact, activeCardFilter, t)) return false;
 
-    if (filters.searchTerm) {
-      const searchLower = filters.searchTerm.toLowerCase();
-      if (!getContactDisplayName(contact).toLowerCase().includes(searchLower)) return false;
-    }
+    // Αναζήτηση ανά λέξη στα πεδία ταυτότητας (ADR-372 §8.5 b4) — ήταν μόνο το
+    // όνομα, ως ενιαία φράση και με τόνους.
+    if (!matchesAllSearchTokens(contactSearchFields(contact), filters.searchTerm ?? '')) return false;
 
     // Contact type (unless overridden by card filter)
     if (!activeCardFilter && filters.contactType !== 'all' && contact.type !== filters.contactType) {
