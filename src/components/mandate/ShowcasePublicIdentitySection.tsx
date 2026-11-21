@@ -95,12 +95,10 @@ function PreviewNotice({ state }: { readonly state: ShowcaseLegalPreviewState })
 export function ShowcasePublicIdentitySection({
   state,
   value,
-  published,
   onChange,
 }: {
   readonly state: ShowcaseLegalPreviewState;
   readonly value: ShowcaseLegalDeclaration;
-  readonly published: boolean;
   readonly onChange: (next: ShowcaseLegalDeclaration) => void;
 }): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
@@ -128,7 +126,6 @@ export function ShowcasePublicIdentitySection({
           <SeatDisclosureField
             preview={ready}
             value={value.seatDisclosure}
-            published={published}
             onChange={(seatDisclosure) => onChange({ ...value, seatDisclosure })}
           />
           {ready !== null && <PublicIdentityPreviewCard preview={ready} value={value} />}

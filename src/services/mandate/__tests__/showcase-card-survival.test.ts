@@ -10,7 +10,8 @@
  *   • Κ1 — αλλαγή επωνυμίας **δεν** σβήνει την κάρτα (το `set` χωρίς `merge`)
  *   • Κ2 — 🔴 το **δημόσιο** έγγραφο δεν κρατά **ποτέ** αριθμό ή email (άγκυρα διαρροής)
  *   • Κ3 — η απόσυρση σβήνει **και** τα ιδιωτικά κανάλια (ανάκληση συγκατάθεσης)
- *   • Κ4 — κάρτα χωρίς βιτρίνα: ονομαστική άρνηση, **τίποτα** δεν γράφεται
+ *   • Κ4 — κάρτα χωρίς βιτρίνα (Α23.14.3): ιδιωτικό **πρόχειρο**, **τίποτα** στο δημόσιο έγγραφο
+ *   • Κ9 — η πρώτη δημοσίευση παραλαμβάνει το πρόχειρο (ίδια ids) και το σβήνει στην ίδια συναλλαγή
  *   • Κ5 — το reveal: ταυτόσημο `absent` για ανύπαρκτο κατάστημα / αποσυρμένη βιτρίνα
  *   • Κ8 — κλειστή στο ΓΕΜΗ (ADR-841 §7 Α23 Γ4): `absent` και στις δύο πόρτες, τα κανάλια μένουν, επανέρχονται
  */
@@ -38,7 +39,8 @@ jest.mock('@/lib/firebaseAdmin', () => ({
 const { publishShowcase, withdrawAgencyProfile } = require('../agency-profile.service') as
   typeof import('../agency-profile.service');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { saveShowcaseCard } = require('../showcase-card-custody') as typeof import('../showcase-card-custody');
+const { readOwnedShowcaseCard, saveShowcaseCard } = require('../showcase-card-custody') as
+  typeof import('../showcase-card-custody');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { revealLocationCard, revealLocationChannels } = require('../showcase-card-reveal') as
   typeof import('../showcase-card-reveal');
@@ -149,13 +151,46 @@ describe('🔴 Κ — Η ΚΑΡΤΑ ΩΣ ΠΡΑΞΗ', () => {
     expect(await raw(fake, COLLECTIONS.SHOWCASE_CARD_CHANNELS)).toBeUndefined();
   });
 
-  it('🔑 Κ4 — κάρτα χωρίς βιτρίνα: ονομαστική άρνηση, κανένα κανάλι στον δίσκο', async () => {
+  it('🔴 Κ4 — Α23.14.3: κάρτα ΧΩΡΙΣ βιτρίνα ⇒ ιδιωτικό πρόχειρο, ΤΙΠΟΤΑ δημόσιο, και ξαναδιαβάζεται', async () => {
     const { fake, admin } = db();
 
-    const result = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null);
+    const saved = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], 'vafes.gr');
+    if (saved.kind !== 'saved') throw new Error(saved.kind);
+    const locationId = saved.locations[0].id;
 
-    expect(result).toEqual({ kind: 'rejected', reason: 'agency-profile-card-without-showcase' });
-    expect(await raw(fake, COLLECTIONS.SHOWCASE_CARD_CHANNELS)).toBeUndefined();
+    // 🔴 Η ύπαρξη του `agency_profiles` ΕΙΝΑΙ η δημοσίευση — ένα πρόχειρο εκεί θα «δημοσίευε» τη βιτρίνα.
+    expect(await raw(fake, COLLECTIONS.AGENCY_PROFILES)).toBeUndefined();
+    const draft = (await raw(fake, COLLECTIONS.SHOWCASE_CARD_CHANNELS))?.draft as { locations: { id: string }[]; website: string };
+    expect(draft.locations.map(({ id }) => id)).toEqual([locationId]);
+    expect(draft.website).toBe(saved.website);
+
+    expect(await readOwnedShowcaseCard(admin, COMPANY)).toMatchObject({
+      kind: 'owned',
+      website: saved.website,
+      locations: [{ id: locationId, channels: { emails: ['office@vafes.gr'] } }],
+    });
+  });
+
+  it('🔴 Κ9 — Α23.14.3: η ΠΡΩΤΗ δημοσίευση παραλαμβάνει το πρόχειρο — ίδια ids, και το πρόχειρο ΣΒΗΝΕΤΑΙ', async () => {
+    const { fake, admin } = db();
+    const saved = await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], 'vafes.gr');
+    if (saved.kind !== 'saved') throw new Error(saved.kind);
+    const locationId = saved.locations[0].id;
+
+    await givenShowcase(admin);
+
+    const published = await raw(fake, COLLECTIONS.AGENCY_PROFILES);
+    expect((published?.locations as { id: string }[]).map(({ id }) => id)).toEqual([locationId]);
+    expect(published?.website).toBe(saved.website);
+    // Ποτέ δύο σπίτια: το πρόχειρο φεύγει, τα κανάλια μένουν και ταιριάζουν στο ίδιο κατάστημα.
+    const privateDoc = await raw(fake, COLLECTIONS.SHOWCASE_CARD_CHANNELS);
+    expect(privateDoc).not.toHaveProperty('draft');
+    expect((await revealLocationChannels(admin, COMPANY, locationId)).kind).toBe('revealed');
+
+    // Μετά τη δημοσίευση η κάρτα γράφεται στη βιτρίνα — κανένα νέο πρόχειρο.
+    expect((await saveShowcaseCard(admin, COMPANY, [HEADQUARTERS], null)).kind).toBe('saved');
+    expect(await raw(fake, COLLECTIONS.SHOWCASE_CARD_CHANNELS)).not.toHaveProperty('draft');
+    expect((await raw(fake, COLLECTIONS.AGENCY_PROFILES))?.website).toBeNull();
   });
 
   it('🔑 Κ5 — reveal: ΜΟΝΟ του ζητούμενου καταστήματος, και ταυτόσημο absent αλλιώς', async () => {

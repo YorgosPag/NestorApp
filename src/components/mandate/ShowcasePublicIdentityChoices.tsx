@@ -98,16 +98,16 @@ export function PublicNameChoiceField({
   );
 }
 
-/** **Πού διορθώνεται** η έδρα που λείπει — η κάρτα υπάρχει μόνο μετά την πρώτη δημοσίευση. */
-function SeatFix({ disclosure, published }: { readonly disclosure: SeatDisclosure; readonly published: boolean }) {
+/**
+ * **Πού διορθώνεται** η έδρα που λείπει. 🔑 Α23.14.3 — η κάρτα συμπληρώνεται **και πριν** την πρώτη δημοσίευση
+ * (πρόχειρο), άρα ο σύνδεσμος υπάρχει **πάντα**: η «διεύθυνση γραφείου» δεν είναι πια αδιέξοδο για ατομική/ΟΕ.
+ */
+function SeatFix({ disclosure }: { readonly disclosure: SeatDisclosure }) {
   const { t } = useTranslation([SHOWCASE_NS]);
-  if (disclosure !== 'business-address') {
-    return <Link href={APP_ROUTES.accountingSetup} className={LINK_CLASS}>{t(SHOWCASE_PUBLIC_IDENTITY_KEYS.fixProfile)}</Link>;
-  }
-  return published ? (
+  return disclosure === 'business-address' ? (
     <Link href={AGENCY_SHOWCASE_CARD_ROUTE} className={LINK_CLASS}>{t(SHOWCASE_PUBLIC_IDENTITY_KEYS.fixCard)}</Link>
   ) : (
-    <span className="text-xs">{t(SHOWCASE_PUBLIC_IDENTITY_KEYS.cardAfterPublish)}</span>
+    <Link href={APP_ROUTES.accountingSetup} className={LINK_CLASS}>{t(SHOWCASE_PUBLIC_IDENTITY_KEYS.fixProfile)}</Link>
   );
 }
 
@@ -115,11 +115,9 @@ function SeatFix({ disclosure, published }: { readonly disclosure: SeatDisclosur
 function SeatOutcome({
   disclosure,
   outcome,
-  published,
 }: {
   readonly disclosure: SeatDisclosure;
   readonly outcome: SeatPreview;
-  readonly published: boolean;
 }): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   if (outcome.kind === 'ok') {
@@ -128,7 +126,7 @@ function SeatOutcome({
   return (
     <span className="flex flex-col gap-1 text-xs text-muted-foreground">
       <span>{t(SHOWCASE_REJECTION_KEYS[outcome.reason])}</span>
-      <SeatFix disclosure={disclosure} published={published} />
+      <SeatFix disclosure={disclosure} />
     </span>
   );
 }
@@ -137,13 +135,11 @@ function SeatOption({
   disclosure,
   outcome,
   recommended,
-  published,
 }: {
   readonly disclosure: SeatDisclosure;
   /** `null` = καμία προεπισκόπηση (δεν είσαι διαχειριστής · δεν απάντησε) — η επιλογή μένει δυνατή. */
   readonly outcome: SeatPreview | null;
   readonly recommended: boolean;
-  readonly published: boolean;
 }): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const id = useId();
@@ -157,7 +153,7 @@ function SeatOption({
           {recommended && <Badge variant="secondary">{t(SHOWCASE_PUBLIC_IDENTITY_KEYS.recommended)}</Badge>}
         </Label>
         <span className="text-xs text-muted-foreground">{t(SEAT_DISCLOSURE_HINT_KEYS[disclosure])}</span>
-        {outcome !== null && <SeatOutcome disclosure={disclosure} outcome={outcome} published={published} />}
+        {outcome !== null && <SeatOutcome disclosure={disclosure} outcome={outcome} />}
       </span>
     </div>
   );
@@ -172,12 +168,10 @@ function SeatOption({
 export function SeatDisclosureField({
   preview,
   value,
-  published,
   onChange,
 }: {
   readonly preview: ReadyPreview | null;
   readonly value: SeatDisclosure | null;
-  readonly published: boolean;
   readonly onChange: (next: SeatDisclosure) => void;
 }): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
@@ -199,7 +193,6 @@ export function SeatDisclosureField({
             disclosure={disclosure}
             outcome={preview?.seats[disclosure] ?? null}
             recommended={required && disclosure === 'municipality'}
-            published={published}
           />
         ))}
       </RadioGroup>

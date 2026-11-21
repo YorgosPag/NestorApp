@@ -30,7 +30,7 @@ import {
 } from '@/services/mandate/showcase-card-custody';
 import { cardSchema, verifyLocations, type ShowcaseCardResponse } from './card-request';
 
-/** **«Δείξε μου την κάρτα μου.»** */
+/** **«Δείξε μου την κάρτα μου.»** — με ή χωρίς βιτρίνα (Α23.14.3: χωρίς ⇒ το πρόχειρο). */
 async function readHandler(
   _request: NextRequest,
   ctx: AuthContext,
@@ -39,8 +39,6 @@ async function readHandler(
   switch (read.kind) {
     case 'owned':
       return NextResponse.json({ locations: read.locations, website: read.website, emailReturns: read.emailReturns });
-    case 'without-showcase':
-      return NextResponse.json({ error: 'SHOWCASE_NOT_PUBLISHED' } as const, { status: 404 });
     // 🔴 **Δεν μάθαμε** — ποτέ «δεν έχεις κάρτα»: η οθόνη θα πρότεινε να τη γράψεις από την αρχή.
     case 'failed':
       return NextResponse.json({ error: 'READ_FAILED' } as const, { status: 503 });

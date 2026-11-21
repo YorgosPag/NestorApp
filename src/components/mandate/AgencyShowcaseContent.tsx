@@ -299,7 +299,6 @@ export function AgencyShowcaseContent(): React.ReactElement {
       <ShowcasePublicIdentitySection
         state={legalPreview}
         value={legal}
-        published={published !== null}
         onChange={setLegal}
       />
 
@@ -336,7 +335,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
 
       {/* 🏆 ADR-841 §7 Α21.16 — Η ΚΑΡΤΑ: **δική της πράξη σε δική της υποσελίδα** (GBP · GitHub ·
           LinkedIn: κάθε ενότητα με δικό της «Αποθήκευση»). Εδώ μόνο η πόρτα. */}
-      <ShowcaseCardDoor published={published !== null} />
+      <ShowcaseCardDoor />
       <ShowcaseLicencesDoor published={published} />
       {/* 🏆 ADR-841 §7 Α23.9 Φέτα Β — «Στοιχεία ΓΕΜΗ»: υποσελίδα· η πόρτα λέει την ΚΑΤΑΣΤΑΣΗ (κλειστή/επαληθευμένη). */}
       <ShowcaseRegistryDoor published={published} />

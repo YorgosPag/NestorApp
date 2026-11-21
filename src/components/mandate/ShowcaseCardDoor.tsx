@@ -13,8 +13,9 @@
  *      γράφει ρητά *«επόμενη αύξηση εδώ ΔΕΝ πρέπει να λυθεί με τέταρτη σφράγιση — η σωστή απάντηση
  *      είναι να σπάσει η ΙΔΙΑ Η ΟΘΟΝΗ σε δεύτερη διαδρομή»*. Αυτό ακριβώς είναι αυτή η πόρτα.
  *
- * ⚠️ **Μόνο με δημοσιευμένη βιτρίνα** — ίδιο δόγμα με το `ShowcasePublicDoor`: πόρτα που ανοίγει
- * σε «δημοσιεύστε πρώτα» είναι αδιέξοδο με κουμπί.
+ * 🔑 **Πάντα ορατή** (ADR-841 §7 Α23.14.3): η κάρτα συμπληρώνεται **και πριν** την πρώτη δημοσίευση, ως ιδιωτικό
+ * πρόχειρο (πρότυπο Stripe/Google Business Profile) — η πόρτα δεν ανοίγει πια σε «δημοσιεύστε πρώτα». Μέχρι την
+ * Α23.14.3 έκρυβε τον εαυτό της χωρίς βιτρίνα, και η «διεύθυνση γραφείου» ήταν αδιέξοδο για ατομική/ΟΕ.
  */
 
 import React from 'react';
@@ -25,9 +26,8 @@ import { AGENCY_SHOWCASE_CARD_ROUTE } from '@/lib/mandate/mandate-routes';
 import { SHOWCASE_CARD_KEYS, SHOWCASE_NS } from '@/components/mandate/agency-showcase-labels';
 import { ShowcaseDoorLink } from '@/components/mandate/ShowcaseDoorLink';
 
-export function ShowcaseCardDoor({ published }: { readonly published: boolean }): React.ReactElement | null {
+export function ShowcaseCardDoor(): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
-  if (!published) return null;
 
   return (
     <ShowcaseDoorLink

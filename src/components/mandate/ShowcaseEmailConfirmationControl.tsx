@@ -44,6 +44,8 @@ export interface SavedEmailChannels {
   readonly channels: ShowcaseLocationChannels;
   /** Α21.20 — email της κάρτας που επέστρεψαν οριστικά (από το ημερολόγιο παράδοσης). */
   readonly returns: readonly ShowcaseEmailReturn[];
+  /** Α23.14.3 — `false` = πρόχειρο πριν την πρώτη δημοσίευση: η επιβεβαίωση περιμένει τη βιτρίνα. */
+  readonly published: boolean;
 }
 
 type EmailStatus =
@@ -135,6 +137,8 @@ export function ShowcaseEmailConfirmationControl({
 
   const isSaved = saved !== null && saved.channels.emails.includes(normalised);
   if (!isSaved) return <span className="w-full text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.emailSaveFirst)}</span>;
+  // 🔑 Α23.14.3 — καμία πόρτα σε τοίχο: η αποστολή θα απαντούσε «δημοσιεύστε πρώτα», άρα το λέμε **πριν**.
+  if (!saved.published) return <span className="w-full text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.emailAfterPublish)}</span>;
 
   const status = statusOf(saved, normalised);
   return (

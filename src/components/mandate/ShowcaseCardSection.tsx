@@ -134,9 +134,12 @@ function savedOf(
   locations: readonly OwnedShowcaseLocation[],
   emailReturns: readonly ShowcaseEmailReturn[] | null,
   draft: ShowcaseLocationDraft,
+  published: boolean,
 ): SavedEmailChannels | null {
   const location = draft.id === null ? undefined : locations.find(({ id }) => id === draft.id);
-  return location === undefined ? null : { locationId: location.id, channels: location.channels, returns: emailReturns ?? [] };
+  return location === undefined
+    ? null
+    : { locationId: location.id, channels: location.channels, returns: emailReturns ?? [], published };
 }
 
 function useCardDrafts(loaded: readonly ShowcaseLocationDraft[] | null) {
@@ -153,9 +156,13 @@ function useCardDrafts(loaded: readonly ShowcaseLocationDraft[] | null) {
   return { drafts, setDrafts, patch };
 }
 
-export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }): React.ReactElement {
+/**
+ * @param published Α23.14.3 — `false` = η κάρτα συμπληρώνεται **πριν** την πρώτη δημοσίευση (πρόχειρο, πρότυπο
+ *   Stripe/Google Business Profile)· η φόρμα είναι ίδια, αλλάζει μόνο η σημείωση και η επιβεβαίωση email.
+ */
+export function ShowcaseCardSection({ published }: { readonly published: boolean }): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
-  const { load, busy, failure, saved, save } = useShowcaseCard(enabled);
+  const { load, busy, failure, saved, save } = useShowcaseCard(true);
   const loaded = React.useMemo(
     () => (load.phase === 'loaded' ? load.locations.map(draftOfLocation) : null),
     [load],
@@ -201,11 +208,11 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
         <h1 id="showcase-card-title" className="m-0 text-2xl font-semibold text-foreground">{t(SHOWCASE_CARD_KEYS.title)}</h1>
         <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.lead)}</p>
       </header>
-      {!enabled ? <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.needsShowcase)}</p> : null}
+      {!published ? <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.draftNotice)}</p> : null}
       {load.phase === 'failed' ? <p role="alert" className="m-0 text-sm text-destructive">{t(SHOWCASE_CARD_KEYS.loadFailed)}</p> : null}
       {load.phase === 'loaded' ? (
         <>
-          <ShowcaseCardImportControl enabled={enabled} drafts={drafts} website={website} onReplace={onImport} />
+          <ShowcaseCardImportControl enabled drafts={drafts} website={website} onReplace={onImport} />
           <WebsiteField
             value={website}
             origin={websiteOrigin}
@@ -216,7 +223,7 @@ export function ShowcaseCardSection({ enabled }: { readonly enabled: boolean }):
           />
           {drafts.length === 0 ? <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_CARD_KEYS.empty)}</p> : null}
           {drafts.map((draft) => (
-            <ShowcaseLocationEditor key={draft.key} draft={draft} saved={savedOf(load.locations, load.emailReturns, draft)} placeMissing={saveAttempted && draft.place === null} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
+            <ShowcaseLocationEditor key={draft.key} draft={draft} saved={savedOf(load.locations, load.emailReturns, draft, published)} placeMissing={saveAttempted && draft.place === null} onChange={(next) => patch(draft.key, next)} onRemove={() => patch(draft.key, null)} />
           ))}
           <p className="m-0 text-xs text-muted-foreground">{t(SHOWCASE_CARD_KEYS.emailConfirmHint)}</p>
           <span className="flex flex-wrap gap-2">

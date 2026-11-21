@@ -5,7 +5,7 @@
  * @module services/mandate/showcase-legal-preview.service
  *
  * 🔑 **Καμία δεύτερη ανάγνωση, καμία δεύτερη κρίση**: οι είσοδοι έρχονται από το `readLegalIdentityInputs` (προφίλ ·
- * αντίγραφο ΓΕΜΗ · έδρα της **κάρτας** της δημοσιευμένης βιτρίνας), η κρίση από το `previewShowcaseLegalIdentity`,
+ * αντίγραφο ΓΕΜΗ · έδρα της **κάρτας** — της βιτρίνας, ή του προχείρου πριν την πρώτη δημοσίευση), η κρίση από το `previewShowcaseLegalIdentity`,
  * που καλεί τον **ίδιο** `resolveShowcaseLegalIdentity` της δημοσίευσης. Ό,τι λέει η οθόνη, το λέει και ο γραφέας.
  *
  * ⚠️ **Συναλλαγή μόνο-ανάγνωσης**: τα τρία έγγραφα διαβάζονται ως **ένα** στιγμιότυπο — μια αποθήκευση κάρτας
@@ -18,6 +18,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { readShowcase } from '@/lib/agency/showcase-read';
+import { readCardDraftIn } from '@/services/mandate/showcase-card-custody';
 import { previewShowcaseLegalIdentity, type LegalIdentityPreview } from '@/lib/agency/showcase-legal-identity';
 import { readLegalIdentityInputs } from '@/services/mandate/showcase-legal-identity-custody';
 
@@ -37,7 +38,12 @@ export async function readShowcaseLegalPreview(
       const snapshot = await transaction.get(ref);
       const read = snapshot.exists ? readShowcase(snapshot.data(), companyId) : null;
       // 🔑 Ίδια πηγή έδρας κάρτας με τη δημοσίευση (`keptLocations`): η κάρτα **μεταφέρεται**, άρα αυτή θα κριθεί.
-      const locations = read?.outcome === 'showcase' ? read.showcase.locations : [];
+      //    Α23.14.3 — χωρίς βιτρίνα, το **πρόχειρο** (αυτό θα μεταφέρει η πρώτη δημοσίευση) ⇒ η «διεύθυνση
+      //    γραφείου» γίνεται επιλέξιμη **πριν** τη δημοσίευση.
+      const locations =
+        read?.outcome === 'showcase'
+          ? read.showcase.locations
+          : ((await readCardDraftIn(adminDb, transaction, companyId))?.locations ?? []);
       return previewShowcaseLegalIdentity(await readLegalIdentityInputs(adminDb, transaction, companyId, locations));
     },
     { readOnly: true },

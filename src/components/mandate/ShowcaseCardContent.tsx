@@ -44,7 +44,7 @@ export function ShowcaseCardContent(): React.ReactElement {
         <p role="alert" className="m-0 text-sm text-destructive">{t(SHOWCASE_KEYS.temporarilyUnavailable)}</p>
       ) : null}
       {state.phase === 'published' || state.phase === 'not-published' ? (
-        <ShowcaseCardSection enabled={state.phase === 'published'} />
+        <ShowcaseCardSection published={state.phase === 'published'} />
       ) : null}
       {/* Α21.17 — ο κωδικός δείχνει στη ΖΩΝΤΑΝΗ βιτρίνα ⇒ υπάρχει μόνο όταν υπάρχει βιτρίνα (ποτέ πόρτα σε τοίχο). */}
       {state.phase === 'published' ? <ShowcaseQrPanel alias={state.profile.alias} /> : null}

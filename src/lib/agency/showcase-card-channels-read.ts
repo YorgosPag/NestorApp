@@ -7,12 +7,36 @@
  * δέχεται `unknown` — ανάμεσα στον γραφέα και σε αυτόν υπάρχει χειροκίνητη επεξεργασία.
  */
 
-import { readPlace, text } from '@/lib/agency/showcase-read-primitives';
+import { readPlace, readWebsite, text } from '@/lib/agency/showcase-read-primitives';
+import { readLocations } from '@/lib/agency/showcase-read-locations';
 import type { PlaceRef } from '@/types/geo/public-place';
 import { carryConfirmations } from '@/lib/agency/showcase-email-confirmation-rules';
-import type { ShowcaseEmailConfirmation, ShowcaseLocationChannels, ShowcasePhone } from '@/types/showcase-card';
+import type {
+  ShowcaseEmailConfirmation,
+  ShowcaseLocation,
+  ShowcaseLocationChannels,
+  ShowcasePhone,
+} from '@/types/showcase-card';
 
 export const NO_CHANNELS: ShowcaseLocationChannels = { phones: [], emails: [], emailConfirmations: [] };
+
+/**
+ * **Το δημόσιο μισό μιας κάρτας που ΔΕΝ δημοσιεύτηκε ακόμη** (ADR-841 §7 Α23.14.3) — πεδίο `draft` του ιδιωτικού
+ * εγγράφου. Γράφεται **μόνο** όσο δεν υπάρχει βιτρίνα· η πρώτη δημοσίευση το μεταφέρει στο δημόσιο και το σβήνει.
+ */
+export interface ShowcaseCardDraft {
+  readonly locations: readonly ShowcaseLocation[];
+  readonly website: string | null;
+}
+
+/** Ίδιοι αναγνώστες με το δημόσιο έγγραφο (`readLocations` · `readWebsite`) ⇒ ένα σχήμα. Απόν ⇒ `null`, ποτέ σφάλμα. */
+export function readCardDraft(raw: unknown): ShowcaseCardDraft | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const draft = (raw as Record<string, unknown>).draft;
+  if (typeof draft !== 'object' || draft === null) return null;
+  const row = draft as Record<string, unknown>;
+  return { locations: readLocations(row.locations), website: readWebsite(row.website) };
+}
 
 /** Οι αποθηκευμένες επιβεβαιώσεις (Α21.18) — απούσες σε κάθε έγγραφο πριν τη φέτα ⇒ `[]`. */
 function readConfirmations(raw: unknown): readonly ShowcaseEmailConfirmation[] {

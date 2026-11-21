@@ -8,6 +8,7 @@
  *   • Δ1-Δ3 — δημοσίευση: σήμα ΓΕΜΗ στην ταυτότητα **και** στο διαπιστευτήριο μεσίτη (Α9.2) · τίτλος
  *   • Α1-Α4 — ανανέωση: μετονομασία ρίχνει το σήμα · αποσυρμένη επωνυμία ⇒ ταυτότητα `null` · ιδεμποτής · παλιά βιτρίνα
  *   • Κ1 — η οδός της κάρτας τροφοδοτεί το `business-address`, και η αλλαγή της φτάνει με ανανέωση
+ *   • Κ3-Κ4 — Α23.14.3: η κάρτα-πρόχειρο τροφοδοτεί προεπισκόπηση **και** πρώτη δημοσίευση· άρνηση ⇒ πρόχειρο μένει
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -39,6 +40,9 @@ const { saveShowcaseCard } = require('../showcase-card-custody') as typeof impor
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { refreshShowcaseLegalIdentity } = require('../showcase-legal-identity-custody') as
   typeof import('../showcase-legal-identity-custody');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { readShowcaseLegalPreview } = require('../showcase-legal-preview.service') as
+  typeof import('../showcase-legal-preview.service');
 
 const COMPANY = 'comp_legal_0001';
 
@@ -266,5 +270,34 @@ describe('Κ — η κάρτα τροφοδοτεί την «διεύθυνση 
       kind: 'rejected',
       reason: 'agency-profile-seat-address-missing',
     });
+  });
+
+  it('🔴 Κ3 — Α23.14.3: κάρτα ΠΡΙΝ τη δημοσίευση ⇒ η προεπισκόπηση δέχεται business-address, και η ΠΡΩΤΗ δημοσίευση το γράφει', async () => {
+    const { fake, admin } = db();
+    expect((await readShowcaseLegalPreview(admin, COMPANY))).toMatchObject({
+      kind: 'ready',
+      seats: { 'business-address': { kind: 'rejected', reason: 'agency-profile-seat-address-missing' } },
+    });
+
+    expect((await saveShowcaseCard(admin, COMPANY, [headquarters('Τσιμισκή')], null)).kind).toBe('saved');
+
+    expect(await readShowcaseLegalPreview(admin, COMPANY)).toMatchObject({
+      kind: 'ready',
+      seats: { 'business-address': { kind: 'ok', seat: { disclosure: 'business-address', streetLine: 'Τσιμισκή 12' } } },
+    });
+    expect((await publish(admin, { seatDisclosure: 'business-address' })).kind).toBe('published');
+    expect((await stored(fake)).legalIdentity).toMatchObject({ seat: { disclosure: 'business-address', streetLine: 'Τσιμισκή 12' } });
+  });
+
+  it('🔑 Κ4 — Α23.14.3: ΑΡΝΗΜΕΝΗ πρώτη δημοσίευση ⇒ το πρόχειρο ΜΕΝΕΙ (η συναλλαγή δεν έγραψε τίποτα)', async () => {
+    const { fake, admin } = db();
+    givenRegistryCheck(fake, COMPANY);
+    await saveShowcaseCard(admin, COMPANY, [headquarters('Τσιμισκή')], null);
+
+    const result = await publish(admin, { publicName: { kind: 'distinctive-title', title: 'Δοκιμαστικό Γραφείο' } });
+
+    expect(result).toEqual({ kind: 'rejected', reason: 'agency-profile-title-not-in-registry' });
+    const privateDoc = await fake.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(COMPANY).get();
+    expect(privateDoc.data()).toHaveProperty('draft');
   });
 });

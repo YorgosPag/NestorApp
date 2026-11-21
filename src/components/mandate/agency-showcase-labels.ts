@@ -291,7 +291,6 @@ export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {
   'agency-profile-mark-unknown-kind': `${K}.rejection.agency-profile-mark-unknown-kind`,
   'agency-profile-mark-without-showcase': `${K}.rejection.agency-profile-mark-without-showcase`,
   'agency-profile-mark-unpublishable': `${K}.rejection.agency-profile-mark-unpublishable`,
-  'agency-profile-card-without-showcase': `${K}.rejection.agency-profile-card-without-showcase`,
   'agency-profile-card-too-many-locations': `${K}.rejection.agency-profile-card-too-many-locations`,
   'agency-profile-card-two-headquarters': `${K}.rejection.agency-profile-card-two-headquarters`,
   'agency-profile-card-too-many-channels': `${K}.rejection.agency-profile-card-too-many-channels`,
@@ -310,7 +309,8 @@ export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {
 export const SHOWCASE_CARD_KEYS = {
   title: `${K}.cardTitle`,
   lead: `${K}.cardLead`,
-  needsShowcase: `${K}.cardNeedsShowcase`,
+  /** Α23.14.3 — χωρίς βιτρίνα η κάρτα είναι **πρόχειρο**: ιδιωτικό, δημοσιεύεται μαζί με την πρώτη δημοσίευση. */
+  draftNotice: `${K}.cardDraftNotice`,
   empty: `${K}.cardEmpty`,
   addHeadquarters: `${K}.cardAddHeadquarters`,
   addBranch: `${K}.cardAddBranch`,
@@ -381,6 +381,8 @@ export const SHOWCASE_CARD_KEYS = {
   emailSending: `${K}.cardEmailSending`,
   emailSent: `${K}.cardEmailSent`,
   emailSaveFirst: `${K}.cardEmailSaveFirst`,
+  /** Α23.14.3 — η επιβεβαίωση στέλνεται για **δημοσιευμένη** κάρτα (ο σύνδεσμος δείχνει τη ζωντανή βιτρίνα). */
+  emailAfterPublish: `${K}.cardEmailAfterPublish`,
   /** 🔑 Λέει **τι ΔΕΝ** σημαίνει το σήμα — Α9.2 · DSA 6(3). */
   emailConfirmHint: `${K}.cardEmailConfirmHint`,
   // ── ΤΟ EMAIL ΕΠΕΣΤΡΕΨΕ (Α21.20) ──────────────────────────────────────────────────────────

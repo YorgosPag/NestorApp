@@ -84,8 +84,8 @@
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__rfq__rfqId.el.json": "44fb1489acea4df41952396d18ab97677db233bb37d825310902db0a0cb7c7d2",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts.el.json": "4417d0b90ea545e7726040be07e723ae3b0506f1786f4daecca137b59d758157",
     "src/i18n/generated/routes/o__workspace__projects__id__procurement__subcontracts__agreementId.el.json": "9e6e28dce807af1b9362fbe47e1eafa1a191843e3a6c68c9d92644adb3ba4d73",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "1cb12e96125b87fa5fb3227bc6ac24acf9ebc470b9ec4accd70586b2197be7bb",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "df1448a2bb4c85fc26bfbdcc903c7df7d53eaecd1d97fdc03e01a17528acfbae",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "4106f57eb106796087afe0f12e97534e58c1d2c8d54786e952aae97a4c2e449a",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile__card.el.json": "c8aeacb972a305592a3ecccfe48c5bddc40e4ef117291955394cdded1a49d30d",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__licences.el.json": "197d7f2e76bcd3573ef2b5e920ee6ac02ffc68d91c6c9e531bd87c9bb4ce27e1",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile__registry.el.json": "c31ac607e41ec524cd78d412c71f24c321d5922d87c07166cd544a39ef06b213",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2d03277cd35aeb756c09da4574ea57ceb23c040933a0c43a6726bc37b0fd407b",
+  "inputsSha256": "1252d825deafaf4eaa29a3164d77c356ed871a3da32199c90734920902deff7b",
   "languages": [
     "el"
   ],
@@ -35634,7 +35634,6 @@
             "mandate.showcase.placeHint",
             "mandate.showcase.placeLabel",
             "mandate.showcase.placeNotFound",
-            "mandate.showcase.publicIdentity.cardAfterPublish",
             "mandate.showcase.publicIdentity.fixCard",
             "mandate.showcase.publicIdentity.fixProfile",
             "mandate.showcase.publicIdentity.forbidden",
@@ -35686,7 +35685,6 @@
             "mandate.showcase.rejection.agency-profile-card-too-many-locations",
             "mandate.showcase.rejection.agency-profile-card-two-headquarters",
             "mandate.showcase.rejection.agency-profile-card-website-invalid",
-            "mandate.showcase.rejection.agency-profile-card-without-showcase",
             "mandate.showcase.rejection.agency-profile-chapter-missing",
             "mandate.showcase.rejection.agency-profile-mark-not-owned",
             "mandate.showcase.rejection.agency-profile-mark-unknown-kind",
@@ -35836,6 +35834,8 @@
             "mandate.showcase.cardDayClosed",
             "mandate.showcase.cardDayModeLabel",
             "mandate.showcase.cardDayOpen",
+            "mandate.showcase.cardDraftNotice",
+            "mandate.showcase.cardEmailAfterPublish",
             "mandate.showcase.cardEmailAged",
             "mandate.showcase.cardEmailConfirmHint",
             "mandate.showcase.cardEmailConfirmedOn",
@@ -35886,7 +35886,6 @@
             "mandate.showcase.cardLabelPlaceholder",
             "mandate.showcase.cardLead",
             "mandate.showcase.cardLoadFailed",
-            "mandate.showcase.cardNeedsShowcase",
             "mandate.showcase.cardNumberLabel",
             "mandate.showcase.cardOpensLabel",
             "mandate.showcase.cardPhonePlaceholder",
@@ -35952,7 +35951,6 @@
             "mandate.showcase.rejection.agency-profile-card-too-many-locations",
             "mandate.showcase.rejection.agency-profile-card-two-headquarters",
             "mandate.showcase.rejection.agency-profile-card-website-invalid",
-            "mandate.showcase.rejection.agency-profile-card-without-showcase",
             "mandate.showcase.rejection.agency-profile-chapter-missing",
             "mandate.showcase.rejection.agency-profile-mark-not-owned",
             "mandate.showcase.rejection.agency-profile-mark-unknown-kind",
@@ -41379,7 +41377,7 @@
   ],
   "stats": {
     "matchedKeys": 281,
-    "sliceBytes": 1373885
+    "sliceBytes": 1373734
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

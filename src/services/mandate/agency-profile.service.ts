@@ -52,7 +52,7 @@
 
 import 'server-only';
 
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
@@ -62,6 +62,8 @@ import type { PublicShowcase, PublicShowcaseLookup } from '@/types/agency-profil
 import type { ShowcaseLegalDeclaration } from '@/types/showcase-legal-identity';
 import { readShowcase, toStoredShowcase } from '@/lib/agency/showcase-read';
 import { publishShowcaseMark } from '@/services/mandate/showcase-mark-publication';
+// 🔑 Α23.14.3 — το πρόχειρο της κάρτας διαβάζεται από τον **έναν** κάτοχό της.
+import { readCardDraftIn } from '@/services/mandate/showcase-card-custody';
 // 🔑 Ο κριτής του διαπιστευτηρίου ζει **έξω** — καθαρή κρίση, μηδέν I/O (N.7.1).
 import type { ShowcaseCredentialDeclaration } from '@/services/mandate/agency-profile-credential';
 // 🔑 Α23 — η νομική ταυτότητα: αναγνώσεις μέσα στη συναλλαγή + σύνθεση με τα διαπιστευτήρια.
@@ -261,9 +263,12 @@ export async function publishShowcase(
       //    **δική της πράξη** (`showcase-card-custody`), η οθόνη της βιτρίνας δεν τη στέλνει,
       //    και το `set` είναι χωρίς `merge` ⇒ χωρίς μεταφορά, κάθε αλλαγή επωνυμίας θα έσβηνε
       //    έδρα, υποκαταστήματα και ωράριο. Άγκυρα: `showcase-card-survival.test.ts`.
-      const keptLocations = existing?.outcome === 'showcase' ? existing.showcase.locations : [];
+      // 🔑 Α23.14.3 — **ΠΡΩΤΗ ΔΗΜΟΣΙΕΥΣΗ**: η κάρτα έρχεται από το **πρόχειρο** του ιδιωτικού εγγράφου (ίδια ids ⇒
+      //    τα κανάλια ταιριάζουν), και το πρόχειρο σβήνεται **παρακάτω, στην ίδια συναλλαγή** ⇒ ποτέ δύο σπίτια.
+      const card = existing?.outcome === 'showcase' ? null : await readCardDraftIn(adminDb, transaction, companyId);
+      const keptLocations = existing?.outcome === 'showcase' ? existing.showcase.locations : (card?.locations ?? []);
       // 🔴 Α21.17 — **ΤΕΤΑΡΤΟΣ** καταναλωτής: η ιστοσελίδα γράφεται από την πράξη της κάρτας, άρα μεταφέρεται.
-      const keptWebsite = existing?.outcome === 'showcase' ? existing.showcase.website : null;
+      const keptWebsite = existing?.outcome === 'showcase' ? existing.showcase.website : (card?.website ?? null);
       // 🔴 ADR-915 §21 — **ΠΕΜΠΤΟΣ** καταναλωτής: οι άδειες είναι δική τους πράξη (`showcase-licence-custody`), η
       //    οθόνη της βιτρίνας δεν τις στέλνει, και το `set` είναι χωρίς `merge` ⇒ χωρίς μεταφορά θα σβήνονταν.
       const keptLicences = existing?.outcome === 'showcase' ? existing.showcase.licences : [];
@@ -303,6 +308,12 @@ export async function publishShowcase(
       // 🔑 **Ο δίσκος ΔΕΝ παίρνει το `standing`** — δες `toStoredShowcase`. Μια
       //    αποθηκευμένη σημαία μπορεί να διαφωνήσει με το περιεχόμενο (ADR-749).
       transaction.set(ref, toStoredShowcase(showcase));
+      // 🔑 Α23.14.3 — το πρόχειρο **παραδόθηκε**: σβήνεται ατομικά με τη δημοσίευση (κανάλια/`premises` μένουν).
+      if (card !== null) {
+        transaction.update(adminDb.collection(COLLECTIONS.SHOWCASE_CARD_CHANNELS).doc(companyId), {
+          draft: FieldValue.delete(),
+        });
+      }
 
       // 🔴 ADR-841 §7 Α22 — **ΤΟ ΟΝΟΜΑ ΤΗΣ ΒΙΤΡΙΝΑΣ ΕΙΝΑΙ ΤΟ ΟΝΟΜΑ ΤΩΝ ΑΓΓΕΛΙΩΝ.** Η σύγκριση
       //    γίνεται **εδώ**, πάνω στο ίδιο `existing` που κλειδώνει η συναλλαγή: αλλού δεν
@@ -325,7 +336,6 @@ export async function publishShowcase(
     return { kind: 'failed' };
   }
 }
-
 
 /**
  * **Η απόσυρση — ΔΙΑΓΡΑΦΗ, όχι σημαία** (§9.10).

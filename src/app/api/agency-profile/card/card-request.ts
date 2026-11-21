@@ -80,7 +80,6 @@ export type ShowcaseCardResponse =
   | { readonly error: 'INVALID_CARD'; readonly reason: AgencyProfileRejection }
   /** Ο τόπος **ποιου** καταστήματος — η φόρμα έχει πολλά, και «κάποιος τόπος» είναι γρίφος. */
   | { readonly error: PlaceError; readonly locationIndex: number }
-  | { readonly error: 'SHOWCASE_NOT_PUBLISHED' }
   | { readonly error: 'READ_FAILED' }
   | { readonly error: 'WRITE_FAILED' };
 

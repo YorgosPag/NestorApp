@@ -32,7 +32,6 @@ export const SHOWCASE_PUBLIC_IDENTITY_KEYS = {
   willShow: `${K}.willShow`,
   fixProfile: `${K}.fixProfile`,
   fixCard: `${K}.fixCard`,
-  cardAfterPublish: `${K}.cardAfterPublish`,
   previewTitle: `${K}.previewTitle`,
   previewEmpty: `${K}.previewEmpty`,
   /** ⚖️ GDPR άρθ. 13/14 — η πλήρης έδρα φυλάσσεται και **δεν** δημοσιεύεται χωρίς επιλογή. */
