@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { ViewportCamera, ProjectionMode, SpeedModifier, ViewportCameraOptions } from './viewport-types';
 import { createViewportAnimation } from './viewport-animation';
-import { computePerspectiveFraming, computeOrthoFraming, computeFramingForView } from './viewport-framing';
+import { computePerspectiveFraming, computeOrthoFraming, computeFramingForView } from '@/lib/three/camera/viewport-framing';
 import { HOME_CANONICAL_VIEW_ID } from './canonical-views';
 import { areFiniteBounds } from '../scene/finite-bounds';
 import { createTumbleRotation } from './tumble-rotation';

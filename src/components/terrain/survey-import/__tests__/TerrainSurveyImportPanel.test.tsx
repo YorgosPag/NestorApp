@@ -155,7 +155,8 @@ describe('Δ — δήλωση και δημοσίευση', () => {
 
   it('Δ3 δημοσιευμένο έδαφος ⇒ πηγή και αριθμοί του, και «αντικατάσταση»', async () => {
     renderPanel(TARGET, PUBLISHED);
-    expect(screen.getByText(/^terrain-survey:current\.survey::\{"name":"Τοπογράφος Α\.Ε\."/)).toBeInTheDocument();
+    // Η ΙΔΙΑ πηγή με τη δημόσια αγγελία — ένα κλειδί (`TerrainSurveyCredit`, ADR-920 Β6.6α).
+    expect(screen.getByText(/^listing-detail:terrain\.survey::\{"name":"Τοπογράφος Α\.Ε\."/)).toBeInTheDocument();
     expect(screen.getByText(`${S}.towards.south`)).toBeInTheDocument();
     await drop(surveyFileOf('survey.csv', SURVEY_CSV));
     await settled();

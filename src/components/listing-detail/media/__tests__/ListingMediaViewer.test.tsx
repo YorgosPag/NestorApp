@@ -26,6 +26,10 @@ jest.mock('../../ListingModels', () => ({ ListingModels: () => <div data-testid=
 jest.mock('../../ListingTour', () => ({ ListingTour: () => <div data-testid="tour" /> }));
 jest.mock('../../ListingVideos', () => ({ ListingVideos: () => <div data-testid="videos" /> }));
 jest.mock('../../ListingFloorPlates', () => ({ ListingFloorPlates: () => <div data-testid="floor-plates" /> }));
+// Η σκηνή του εδάφους ζητά το στιγμιότυπο ΣΤΗΝ ΠΡΟΣΑΡΤΗΣΗ (`ListingTerrainPanel.test.tsx`)· εδώ κρίνεται ΠΟΤΕ προσαρτάται.
+jest.mock('../../terrain/ListingTerrainPanel', () => ({
+  ListingTerrainPanel: ({ terrain }: { terrain: { url: string } }) => <div data-testid="terrain" data-url={terrain.url} />,
+}));
 
 const DECLARED = { value: { url: '/a', altKey: 'k' }, provenance: 'declared' };
 const GUESSED = { value: { url: '/b', altKey: 'k' }, provenance: 'inferred', confirmedAt: null };
@@ -47,14 +51,18 @@ const FLOOR_PLATE_WITHOUT_SELF = {
 /** Η περιήγηση ζει ΣΤΗΝ αγγελία (ADR-777 §8.92): `null` = καμία που φαίνεται — ο προβολέας δεν ρωτά πια το δίκτυο. */
 const LISTED_TOUR = { visibility: 'public' };
 
+/** Το έδαφος όπως το γράφει ο binder (ADR-920 Β3β): μετρημένο, με το url του ραφιού (η κάρτα δεν κρίνεται εδώ). */
+const TERRAIN = { provenance: 'measured', value: { url: 'https://shelf.example/terrain.json' } };
+
 function listing(
   floorplans: unknown[] = [],
   models: unknown[] = [],
   videos: unknown[] = [],
   floorPlates: unknown[] = [],
-  tour: unknown = null
+  tour: unknown = null,
+  terrain: unknown = null
 ) {
-  return { id: 'l1', floorplans, models, videos, floorPlates, tour } as never;
+  return { id: 'l1', floorplans, models, videos, floorPlates, tour, terrain } as never;
 }
 
 function setQuery(query: string): void {
@@ -186,5 +194,34 @@ describe('ListingMediaViewer', () => {
     expect(screen.getByTestId('floor-plates')).toBeTruthy();
     expect(screen.queryByTestId('gallery')).toBeNull();
     expect(screen.queryByTestId('floorplans')).toBeNull();
+  });
+
+  // ADR-920 Β6.6 — ως εδώ το `terrain` γραφόταν στο δημόσιο έγγραφο και καμία δημόσια οθόνη δεν το έδειχνε.
+  it('🔴 Π9 «Ανάγλυφο»: τελευταίο σχέδιο, χωρίς πλήθος, μόνο με έδαφος που δείχνεται — και η σκηνή ΜΟΝΟ όταν ανοίξει', async () => {
+    const full = render(<ListingMediaViewer listing={listing([DECLARED], [DECLARED], [], [FLOOR_PLATE], null, TERRAIN)} />);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'listing-detail:media.tabs.photos(3)',
+      'listing-detail:media.tabs.floorplan(1)',
+      'listing-detail:media.tabs.floorPlate',
+      'listing-detail:media.tabs.terrain',
+      'listing-detail:model.heading',
+    ]);
+    // Η καρτέλα υπάρχει, η σκηνή ΟΧΙ: κανένα byte του στιγμιοτύπου για όποιον δεν την πατήσει.
+    expect(screen.queryByTestId('terrain')).toBeNull();
+    await act(async () => {
+      fireEvent.mouseDown(screen.getByRole('tab', { name: /terrain/ }), { button: 0, ctrlKey: false });
+    });
+    await waitFor(() => expect(screen.getByTestId('terrain').getAttribute('data-url')).toBe(TERRAIN.value.url));
+    full.unmount();
+
+    // Μαντεμένο έδαφος χωρίς έγκριση ⇒ καμία καρτέλα· μένουν μόνο οι φωτογραφίες, άρα ούτε λωρίδα.
+    const guessed = render(<ListingMediaViewer listing={listing([], [], [], [], null, { ...TERRAIN, provenance: 'inferred', confirmedAt: null })} />);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    guessed.unmount();
+
+    setQuery('?mediaTab=terrain');
+    render(<ListingMediaViewer listing={listing([], [], [], [], null, TERRAIN)} />);
+    expect(screen.getByTestId('terrain')).toBeTruthy();
+    expect(screen.queryByTestId('gallery')).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview 🗺️ **ΤΟ SVG ΤΟΥ ΧΑΡΤΗ ΕΔΑΦΟΥΣ** — κλάσεις κλίσης, ισοϋψείς, ετικέτες, σημάνσεις, βορράς, κλίμακα (ADR-920 Β4.8, Α5).
+ * @fileoverview 🗺️ **ΤΟ SVG ΤΟΥ ΧΑΡΤΗ ΕΔΑΦΟΥΣ** — υψομετρικές ζώνες ή κλάσεις κλίσης (Β6.2), ισοϋψείς, ετικέτες, σημάνσεις, βορράς, κλίμακα (ADR-920 Β4.8, Α5).
  * @related lib/terrain/publication/terrain-map-model (ΤΙ ζωγραφίζεται — εδώ μόνο ΠΩΣ) · ./terrain-map-symbols · ./terrain-map-palette
  * @module components/listing-detail/terrain/TerrainMapSvg
  *
@@ -50,6 +50,22 @@ function SlopeLayer({ model }: { readonly model: TerrainMapModel }) {
       {model.slopeRegions.filter((region) => region.pathData.length > 0).map((region) => (
         <path key={region.classIndex} d={region.pathData} fillRule="evenodd" data-slope-class={region.classIndex}
           className={terrainSlopeFillClass(region.classIndex)} strokeWidth={SEAM_PX} strokeLinejoin="round" {...NON_SCALING} />
+      ))}
+    </g>
+  );
+}
+
+/**
+ * ADR-920 Β6.2 — υψομετρικές ζώνες. Το χρώμα έρχεται από το μοντέλο (`band.color`), δηλαδή από τη **μία** υψομετρική
+ * κλίμακα του `@/lib/terrain/elevation-ramp`, την ίδια με το 3Δ. Ένα token CSS δεν θα έφτανε ποτέ στο three, και η κλίμακα
+ * είναι συνεχής (ένα χρώμα ανά ύψος), όχι κλειστή λίστα κλάσεων. Ίδιο περίγραμμα ραφής με τις κλάσεις κλίσης.
+ */
+function ElevationLayer({ model }: { readonly model: TerrainMapModel }) {
+  return (
+    <g data-terrain-layer="elevation">
+      {model.elevationBands.map((band) => (
+        <path key={band.fromM} d={band.pathData} fillRule="evenodd" fill={band.color} stroke={band.color}
+          data-elevation-from={band.fromM} strokeWidth={SEAM_PX} strokeLinejoin="round" {...NON_SCALING} />
       ))}
     </g>
   );
@@ -115,12 +131,16 @@ function Marks({ model }: { readonly model: TerrainMapModel }) {
   );
 }
 
+/** Τι χρωματίζει τον χάρτη (ADR-920 Β6.2): το υψόμετρο, όπως στον viewer, ή η κλάση κλίσης. */
+export type TerrainMapFill = 'elevation' | 'slope';
+
 export interface TerrainMapSvgProps {
   readonly model: TerrainMapModel;
   readonly words: TerrainMapSvgWords;
+  readonly fill: TerrainMapFill;
 }
 
-export function TerrainMapSvg({ model, words }: TerrainMapSvgProps) {
+export function TerrainMapSvg({ model, words, fill }: TerrainMapSvgProps) {
   const id = useSvgFragmentId('terrain');
   const { viewBox: box } = model;
   const sparseId = `${id}-sparse`;
@@ -133,7 +153,7 @@ export function TerrainMapSvg({ model, words }: TerrainMapSvgProps) {
         <defs><SparseHatchPattern id={sparseId} tile={model.labelHeightM * HATCH_TILE_RATIO} /></defs>
       )}
       <rect x={box.minX} y={box.minY} width={box.width} height={box.height} className={TERRAIN_PAPER_CLASS} />
-      <SlopeLayer model={model} />
+      {fill === 'elevation' ? <ElevationLayer model={model} /> : <SlopeLayer model={model} />}
       {model.sparsePathData !== null && (
         <path d={model.sparsePathData} fillRule="evenodd" fill={`url(#${sparseId})`} data-terrain-layer="sparse" />
       )}

@@ -402,7 +402,8 @@ describe('Χ — «Μόνο με 3D»: περιήγηση Ή μοντέλο, έ�
     at: AT,
     sourceRef: 'bim',
   } as const;
-  const bare = { floorplans: [], videos: [], floorPlates: [], models: [], tour: null };
+  // `terrain: null` — κάθε αποθηκευμένη αγγελία το έχει (κρίκος σχήματος 26)· ADR-920 Β6.6β: είναι πλέον χωρικό μέσο.
+  const bare = { floorplans: [], videos: [], floorPlates: [], models: [], tour: null, terrain: null };
   const wants3d = withFlag(EMPTY_LISTING_CRITERIA, 'hasSpatialMedia', true);
 
   it.each([
@@ -428,6 +429,15 @@ describe('Χ — «Μόνο με 3D»: περιήγηση Ή μοντέλο, έ�
     const plot = listing({ ...bare, type: 'plot', floor: null, bedrooms: null } as Partial<PublicListing>);
     expect(criterionAppliesTo(plot, 'hasSpatialMedia')).toBe(true);
     expect(listingSurvivesCriteria(plot, wants3d)).toBe(false);
+  });
+
+  // ADR-920 Β6.6β — το τρίτο χωρικό μέσο: στη γη το «3D» είναι το τρισδιάστατο ανάγλυφο (Land id «3D tour»).
+  it('🔴 οικόπεδο με ΜΕΤΡΗΜΕΝΟ ανάγλυφο περνά το `3d` · με μη εγκεκριμένο, όχι', () => {
+    const terrainOf = (fact: object) =>
+      listing({ ...bare, type: 'plot', floor: null, bedrooms: null, terrain: fact } as unknown as Partial<PublicListing>);
+    const value = { url: 'https://shelf.example/terrain.json' };
+    expect(listingSurvivesCriteria(terrainOf({ provenance: 'measured', value, at: AT }), wants3d)).toBe(true);
+    expect(listingSurvivesCriteria(terrainOf({ provenance: 'inferred', value, at: AT, confirmedAt: null }), wants3d)).toBe(false);
   });
 
   it('ταξιδεύει στη διεύθυνση ως `3d` και γυρίζει ίδιο', () => {

@@ -111,7 +111,6 @@
   },
   "current": {
     "heading": "Published now",
-    "survey": "Surveyor: {name} · surveyed {date}",
     "none": "The listing has no terrain relief yet. Upload the plot's survey — buyers will see the elevation difference, slopes and a contour map.",
     "replaceHint": "A new survey replaces the published one."
   }

@@ -131,6 +131,7 @@
       "video": "Video",
       "floorplan": "Floor plan",
       "floorPlate": "Storey plan",
+      "terrain": "Terrain",
       "tour": "3D tour"
     },
     "backToListing": "Back to the listing",
@@ -230,11 +231,69 @@
     "basis": "As declared by the developer."
   },
   "terrain": {
+    "survey": "Surveyor: {name} · surveyed {date}",
+    "panel": {
+      "label": "Plot terrain",
+      "loading": "Loading the terrain…",
+      "unreachable": "The terrain did not load. The figures below still apply.",
+      "retry": "Try again",
+      "refused": "The terrain of this listing cannot be shown right now. The figures below still apply."
+    },
+    "view": {
+      "tabs": {
+        "label": "Terrain view",
+        "plan": "Plan",
+        "threeD": "3D"
+      },
+      "threeD": {
+        "reveal": "View the terrain in 3D",
+        "revealHint": "Rotate with the mouse or one finger; use two fingers to move and zoom.",
+        "loading": "Loading the 3D view…",
+        "failed": "The 3D view stopped. Please try again; the plan stays available.",
+        "retry": "Try again",
+        "noWebgl": "This device or browser does not support 3D graphics (WebGL). The plan shows the same relief with contour lines and elevation colours.",
+        "canvasLabel": "3D view of the terrain",
+        "description": "The plot's terrain in three dimensions, with contour lines and elevation colouring. The cube at the top right changes the view and resets it.",
+        "home": "Reset view"
+      },
+      "exaggeration": {
+        "label": "Vertical exaggeration",
+        "option": "{value}×",
+        "badge": "Vertical exaggeration {value}×: heights look larger than they are"
+      },
+      "cube": {
+        "faces": {
+          "top": "TOP",
+          "bottom": "BTM",
+          "front": "S",
+          "back": "N",
+          "left": "W",
+          "right": "E"
+        },
+        "compass": {
+          "n": "N",
+          "e": "E",
+          "s": "S",
+          "w": "W"
+        }
+      }
+    },
     "map": {
       "title": "Terrain map",
       "description": "Contour lines every {interval}, index contours every {major}, and slope classes of the ground. North is up; the scale bar shows {scale}.",
       "caption": "Contours every {interval} · labelled index contours every {major}",
+      "descriptionElevation": "Contour lines every {interval}, index contours every {major}, and colouring by elevation, from green at the lowest point to pale at the highest. North is up; the scale bar shows {scale}.",
       "indicative": "Slope classes are indicative: they help read the terrain and are not a construction cost estimate.",
+      "fill": {
+        "label": "Map colouring",
+        "elevation": "Elevation",
+        "slope": "Slope"
+      },
+      "elevation": {
+        "caption": "Elevation",
+        "low": "Lowest {value}",
+        "high": "Highest {value}"
+      },
       "north": "N",
       "metres": "{value} m",
       "preview": {

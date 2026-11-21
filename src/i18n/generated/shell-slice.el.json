@@ -2804,6 +2804,7 @@
       "none": "Χωρίς φωτογραφία",
       "spatial": {
         "model": "3D μοντέλο",
+        "terrain": "3D ανάγλυφο",
         "tour": "3D περιήγηση",
         "tourAndModel": "3D περιήγηση · μοντέλο",
         "tourAndModelShort": "3D"

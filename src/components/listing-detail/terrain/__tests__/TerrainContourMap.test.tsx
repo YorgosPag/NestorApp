@@ -7,9 +7,8 @@
  *   - `STEP_PLOT`: επίπεδο ως x = 15 m, μετά 20 % ⇒ 75 % / 25 % του ΕΜΒΑΔΟΥ σε δύο κλάσεις.
  */
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 
-import el from '@/i18n/locales/el/listing-detail.json';
 import { formatNumber, formatPercentage } from '@/lib/intl-formatting';
 import type { TopoPoint } from '@/lib/terrain/terrain-types';
 import { buildListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-snapshot';
@@ -18,23 +17,14 @@ import { terrainMapModelOf, type TerrainMapModel } from '@/lib/terrain/publicati
 
 import { TerrainContourMap } from '../TerrainContourMap';
 import { terrainSlopeFillClass } from '../terrain-map-palette';
+import { elListingDetailT } from './fixtures/el-listing-detail-t';
 
-type Dict = { readonly [key: string]: string | Dict };
-
-function lookup(key: string): string {
-  const [ns, path] = key.split(':');
-  if (ns !== 'listing-detail') throw new Error(`unexpected namespace in ${key}`);
-  const value = path.split('.').reduce<string | Dict | undefined>(
-    (node, part) => (node !== undefined && typeof node !== 'string' ? node[part] : undefined), el as Dict,
-  );
-  if (typeof value !== 'string') throw new Error(`missing i18n key ${key}`);
-  return value;
-}
+/** Το ωμό πρότυπο του κλειδιού (χωρίς τιμές, τα `{name}` μένουν όπως είναι). */
+const lookup = (key: string): string => elListingDetailT(key);
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
-    t: (key: string, values: Record<string, string | number> = {}) =>
-      lookup(key).replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? `{${name}}`)),
+    t: jest.requireActual<typeof import('./fixtures/el-listing-detail-t')>('./fixtures/el-listing-detail-t').elListingDetailT,
   }),
 }));
 
@@ -55,8 +45,10 @@ const STEP_PLOT = terrainMapModelOf(
   snapshotOf([...every(0, 15, 5), ...every(16, 20, 1)], every(0, 20, 5), (x) => (x <= 15 ? 120_000 : 120_000 + 200 * (x - 15))),
 );
 
-function renderMap(model: TerrainMapModel) {
+/** Ο χάρτης ανοίγει σε «Υψόμετρα» (Β6.2)· `fill: 'slope'` πατά «Κλίσεις» όπως ο άνθρωπος. */
+function renderMap(model: TerrainMapModel, fill: 'elevation' | 'slope' = 'elevation') {
   const view = render(<TerrainContourMap model={model} />);
+  if (fill === 'slope') fireEvent.click(screen.getByRole('radio', { name: lookup('listing-detail:terrain.map.fill.slope') }));
   const svg = view.container.querySelector('svg[data-terrain-map]');
   if (svg === null) throw new Error('no map svg');
   return { ...view, svg };
@@ -77,7 +69,7 @@ describe('TerrainContourMap — σχέδιο', () => {
   });
 
   it('μία περιοχή ανά ΜΗ κενή κλάση, `evenodd`, με το γέμισμα της παλέτας', () => {
-    const { svg } = renderMap(STEP_PLOT);
+    const { svg } = renderMap(STEP_PLOT, 'slope');
     const drawn = STEP_PLOT.slopeRegions.filter((region) => region.pathData.length > 0);
     const paths = svg.querySelectorAll('[data-terrain-layer="slope"] path');
     expect(paths).toHaveLength(drawn.length);
@@ -123,6 +115,40 @@ describe('TerrainContourMap — σχέδιο', () => {
   });
 });
 
+describe('TerrainContourMap — Υψόμετρα | Κλίσεις (Β6.2)', () => {
+  it('ανοίγει σε «Υψόμετρα»: ζώνες με τα χρώματα του μοντέλου, κανένα στρώμα κλίσης, λωρίδα αντί για πίνακα', () => {
+    const { svg, container } = renderMap(PLANE);
+    const bands = svg.querySelectorAll('[data-terrain-layer="elevation"] path');
+    expect(bands).toHaveLength(PLANE.elevationBands.length);
+    PLANE.elevationBands.forEach((band, index) => {
+      expect(bands[index].getAttribute('fill')).toBe(band.color);
+      expect(bands[index].getAttribute('fill-rule')).toBe('evenodd');
+    });
+    expect(svg.querySelector('[data-terrain-layer="slope"]')).toBeNull();
+    expect(container.querySelector('[data-terrain-slope-table]')).toBeNull();
+    expect(container.querySelector('[data-terrain-elevation-legend]')).not.toBeNull();
+    expect(screen.queryByText(lookup('listing-detail:terrain.map.indicative'))).toBeNull();
+  });
+
+  it('η λωρίδα δείχνει χαμηλότερο και υψηλότερο υψόμετρο σε κείμενο (ποτέ μόνο χρώμα)', () => {
+    const { container } = renderMap(PLANE);
+    const legend = container.querySelector('[data-terrain-elevation-legend]');
+    const metres = (m: number) => lookup('listing-detail:terrain.map.metres').replace('{value}',
+      formatNumber(m, { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+    expect(legend?.textContent).toContain(metres(PLANE.elevationRangeM.min));
+    expect(legend?.textContent).toContain(metres(PLANE.elevationRangeM.max));
+    expect(legend?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('η περιγραφή του SVG ακολουθεί τον χρωματισμό', () => {
+    renderMap(PLANE);
+    const desc = () => screen.getByRole('img', { name: /Χάρτης εδάφους/u }).querySelector('desc')?.textContent ?? '';
+    expect(desc()).toContain('υψόμετρο');
+    fireEvent.click(screen.getByRole('radio', { name: lookup('listing-detail:terrain.map.fill.slope') }));
+    expect(desc()).toContain('κλάσεις κλίσης');
+  });
+});
+
 describe('TerrainContourMap — αραιή περιοχή και σημάνσεις', () => {
   it('διαγράμμιση μόνο όταν υπάρχει αραιή περιοχή — και το γέμισμα δείχνει σε ΥΠΑΡΚΤΟ pattern', () => {
     const plain = { ...PLANE, sparsePathData: null };
@@ -150,7 +176,7 @@ describe('TerrainContourMap — αραιή περιοχή και σημάνσε�
 
 describe('TerrainContourMap — πίνακας και υπόμνημα', () => {
   it('πίνακας: ΟΛΕΣ οι κλάσεις (και οι κενές), εύρος + % εμβαδού, ανοιχτή η τελευταία', () => {
-    renderMap(STEP_PLOT);
+    renderMap(STEP_PLOT, 'slope');
     const table = screen.getByRole('table', { name: lookup('listing-detail:terrain.map.slope.caption') });
     const rows = within(table).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(STEP_PLOT.slopeRegions.length);
@@ -162,15 +188,15 @@ describe('TerrainContourMap — πίνακας και υπόμνημα', () => {
   });
 
   it('το δείγμα του πίνακα έχει ΤΟ ΙΔΙΟ γέμισμα με την περιοχή του χάρτη', () => {
-    const { container } = renderMap(STEP_PLOT);
+    const { container } = renderMap(STEP_PLOT, 'slope');
     for (const region of STEP_PLOT.slopeRegions) {
       const swatch = container.querySelector(`[data-terrain-swatch="slope-${region.classIndex}"] rect:last-child`);
       expect(swatch?.getAttribute('class')).toBe(terrainSlopeFillClass(region.classIndex));
     }
   });
 
-  it('ένδειξη «ενδεικτικές» ορατή (Α6)', () => {
-    renderMap(PLANE);
+  it('ένδειξη «ενδεικτικές» ορατή με τις κλάσεις κλίσης (Α6)', () => {
+    renderMap(PLANE, 'slope');
     expect(screen.getByText(lookup('listing-detail:terrain.map.indicative'))).toBeTruthy();
   });
 

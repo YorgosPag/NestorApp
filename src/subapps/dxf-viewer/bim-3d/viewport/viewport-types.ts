@@ -4,15 +4,19 @@
  */
 
 import type * as THREE from 'three';
+import type { ProjectionMode } from '@/lib/three/view-cube/canonical-view-types';
 
-export type ProjectionMode =
-  | 'perspective'
-  | 'top'
-  | 'bottom'
-  | 'front'
-  | 'back'
-  | 'left'
-  | 'right';
+/**
+ * Οι τύποι κανονικών όψεων ζουν πλέον στο `@/lib/three/view-cube/canonical-view-types` (ADR-920 Β6.3):
+ * τους χρειάζεται ο κύβος πλοήγησης, που μοιράζεται με τον θεατή εδάφους της αγγελίας. Re-export εδώ,
+ * ώστε κανένας εισαγωγέας του viewer να μην αλλάξει.
+ */
+export type {
+  ProjectionMode,
+  CanonicalViewId,
+  OrthoCanonicalViewId,
+  CanonicalViewDef,
+} from '@/lib/three/view-cube/canonical-view-types';
 
 export interface ZoomPreset {
   readonly label: string;
@@ -89,26 +93,6 @@ export interface ViewportCamera {
    * tumble). The 3D BIM edit gizmos call this to own the pointer during a drag.
    */
   readonly setControlsEnabled: (enabled: boolean) => void;
-}
-
-/** All 12 canonical view IDs: 6 ortho face + 6 isometric. */
-export type CanonicalViewId =
-  | 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
-  | 'iso-ne' | 'iso-nw' | 'iso-se' | 'iso-sw' | 'iso-ue' | 'iso-uw';
-
-/** Subset of CanonicalViewId that maps to an orthographic ProjectionMode. */
-export type OrthoCanonicalViewId = Extract<CanonicalViewId,
-  'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'>;
-
-export interface CanonicalViewDef {
-  readonly id: CanonicalViewId;
-  /** Camera-to-target direction (unit vector). Negate for camera-from-target. */
-  readonly lookDir: readonly [number, number, number];
-  readonly type: 'ortho' | 'iso';
-  /** Present only for ortho views; undefined for iso. */
-  readonly projectionMode?: OrthoCanonicalViewId;
-  /** i18n key within the bim3d namespace. */
-  readonly labelKey: string;
 }
 
 export interface ScreenPoint {

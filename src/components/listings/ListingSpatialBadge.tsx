@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * @fileoverview **ΤΟ ΣΗΜΑ ΧΩΡΙΚΩΝ ΜΕΣΩΝ** — «3D περιήγηση» · «3D μοντέλο» · «3D» με δύο εικονίδια, πάνω στη φωτογραφία.
+ * @fileoverview **ΤΟ ΣΗΜΑ ΧΩΡΙΚΩΝ ΜΕΣΩΝ** — «3D περιήγηση» · «3D μοντέλο» · «3D» με δύο εικονίδια · «3D ανάγλυφο»
+ *   (ADR-920 Β6.6β), πάνω στη φωτογραφία.
  * @related ADR-777 §8.88 · lib/listings/listing-spatial-media (η ΜΙΑ απόφαση) · shared/gallery/photo-overlay-surface
  * @module components/listings/ListingSpatialBadge
  *
@@ -29,13 +30,16 @@
  */
 
 import React from 'react';
-import { Box, Compass, type LucideIcon } from 'lucide-react';
+import { Box, Compass, Mountain, type LucideIcon } from 'lucide-react';
 
 import { PHOTO_OVERLAY_SURFACE_CLASS } from '@/components/shared/gallery/photo-overlay-surface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-import { listingSpatialBadge, type ListingSpatialBadgeKind } from '@/lib/listings/listing-spatial-media';
-import type { PublicListing } from '@/types/public-listing';
+import {
+  listingSpatialBadge,
+  type ListingSpatialBadgeKind,
+  type ListingSpatialMediaSubject,
+} from '@/lib/listings/listing-spatial-media';
 
 /**
  * Τα εικονίδια ανά σήμα — πλήρες `Record`, ώστε τέταρτο είδος να **σπάει τη μεταγλώττιση** αντί να βγει κενό.
@@ -46,6 +50,8 @@ const BADGE_ICONS: Record<ListingSpatialBadgeKind, readonly LucideIcon[]> = {
   tour: [Compass],
   model: [Box],
   'tour-and-model': [Compass, Box],
+  // ADR-920 Β6.6β — το ίδιο `Mountain` με την καρτέλα «Ανάγλυφο».
+  terrain: [Mountain],
 };
 
 type Translate = ReturnType<typeof useTranslation>['t'];
@@ -66,6 +72,8 @@ function badgeLabel(t: Translate, kind: ListingSpatialBadgeKind): string {
       return t('common-photos:photos.spatial.model');
     case 'tour-and-model':
       return t('common-photos:photos.spatial.tourAndModel');
+    case 'terrain':
+      return t('common-photos:photos.spatial.terrain');
   }
 }
 
@@ -88,6 +96,7 @@ function badgeCompactLabel(t: Translate, kind: ListingSpatialBadgeKind): string 
   switch (kind) {
     case 'tour':
     case 'model':
+    case 'terrain':
       return null;
     case 'tour-and-model':
       return t('common-photos:photos.spatial.tourAndModelShort');
@@ -95,7 +104,7 @@ function badgeCompactLabel(t: Translate, kind: ListingSpatialBadgeKind): string 
 }
 
 interface ListingSpatialBadgeProps {
-  readonly listing: Pick<PublicListing, 'models' | 'tour'>;
+  readonly listing: ListingSpatialMediaSubject;
   /** **Η θέση** — την αποφασίζει ο γονέας (κάρτα ≠ φούσκα 176px)· το σήμα δεν ξέρει πού κάθεται. */
   readonly className?: string;
 }

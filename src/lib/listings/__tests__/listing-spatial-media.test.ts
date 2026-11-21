@@ -8,7 +8,8 @@
  */
 
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
-import type { ListingModel, ListingTourPresence } from '@/types/public-listing';
+import { REAL_PLANE, publishedTerrainOf } from '@/lib/terrain/publication/__tests__/fixtures/terrain-3d-fixtures';
+import type { ListingModel, ListingTourPresence, PublicListing } from '@/types/public-listing';
 
 import {
   LISTING_SPATIAL_BADGES,
@@ -16,6 +17,7 @@ import {
   hasSpatialMedia,
   listingSpatialBadge,
   presentableModels,
+  presentableTerrain,
 } from '../listing-spatial-media';
 
 const AT = '2026-10-13T10:00:00.000Z';
@@ -28,15 +30,25 @@ const UNCONFIRMED = { provenance: 'inferred', value: FILE, at: AT, confirmedAt: 
 const PUBLIC_TOUR: ListingTourPresence = { visibility: 'public' };
 const ON_REQUEST_TOUR: ListingTourPresence = { visibility: 'on-request' };
 
+/** ADR-920 Β6.6β — μετρημένο ανάγλυφο, όπως το γράφει ο binder (Β3β), και ένα που μάντεψε μηχανή χωρίς έγκριση. */
+const TERRAIN = publishedTerrainOf(REAL_PLANE());
+const MEASURED_TERRAIN = { provenance: 'measured', value: TERRAIN, at: AT, sourceRef: 'property-terrain:measured' } as unknown as PublicListing['terrain'];
+const UNCONFIRMED_TERRAIN = { provenance: 'inferred', value: TERRAIN, at: AT, confirmedAt: null } as unknown as PublicListing['terrain'];
+
 describe('ο πίνακας αλήθειας — ΕΝΑ σήμα, ποτέ στοίβα', () => {
   it.each([
-    ['τίποτα', [], null, null],
-    ['μόνο μοντέλο', [MEASURED], null, 'model'],
-    ['μόνο περιήγηση', [], PUBLIC_TOUR, 'tour'],
-    ['και τα δύο ⇒ ΤΡΙΤΗ τιμή', [MEASURED], PUBLIC_TOUR, 'tour-and-model'],
-    ['περιήγηση με αίτημα μετρά ως «έχει»', [], ON_REQUEST_TOUR, 'tour'],
-  ] as const)('%s', (_name, models, tour, expected) => {
-    expect(listingSpatialBadge(listing({ models, tour }))).toBe(expected);
+    ['τίποτα', [], null, null, null],
+    ['μόνο μοντέλο', [MEASURED], null, null, 'model'],
+    ['μόνο περιήγηση', [], PUBLIC_TOUR, null, 'tour'],
+    ['και τα δύο ⇒ ΤΡΙΤΗ τιμή', [MEASURED], PUBLIC_TOUR, null, 'tour-and-model'],
+    ['περιήγηση με αίτημα μετρά ως «έχει»', [], ON_REQUEST_TOUR, null, 'tour'],
+    // ADR-920 Β6.6β — το ανάγλυφο είναι το ΤΕΛΕΥΤΑΙΟ: ό,τι άλλο υπάρχει εξηγεί ήδη το «3D», χωρίς στοίβα.
+    ['μόνο ανάγλυφο', [], null, MEASURED_TERRAIN, 'terrain'],
+    ['ανάγλυφο + περιήγηση ⇒ η περιήγηση', [], PUBLIC_TOUR, MEASURED_TERRAIN, 'tour'],
+    ['ανάγλυφο + μοντέλο ⇒ το μοντέλο', [MEASURED], null, MEASURED_TERRAIN, 'model'],
+    ['ανάγλυφο που μάντεψε μηχανή ⇒ τίποτα (Α7)', [], null, UNCONFIRMED_TERRAIN, null],
+  ] as const)('%s', (_name, models, tour, terrain, expected) => {
+    expect(listingSpatialBadge(listing({ models, tour, terrain }))).toBe(expected);
   });
 
   it('κάθε απάντηση ανήκει στο κλειστό σύνολο', () => {
@@ -44,6 +56,7 @@ describe('ο πίνακας αλήθειας — ΕΝΑ σήμα, ποτέ στ�
       listingSpatialBadge(listing({ models: [MEASURED], tour: null })),
       listingSpatialBadge(listing({ models: [], tour: PUBLIC_TOUR })),
       listingSpatialBadge(listing({ models: [MEASURED], tour: PUBLIC_TOUR })),
+      listingSpatialBadge(listing({ models: [], tour: null, terrain: MEASURED_TERRAIN })),
     ];
     expect([...answers].sort()).toEqual([...LISTING_SPATIAL_BADGES].sort());
   });
@@ -89,5 +102,30 @@ describe('🔴 το φίλτρο «Μόνο με 3D» περνά ΑΚΡΙΒΩΣ 
 
   it('μη εγκεκριμένο μοντέλο ΔΕΝ περνά το φίλτρο — δεν θα το έβλεπε κανείς', () => {
     expect(hasSpatialMedia(listing({ models: [UNCONFIRMED], tour: null }))).toBe(false);
+  });
+});
+
+// ADR-920 Β6.6 — ο κριτής της καρτέλας «Ανάγλυφο» και της σκηνής της: ΕΝΑΣ, ο ίδιος του Α7.
+describe('🔴 ανάγλυφο — δείχνεται μόνο ό,τι δέχεται ο κριτής του Α7', () => {
+  const subject = (terrain: PublicListing['terrain']) => ({ terrain });
+
+  it('χωρίς έδαφος ⇒ null', () => {
+    expect(presentableTerrain(subject(null))).toBeNull();
+  });
+
+  it('μετρημένο ⇒ η τιμή του (url + κάρτα)', () => {
+    expect(presentableTerrain(subject(MEASURED_TERRAIN))).toBe(TERRAIN);
+  });
+
+  it('συμπέρασμα μηχανής χωρίς έγκριση ⇒ null', () => {
+    expect(presentableTerrain(subject(UNCONFIRMED_TERRAIN))).toBeNull();
+  });
+
+  // Β6.6β: ο κριτής της καρτέλας ΕΙΝΑΙ και ο κριτής του σήματος — ό,τι διαφημίζει η κάρτα, το δείχνει η σελίδα.
+  it('ανάβει το «3D» ΑΚΡΙΒΩΣ όταν η καρτέλα «Ανάγλυφο» υπάρχει', () => {
+    for (const terrain of [null, MEASURED_TERRAIN, UNCONFIRMED_TERRAIN]) {
+      const subjectListing = listing({ models: [], tour: null, terrain });
+      expect(hasSpatialMedia(subjectListing)).toBe(presentableTerrain(subjectListing) !== null);
+    }
   });
 });

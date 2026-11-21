@@ -1,0 +1,105 @@
+/**
+ * ADR-920 Β6.4 — ο αναγνώστης του δημοσιευμένου στιγμιοτύπου.
+ *
+ * Το κρίσιμο test είναι το πρώτο: ό,τι γράφει ο ΑΛΗΘΙΝΟΣ builder, μετά από JSON (όπως φτάνει από το ράφι), διαβάζεται
+ * αυτούσιο. Χωρίς αυτό, ένας αυστηρός αναγνώστης μπορεί να αρνείται σιωπηλά κάθε πραγματική αγγελία.
+ */
+
+import { LISTING_TERRAIN_MAX_TRIANGLES } from '../listing-terrain-config';
+import { readListingTerrainSnapshot } from '../listing-terrain-snapshot-reader';
+import type { ListingTerrainSnapshot } from '../listing-terrain-types';
+import { REAL_PLANE } from './fixtures/terrain-3d-fixtures';
+
+/** Ό,τι φτάνει στον browser: JSON κείμενο, ξαναδιαβασμένο. */
+function overTheWire(snapshot: unknown): unknown {
+  return JSON.parse(JSON.stringify(snapshot));
+}
+
+/** Αντίγραφο του αληθινού στιγμιοτύπου με αλλοιωμένο ένα κομμάτι του. */
+function corrupted(mutate: (copy: Record<string, unknown> & { mesh: Record<string, number[]> }) => void): unknown {
+  const copy = overTheWire(REAL_PLANE()) as Record<string, unknown> & { mesh: Record<string, number[]> };
+  mutate(copy);
+  return copy;
+}
+
+describe('readListingTerrainSnapshot', () => {
+  it('διαβάζει αυτούσιο ό,τι παράγει ο αληθινός builder, μετά από JSON', () => {
+    const snapshot = REAL_PLANE();
+    const read = readListingTerrainSnapshot(overTheWire(snapshot));
+    expect(read).toEqual({ ok: true, snapshot });
+  });
+
+  it.each<[string, unknown]>([
+    ['null', null],
+    ['πίνακας', []],
+    ['χωρίς contours', corrupted((c) => { delete c.contours; })],
+    ['stats χωρίς minElevationM', corrupted((c) => { delete (c.stats as Record<string, unknown>).minElevationM; })],
+    ['ισοϋψής με μονό πλήθος συντεταγμένων', corrupted((c) => { (c.contours as { points: number[] }[])[0].points.push(1); })],
+    ['τρίγωνα όχι σε τριάδες', corrupted((c) => { c.mesh.triangles.push(0); })],
+  ])('malformed: %s', (_label, raw) => {
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'malformed' });
+  });
+
+  it('άγνωστη έκδοση ⇒ unknown-version (όχι «malformed»: ο αναγνώστης είναι παλιός, όχι το αρχείο χαλασμένο)', () => {
+    expect(readListingTerrainSnapshot(corrupted((c) => { c.version = 2; }))).toEqual({ ok: false, reason: 'unknown-version' });
+  });
+
+  it('positions όχι σε τριάδες ⇒ positions-not-triples', () => {
+    const raw = corrupted((c) => { c.mesh.positions.push(0); });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'positions-not-triples' });
+  });
+
+  it('δείκτης τριγώνου = πλήθος κορυφών ⇒ index-out-of-range', () => {
+    const raw = corrupted((c) => { c.mesh.triangles[0] = c.mesh.positions.length / 3; });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'index-out-of-range' });
+  });
+
+  it('μη ακέραιος δείκτης ⇒ index-out-of-range', () => {
+    const raw = corrupted((c) => { c.mesh.triangles[0] = 0.5; });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'index-out-of-range' });
+  });
+
+  it('μία κλάση κλίσης λιγότερη ⇒ slope-class-mismatch', () => {
+    const raw = corrupted((c) => { c.mesh.slopeClass.pop(); });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'slope-class-mismatch' });
+  });
+
+  it('κλάση κλίσης εκτός ζωνών ⇒ slope-class-mismatch', () => {
+    const raw = corrupted((c) => { c.mesh.slopeClass[0] = 4; });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'slope-class-mismatch' });
+  });
+
+  it('κενό mesh ⇒ empty-mesh', () => {
+    const raw = corrupted((c) => { c.mesh.triangles = []; c.mesh.slopeClass = []; });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'empty-mesh' });
+  });
+
+  it('περισσότερα τρίγωνα από το όριο ⇒ too-dense', () => {
+    const count = LISTING_TERRAIN_MAX_TRIANGLES + 1;
+    const raw = corrupted((c) => {
+      c.mesh.triangles = Array.from({ length: count * 3 }, (_, i) => i % 3);
+      c.mesh.slopeClass = Array.from({ length: count }, () => 0);
+    });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'too-dense' });
+  });
+
+  it('άπειρο υψόμετρο ⇒ non-finite', () => {
+    const snapshot = REAL_PLANE();
+    const positions = [...snapshot.mesh.positions];
+    positions[2] = Infinity;
+    const raw: ListingTerrainSnapshot = { ...snapshot, mesh: { ...snapshot.mesh, positions } };
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'non-finite' });
+  });
+
+  it('min > max ⇒ inconsistent-stats', () => {
+    const raw = corrupted((c) => {
+      const stats = c.stats as { minElevationM: number; maxElevationM: number };
+      [stats.minElevationM, stats.maxElevationM] = [stats.maxElevationM, stats.minElevationM];
+    });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'inconsistent-stats' });
+  });
+
+  it('control: η ίδια διαδρομή αλλοίωσης χωρίς αλλοίωση ⇒ ok', () => {
+    expect(readListingTerrainSnapshot(corrupted(() => undefined)).ok).toBe(true);
+  });
+});

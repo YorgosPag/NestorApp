@@ -4,6 +4,7 @@
  * @fileoverview **Τι βλέπει ΗΔΗ ο αγοραστής** — το δημοσιευμένο έδαφος της αγγελίας, με την πηγή του (ADR-920 Β4.9).
  * @related lib/terrain/publication/listing-terrain-card (`ListingTerrainCard` — η κάρτα που κουβαλά η αγγελία) ·
  *   components/listing-detail/terrain/TerrainStatsList (οι ΙΔΙΟΙ αριθμοί με τη δημόσια σελίδα) ·
+ *   components/listing-detail/terrain/TerrainSurveyCredit (η ΙΔΙΑ πηγή με τη δημόσια σελίδα) ·
  *   services/realtime/hooks/usePublicListings (`usePublicListing` — ζωντανά, άρα αλλάζει μόλις ξαναπροβληθεί η αγγελία)
  * @module components/terrain/survey-import/PublishedTerrainSummary
  *
@@ -14,8 +15,8 @@
 import React, { useId } from 'react';
 
 import { TerrainStatsList } from '@/components/listing-detail/terrain/TerrainStatsList';
+import { TerrainSurveyCredit } from '@/components/listing-detail/terrain/TerrainSurveyCredit';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCalendarDate } from '@/lib/intl-formatting';
 import type { ListingTerrainCard } from '@/lib/terrain/publication/listing-terrain-card';
 
 const NS = 'terrain-survey:current';
@@ -30,9 +31,8 @@ export function PublishedTerrainSummary({ card }: { readonly card: ListingTerrai
         <p className="m-0 text-sm text-muted-foreground">{t(`${NS}.none`)}</p>
       ) : (
         <>
-          <p className="m-0 text-sm text-foreground">
-            {t(`${NS}.survey`, { name: card.survey.surveyorName, date: formatCalendarDate(card.survey.surveyedOn) })}
-          </p>
+          {/* Η ΙΔΙΑ πηγή, με τις ΙΔΙΕΣ λέξεις, που διαβάζει ο αγοραστής (ADR-920 Β6.6α). */}
+          <TerrainSurveyCredit survey={card.survey} />
           <TerrainStatsList stats={card.stats} contourIntervalM={card.contourIntervalM} />
           <p className="m-0 text-xs text-muted-foreground">{t(`${NS}.replaceHint`)}</p>
         </>

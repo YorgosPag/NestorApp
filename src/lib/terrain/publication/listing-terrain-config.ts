@@ -97,3 +97,18 @@ export const LISTING_TERRAIN_MAP_DIGIT_EM = 0.6;
  * definition's «maximum triangle length»; we flag such triangles (hatched on the map) instead of deleting them.
  */
 export const LISTING_TERRAIN_MAP_SPARSE_EDGE_FACTOR = 3;
+
+/**
+ * ADR-920 Β6.4 — the vertical exaggerations the 3D viewer offers. `1` (true scale) is the default and the first
+ * entry (Α5): a buyer must never read an exaggerated hill as the real one, so any other factor is shown on screen.
+ * A closed set, not a range: the geometry refuses a factor outside it instead of clamping it silently.
+ */
+export const LISTING_TERRAIN_3D_EXAGGERATIONS = [1, 2, 3] as const;
+export type ListingTerrain3dExaggeration = (typeof LISTING_TERRAIN_3D_EXAGGERATIONS)[number];
+
+/**
+ * ADR-920 Β6.4 — depth of the soil block under the lowest point, as a fraction of the larger plan dimension, with a
+ * floor in metres. Independent of the exaggeration, so the base does not jump when the factor changes.
+ */
+export const LISTING_TERRAIN_3D_BASE_DEPTH_FRACTION = 0.05;
+export const LISTING_TERRAIN_3D_BASE_DEPTH_MIN_M = 1;

@@ -33,7 +33,7 @@
       "offerKind": "Offer",
       "authorship": "Listed by",
       "hasPhotos": "With photos only",
-      "hasSpatialMedia": "With 3D only (tour or model)",
+      "hasSpatialMedia": "With 3D only (tour, model or terrain)",
       "priceSale": "Sale price",
       "priceRent": "Rent (monthly)",
       "priceNightly": "Price per night",

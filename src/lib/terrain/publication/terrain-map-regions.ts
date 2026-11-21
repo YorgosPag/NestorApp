@@ -41,15 +41,21 @@ export function meshTriangles(mesh: ListingTerrainMesh): TriangleIndices[] {
   return out;
 }
 
-/** The boundary of a triangle set as ONE path data string. */
-export function regionPathData(mesh: ListingTerrainMesh, triangles: readonly TriangleIndices[]): string {
+/**
+ * The boundary of a triangle set as ONE path data string. Only the flat `[x, y, z, …]` positions are read, so the
+ * elevation bands (`terrain-map-elevation-bands.ts`) draw their refined triangles through this SAME function.
+ */
+export function regionPathData(
+  mesh: Pick<ListingTerrainMesh, 'positions'>,
+  triangles: readonly TriangleIndices[],
+): string {
   return joinPathData(
     tinBoundaryLoops(triangles).map((ring) => polylinePathData(ring.map((i) => meshSvgPoint(mesh.positions, i)), true)),
   );
 }
 
-/** Plan area of one triangle, m². */
-function triangleArea(positions: readonly number[], [i, j, k]: TriangleIndices): number {
+/** Plan area of one triangle, m² — also of the refined triangles of the elevation bands (one definition). */
+export function triangleArea(positions: readonly number[], [i, j, k]: TriangleIndices): number {
   const at = (v: number) => ({ x: positions[3 * v], y: positions[3 * v + 1] });
   return polygonArea([at(i), at(j), at(k)]);
 }

@@ -2,12 +2,15 @@
  * Zoom-to-fit calculations for perspective and orthographic cameras.
  * PORT_AS_IS from GenArc viewportFraming.ts (ADR-366 §8.2 SPEC-3D-004A).
  * Phase 4.1: computeFramingForView convenience wrapper for canonical views.
+ *
+ * ADR-920 §14.5 — μετακόμισε αυτούσιο από το `dxf-viewer/bim-3d/viewport/` (μόνο διαδρομές εισαγωγής), ώστε ο θεατής
+ * εδάφους της αγγελίας να πλαισιώνει με την ΙΔΙΑ μαθηματική με τον viewer.
  */
 
 import * as THREE from 'three';
-import { DEFAULT_ORTHO_SIZE, FRAME_PADDING_FACTOR, ORTHO_CAMERA_UP } from './viewport-constants';
-import type { CanonicalViewId } from './viewport-types';
-import { getCanonicalViewDef } from './canonical-views';
+import { DEFAULT_ORTHO_SIZE, FRAME_PADDING_FACTOR, ORTHO_CAMERA_UP } from './framing-constants';
+import type { CanonicalViewId } from '@/lib/three/view-cube/canonical-view-types';
+import { getCanonicalViewDef } from '@/lib/three/view-cube/canonical-views';
 
 export interface FramingResult {
   readonly position: THREE.Vector3;

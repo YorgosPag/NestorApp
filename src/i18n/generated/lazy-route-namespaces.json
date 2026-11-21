@@ -2236,5 +2236,11 @@
     "files",
     "files-media",
     "public-catalog"
+  ],
+  "Terrain3dCanvas": [
+    "listing-detail"
+  ],
+  "TerrainSnapshotStage": [
+    "listing-detail"
   ]
 }

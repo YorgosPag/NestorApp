@@ -200,6 +200,9 @@ const DEFAULTS = Object.freeze({
     // ADR-946 · ADR-842 Φ4 — «τι βλέπει ο αγοραστής» στο πλαϊνό της «Βελτίωσε την αγγελία σου»: τα components της
     // σελίδας αγγελίας, με το `listing-detail` στο chunk — όχι στο slice της φόρμας (μετρημένο 19,8 → 28,8 KB στατικά).
     'src/components/owner-property/improve/improve-surfaces.tsx',
+    // ADR-920 Β6.6 — ο θεατής 3Δ του εδάφους στη σελίδα αγγελίας: μόνο μετά το «Προβολή σε 3Δ», με το `listing-detail`
+    // στο chunk — αλλιώς chunk και κείμενα είναι δύο αιτήματα και η σελίδα δεν περιμένει τα κείμενα (χρέος εισδοχής).
+    'src/components/listing-detail/terrain/terrain-surfaces.tsx',
   ],
 
   /**

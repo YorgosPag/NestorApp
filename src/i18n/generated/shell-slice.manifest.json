@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "1648d4eb24dbb7a51260ec43fcca7bb939b49baf7dd35a0da3226ebc4866a4d1",
+    "src/i18n/generated/lazy-route-namespaces.json": "f6b0fd66b84f83daa26628e193863518ba7f5b5eebae3ef498d1e97b57e71669",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -31,7 +31,7 @@
     "src/i18n/generated/routes/interest-check.el.json": "3690e1efa38a016b5eaf7b7a367d3e79643c656d5a1af4df1019a85a15e243de",
     "src/i18n/generated/routes/invite__token.el.json": "14d659a231e6bc8a89c08a3c83b19103a9c6c14cab339d7b9fe0e876d91528bf",
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
-    "src/i18n/generated/routes/listing__id.el.json": "a9197cd5e46c7ac5b2d0ca7f5816202339baf94a2b826d1d402d3e59e274d36c",
+    "src/i18n/generated/routes/listing__id.el.json": "06a18795437d6f6021c0f98952b06d071881f0713356a7d6a8e9075b1f711cc4",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "40faa0a4a561d7e7c6ea0aa7c630472ec585301f9b4b3c5a774aa2c0aaa17387",
     "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
@@ -107,7 +107,7 @@
     "src/i18n/generated/routes/pro__alias.el.json": "cab418d4b3c11cb463da7952d60e292c0f6cd99c64341b0b4e668dc79ebb646b",
     "src/i18n/generated/routes/profile.el.json": "24b5f25a2e330998e650126e7fb3ffc0452c89fcda2946634f21bd02b5b7dd95",
     "src/i18n/generated/routes/saved-listings.el.json": "7b13b8c74093929134a72cfd029aa8f474840f42c4a734f86b3b50181fa86eac",
-    "src/i18n/generated/routes/search__results.el.json": "b6ec3a0e49bc98af506acda00e125c7c4458af00fb27aa03088731e848760734",
+    "src/i18n/generated/routes/search__results.el.json": "e78e2c05c9ba1239eb11a811e91583d9f9d65b8dffbacbf154ed835baf6e98f3",
     "src/i18n/generated/routes/stay.el.json": "3044270a27d1268903929dd44a0a20afa30e6ac91fa1d554ceeba748ba062886",
     "src/i18n/generated/routes/suppliers__alias.el.json": "6b2818bcbb9647d289db6a453503058ea3acd3c04f9bbc666f939581ffbb482c",
     "src/i18n/generated/routes/suppliers__alias__c__category.el.json": "6b2818bcbb9647d289db6a453503058ea3acd3c04f9bbc666f939581ffbb482c",
@@ -125,7 +125,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "e45f06e8af44370d125a47684c157ad22a75322ee394c594ed7f31242e315a58",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "e5c385b5146a56f43325213f3bda1bb83536cfe877ebb8e0a0b3d983ce6de4c9",
+    "src/i18n/generated/shell-slice.el.json": "5a5f61c46933bd1ef7a7214c6a7b9e4388c03630fb5db7b2eba4fcab24ac6e1f",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -138,7 +138,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "ea809d3dd5036454f9723797b38acf84a96410a2cf8d926571c41a507acb0063",
-      "lazyRouteRegistries": "bf5d49aaa7f799eb9400c40f01e3ef21d3215c371e49ad7f5c5a950ab5c462c5",
+      "lazyRouteRegistries": "2ba013964af87b5f446f60d8c3b6ae966413e2fec1e07c540e08c3b78acffd14",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "3463fd9666b61d2a3e504b0560c1e2c1bd9a491651a34eb68fd035adda7836af",
@@ -150,7 +150,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "17564915fa6e4b84d2801c57acbde3f88afad22f035a19e13e23a393ad701751",
+      "registries": "aa6b0915e30fcd780156f8cdb0e77a9ed40ba0afa1729403d62ff8d399134217",
       "supportedNamespaces": "b3dec606cde1f3d914e3206109aa7c4447c6c17882103a096a8fe306e756a38f"
     },
     "namespaceBundles": {
@@ -165,7 +165,7 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "4d7aea351f65ad8b1ecf40ed8e6c2d55991cb260154053bf8908319daad8c7c9",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "85995c237607bfa4fb2463214b71dece03891aab6c628bec071c89a549219aba",
+      "scripts/lib/i18n-shell-slice/config.js": "855d526d92f1c63254f28743951d379dc050f68d3bb658436f0c2675e5d09c97",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "f48980961561972843d1b85a506c1dd66cf446fb8f2e076976ba5787be2e30dc",
+  "inputsSha256": "a20ed378e070cb39c5c86661559b01d28b96c263ce01250bbb527d9905ef015f",
   "languages": [
     "el"
   ],
@@ -377,6 +377,7 @@
             "photos.locationMapAlt",
             "photos.none",
             "photos.spatial.model",
+            "photos.spatial.terrain",
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
@@ -4350,6 +4351,7 @@
             "photoPreview.navigation.slide",
             "photos.galleryLabel",
             "photos.spatial.model",
+            "photos.spatial.terrain",
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
@@ -4540,6 +4542,7 @@
             "media.tabs.floorPlate",
             "media.tabs.floorplan",
             "media.tabs.photos",
+            "media.tabs.terrain",
             "media.tabs.tour",
             "media.tabs.video",
             "model.alt.agency",
@@ -4577,6 +4580,27 @@
             "sunExposure.season.equinox",
             "sunExposure.season.summer",
             "sunExposure.season.winter",
+            "terrain.map.metres",
+            "terrain.map.slope.lessThan",
+            "terrain.map.slope.range",
+            "terrain.map.slope.rangeOpen",
+            "terrain.panel.label",
+            "terrain.panel.loading",
+            "terrain.panel.refused",
+            "terrain.panel.retry",
+            "terrain.panel.unreachable",
+            "terrain.stats.area",
+            "terrain.stats.areaValue",
+            "terrain.stats.contourInterval",
+            "terrain.stats.downslope",
+            "terrain.stats.elevation",
+            "terrain.stats.elevationRange",
+            "terrain.stats.flat",
+            "terrain.stats.maxSlope",
+            "terrain.stats.meanSlope",
+            "terrain.stats.relief",
+            "terrain.survey",
+            "terrain.view.threeD.loading",
             "video.alt.agency",
             "video.alt.ownerDeclared",
             "video.failed",
@@ -4591,6 +4615,7 @@
             "attributes.group",
             "attributes.label",
             "model",
+            "terrain.stats.towards",
             "video"
           ],
           "whole": false
@@ -38644,6 +38669,7 @@
             "photos.locationMapAlt",
             "photos.none",
             "photos.spatial.model",
+            "photos.spatial.terrain",
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
@@ -39429,6 +39455,7 @@
             "photos.locationMapAlt",
             "photos.none",
             "photos.spatial.model",
+            "photos.spatial.terrain",
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
@@ -39579,6 +39606,7 @@
             "photos.locationMapAlt",
             "photos.none",
             "photos.spatial.model",
+            "photos.spatial.terrain",
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
@@ -40014,6 +40042,7 @@
             "photos.locationMapAlt",
             "photos.none",
             "photos.spatial.model",
+            "photos.spatial.terrain",
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
@@ -40798,6 +40827,7 @@
             "photoPreview.navigation.slide",
             "photos.galleryLabel",
             "photos.spatial.model",
+            "photos.spatial.terrain",
             "photos.spatial.tour",
             "photos.spatial.tourAndModel",
             "photos.spatial.tourAndModelShort"
@@ -41320,8 +41350,8 @@
     "src/components/search/GlobalSearchDialog.tsx"
   ],
   "stats": {
-    "matchedKeys": 280,
-    "sliceBytes": 1370534
+    "matchedKeys": 281,
+    "sliceBytes": 1372654
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -44366,6 +44396,7 @@
         "photos.locationMapAlt",
         "photos.none",
         "photos.spatial.model",
+        "photos.spatial.terrain",
         "photos.spatial.tour",
         "photos.spatial.tourAndModel",
         "photos.spatial.tourAndModelShort",

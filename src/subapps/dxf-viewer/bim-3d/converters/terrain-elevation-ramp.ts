@@ -1,37 +1,21 @@
 /**
- * ADR-650 M4 — hypsometric elevation ramp (Civil 3D «Elevation Banding» analysis style).
+ * ADR-650 M4 — hypsometric elevation ramp (Civil 3D «Elevation Banding» analysis style) · ADR-650 M6 — cut/fill ramp.
  *
- * The cartographic convention every surveying/GIS stack ships (Civil 3D elevation analysis,
- * QGIS/GRASS hypsometric tints, USGS topo sheets): low ground reads green, mid ground reads
- * ochre/yellow, high ground reads brown, peaks read pale. It is not decoration — it is how a
- * surveyor reads relief at a glance before contours are even drawn.
+ * ADR-920 Β6.1: the elevation ramp's stops **and** the one ramp evaluator now live in `@/lib/terrain/elevation-ramp`,
+ * because the public listing (plan SVG + 3D) must show the SAME colours as this viewer. This file keeps its two
+ * signatures so `tin-to-three.ts` is unchanged; it no longer owns a second copy of the maths.
  *
- * Colours are LINEARLY interpolated between stops in sRGB (the same space the stops are
- * authored in), then handed to `THREE.Color`, which converts into the renderer's working
- * colour space — so a hypsometric hill matches its swatch and does not wash out under the PBR
- * lighting the way a raw linear-space lerp would.
+ * Colours are interpolated in the renderer's LINEAR working space (the stops are authored in sRGB and converted
+ * exactly like `THREE.Color.setHex` does with ColorManagement on), so a hypsometric hill matches its swatch and
+ * does not wash out under the PBR lighting the way a raw sRGB lerp would.
  */
 
-import * as THREE from 'three';
-
-/** One ramp stop: `t` = normalised elevation within the surface's own min→max range. */
-interface RampStop {
-  readonly t: number;
-  readonly color: number;
-}
-
-/**
- * The ramp, low → high. Relative to the surface's OWN vertical range (not an absolute
- * altitude), so a 3 m garden mound and a 300 m hillside both read across the full ramp —
- * which is what an analysis style is for.
- */
-const RAMP: readonly RampStop[] = [
-  { t: 0.0, color: 0x2f6b3c }, // valley floor — deep green
-  { t: 0.28, color: 0x7fae53 }, // low slopes — grass
-  { t: 0.52, color: 0xd8cd7d }, // mid slopes — ochre
-  { t: 0.76, color: 0xa8744d }, // upper slopes — earth brown
-  { t: 1.0, color: 0xf0ece4 }, // crest — pale rock
-];
+import {
+  linearRampOf,
+  writeLinearRampColor,
+  writeTerrainElevationColor,
+  type ElevationRampStop,
+} from '@/lib/terrain/elevation-ramp';
 
 /**
  * ADR-650 M6 — the CUT/FILL ramp (Civil 3D «Cut/Fill analysis» convention, and the colours
@@ -43,8 +27,11 @@ const RAMP: readonly RampStop[] = [
  * `t` is the SIGNED Δz normalised symmetrically: 0 = deepest fill, 0.5 = exactly on the design
  * level, 1 = deepest cut. Symmetric on purpose — a site that is 90 % fill must still show its
  * balance line in the same place as one that is 90 % cut.
+ *
+ * It stays here: cut/fill is a viewer-only analysis, nothing outside the subapp reads it. Its stops are DATA
+ * handed to the ONE shared evaluator.
  */
-const CUTFILL_RAMP: readonly RampStop[] = [
+const CUTFILL_RAMP: readonly ElevationRampStop[] = [
   { t: 0.0, color: 0x1d4e89 }, // deep fill — blue
   { t: 0.3, color: 0x6ba3d6 }, // shallow fill — pale blue
   { t: 0.5, color: 0xf2efe6 }, // the zero / daylight line — bone
@@ -52,9 +39,7 @@ const CUTFILL_RAMP: readonly RampStop[] = [
   { t: 1.0, color: 0x9e2b25 }, // deep cut — deep red
 ];
 
-const scratch = new THREE.Color();
-const lowStop = new THREE.Color();
-const highStop = new THREE.Color();
+const LINEAR_CUTFILL_RAMP = linearRampOf(CUTFILL_RAMP);
 
 /**
  * Colour for a normalised elevation `t` ∈ [0,1], written into `out` at float offset `i`
@@ -62,43 +47,10 @@ const highStop = new THREE.Color();
  * `t` outside the range is clamped — a flat surface (min == max) reads as the valley tone.
  */
 export function writeTerrainRampColor(out: Float32Array, i: number, t: number): void {
-  writeRampColor(out, i, t, RAMP);
+  writeTerrainElevationColor(out, i, t);
 }
 
 /** ADR-650 M6 — cut/fill colour for a symmetric, normalised Δz `t` ∈ [0,1] (0.5 = zero line). */
 export function writeTerrainCutFillColor(out: Float32Array, i: number, t: number): void {
-  writeRampColor(out, i, t, CUTFILL_RAMP);
-}
-
-/** The one ramp evaluator — both styles are DATA (stop tables), not two copies of this code. */
-function writeRampColor(
-  out: Float32Array,
-  i: number,
-  t: number,
-  ramp: readonly RampStop[],
-): void {
-  const clamped = Number.isFinite(t) ? Math.min(1, Math.max(0, t)) : 0;
-  const upperIndex = findUpperStopIndex(clamped, ramp);
-  const lower = ramp[upperIndex - 1]!;
-  const upper = ramp[upperIndex]!;
-
-  const span = upper.t - lower.t;
-  const local = span > 0 ? (clamped - lower.t) / span : 0;
-
-  // `setHex` (sRGB by default) converts into the working colour space; lerp there.
-  lowStop.setHex(lower.color);
-  highStop.setHex(upper.color);
-  scratch.copy(lowStop).lerp(highStop, local);
-
-  out[i] = scratch.r;
-  out[i + 1] = scratch.g;
-  out[i + 2] = scratch.b;
-}
-
-/** Index of the first stop at or above `t` (never 0 — `t ≥ 0` always has a lower stop). */
-function findUpperStopIndex(t: number, ramp: readonly RampStop[]): number {
-  for (let i = 1; i < ramp.length; i++) {
-    if (t <= ramp[i]!.t) return i;
-  }
-  return ramp.length - 1;
+  writeLinearRampColor(out, i, t, LINEAR_CUTFILL_RAMP);
 }

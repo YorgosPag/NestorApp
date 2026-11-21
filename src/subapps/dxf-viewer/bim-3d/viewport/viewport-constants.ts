@@ -23,7 +23,8 @@ export const ZOOM_PRESETS: readonly ZoomPreset[] = [
 
 export const DEFAULT_PERSPECTIVE_FOV = 50;
 export const DEFAULT_CAMERA_DISTANCE = 22.0;
-export const DEFAULT_ORTHO_SIZE = 15.0;
+// ADR-920 §14.5 — μετακόμισαν στο `lib` μαζί με το `viewport-framing` (re-export ⇒ οι καταναλωτές ανέγγιχτοι).
+export { DEFAULT_ORTHO_SIZE, ORTHO_CAMERA_UP, FRAME_PADDING_FACTOR } from '@/lib/three/camera/framing-constants';
 export const CAMERA_NEAR = 0.1;
 export const CAMERA_FAR = 1000;
 
@@ -34,15 +35,6 @@ export const ORTHO_CAMERA_DIRECTIONS: Readonly<Record<string, readonly [number, 
   back:   [0,  0, -1],
   left:   [-1, 0,  0],
   right:  [1,  0,  0],
-} as const;
-
-export const ORTHO_CAMERA_UP: Readonly<Record<string, readonly [number, number, number]>> = {
-  top:    [0, 0, -1],
-  bottom: [0, 0,  1],
-  front:  [0, 1,  0],
-  back:   [0, 1,  0],
-  left:   [0, 1,  0],
-  right:  [0, 1,  0],
 } as const;
 
 // ADR-363 Φ1G.5 — lowered from 1.0 m so the surface-anchored zoom clamp (ZOOM_SURFACE_MARGIN),
@@ -76,7 +68,6 @@ export const TUMBLE_BASE_SPEED = 0.005;
 
 export const PROJECTION_SWITCH_DURATION_MS = DXF_TIMING.animation.SLOW; // ADR-516
 export const FRAME_SCENE_DURATION_MS = DXF_TIMING.animation.SLOW; // ADR-516
-export const FRAME_PADDING_FACTOR = 1.1;
 
 export const POI_ARM_LENGTH = 0.15;
 export const POI_COLOR: readonly [number, number, number] = [0, 0.706, 0.847];

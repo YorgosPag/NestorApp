@@ -34,6 +34,9 @@ const MODEL: ListingModel = {
   sourceRef: 'bim',
 };
 
+/** Μετρημένο ανάγλυφο, όπως το γράφει ο binder (ADR-920 Β3β) — η κάρτα δεν κρίνεται εδώ. */
+const TERRAIN = { provenance: 'measured', value: { url: 'https://shelf.example/terrain.json' }, at: '2026-10-13T10:00:00.000Z' };
+
 let el: i18n;
 let en: i18n;
 
@@ -55,9 +58,16 @@ describe('ListingSpatialBadge — το κείμενο που βλέπει ο ά�
     ['μόνο περιήγηση', { tour: { visibility: 'public' } }, '3D περιήγηση'],
     ['μόνο μοντέλο', { models: [MODEL] }, '3D μοντέλο'],
     ['και τα δύο ⇒ ΜΙΑ πρόταση', { models: [MODEL], tour: { visibility: 'on-request' } }, '3D περιήγηση · μοντέλο'],
+    // ADR-920 Β6.6β — το τρίτο χωρικό μέσο: μετρημένο ανάγλυφο.
+    ['μόνο ανάγλυφο', { terrain: TERRAIN }, '3D ανάγλυφο'],
   ] as const)('%s', (_name, over, text) => {
     renderBadge(over as Partial<PublicListing>);
     expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  it('ανάγλυφο και στα αγγλικά — κανένα ωμό κλειδί', () => {
+    renderBadge({ terrain: TERRAIN } as Partial<PublicListing>, en);
+    expect(screen.getByText('3D terrain')).toBeInTheDocument();
   });
 
   it('και στα αγγλικά — κανένα ωμό κλειδί', async () => {

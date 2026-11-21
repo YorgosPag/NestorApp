@@ -1,0 +1,492 @@
+/**
+ * ViewCube: interactive 3D navigation widget.
+ * PORT_WITH_ADAPTATION from GenArc viewCube.ts (ADR-366 §8.2 SPEC-3D-004A).
+ * Adaptation: useSiteStore north-angle subscription → getNorthAngleDeg callback
+ * (Nestor has no site store; north angle supplied externally or defaults to 0).
+ */
+
+import * as THREE from 'three';
+import type { ProjectionMode, CanonicalViewId } from './canonical-view-types';
+import {
+  createVisualCube, createHitTargets, createCompassRing, createHomeButton,
+  COMPASS_RING_DEFAULT_COLOR,
+  FACE_DIRS, type HitUserData, type FaceLabels, type CompassLabels,
+} from './view-cube-mesh';
+import { createRollArrows, createFaceNavArrows, computeCompassDirection, NAV_ARROW_COLOR } from './view-cube-overlay';
+import { computeHighlights, VIEWCUBE_HOVER_COLOR_HEX } from './view-cube-highlight';
+import { matchIsoCanonicalView } from './canonical-views';
+import { computeViewCubeScissorRect } from './view-cube-scissor';
+
+const CUBE_CANVAS_SIZE = 160;
+
+const FACE_TO_PROJECTION: Record<number, ProjectionMode> = {
+  0: 'right', 1: 'left', 2: 'top', 3: 'bottom', 4: 'front', 5: 'back',
+} as const;
+
+// Same mapping as FACE_TO_PROJECTION but typed as CanonicalViewId (used by onSnapToView path).
+const FACE_INDEX_TO_VIEW_ID: Record<number, CanonicalViewId> = {
+  0: 'right', 1: 'left', 2: 'top', 3: 'bottom', 4: 'front', 5: 'back',
+} as const;
+
+export interface ViewCubeOptions {
+  readonly container: HTMLElement;
+  /**
+   * ADR-553 — the MAIN scene renderer. The ViewCube no longer owns a second WebGLRenderer
+   * (2nd GPU context); it draws as a scissored sub-viewport of this renderer via `composite()`.
+   */
+  readonly renderer: THREE.WebGLRenderer;
+  /**
+   * ADR-553 — request a main-loop frame (→ `markSceneDirty`). The cube has no independent
+   * render anymore, so hover/enter/leave repaints must run through the main render loop.
+   */
+  readonly onRenderNeeded: () => void;
+  readonly getCamera: () => THREE.PerspectiveCamera | THREE.OrthographicCamera;
+  readonly getTarget: () => THREE.Vector3;
+  readonly onFaceSnap: (mode: ProjectionMode) => void;
+  readonly onDirSnap: (dir: THREE.Vector3) => void;
+  /** Roll arrows — roll the view ±90° around the viewing axis (+1 cw, -1 ccw). */
+  readonly onRoll?: (dirSign: 1 | -1) => void;
+  readonly onHome: () => void;
+  readonly onDragRotate?: (dxPx: number, dyPx: number) => void;
+  /**
+   * Phase 4.1: canonical dispatch — face/faceNav/edge/corner clicks route here
+   * when provided. Falls back to onFaceSnap/onDirSnap when absent.
+   */
+  readonly onSnapToView?: (id: CanonicalViewId) => void;
+  /**
+   * Returns true-north offset in degrees (0 = no offset). Defaults to 0.
+   * Return null when no topographic data is available (compass hidden by default).
+   */
+  readonly getNorthAngleDeg?: () => number | null;
+  /**
+   * Phase 4.3: right-click context menu request with screen coordinates.
+   * Consumer (BimViewport3D) renders the React context menu overlay.
+   */
+  readonly onContextMenuRequest?: (x: number, y: number) => void;
+  /** Phase 4.3: initial compass ring visibility (default true). */
+  readonly compassVisible?: boolean;
+  readonly labels?: {
+    readonly faces?: Partial<FaceLabels>;
+    readonly compass?: Partial<CompassLabels>;
+  };
+}
+
+export interface ViewCubeEngine {
+  sync(cam: THREE.PerspectiveCamera | THREE.OrthographicCamera, target: THREE.Vector3): void;
+  /**
+   * ADR-553 — draw the cube as a scissored sub-viewport of the MAIN renderer. Must be called at
+   * the END of the frame (after all post-FX / outline) so the gizmo is AO-immune. No-op when hidden.
+   */
+  composite(): void;
+  /** Phase 4.3: programmatically toggle compass ring visibility. */
+  setCompassVisible(visible: boolean): void;
+  /** ADR-366 Polish Item #6: hide/show canvas on narrow viewports (<600px). */
+  setVisible(visible: boolean): void;
+  dispose(): void;
+}
+
+/**
+ * ADR-920 Β6.3β — η κύρια συσκευή εισόδου δεν έχει hover (οθόνη αφής). Ρωτά το media query
+ * `(hover: none)` — το ίδιο κριτήριο με το CSS `[@media(hover:none)]` του `SnapGallery`. Χωρίς
+ * `matchMedia` (π.χ. jsdom) ⇒ false: η συμπεριφορά του desktop είναι η ασφαλής προεπιλογή.
+ */
+function deviceLacksHover(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(hover: none)').matches;
+}
+
+export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
+  const { container, renderer, onRenderNeeded, getCamera, getTarget, onFaceSnap, onDirSnap, onRoll, onHome, onDragRotate, onSnapToView, getNorthAngleDeg, onContextMenuRequest } = opts;
+
+  // ADR-553 — transparent DOM HIT-LAYER (no WebGL context). It only captures pointer events
+  // (face/edge/corner/compass/home/roll/drag/right-click) exactly as before; the cube PIXELS are
+  // drawn by the MAIN renderer in `composite()`. A `<canvas>` element with no `getContext` call
+  // allocates no GPU context → eliminates the 2nd WebGL context (ADR-551 census #6). It keeps the
+  // `dxf-view-cube` testid so it stays the stable anchor for floating-panel positioning.
+  const canvas = document.createElement('canvas');
+  canvas.dataset.testid = 'dxf-view-cube';
+  const size = CUBE_CANVAS_SIZE;
+  Object.assign(canvas.style, {
+    width: `${size}px`, height: `${size}px`, position: 'absolute',
+    top: '12px', right: '12px', pointerEvents: 'auto',
+    zIndex: '20', borderRadius: '4px', cursor: 'pointer',
+    // ADR-920 Β6.3β — η σύρση με το δάχτυλο ανήκει στον κύβο, όχι στην κύλιση της σελίδας
+    // (αλλιώς ο browser στέλνει `pointercancel` και η περιστροφή δεν γίνεται ποτέ).
+    touchAction: 'none',
+  });
+  container.appendChild(canvas);
+
+  let visibleState = true;
+
+  const scene = new THREE.Scene();
+  const miniCam = new THREE.OrthographicCamera(-1.95, 1.95, 1.95, -1.95, 0.1, 20);
+  miniCam.position.set(0, 0, 8);
+  miniCam.lookAt(0, 0, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(3, 5, 4);
+  scene.add(dirLight);
+
+  const faceLabels: FaceLabels = {
+    right:  opts.labels?.faces?.right  ?? 'RGT',
+    left:   opts.labels?.faces?.left   ?? 'LFT',
+    top:    opts.labels?.faces?.top    ?? 'TOP',
+    bottom: opts.labels?.faces?.bottom ?? 'BOT',
+    front:  opts.labels?.faces?.front  ?? 'FRT',
+    back:   opts.labels?.faces?.back   ?? 'BCK',
+  };
+  const compassLabels: CompassLabels = {
+    n: opts.labels?.compass?.n ?? 'N',
+    e: opts.labels?.compass?.e ?? 'E',
+    s: opts.labels?.compass?.s ?? 'S',
+    w: opts.labels?.compass?.w ?? 'W',
+  };
+
+  const { mesh: cubeMesh, materials: cubeMaterials, setHighlights: cubeSetHighlights } = createVisualCube(faceLabels);
+  const hitTargets = createHitTargets();
+  const { group: compassGroup, hitMeshes: compassHitMeshes, ringMaterial, ringMesh, labelMaterials: compassLabelMats } = createCompassRing(compassLabels);
+  const { sprite: homeSprite, hitMesh: homeHitMesh } = createHomeButton();
+  const { sprites: rollSprites, hitMeshes: rollHitMeshes } = createRollArrows();
+  const { group: faceNavGroup, hitMeshes: faceNavHitMeshes, materials: faceNavMats } = createFaceNavArrows();
+
+  // No cube silhouette outline: the cube itself must not be framed — only the
+  // per-face button zones carry outlines (drawn into the face textures). The
+  // old EdgesGeometry wireframe was removed for that reason.
+  const cubeGroup = new THREE.Group();
+  cubeGroup.add(cubeMesh);
+  for (const t of hitTargets) cubeGroup.add(t);
+  cubeGroup.add(compassGroup);
+  cubeGroup.add(faceNavGroup);
+  scene.add(cubeGroup);
+
+  // ADR-920 §14.5 — χωρίς `onRoll` (π.χ. έδαφος) τα βέλη κύλισης ούτε ζωγραφίζονται ούτε πιάνονται: ορατό κουμπί που δεν
+  // κάνει τίποτα είναι χειρότερο από την απουσία του. Ο viewer δίνει πάντα `onRoll` ⇒ ανέγγιχτος.
+  const rollEnabled = onRoll !== undefined;
+  scene.add(homeSprite); scene.add(homeHitMesh);
+  if (rollEnabled) scene.add(...rollSprites, ...rollHitMeshes);
+
+  homeSprite.visible = false; homeHitMesh.visible = false;
+
+  const pickables: THREE.Object3D[] = [
+    ...hitTargets, ...compassHitMeshes, ringMesh, homeHitMesh,
+    ...(rollEnabled ? rollHitMeshes : []), ...faceNavHitMeshes,
+  ];
+
+  for (const mat of cubeMaterials) { mat.transparent = true; mat.opacity = 0.5; }
+
+  // Phase 4.3: compass visibility state (user-controlled, persisted via Bim3DPreferencesService)
+  let compassVisibleState = opts.compassVisible ?? true;
+  compassGroup.visible = compassVisibleState;
+
+  let hoveredMesh: THREE.Mesh | null = null;
+  let cubeHovered = false;
+  let isPointerDown = false;
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let prevDragX = 0;
+  let prevDragY = 0;
+
+  const DRAG_THRESHOLD_SQ = 9;
+  const _raycaster = new THREE.Raycaster();
+  const _mouse = new THREE.Vector2();
+
+  function getNorthAngleRad(): number {
+    const deg = getNorthAngleDeg?.() ?? 0;
+    return ((deg ?? 0) * Math.PI) / 180;
+  }
+
+  function getNormalizedMouse(e: PointerEvent): THREE.Vector2 {
+    const rect = canvas.getBoundingClientRect();
+    _mouse.x =  ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
+    _mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    return _mouse;
+  }
+
+  function getFirstHit(e: PointerEvent): THREE.Intersection | null {
+    getNormalizedMouse(e);
+    _raycaster.setFromCamera(_mouse, miniCam);
+    const hits = _raycaster.intersectObjects(pickables, false);
+    if (hits.length === 0) return null;
+    // The N/E/S/W letter hit planes overlap the ring radius, so a ray can pierce
+    // both. Prefer the (closest) cardinal letter over the bare ring body so
+    // cardinal hover/click keeps working; the ring wins only away from letters.
+    const cardinalHit = hits.find(h => (h.object.userData as HitUserData).cardinal);
+    return cardinalHit ?? hits[0]!;
+  }
+
+  function computeDirection(faces: readonly number[]): THREE.Vector3 {
+    const sum = new THREE.Vector3();
+    for (const fi of faces) { const d = FACE_DIRS[fi]; if (d) sum.add(d); }
+    return sum.normalize();
+  }
+
+  // Sprite materials default to white so their canvas texture shows untinted;
+  // setting an orange color multiplies the texture → orange hover feedback.
+  const SPRITE_DEFAULT_COLOR = 0xffffff;
+
+  /** Reset every non-cube control (ring, compass labels, arrows, home) to its base color. */
+  function resetControlHighlights(): void {
+    ringMaterial.color.setHex(COMPASS_RING_DEFAULT_COLOR);
+    for (const m of compassLabelMats) m.color.setHex(SPRITE_DEFAULT_COLOR);
+    for (const m of faceNavMats) m.color.setHex(NAV_ARROW_COLOR);
+    for (const s of rollSprites) s.material.color.setHex(NAV_ARROW_COLOR);
+    homeSprite.material.color.setHex(SPRITE_DEFAULT_COLOR);
+  }
+
+  /** Tint the hovered control (and the ring, for compass hits) orange. */
+  function applyControlHighlight(mesh: THREE.Mesh | null): void {
+    resetControlHighlights();
+    if (!mesh) return;
+    const ud = mesh.userData as HitUserData;
+    if (ud.type === 'compass') {
+      ringMaterial.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+      const i = compassHitMeshes.indexOf(mesh);
+      compassLabelMats[i]?.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+    } else if (ud.type === 'faceNav') {
+      const i = faceNavHitMeshes.indexOf(mesh);
+      faceNavMats[i]?.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+    } else if (ud.type === 'roll') {
+      const i = rollHitMeshes.indexOf(mesh);
+      rollSprites[i]?.material.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+    } else if (ud.type === 'home') {
+      homeSprite.material.color.setHex(VIEWCUBE_HOVER_COLOR_HEX);
+    }
+  }
+
+  function updateHover(e: PointerEvent): void {
+    const hit = getFirstHit(e);
+    const newMesh = hit ? (hit.object as THREE.Mesh) : null;
+    if (newMesh === hoveredMesh) return;
+    hoveredMesh = null;
+    if (newMesh !== null) {
+      const ud = newMesh.userData as HitUserData;
+      hoveredMesh = newMesh;
+      if (ud.type === 'face' || ud.type === 'edge' || ud.type === 'corner') {
+        cubeSetHighlights(computeHighlights(ud.type, ud.faces));
+      } else {
+        cubeSetHighlights(null);
+      }
+      // Snap cube faces to full opacity immediately so the hover highlight reads
+      // crisp. The highlight is baked into the semi-transparent face texture
+      // (opacity 0.5 at rest); sync() only lerps toward 1.0 over many frames and
+      // stalls entirely when the 3D scene is idle → highlight would look faint.
+      for (const mat of cubeMaterials) mat.opacity = 1.0;
+      canvas.style.cursor = 'pointer';
+    } else {
+      cubeSetHighlights(null);
+      canvas.style.cursor = 'grab';
+    }
+    applyControlHighlight(newMesh);
+    onRenderNeeded(); // ADR-553 — repaint via the main loop (no independent render anymore).
+  }
+
+  function handleClick(e: PointerEvent): void {
+    const hit = getFirstHit(e);
+    if (!hit) return;
+    const ud = hit.object.userData as HitUserData;
+    if (ud.type === 'home') { onHome(); return; }
+    if (ud.type === 'roll' && ud.rollDir) {
+      onRoll?.(ud.rollDir);
+      return;
+    }
+    // faceNav arrows (front/back/left/right only — never top/bottom)
+    if (ud.type === 'faceNav' && ud.navTarget) {
+      if (onSnapToView) { onSnapToView(ud.navTarget as CanonicalViewId); return; }
+      onFaceSnap(ud.navTarget);
+      return;
+    }
+    if (ud.type === 'compass' && ud.cardinal) {
+      onDirSnap(computeCompassDirection(ud.cardinal, getNorthAngleRad(), getCamera().position, getTarget()));
+      return;
+    }
+    if (ud.type === 'face' && ud.faces.length === 1) {
+      const faceIdx = ud.faces[0]!;
+      if (onSnapToView) {
+        const viewId = FACE_INDEX_TO_VIEW_ID[faceIdx];
+        if (viewId) { onSnapToView(viewId); return; }
+      }
+      const mode = FACE_TO_PROJECTION[faceIdx];
+      if (mode) { onFaceSnap(mode); return; }
+    }
+    if (ud.type === 'edge' || ud.type === 'corner') {
+      const dir = computeDirection(ud.faces);
+      if (onSnapToView) {
+        const isoId = matchIsoCanonicalView(dir);
+        if (isoId) { onSnapToView(isoId); return; }
+      }
+      onDirSnap(dir);
+    }
+  }
+
+  function onPointerDown(e: PointerEvent): void {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    canvas.setPointerCapture(e.pointerId);
+    isPointerDown = true; isDragging = false;
+    dragStartX = prevDragX = e.clientX;
+    dragStartY = prevDragY = e.clientY;
+  }
+
+  function onPointerMove(e: PointerEvent): void {
+    if (isPointerDown) {
+      if (!isDragging) {
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        if (dx * dx + dy * dy < DRAG_THRESHOLD_SQ) return;
+        isDragging = true;
+        canvas.style.cursor = 'grabbing';
+      }
+      if (onDragRotate) onDragRotate(e.clientX - prevDragX, e.clientY - prevDragY);
+      prevDragX = e.clientX;
+      prevDragY = e.clientY;
+      return;
+    }
+    updateHover(e);
+  }
+
+  function onPointerUp(e: PointerEvent): void {
+    if (e.button !== 0 || !isPointerDown) return;
+    isPointerDown = false;
+    e.stopPropagation();
+    canvas.releasePointerCapture(e.pointerId);
+    if (isDragging) { isDragging = false; canvas.style.cursor = hoveredMesh ? 'pointer' : 'grab'; return; }
+    handleClick(e);
+  }
+
+  /**
+   * ADR-920 Β6.3β — η χειρονομία ακυρώθηκε (`pointercancel`) ή χάθηκε η σύλληψη (`lostpointercapture`):
+   * καθαρίζει την κατάσταση ΧΩΡΙΣ κλικ. Χωρίς αυτό το `isPointerDown` έμενε «κολλημένο» και η επόμενη
+   * απλή κίνηση περιέστρεφε την όψη σαν να ήταν πατημένο. Ιδεμποτές: μετά από `pointerup` δεν κάνει τίποτα.
+   */
+  function endPointerGesture(): void {
+    if (!isPointerDown) return;
+    isPointerDown = false;
+    if (isDragging) { isDragging = false; canvas.style.cursor = hoveredMesh ? 'pointer' : 'grab'; }
+  }
+
+  function onCanvasClick(e: MouseEvent): void { e.stopPropagation(); }
+
+  function onCanvasContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    onContextMenuRequest?.(e.clientX, e.clientY);
+  }
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', endPointerGesture);
+  canvas.addEventListener('lostpointercapture', endPointerGesture);
+  canvas.addEventListener('click', onCanvasClick);
+  canvas.addEventListener('contextmenu', onCanvasContextMenu);
+  // Hover chrome (home button + roll arrows + face-nav arrows) is shown ONLY
+  // while the ViewCube is hovered. Applied from sync() AND directly here (+ an
+  // immediate render) so it appears/disappears the instant the pointer enters or
+  // leaves, even when the main render loop is idle and sync() isn't ticking.
+  // ADR-920 Β6.3β — συσκευή χωρίς hover (αφή): δεν υπάρχει «πλησίασε τον κύβο», άρα το σπίτι και
+  // τα βέλη μένουν ΜΟΝΙΜΑ ορατά — αλλιώς θα ήταν απρόσιτα. Στο desktop η συμπεριφορά είναι ίδια.
+  const chromeAlwaysOn = deviceLacksHover();
+
+  function applyHoverChrome(): void {
+    const show = cubeHovered || chromeAlwaysOn;
+    homeSprite.visible = show; homeHitMesh.visible = show;
+    for (const s of rollSprites) s.visible = show;
+    for (const hm of rollHitMeshes) hm.visible = show;
+    for (const child of faceNavGroup.children) child.visible = show;
+    for (const hm of faceNavHitMeshes) hm.visible = show;
+    for (const m of faceNavMats) m.opacity = show ? 0.7 : 0;
+  }
+  applyHoverChrome();
+
+  canvas.addEventListener('mouseenter', () => { cubeHovered = true; applyHoverChrome(); onRenderNeeded(); });
+  canvas.addEventListener('mouseleave', () => { cubeHovered = false; applyHoverChrome(); onRenderNeeded(); });
+
+  const _q = new THREE.Quaternion();
+
+  function sync(
+    cam: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+    _target: THREE.Vector3,
+  ): void {
+    cam.getWorldQuaternion(_q);
+    cubeGroup.quaternion.copy(_q).conjugate();
+    compassGroup.rotation.y = getNorthAngleRad();
+    compassGroup.visible = compassVisibleState;
+    const tgtAlpha = cubeHovered ? 1.0 : 0.5;
+    const lerp = 0.15;
+    for (const mat of cubeMaterials) { mat.opacity += (tgtAlpha - mat.opacity) * lerp; }
+    ringMaterial.opacity += ((cubeHovered ? 0.8 : 0.4) - ringMaterial.opacity) * lerp;
+    applyHoverChrome();
+    // ADR-553 — NO render here: `sync()` runs BEFORE the main scene render. The actual pixels are
+    // drawn by `composite()` at the end of the frame (after post-FX), reusing the main renderer.
+  }
+
+  // ADR-553 — scratch objects reused across frames (no per-frame allocation in the render path).
+  const _scissorPrevTarget = { value: null as THREE.WebGLRenderTarget | null };
+  const _rendererSize = new THREE.Vector2();
+
+  /**
+   * Draw the cube as a scissored sub-viewport of the MAIN renderer into the default framebuffer.
+   * Called at the END of `renderSceneFrame` (after outline/post-FX) so it is AO-immune. The scissor
+   * box tracks the hit-layer rect (single source of position). Only depth is cleared inside the box
+   * (not colour), so the 3D scene shows through the cube's transparent background — matching the old
+   * stacked-canvas look. No-op when hidden or when the rect is degenerate (narrow viewport).
+   */
+  function composite(): void {
+    if (!visibleState) return;
+    const canvasRect = renderer.domElement.getBoundingClientRect();
+    renderer.getSize(_rendererSize);
+    const rect = computeViewCubeScissorRect(canvas.getBoundingClientRect(), canvasRect, _rendererSize.y);
+    if (!rect) return;
+
+    const prevAutoClear = renderer.autoClear;
+    _scissorPrevTarget.value = renderer.getRenderTarget();
+    renderer.setRenderTarget(null);
+    renderer.autoClear = false;
+    renderer.setScissorTest(true);
+    renderer.setScissor(rect.x, rect.y, rect.w, rect.h);
+    renderer.setViewport(rect.x, rect.y, rect.w, rect.h);
+    renderer.clearDepth(); // scissored → clears depth only in the corner, keeps the scene colour.
+    renderer.render(scene, miniCam);
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, _rendererSize.x, _rendererSize.y);
+    renderer.setScissor(0, 0, _rendererSize.x, _rendererSize.y);
+    renderer.autoClear = prevAutoClear;
+    renderer.setRenderTarget(_scissorPrevTarget.value);
+  }
+
+  function setCompassVisible(visible: boolean): void {
+    compassVisibleState = visible;
+    compassGroup.visible = visible;
+    onRenderNeeded(); // ADR-553 — repaint via the main loop.
+  }
+
+  function setVisible(visible: boolean): void {
+    visibleState = visible; // ADR-553 — gate `composite()` so the scissor pass skips when hidden.
+    canvas.style.display = visible ? '' : 'none';
+  }
+
+  function dispose(): void {
+    canvas.removeEventListener('pointerdown', onPointerDown);
+    canvas.removeEventListener('pointermove', onPointerMove);
+    canvas.removeEventListener('pointerup', onPointerUp);
+    canvas.removeEventListener('pointercancel', endPointerGesture);
+    canvas.removeEventListener('lostpointercapture', endPointerGesture);
+    canvas.removeEventListener('click', onCanvasClick);
+    canvas.removeEventListener('contextmenu', onCanvasContextMenu);
+    cubeMesh.geometry.dispose();
+    for (const mat of cubeMaterials) { mat.map?.dispose(); mat.dispose(); }
+    for (const t of hitTargets) t.geometry.dispose();
+    for (const hm of compassHitMeshes) hm.geometry.dispose();
+    homeHitMesh.geometry.dispose();
+    homeSprite.material.map?.dispose(); homeSprite.material.dispose();
+    for (const s of rollSprites) { s.material.map?.dispose(); s.material.dispose(); }
+    for (const hm of rollHitMeshes) hm.geometry.dispose();
+    for (const hm of faceNavHitMeshes) hm.geometry.dispose();
+    // ADR-553 — no miniRenderer to dispose (the main renderer is owned by ThreeJsSceneManager).
+    if (canvas.parentElement) canvas.parentElement.removeChild(canvas);
+  }
+
+  return { sync, composite, setCompassVisible, setVisible, dispose };
+}

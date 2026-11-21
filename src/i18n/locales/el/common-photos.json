@@ -15,7 +15,8 @@
       "tour": "3D περιήγηση",
       "model": "3D μοντέλο",
       "tourAndModel": "3D περιήγηση · μοντέλο",
-      "tourAndModelShort": "3D"
+      "tourAndModelShort": "3D",
+      "terrain": "3D ανάγλυφο"
     },
     "addPhoto": "Προσθήκη Φωτογραφίας",
     "galleryLabel": "Γκαλερί φωτογραφιών",

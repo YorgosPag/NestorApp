@@ -22,6 +22,7 @@ import { roundPublished } from './listing-terrain-frame';
 import type { SurveyPointMark } from '../survey-import/survey-upload-preparation';
 import type { ListingTerrainSnapshot } from './listing-terrain-types';
 import { contourLabelsOf, contourPathData, type TerrainMapContourLabel } from './terrain-map-contours';
+import { contourLevelsOf, elevationBandsOf, type TerrainMapElevationBand } from './terrain-map-elevation-bands';
 import {
   northArrowOf,
   scaleBarOf,
@@ -52,6 +53,10 @@ export interface TerrainMapModel {
   readonly boundaryPathData: string | null;
   /** Every slope class, flattest first — empty classes included, so the legend shows the full scale. */
   readonly slopeRegions: readonly TerrainMapSlopeRegion[];
+  /** ADR-920 Β6.2 — hypsometric bands between the drawn contour levels, lowest first (bands without ground omitted). */
+  readonly elevationBands: readonly TerrainMapElevationBand[];
+  /** The surface's own elevation range, metres — the ends of the elevation legend. */
+  readonly elevationRangeM: { readonly min: number; readonly max: number };
   /** Triangles spanning unmeasured ground (interpolation, not survey); `null` when there are none. */
   readonly sparsePathData: string | null;
   readonly minorContoursPathData: string;
@@ -111,11 +116,14 @@ export function terrainMapModelOf(
   const triangles = meshTriangles(snapshot.mesh);
   const viewBox = viewBoxOf(contentPoints(snapshot));
   const labelHeightM = labelHeightOf(viewBox, display);
+  const { minElevationM: min, maxElevationM: max } = snapshot.stats;
   return {
     viewBox,
     extentPathData: regionPathData(snapshot.mesh, triangles),
     boundaryPathData: snapshot.boundary ? polylinePathData(flatSvgPoints(snapshot.boundary), true) : null,
     slopeRegions: slopeRegionsOf(snapshot.mesh, triangles, snapshot.slopeBandsPct),
+    elevationBands: elevationBandsOf(snapshot.mesh, triangles, contourLevelsOf(snapshot.contours), min, max),
+    elevationRangeM: { min, max },
     sparsePathData: sparseAreaPathData(snapshot.mesh, triangles),
     minorContoursPathData: contourPathData(snapshot.contours, false),
     majorContoursPathData: contourPathData(snapshot.contours, true),

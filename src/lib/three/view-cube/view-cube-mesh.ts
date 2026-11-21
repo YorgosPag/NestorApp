@@ -5,8 +5,8 @@
 
 import * as THREE from 'three';
 import { drawZoneHighlight, type FaceZone } from './view-cube-highlight';
-// 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
-import { trueColorToHex } from '../../../utils/dxf-true-color';
+// 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `@/lib/color/true-color` (ADR-920 Β6.1).
+import { trueColorToHex } from '@/lib/color/true-color';
 
 export const FACE_DIRS: readonly THREE.Vector3[] = [
   new THREE.Vector3( 1,  0,  0),

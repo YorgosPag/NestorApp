@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Ο ΠΡΟΒΟΛΕΑΣ ΜΕΣΩΝ ΤΗΣ ΑΓΓΕΛΙΑΣ** — ο **δημόσιος** προσαρμογέας του `MediaViewerShell`: φωτογραφίες · κάτοψη ·
- * κάτοψη ορόφου · βίντεο · τρισδιάστατο μοντέλο · περιήγηση 360°, σε καρτέλες μέσα στη σελίδα (πρότυπο Zillow/Idealista: ένας προβολέας στην κορυφή).
+ * κάτοψη ορόφου · ανάγλυφο εδάφους (ADR-920 Β6.6) · βίντεο · τρισδιάστατο μοντέλο · περιήγηση 360°, σε καρτέλες μέσα στη σελίδα (πρότυπο Zillow/Idealista: ένας προβολέας στην κορυφή).
  * @related components/shared/media/viewer/MediaViewerShell · features/read-only-viewer (ο εταιρικός προσαρμογέας) · ADR-884 §4.12 Μέρος Δ
  * @module components/listing-detail/media/ListingMediaViewer
  *
@@ -21,14 +21,14 @@
  */
 
 import type { ReactElement, ReactNode } from 'react';
-import { Box, Camera, Compass, Layers, Map as MapIcon, Video } from 'lucide-react';
+import { Box, Camera, Compass, Layers, Map as MapIcon, Mountain, Video } from 'lucide-react';
 
 import { MediaViewerShell, type MediaViewerTab } from '@/components/shared/media/viewer/MediaViewerShell';
 import { useActiveMediaTab } from '@/components/shared/media/viewer/useMediaTabParam';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { presentableFloorPlate } from '@/lib/listings/floor-plate/floor-plate-publication';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
-import { hasListedTour, presentableModels } from '@/lib/listings/listing-spatial-media';
+import { hasListedTour, presentableModels, presentableTerrain } from '@/lib/listings/listing-spatial-media';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -38,6 +38,7 @@ import { ListingGallery } from '../ListingGallery';
 import { ListingModels } from '../ListingModels';
 import { ListingTour } from '../ListingTour';
 import { ListingVideos } from '../ListingVideos';
+import { ListingTerrainPanel } from '../terrain/ListingTerrainPanel';
 
 import { LISTING_FLOOR_PLATE_TAB } from './floor-plate-tab';
 
@@ -77,7 +78,8 @@ function pictureTabs(listing: PublicListing, t: Translate): MediaViewerTab[] {
 
 /**
  * **Τα σχέδια**: η κάτοψη της μονάδας και, αμέσως μετά, η κάτοψη του ορόφου — από το «πώς είναι μέσα» στο «πού βρίσκεται
- * στον όροφο» (ADR-907 §11.9). Η κάτοψη ορόφου χωρίς πλήθος: είναι πάντα μία.
+ * στον όροφο» (ADR-907 §11.9) — και τελευταίο το ανάγλυφο του οικοπέδου. Κάτοψη ορόφου και ανάγλυφο χωρίς πλήθος: είναι
+ * πάντα ένα.
  */
 function planTabs(listing: PublicListing, t: Translate): MediaViewerTab[] {
   const tabs: MediaViewerTab[] = [];
@@ -98,6 +100,17 @@ function planTabs(listing: PublicListing, t: Translate): MediaViewerTab[] {
       label: t('listing-detail:media.tabs.floorPlate'),
       icon: Layers,
       panel: <Stage><ListingFloorPlates listing={listing} /></Stage>,
+    });
+  }
+  // ADR-920 Β6.6 — το ανάγλυφο του οικοπέδου, σχέδιο κι αυτό. Η σκηνή προσαρτάται μόνο όταν ανοίξει η καρτέλα (το κέλυφος
+  // δεν κάνει `forceMount`), άρα το στιγμιότυπο δεν κατεβαίνει για όποιον δεν την πατήσει.
+  const terrain = presentableTerrain(listing);
+  if (terrain !== null) {
+    tabs.push({
+      id: 'terrain',
+      label: t('listing-detail:media.tabs.terrain'),
+      icon: Mountain,
+      panel: <Stage><ListingTerrainPanel terrain={terrain} /></Stage>,
     });
   }
   return tabs;

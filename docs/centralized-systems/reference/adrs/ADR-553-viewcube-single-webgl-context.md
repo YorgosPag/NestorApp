@@ -95,4 +95,8 @@ setScissorTest(false); restore full viewport + scissor + autoClear + renderTarge
 
 ## Changelog
 
+- **2026-11-21** — **Αφή (ADR-920 §14.3β, Β6.3β)**: το DOM hit-layer παίρνει `touch-action: none`· νέος χειριστής `pointercancel` / `lostpointercapture` καθαρίζει την κατάσταση σύρσης χωρίς κλικ· σε συσκευή `(hover: none)` το σπίτι + τα βέλη μένουν μόνιμα ορατά. Ένα WebGL context και scissored sub-viewport αμετάβλητα· στο desktop καμία αλλαγή συμπεριφοράς.
+
+- **2026-11-21** — **Μετακόμιση (ADR-920 §14.3, Β6.3)**: τα `view-cube.ts` · `view-cube-scissor.ts` (+ test) · `-mesh` · `-overlay` · `-highlight` ζουν πλέον στο `src/lib/three/view-cube/`, ώστε ο ίδιος κύβος να οδηγεί και τον θεατή εδάφους της δημόσιας αγγελίας. Το `bim-3d/viewport/view-cube/view-cube.ts` κάνει re-export. Η αρχιτεκτονική αυτού του ADR (ένα WebGL context, scissored sub-viewport, DOM hit-layer) **αμετάβλητη** — οι διαδρομές του πίνακα αρχείων παραπάνω είναι πλέον ιστορικές.
+
 - **2026-06-29** — Initial. Υλοποίηση ADR-551 §5.2 #6: εξάλειψη 2ου WebGL context· ViewCube → scissored sub-viewport του main renderer (Three.js `webgl_multiple_views` pattern). DOM hit-layer διατηρείται (hit-test byte-identical, zero remap). Pure `computeViewCubeScissorRect` 5/5 jest. UNCOMMITTED — εκκρεμεί browser-verify (path-tracer/section interaction + DevTools single-context check) + commit (Giorgio).
