@@ -14,9 +14,8 @@
 
 import elRelationships from '@/i18n/locales/el/contacts-relationships.json';
 import type { ContactType } from '@/types/contacts/contracts';
-import type { RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
+import { RELATIONSHIP_TYPES, type RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
 import {
-  RELATIONSHIP_TYPES,
   isStoredCrossingValid,
   relationshipTypeI18nSegment,
   resolveRelationshipTypeInput,

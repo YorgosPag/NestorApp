@@ -22,6 +22,7 @@ import { buildUpdateChangeEntry, buildTerminationChangeEntry, diffChangedFields 
 import { normalizeUpdateDays, relationshipCalendarDay, todayRelationshipDay } from './relationship-field-codec';
 import { RelationshipValidationService } from './RelationshipValidationService';
 import { isSymmetricRelationshipType } from '@/types/contacts/relationships/core/relationship-orientation';
+import { ORG_CHART_RELATIONSHIP_TYPES } from '@/types/contacts/relationships/core/relationship-metadata';
 import {
   getContactById,
   updateOrganizationalHierarchy
@@ -162,16 +163,11 @@ export class RelationshipCRUDService {
     // ADR-372 §Β2: ONE record per relationship. The inverse reading («Εργαζόμενος σε»,
     // «Πελάτης») is derived at display time — no twin record to create or keep in sync.
 
-    // Update organizational hierarchy if employment relationship
-    // 🔧 FIX: Inline check instead of isEmploymentRelationship() to avoid
-    // "Maximum call stack size exceeded" in production bundles
-    const employmentTypes: RelationshipType[] = [
-      'employee', 'manager', 'director', 'executive',
-      'intern', 'contractor', 'civil_servant', 'department_head', 'ministry_official'
-    ];
-    const isEmployment = employmentTypes.includes(relationship.relationshipType);
-
-    if (isEmployment) {
+    // Update organizational hierarchy if the role places its holder in the org chart
+    // (ADR-372 §8.3). Read from the LEAF registry module — never via the
+    // `@/types/contacts/relationships` barrel, whose cycle once caused
+    // "Maximum call stack size exceeded" in production bundles.
+    if (ORG_CHART_RELATIONSHIP_TYPES.includes(relationship.relationshipType)) {
       try {
         await this.updateOrganizationalHierarchy(relationship);
         logger.info('✅ CRUD: Organizational hierarchy updated');

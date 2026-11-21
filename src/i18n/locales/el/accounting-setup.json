@@ -52,9 +52,6 @@
     "vatDuplicateWarning": "Το ΑΦΜ υπάρχει ήδη στις επαφές: {contactName}",
     "searchTaxOffice": "Αναζήτηση ΔΟΥ...",
     "noTaxOfficeFound": "Δεν βρέθηκε ΔΟΥ",
-    "searchKad": "Αναζήτηση ΚΑΔ (κωδικός ή περιγραφή)...",
-    "noKadFound": "Δεν βρέθηκε ΚΑΔ",
-    "kadLoading": "Φόρτωση κωδικών ΚΑΔ...",
     "validation": {
       "vatNumberRequired": "Το ΑΦΜ είναι υποχρεωτικό",
       "vatNumberInvalid": "Μη έγκυρο ΑΦΜ (9 ψηφία)",

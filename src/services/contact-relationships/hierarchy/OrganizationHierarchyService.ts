@@ -15,6 +15,7 @@ import {
 import { ContactsService } from '@/services/contacts.service';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
 import { RelationshipQueryBuilder } from '../search/RelationshipQueryBuilder';
+import { ORG_CHART_RELATIONSHIP_TYPES } from '@/types/contacts/relationships/core/relationship-metadata';
 import { createModuleLogger } from '@/lib/telemetry';
 
 // Re-export types for backward compatibility
@@ -172,7 +173,7 @@ export class OrganizationHierarchyService {
         const relationships = await RelationshipQueryBuilder
           .create()
           .fromContact(currentEmployee)
-          .ofTypes(['employee', 'manager', 'director'])
+          .ofTypes(ORG_CHART_RELATIONSHIP_TYPES)
           .activeOnly()
           .compile();
 
@@ -199,7 +200,7 @@ export class OrganizationHierarchyService {
 
       for (const relationship of relationships) {
         if (relationship.targetContactId === managerId &&
-            ['employee', 'manager', 'director'].includes(relationship.relationshipType)) {
+            ORG_CHART_RELATIONSHIP_TYPES.includes(relationship.relationshipType)) {
 
           const contact = await ContactsService.getContact(relationship.sourceContactId);
           if (contact) {

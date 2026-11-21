@@ -290,11 +290,6 @@
     "typeLabel": "| Τύπος:"
   },
   "navigation": {
-    "positionKeywords": {
-      "director": "διευθυντής",
-      "generalDirector": "γενικός διευθυντής",
-      "seniorExecutive": "ανώτερο στέλεχος"
-    },
     "fallbackSearch": {
       "totalRelationships": "σχέση",
       "employees": "εργαζόμενος",

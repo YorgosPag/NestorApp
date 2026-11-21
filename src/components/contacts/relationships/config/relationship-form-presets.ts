@@ -25,6 +25,7 @@ import {
   relationshipRoleLabelKey,
   type OrientedRole,
 } from '@/types/contacts/relationships/core/relationship-orientation';
+import { POSITION_PRESETS } from '@/types/contacts/relationships/core/relationship-positions';
 
 // ============================================================================
 // RELATIONSHIP ROLE OPTIONS — ADR-372 §Β1/§Β2 reciprocal-role model
@@ -79,26 +80,13 @@ export function getHolderRoleOptions(
 // ============================================================================
 
 /**
- * Predefined position options (i18n keys).
- * Users can also add custom positions via the "Add new" feature.
- */
-const POSITION_PRESET_KEYS = [
-  { value: 'director', labelKey: 'relationships.presets.positions.director' },
-  { value: 'manager', labelKey: 'relationships.presets.positions.manager' },
-  { value: 'supervisor', labelKey: 'relationships.presets.positions.supervisor' },
-  { value: 'engineer', labelKey: 'relationships.presets.positions.engineer' },
-  { value: 'accountant', labelKey: 'relationships.presets.positions.accountant' },
-  { value: 'secretary', labelKey: 'relationships.presets.positions.secretary' },
-  { value: 'technician', labelKey: 'relationships.presets.positions.technician' },
-  { value: 'sales_rep', labelKey: 'relationships.presets.positions.salesRep' },
-] as const;
-
-/**
  * Returns ComboboxOption[] for positions, translated via i18n.
+ * Presets (and their «manages people» flag) live in the domain leaf
+ * `relationship-positions.ts` (ADR-372 §8.3). Users can also type a custom one.
  * @param t - translation function
  */
 export function getPositionOptions(t: (key: string) => string): ComboboxOption[] {
-  return POSITION_PRESET_KEYS.map(({ value, labelKey }) => ({
+  return POSITION_PRESETS.map(({ value, labelKey }) => ({
     value,
     label: t(labelKey)
   }));
@@ -165,5 +153,5 @@ export function resolvePositionLabel(
   t: (key: string) => string
 ): string {
   const trimmed = value?.trim();
-  return trimmed ? resolvePresetOrFreeText(trimmed, POSITION_PRESET_KEYS, t) : '';
+  return trimmed ? resolvePresetOrFreeText(trimmed, POSITION_PRESETS, t) : '';
 }

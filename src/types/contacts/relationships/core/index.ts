@@ -10,3 +10,4 @@
 export * from './relationship-types';
 export * from './relationship-metadata';
 export * from './relationship-orientation';
+export * from './relationship-positions';

@@ -290,11 +290,6 @@
     "typeLabel": "| Type:"
   },
   "navigation": {
-    "positionKeywords": {
-      "director": "director",
-      "generalDirector": "general director",
-      "seniorExecutive": "senior executive"
-    },
     "fallbackSearch": {
       "totalRelationships": "relationship",
       "employees": "employee",

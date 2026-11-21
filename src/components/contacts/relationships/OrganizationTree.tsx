@@ -12,7 +12,6 @@
 import React from 'react';
 import '@/lib/design-system';
 import { formatDateShort } from '@/lib/intl-utils';
-import { createModuleLogger } from '@/lib/telemetry';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building2, Users } from 'lucide-react';
@@ -29,10 +28,9 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 // 🪝 Import contact name hook
 import { useContactName } from './hooks/useContactName';
 import { resolveDepartmentLabel, resolvePositionLabel } from './config/relationship-form-presets';
+import { relationshipRoleLabelKey } from '@/types/contacts/relationships/core/relationship-orientation';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { gridPatterns } from '@/styles/design-tokens';
-
-const logger = createModuleLogger('OrganizationTree');
 
 // 🏢 ENTERPRISE: Helper component for contact badge
 interface ContactBadgeProps {
@@ -42,11 +40,9 @@ interface ContactBadgeProps {
 }
 
 const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relationshipType }) => {
-  logger.info('ContactBadge rendering', { contactId, position, relationshipType });
   const { contactName, loading } = useContactName(contactId);
   const { getStatusBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();
-  logger.info('ContactBadge hook result', { contactName, loading });
 
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('contacts');
@@ -59,12 +55,14 @@ const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relati
     );
   }
 
-  // Display contact name with position if available
+  // ADR-372 §8.5 b2: never a raw key. Position = preset key → i18n / free text verbatim;
+  // else the role the employee HOLDS (source side, canonical direction §8.2).
+  const roleLabel = resolvePositionLabel(position, t)
+    || (relationshipType ? t(relationshipRoleLabelKey(relationshipType, 'source')) : '');
   const unknownContact = t('relationships.organizationTree.unknownContact');
-  const defaultEmployee = t('relationships.organizationTree.employee');
   const displayText = contactName && contactName !== unknownContact
-    ? (position ? `${contactName} (${position})` : contactName)
-    : (position || relationshipType || defaultEmployee);
+    ? (roleLabel ? `${contactName} (${roleLabel})` : contactName)
+    : (roleLabel || t('relationships.organizationTree.employee'));
 
   return (
     <Badge
@@ -291,14 +289,10 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
    * 👥 Render recent additions
    */
   const renderRecentAdditions = () => {
-    logger.info('renderRecentAdditions called', { hasTree: !!tree, childrenCount: tree?.children?.length || 0 });
-
     if (!tree?.children || tree.children.length === 0) {
-      logger.info('No children found, returning null');
       return null;
     }
 
-    logger.info('About to render children', { count: tree.children.length });
     return (
       <div>
         <h4 className={`text-sm font-medium ${colors.text.primary} mb-3`}>{t('relationships.organizationTree.recentAdditions')}</h4>

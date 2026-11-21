@@ -8,6 +8,8 @@
 // ============================================================================
 
 import type { ContactRelationship } from '@/types/contacts/relationships';
+import { isManagerialRelationshipType } from '@/types/contacts/relationships/core/relationship-metadata';
+import { isManagerialPosition } from '@/types/contacts/relationships/core/relationship-positions';
 import { normalizeToDate } from '@/lib/date-local';
 
 // ============================================================================
@@ -87,24 +89,18 @@ export function calculateRelationshipStats(
 }
 
 /**
- * 🏢 Calculate management-level relationship statistics
+ * 🏢 Calculate management-level relationship statistics (ADR-372 §8.3):
+ * `direct` = the ROLE is declared people-managing; `positionBased` = only the
+ * position preset is. Free-text titles are never guessed.
  */
 export function calculateManagementStats(relationships: ContactRelationship[]) {
-  const managementTypes = ['director', 'manager', 'executive', 'ceo', 'chairman'];
-
   const direct = relationships.filter(rel =>
-    managementTypes.includes(rel.relationshipType)
+    isManagerialRelationshipType(rel.relationshipType)
   ).length;
 
   const positionBased = relationships.filter(rel =>
-    rel.position && (
-      rel.position.toLowerCase().includes('διευθυντής') ||
-      rel.position.toLowerCase().includes('manager') ||
-      rel.position.toLowerCase().includes('ceo') ||
-      rel.position.toLowerCase().includes('cto') ||
-      rel.position.toLowerCase().includes('γενικός διευθυντής') ||
-      rel.position.toLowerCase().includes('ανώτερο στέλεχος')
-    ) && !managementTypes.includes(rel.relationshipType) // Avoid double counting
+    isManagerialPosition(rel.position) &&
+    !isManagerialRelationshipType(rel.relationshipType) // Avoid double counting
   ).length;
 
   return {

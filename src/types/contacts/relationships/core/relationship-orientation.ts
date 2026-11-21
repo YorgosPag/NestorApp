@@ -19,7 +19,7 @@
 // ============================================================================
 
 import type { ContactType } from '../../contracts';
-import type { RelationshipType } from './relationship-types';
+import { RELATIONSHIP_TYPES, type RelationshipType } from './relationship-types';
 import { CROSSING_CONTACT_TYPES, RELATIONSHIP_METADATA, isCrossingAllowed } from './relationship-metadata';
 
 /** Which side of the stored record a contact occupies. */
@@ -35,10 +35,6 @@ export interface OrientedRole {
   type: RelationshipType;
   pickedSide: RoleSide;
 }
-
-/** Every canonical relationship type, in registry declaration order. */
-export const RELATIONSHIP_TYPES: readonly RelationshipType[] =
-  Object.keys(RELATIONSHIP_METADATA) as RelationshipType[];
 
 export function isRelationshipType(value: string): value is RelationshipType {
   return Object.prototype.hasOwnProperty.call(RELATIONSHIP_METADATA, value);

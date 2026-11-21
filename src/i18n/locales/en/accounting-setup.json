@@ -52,9 +52,6 @@
     "vatDuplicateWarning": "This VAT already exists in contacts: {contactName}",
     "searchTaxOffice": "Search tax office...",
     "noTaxOfficeFound": "No tax office found",
-    "searchKad": "Search KAD (code or description)...",
-    "noKadFound": "No activity code found",
-    "kadLoading": "Loading activity codes...",
     "validation": {
       "vatNumberRequired": "VAT number is required",
       "vatNumberInvalid": "Invalid VAT number (9 digits)",

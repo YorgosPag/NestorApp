@@ -9,6 +9,7 @@
 
 import { useMemo } from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
+import { isManagerialRelationship } from '@/types/contacts/relationships/utils/type-guards';
 import type { ContactType } from '@/types/contacts';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { calculateRelationshipStats, type RelationshipStats } from '../../utils/summary/statistics-calculator';
@@ -68,16 +69,9 @@ export function useRelationshipStatistics(
       positionBasedManagementCount: calculatedStats.management.positionBased,
       totalManagementCount: calculatedStats.management.total,
       relationshipsByType: calculatedStats.byType,
-      managementRelationships: relationships.filter(rel => {
-        const managementTypes = ['director', 'manager', 'executive', 'ceo', 'chairman'];
-        return managementTypes.includes(rel.relationshipType) ||
-          (rel.position && (
-            rel.position.toLowerCase().includes('διευθυντής') ||
-            rel.position.toLowerCase().includes('manager') ||
-            rel.position.toLowerCase().includes('director') || // preset KEY (ADR-372 §Β3)
-            rel.position.toLowerCase().includes('ceo')
-          ));
-      }).map(r => ({ type: r.relationshipType, position: r.position }))
+      managementRelationships: relationships
+        .filter(isManagerialRelationship)
+        .map(r => ({ type: r.relationshipType, position: r.position }))
     } });
 
     return calculatedStats;

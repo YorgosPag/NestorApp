@@ -112,26 +112,28 @@ All 9 crossings (catch-all / generic).
 
 ## 4. UI Layer Changes
 
-### `relationship-types.ts`
-- Expanded `VISUAL_REGISTRY` from 11 → 31 types (all SSoT types, minus ADR-244 property types
-  which belong to the property module UI).
-- `allowedFor` removed from `RelationshipTypeConfig` — filtering is now 100% SSoT-driven.
-- `getAvailableRelationshipTypes(sourceType, targetType?)`:
-  - With `targetType` → calls `getRelationshipTypesForCrossing(source, target)`.
-  - Without `targetType` → source-only fallback via SSoT `allowedFor` (backward compat).
+> Rewritten 2026-11-21 against the current code. The original `getAvailableRelationshipTypes`
+> no longer exists — filtering moved to the pure SSoT `relationship-orientation.ts` (§8.3).
 
-### `relationship-form-presets.ts`
-- `getRelationshipTypeOptions(sourceType, t, currentValue?, targetType?)` — fourth param added.
+### `utils/relationship-types.ts`
+- Visual properties only (`VISUAL_REGISTRY`: icon, colour) per type. No filtering, no labels.
+- Labels come from the locale via `relationshipRoleLabelKey(type, side)` (§8.3 / §Β1).
+- `allowedFor` removed from `RelationshipTypeConfig` — filtering is 100% SSoT-driven.
 
-### `RelationshipFormData`
-- Added optional `targetContactType?: ContactType`.
+### `config/relationship-form-presets.ts`
+- `getRelationshipTypeOptions(currentType, t, currentValue?, pickedType?)` → `getOfferedOrientedRoles(currentType, pickedType)`;
+  each option value is the **oriented** role (`encodeOrientedRole`), so the stored direction never
+  depends on the card the user started from. A saved value missing from the list is prepended (decoded).
+- `getHolderRoleOptions(currentType, t, pickedType)` — only roles the PICKED contact holds (plain type
+  values), for «role of X at Y» flows (quote signatory); the server orients with `pickedSide: 'source'`.
 
-### `RelationshipFormFields`
-- Added optional `targetContactType?` prop; falls back to `formData.targetContactType`.
+### `RelationshipFormData` / `RelationshipFormFields`
+- `targetContactType?: ContactType` on the form data; the fields component accepts a `targetContactType?`
+  prop and falls back to `formData.targetContactType`.
 
 ### `RelationshipForm`
-- `handleContactSelect` now captures `contact.type` → `formData.targetContactType`.
-- Resets `relationshipType` when the selected target changes (avoids stale invalid type).
+- `handleContactSelect` captures `contact.type` → `formData.targetContactType` and keeps the chosen
+  role only when the picked contact's type is unchanged (avoids a stale invalid role).
 
 ---
 
@@ -155,6 +157,10 @@ All 9 crossings (catch-all / generic).
 | `src/components/contacts/relationships/RelationshipForm.tsx` | Capture + reset on contact select |
 | `src/components/contacts/relationships/types/relationship-manager.types.ts` | `targetContactType?` on `RelationshipFormData` |
 | `src/services/contact-relationships/relationship-type-registry.ts` | `buildDefaultMetadata` uses `buildCrossingsForSources` |
+| `src/types/contacts/relationships/core/relationship-orientation.ts` | §8 SSoT: `RELATIONSHIP_TYPES`, `isSymmetricRelationshipType`, `getOrientedRolesForCrossing`, `CONTACT_OFFERED_RELATIONSHIP_TYPES`, `getOfferedOrientedRoles`, `orientRelationship`, label keys, encode/decode |
+| `src/components/contacts/relationships/hooks/relationship-form-orientation.ts` | §8 form side of the orientation (role ↔ stored direction) |
+| `src/services/contact-relationships/core/relationship-field-codec.ts` | §8.6 structured channels + `contactInfo` projection + calendar-day codec |
+| `src/services/contact-relationships/core/relationship-change-history.ts` | §8.6 `diffChangedFields()` — real changes only, no-op save writes nothing |
 
 ---
 
@@ -173,6 +179,10 @@ HubSpot *paired association labels*, Dynamics 365 *reciprocal connection roles*,
 - `RelationshipTypeMetadata.symmetric` (new). Directed types declare crossings **once, canonical** (`PAIR(holder → other)`), symmetric types keep `BIDIR`.
 - Merged synonyms (removed from the union; input aliases only, `RELATIONSHIP_TYPE_INPUT_ALIASES`): `supplier`→`vendor`; `client`,`customer`→ inverse of `vendor`; `protege`→ inverse of `mentor`; `advisor`→`consultant`. Data using them: **0**.
 - Labels: `relationships.types.<segment>` (holder) + `relationships.inverseTypes.<segment>` (other side: «Εργαζόμενος σε», «Μέτοχος σε», «Πελάτης», «Καθοδηγούμενος»). `manager` = «Υπεύθυνος», `director` = «Διευθυντής». Uniqueness asserted when the locale was generated.
+- **Vocabulary root (a1, CHECK 3.73 `relationship-type`)**: `RELATIONSHIP_TYPES` is the `as const` tuple in `core/relationship-types.ts`; `RelationshipType = (typeof RELATIONSHIP_TYPES)[number]`; ``PropertyRelationshipType = Extract<RelationshipType, `property_${string}`>``. Tuple order = dropdown order (same as the former `Object.keys(RELATIONSHIP_METADATA)`). `VISUAL_REGISTRY` is `Record<Exclude<RelationshipType, PropertyRelationshipType>, …>` — a new role without an icon no longer compiles.
+- **Org chart (a2)** — `RelationshipTypeMetadata` += `orgChartLevel: number | null` (one field answers «member of the target organisation's org chart?» and «which level?») and `isManagerial` (people manager). Industry: Workday supervisory organisation (manager role = position in the org, never the title), SAP SuccessFactors position hierarchy + «Is People Manager», Salesforce/HubSpot/Dynamics «Reports To» — membership/level/management are properties of the ROLE, never per-file lists and never guessed from free text. Levels: 1 employee·intern·contractor·civil_servant·ministry_official · 2 manager · 3 director·department_head · 4 executive · 5 ceo · 6 chairman · `null` for the rest (board, shareholders, outside parties). Managerial: manager·director·executive·department_head·ceo·chairman. Derived: `ORG_CHART_RELATIONSHIP_TYPES` (= the former `HIERARCHY_IMPACT_RELATIONSHIP_TYPES`, now aliased to it), `MANAGERIAL_RELATIONSHIP_TYPES`, `orgChartLevelOf`, `isManagerialRelationshipType`, `TOP_LEVEL_ORG_CHART_LEVEL = 3`. Department head = highest-level managerial member (no separate flag). Custom types: `null`/`false`.
+- **Position presets** moved to the domain leaf `core/relationship-positions.ts` (`POSITION_PRESETS` + `managerial` flag on director/manager/supervisor, `isManagerialPosition`). `isManagerialRelationship` (`utils/type-guards.ts`) = role flag OR preset flag — the ONE managerial judgement for statistics, navigation and the summary hook. Free-text titles are not guessed (keyword matching on «manager»/«ceo»/«διευθυντής» removed, with the 3 `navigation.positionKeywords.*` keys).
+- Offered roles (`relationship-orientation.ts`): `RELATIONSHIP_TYPES` (imported from the root), `isSymmetricRelationshipType` (unknown/custom ⇒ symmetric), `CONTACT_OFFERED_RELATIONSHIP_TYPES` (every type except `isProperty` — ADR-244, owned by the property module; read from the flag, not from which types have an icon), `getOfferedOrientedRoles(currentType, pickedType?)` (without `pickedType`: every role the current contact can take part in, deduplicated, first occurrence wins). Sole consumer: `relationship-form-presets.ts` (`getRelationshipTypeOptions`, `getHolderRoleOptions`).
 - SSoT `src/types/contacts/relationships/core/relationship-orientation.ts`: `getOrientedRolesForCrossing`, `orientRelationship`, `isStoredCrossingValid`, `otherContactIdOf`/`otherSideOf`/`orientedRoleOf`, `relationshipRoleLabelKey`, `encode/decodeOrientedRole`, `resolveRelationshipTypeInput`.
 - Writers that now orient through it: contact form (`useRelationshipForm` + `relationship-form-orientation.ts`), `RelationshipCRUDService` (validates the stored crossing; duplicate check oriented — the old one threw inside its own try/catch and never rejected), AI `relationship-handler` (+ `relationship-type-input.ts`: Greek words from the locale, kinship aliases, auto-flip when only the reverse crossing is valid), procurement `commit-signatory-service` (signatory = holder; static metadata from the registry, not a hand-written ANY copy).
 - Validator: `validateBusinessRules` = `isStoredCrossingValid` (one rule); messages are i18n keys with `labelParams` (`crossingNotAllowed`, `sameContactSameType`); `isValidRelationshipType` derived.
@@ -184,7 +194,13 @@ HubSpot *paired association labels*, Dynamics 365 *reciprocal connection roles*,
 `UNASSIGNED_DEPARTMENT_KEY` + `departmentGroupKey()` (domain, `structures/organization.ts`); `departmentInfo.name: string | null`; UI `resolveDepartmentLabel()` (preset key → i18n, sentinel → «Χωρίς τμήμα», free text verbatim). The form stores the preset **key**. CSV export: empty cell + ID columns instead of `'Unknown'`.
 
 ### 8.5 Open (not done in this pass)
-- Data migration of the 4 inverted records — **no new writer**: re-oriented from the edit form (`orientRelationship()` → `updateRelationshipWithPolicy` → `changeHistory` + `recordRelationshipAudit`). 3/4 done live 2026-11-21 (`rel_8123…`, `rel_0cb0…`, `rel_5613…`); `rel_2646…` waits for §8.6 to deploy (the form would have corrupted it).
+- ~~Data migration of the 4 inverted records~~ → done: re-oriented from the edit form (`orientRelationship()` → `updateRelationshipWithPolicy` → `changeHistory` + `recordRelationshipAudit`), **no new writer**. `rel_8123…`, `rel_0cb0…`, `rel_5613…` live 2026-11-21; `rel_2646…` after §8.6 deployed (verified: no-op save wrote no `changeHistory`, same `updatedAt`).
+- ~~`position` label-vs-key~~ → done 2026-11-21: `resolvePositionLabel` + shared `resolvePresetOrFreeText` (preset KEY stored, free text verbatim — Salesforce/HubSpot «Title» model).
+
+Remaining (plan + file:line in `HANDOFFS/2026-11-21_ΕΠΑΦΕΣ_ΤΑΥΤΟΤΗΤΑ-ΕΚΔΟΤΗ_ADR-372-8.5_ΣΧΕΔΙΟ_handoff.md`):
+- **b1** Relationship channel «Type» empty: the channel owner kind is taken from the card, not from the role holder; auto-copy of the other contact's channels → explicit «Copy from contact».
+- **b4** Contact search = `JSON.stringify(...).includes` instead of per-word AND over fields (`src/lib/search/search.ts`).
+- **b5 (data)** 2 records with an invented start instant (`rel_2d0d7053…`, `rel_6bb161fa…`) → `null` from the edit form, after b1 deploys (no script).
 
 ### 8.6 Lossless edit round trip — structured channels · calendar days · real diff (2026-11-21)
 **Measured live** (`rel_2646…`): opening + saving a relationship UNCHANGED would have (α) written `«+30 +30 2310686440 (13)»` — the stored display string was loaded into `PhoneInfo.number` and re-prefixed by `formatPhoneDisplay`; (β) wiped `startDate` — `createRelationship` stored `startDate || nowISO()`, an invented **instant** that `<input type="date">` cannot show; (γ) logged all 10 form fields as changed when 2 were.
@@ -196,9 +212,7 @@ HubSpot *paired association labels*, Dynamics 365 *reciprocal connection roles*,
 - Legacy records (string only) are read via `parsePhoneDisplay()` — the exact inverse of `formatPhoneDisplay`, next to it in `utils/contacts/formatPhoneDisplay.ts`. The formatter no longer prefixes a number that is already international (`+…`) ⇒ an already-doubled value heals on the next save.
 - Days: `relationshipCalendarDay()` = `normalizeCalendarDay` (SSoT) or, for a legacy instant, the operator day it named (`calendarDayOf`). Create stores `null` when blank (no `nowISO()`); termination uses `todayRelationshipDay()`; updates go through `normalizeUpdateDays()`.
 - `diffChangedFields()` (`relationship-change-history.ts`, `dequal`): `changedFields` = only real changes (`null`/`''`/`[]` equivalent); **a save that changes nothing writes nothing** (idempotent, no history/audit noise).
-- ⚠️ Not touched (reported): the same `|| nowISO()` start-day invention in `BulkRelationshipService.ts:344` and `ImportExportService.ts:372`.
-- CHECK 3.73 registration of the `relationship-type` vocabulary and deriving the hierarchy lists (`organization-hierarchy-helpers.ts`) from metadata flags.
-- ~~`position` label-vs-key~~ → done 2026-11-21: `resolvePositionLabel` + shared `resolvePresetOrFreeText` (preset KEY stored, free text verbatim — Salesforce/HubSpot «Title» model).
+- Out of scope here, tracked in §8.5: the same `|| nowISO()` start-day invention in the bulk/import services (b5).
 
 ---
 
@@ -209,3 +223,8 @@ HubSpot *paired association labels*, Dynamics 365 *reciprocal connection roles*,
 | 2026-05-23 | AI Agent | Initial implementation — ADR-372 |
 | 2026-11-21 | AI Agent (Opus) | §8 reciprocal-role model: directed crossings + `symmetric`, synonyms merged (supplier/client/customer/advisor/protege), `inverseTypes` labels, `relationship-orientation.ts` SSoT, twin records removed, oriented duplicate check, «Unknown» → `UNASSIGNED_DEPARTMENT_KEY` (Β1/Β2/Β3) |
 | 2026-11-21 | AI Agent (Opus) | §8.6 lossless edit round trip: structured `phones[]`/`emails[]` + `contactInfo` projection, `parsePhoneDisplay` inverse, calendar-day codec (no invented `nowISO()` start day), real-diff `changedFields` + no-op save; §8.5 re-orientation via the edit form (3/4 live) |
+| 2026-11-21 | AI Agent (Opus) | Docs only: §4 rewritten against the current code (`getAvailableRelationshipTypes` gone → `getOfferedOrientedRoles` / `getHolderRoleOptions`); §6 += orientation / form-orientation / field codec / change history; §8.3 += `RELATIONSHIP_TYPES`, `isSymmetricRelationshipType`, `CONTACT_OFFERED_RELATIONSHIP_TYPES`, `getOfferedOrientedRoles` (from `7a5a3220`); §8.5 = what remains (a1–a4, b1–b5), items misplaced in §8.6 moved back; 4th inverted record (`rel_2646…`) done live |
+| 2026-11-21 | AI Agent (Opus) | §8.5 a3: removed the 7 dead `relationships.form.validation.*` crossing messages of the pre-§8.3 validator (`individualEmploymentIndividual`, `invalidTypeForService`, `shareholderRequiresCompany`, `companyCannotBeEmployee`, `serviceCannotBeEmployee`, `employmentRequiresCompanyTarget`, `governmentRequiresService`; el+en, 0 consumers — replaced by `crossingNotAllowed`) + the 3 old KAD picker keys (ADR-ACC-013); regenerated `src/types/i18n.ts` |
+| 2026-11-21 | AI Agent (Opus) | §8.5 b2: `OrganizationTree` badge shows `resolvePositionLabel` / the held-role label (`relationshipRoleLabelKey(type,'source')`) instead of raw keys («(sales_rep)»); 5 render-time `logger.info` removed. b5 (code): deleted `services/contact-relationships/bulk/` (3 files, 1,007 lines — reachable only from 3 `ContactRelationshipExtendedService` methods with 0 callers, also removed) which invented start days (`startDate \|\| nowISO()`) |
+| 2026-11-21 | AI Agent (Opus) | §8.5 a1+a2 (§8.3): `RELATIONSHIP_TYPES` `as const` root + CHECK 3.73 vocabulary `relationship-type` (`.domain-vocabulary.json`); `VISUAL_REGISTRY` bound to the type. Registry += `orgChartLevel` / `isManagerial`; ~12 hand-written hierarchy lists (helpers, Extended/Query/Search/CRUD/OrganizationHierarchy services, governance, `managementTypes` ×3, `type-guards`) now derived — org-chart members were 3 incompatible sets (5/7/9 types) and `ceo`/`chairman` never reached the chart. Position presets → `core/relationship-positions.ts` with `managerial`; keyword guessing on free-text titles removed (+ 3 i18n keys). Research: Workday supervisory org, SAP SuccessFactors position hierarchy, Salesforce `ReportsTo`, Dynamics 365 org charts |
+| 2026-11-21 | AI Agent (Opus) | §8.5 b3: `filterOptions` (`searchable-combobox-matching.ts`) ranks BEFORE the `maxDisplayed` cut-off — match-sorter tiers `OPTION_MATCH_RANK` (value = · label = · value starts · label starts · secondary starts · label word starts · contains), stable within a tier, same match set as the old substring; every combobox (KAD «4100» now shows `41.00` first instead of ΓΕΜΗ mid-matches like `01.11.41`). a4: unit tests for `src/lib/kad` (`kad-resolve`, `kad-catalog-shape`, `kad-list-paste`, fixture through the real `indexKadCatalog`) + `searchable-combobox-matching.test.ts` |

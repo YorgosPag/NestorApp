@@ -12,56 +12,68 @@
 // ============================================================================
 
 /**
- * 🔗 Relationship Types - Enterprise Standard Categories
+ * 🔗 Relationship Types — ROOT of the `relationship-type` vocabulary
+ * (ADR-372 §8.3 · ADR-812 / CHECK 3.73). Every other declaration that
+ * enumerates these values MUST be typed on `RelationshipType` (or a derived
+ * type), so a new role breaks compilation instead of fading on screen.
  *
- * Based on industry-standard business relationship classifications
- * Used by Fortune 500 companies for contact management
+ * ⚠️ ORDER IS UI ORDER: `getOfferedOrientedRoles` walks this array, so the
+ * relationship dropdown lists roles in exactly this sequence.
  */
-export type RelationshipType =
-  // 👥 Employment Relationships
-  | 'employee'
-  | 'manager'
-  | 'director'
-  | 'executive'
-  | 'intern'
-  | 'contractor'
-  | 'consultant'
+export const RELATIONSHIP_TYPES = [
+  // 👥 Employment
+  'employee',
+  'manager',
+  'director',
+  'executive',
+  'intern',
+  'contractor',
+  'consultant',
 
-  // 🏢 Corporate Relationships
-  | 'shareholder'
-  | 'board_member'
-  | 'chairman'
-  | 'ceo'
-  | 'representative'
-  | 'partner'
-  | 'vendor'
+  // 🏢 Corporate
+  'shareholder',
+  'board_member',
+  'chairman',
+  'ceo',
+  'partner',
+  'representative',
+  'vendor',
 
-  // 🏛️ Government/Service Relationships
-  | 'civil_servant'
-  | 'elected_official'
-  | 'appointed_official'
-  | 'department_head'
-  | 'ministry_official'
-  | 'mayor'
-  | 'deputy_mayor'
-  | 'regional_governor'
+  // 🏛️ Government / public service
+  'civil_servant',
+  'department_head',
+  'ministry_official',
+  'elected_official',
+  'appointed_official',
+  'mayor',
+  'deputy_mayor',
+  'regional_governor',
 
-  // 🔗 Other Professional Relationships
+  // 🔗 Other professional
   // ADR-372 §Β1: synonyms are ONE role. `client`/`customer` = the INVERSE reading
   // of `vendor`, `protege` = inverse of `mentor`, `supplier` = `vendor`,
   // `advisor` = `consultant` — accepted only as INPUT aliases
   // (`RELATIONSHIP_TYPE_INPUT_ALIASES` in relationship-orientation.ts).
-  | 'mentor'
-  | 'colleague'
-  | 'competitor'
-  | 'business_contact'
-  | 'friend'
-  | 'family'
-  | 'other'
-  // ADR-244: Property ownership roles
-  | 'property_buyer'
-  | 'property_co_buyer'
-  | 'property_landowner';
+  'competitor',
+  'business_contact',
+
+  // 👤 Personal
+  'mentor',
+  'colleague',
+  'friend',
+  'family',
+  'other',
+
+  // 🏠 ADR-244: property ownership roles (owned by the property module)
+  'property_buyer',
+  'property_co_buyer',
+  'property_landowner',
+] as const;
+
+export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
+
+/** ADR-244 property roles — derived by prefix, never re-enumerated. */
+export type PropertyRelationshipType = Extract<RelationshipType, `property_${string}`>;
 
 /**
  * 📊 Relationship Status - Lifecycle Management

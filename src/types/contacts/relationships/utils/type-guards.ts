@@ -14,8 +14,10 @@ import type { ContactRelationship } from '../interfaces/relationship';
 import {
   EMPLOYMENT_RELATIONSHIP_TYPES,
   OWNERSHIP_RELATIONSHIP_TYPES,
-  GOVERNMENT_RELATIONSHIP_TYPES
+  GOVERNMENT_RELATIONSHIP_TYPES,
+  isManagerialRelationshipType
 } from '../core/relationship-metadata';
+import { isManagerialPosition } from '../core/relationship-positions';
 
 /**
  * 🔍 Type guard for checking if a relationship is employment-based
@@ -60,13 +62,15 @@ export function hasFinancialInfo(relationship: ContactRelationship): boolean {
 }
 
 /**
- * 🔍 Type guard for checking if relationship is managerial
+ * 🔍 THE ONE managerial judgement (ADR-372 §8.3): the ROLE is declared
+ * people-managing (`isManagerial` in the metadata registry) OR the position is a
+ * preset declared people-managing. Free-text job titles are never guessed.
  */
-export function isManagerialRelationship(relationship: ContactRelationship): boolean {
-  const managerialTypes: RelationshipType[] = [
-    'manager', 'director', 'executive', 'ceo', 'department_head', 'chairman'
-  ];
-  return managerialTypes.includes(relationship.relationshipType);
+export function isManagerialRelationship(
+  relationship: Pick<ContactRelationship, 'relationshipType' | 'position'>
+): boolean {
+  return isManagerialRelationshipType(relationship.relationshipType)
+    || isManagerialPosition(relationship.position);
 }
 
 /**

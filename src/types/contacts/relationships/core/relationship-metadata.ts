@@ -63,6 +63,19 @@ export interface RelationshipTypeMetadata {
   isOwnership: boolean;
   isGovernment: boolean;
   isProperty: boolean;
+  /**
+   * ADR-372 §8.3 — place of the role-holder (source) in the ORG CHART of the
+   * target organisation. `null` = not a member (shareholders, the board, outside
+   * parties…). ONE field answers both «member?» and «which level?», so the two
+   * can never disagree. Like Workday's supervisory organisation / SuccessFactors'
+   * position hierarchy: membership is a property of the ROLE, never of a title.
+   */
+  orgChartLevel: number | null;
+  /**
+   * ADR-372 §8.3 — the role manages people (SuccessFactors «Is People Manager»).
+   * Declared on the role, never guessed from free-text job titles.
+   */
+  isManagerial: boolean;
   /** ADR-372: explicit (source, target) crossings. SSoT for both axes. */
   allowedCrossings: CrossingPair[];
   /** DERIVED from `allowedCrossings` — distinct source types. Kept for back-compat. */
@@ -118,6 +131,8 @@ const META = (
     government?: boolean;
     property?: boolean;
     symmetric?: boolean;
+    orgChartLevel?: number;
+    managerial?: boolean;
   },
   allowedCrossings: CrossingPair[]
 ): RelationshipTypeMetadata => {
@@ -130,6 +145,8 @@ const META = (
     isOwnership: flags.ownership ?? false,
     isGovernment: flags.government ?? false,
     isProperty: flags.property ?? false,
+    orgChartLevel: flags.orgChartLevel ?? null,
+    isManagerial: flags.managerial ?? false,
     allowedCrossings,
     allowedFor,
   };
@@ -204,27 +221,27 @@ const PROPERTY_CROSSINGS: CrossingPair[] = BETWEEN(
 
 export const RELATIONSHIP_METADATA: Record<RelationshipType, RelationshipTypeMetadata> = {
   // Employment
-  employee:           META('employment',   'always',   { employment: true }, EMPLOYMENT_CROSSINGS),
-  manager:            META('employment',   'always',   { employment: true }, EMPLOYMENT_CROSSINGS),
-  director:           META('employment',   'always',   { employment: true }, EMPLOYMENT_CROSSINGS),
-  executive:          META('employment',   'always',   { employment: true }, EMPLOYMENT_CROSSINGS),
-  intern:             META('employment',   'always',   { employment: true }, EMPLOYMENT_CROSSINGS),
-  contractor:         META('employment',   'always',   { employment: true }, EMPLOYMENT_CROSSINGS),
+  employee:           META('employment',   'always',   { employment: true, orgChartLevel: 1 }, EMPLOYMENT_CROSSINGS),
+  manager:            META('employment',   'always',   { employment: true, orgChartLevel: 2, managerial: true }, EMPLOYMENT_CROSSINGS),
+  director:           META('employment',   'always',   { employment: true, orgChartLevel: 3, managerial: true }, EMPLOYMENT_CROSSINGS),
+  executive:          META('employment',   'always',   { employment: true, orgChartLevel: 4, managerial: true }, EMPLOYMENT_CROSSINGS),
+  intern:             META('employment',   'always',   { employment: true, orgChartLevel: 1 }, EMPLOYMENT_CROSSINGS),
+  contractor:         META('employment',   'always',   { employment: true, orgChartLevel: 1 }, EMPLOYMENT_CROSSINGS),
   consultant:         META('professional', 'optional', {},                    PROFESSIONAL_SERVICES_CROSSINGS),
 
   // Ownership / Corporate
   shareholder:        META('ownership',    'always',   { ownership: true },   SHAREHOLDER_CROSSINGS),
   board_member:       META('ownership',    'always',   { ownership: true },   BOARD_LEVEL_CROSSINGS),
-  chairman:           META('ownership',    'always',   { ownership: true },   BOARD_LEVEL_CROSSINGS),
-  ceo:                META('ownership',    'always',   { ownership: true },   BOARD_LEVEL_CROSSINGS),
+  chairman:           META('ownership',    'always',   { ownership: true, orgChartLevel: 6, managerial: true }, BOARD_LEVEL_CROSSINGS),
+  ceo:                META('ownership',    'always',   { ownership: true, orgChartLevel: 5, managerial: true }, BOARD_LEVEL_CROSSINGS),
   partner:            META('ownership',    'always',   { ownership: true, symmetric: true }, PARTNER_CROSSINGS),
   representative:     META('professional', 'optional', {},                    REPRESENTATIVE_CROSSINGS),
   vendor:             META('professional', 'never',    {},                    COMMERCIAL_CROSSINGS),
 
   // Government
-  civil_servant:      META('government',   'always',   { employment: true, government: true }, GOVERNMENT_CROSSINGS),
-  department_head:    META('government',   'always',   { employment: true, government: true }, GOVERNMENT_CROSSINGS),
-  ministry_official:  META('government',   'always',   { employment: true, government: true }, GOVERNMENT_CROSSINGS),
+  civil_servant:      META('government',   'always',   { employment: true, government: true, orgChartLevel: 1 }, GOVERNMENT_CROSSINGS),
+  department_head:    META('government',   'always',   { employment: true, government: true, orgChartLevel: 3, managerial: true }, GOVERNMENT_CROSSINGS),
+  ministry_official:  META('government',   'always',   { employment: true, government: true, orgChartLevel: 1 }, GOVERNMENT_CROSSINGS),
   elected_official:   META('government',   'never',    { government: true },                   GOVERNMENT_CROSSINGS),
   appointed_official: META('government',   'never',    { government: true },                   GOVERNMENT_CROSSINGS),
   mayor:              META('government',   'never',    { government: true },                   GOVERNMENT_CROSSINGS),
@@ -308,3 +325,24 @@ export const EMPLOYMENT_RELATIONSHIP_TYPES: RelationshipType[] = typesMatching(m
 export const OWNERSHIP_RELATIONSHIP_TYPES: RelationshipType[]  = typesMatching(m => m.isOwnership);
 export const GOVERNMENT_RELATIONSHIP_TYPES: RelationshipType[] = typesMatching(m => m.isGovernment);
 export const PROPERTY_RELATIONSHIP_TYPES: RelationshipType[]   = typesMatching(m => m.isProperty);
+
+// ----------------------------------------------------------------------------
+// ORG CHART (ADR-372 §8.3) — derived from `orgChartLevel` / `isManagerial` only
+// ----------------------------------------------------------------------------
+
+/** Roles that place their holder in the target organisation's org chart. */
+export const ORG_CHART_RELATIONSHIP_TYPES: RelationshipType[] = typesMatching(m => m.orgChartLevel !== null);
+/** Roles that manage people. */
+export const MANAGERIAL_RELATIONSHIP_TYPES: RelationshipType[] = typesMatching(m => m.isManagerial);
+/** Org-chart level from which a member counts as top-level leadership (director and up). */
+export const TOP_LEVEL_ORG_CHART_LEVEL = 3;
+
+/** Org-chart level of a role; `null` for non-members and unknown/custom types. */
+export function orgChartLevelOf(type: string): number | null {
+  return getRelationshipMetadata(type)?.orgChartLevel ?? null;
+}
+
+/** Does this role manage people? Unknown/custom types ⇒ `false`. */
+export function isManagerialRelationshipType(type: string): boolean {
+  return getRelationshipMetadata(type)?.isManagerial ?? false;
+}

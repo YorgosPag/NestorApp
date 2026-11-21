@@ -1,5 +1,5 @@
 import type { ContactRelationship, RelationshipType } from '@/types/contacts/relationships';
-import { EMPLOYMENT_RELATIONSHIP_TYPES } from '@/types/contacts/relationships';
+import { ORG_CHART_RELATIONSHIP_TYPES } from '@/types/contacts/relationships/core/relationship-metadata';
 
 export const PROTECTED_COMPANY_RELATIONSHIP_TYPES: RelationshipType[] = [
   'shareholder',
@@ -10,11 +10,8 @@ export const PROTECTED_COMPANY_RELATIONSHIP_TYPES: RelationshipType[] = [
   'chairman'
 ];
 
-export const HIERARCHY_IMPACT_RELATIONSHIP_TYPES: RelationshipType[] = [
-  ...EMPLOYMENT_RELATIONSHIP_TYPES,
-  'ceo',
-  'chairman'
-];
+/** Roles whose ending changes the org chart (ADR-372 §8.3 — `orgChartLevel` in the registry). */
+export const HIERARCHY_IMPACT_RELATIONSHIP_TYPES: RelationshipType[] = ORG_CHART_RELATIONSHIP_TYPES;
 
 export interface RelationshipGovernanceInfo {
   isProtectedRole: boolean;

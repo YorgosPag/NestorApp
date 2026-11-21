@@ -29,8 +29,15 @@ import type { ComboboxOption } from './searchable-combobox-types';
  * του τόσο συχνά όσο το όνομα, και μια επαφή **χωρίς όνομα** δεν βρίσκεται με τίποτα
  * άλλο (ADR-834 §6.5.στ). Η τιμή μπαίνει γιατί είναι το μόνο σταθερό αναγνωριστικό.
  *
- * ⚠️ Το `maxDisplayed` κόβει **μετά** το φιλτράρισμα: κόψιμο πριν θα έκρυβε ταιριάσματα
- * που υπάρχουν, και ο άνθρωπος θα συμπέραινε ότι δεν υπάρχει ο πελάτης του.
+ * ⚠️ Το `maxDisplayed` κόβει **μετά** το φιλτράρισμα **και την κατάταξη**: κόψιμο πριν
+ * θα έκρυβε ταιριάσματα που υπάρχουν, και ο άνθρωπος θα συμπέραινε ότι δεν υπάρχει ο
+ * πελάτης του.
+ *
+ * 🔴 **ΚΑΤΑΤΑΞΗ ΠΡΙΝ ΤΟ ΚΟΨΙΜΟ (ADR-372 §8.5 b3)**: χωρίς αυτήν, η σειρά ήταν η σειρά
+ * του καταλόγου. Για το «4100» στους ~10.000 ΚΑΔ, γραμμές με το `4100` στη ΜΕΣΗ του
+ * 8ψήφιου ΓΕΜΗ (π.χ. `01.11.41` → `01114100`) γέμιζαν τις 30 θέσεις, και το `41.00`
+ * δεν φαινόταν ποτέ. Μοντέλο match-sorter: καλύτερη βαθμίδα πρώτα, **σταθερή** σειρά
+ * μέσα στη βαθμίδα. Το ΣΥΝΟΛΟ των ταιριασμάτων μένει ίδιο — αλλάζει μόνο η σειρά.
  */
 export function filterOptions(
   options: readonly ComboboxOption[],
@@ -40,20 +47,52 @@ export function filterOptions(
   if (!query.trim()) return options.slice(0, maxDisplayed);
 
   const normalizedQuery = normalizeForSearch(query);
-  const matches = options.filter((option) => {
-    const normalizedLabel = normalizeForSearch(option.label);
-    const normalizedSecondary = option.secondaryLabel
-      ? normalizeForSearch(option.secondaryLabel)
-      : '';
-    const normalizedValue = normalizeForSearch(option.value);
-    return (
-      normalizedLabel.includes(normalizedQuery) ||
-      normalizedSecondary.includes(normalizedQuery) ||
-      normalizedValue.includes(normalizedQuery)
-    );
+  const ranked: { option: ComboboxOption; rank: number; index: number }[] = [];
+  options.forEach((option, index) => {
+    const rank = rankOptionMatch(option, normalizedQuery);
+    if (rank !== null) ranked.push({ option, rank, index });
   });
+  ranked.sort((a, b) => a.rank - b.rank || a.index - b.index);
 
-  return matches.slice(0, maxDisplayed);
+  return ranked.slice(0, maxDisplayed).map((entry) => entry.option);
+}
+
+/**
+ * Οι βαθμίδες ταιριάσματος, από την καλύτερη. Τα κείμενα συγκρίνονται στη μορφή του
+ * `normalizeForSearch` (χωρίς τόνους, πεζά, χωρίς τελείες), όπως και το φιλτράρισμα.
+ */
+export const OPTION_MATCH_RANK = {
+  VALUE_EQUALS: 0,
+  LABEL_EQUALS: 1,
+  VALUE_STARTS: 2,
+  LABEL_STARTS: 3,
+  SECONDARY_STARTS: 4,
+  LABEL_WORD_STARTS: 5,
+  CONTAINS: 6,
+} as const;
+
+/**
+ * **Πόσο καλά ταιριάζει μια επιλογή στο κείμενο** — βαθμίδα του `OPTION_MATCH_RANK`, ή
+ * `null` αν δεν ταιριάζει καθόλου (ίδιο κριτήριο ύπαρξης με το παλιό substring).
+ *
+ * @param normalizedQuery Το κείμενο, ήδη περασμένο από `normalizeForSearch`.
+ */
+export function rankOptionMatch(option: ComboboxOption, normalizedQuery: string): number | null {
+  const value = normalizeForSearch(option.value);
+  const label = normalizeForSearch(option.label);
+  const secondary = option.secondaryLabel ? normalizeForSearch(option.secondaryLabel) : '';
+
+  if (value === normalizedQuery) return OPTION_MATCH_RANK.VALUE_EQUALS;
+  if (label === normalizedQuery) return OPTION_MATCH_RANK.LABEL_EQUALS;
+  if (value.startsWith(normalizedQuery)) return OPTION_MATCH_RANK.VALUE_STARTS;
+  if (label.startsWith(normalizedQuery)) return OPTION_MATCH_RANK.LABEL_STARTS;
+  if (secondary.startsWith(normalizedQuery) && secondary !== '') return OPTION_MATCH_RANK.SECONDARY_STARTS;
+  if (label.split(/\s+/).some((word) => word.startsWith(normalizedQuery))) {
+    return OPTION_MATCH_RANK.LABEL_WORD_STARTS;
+  }
+  const contains =
+    label.includes(normalizedQuery) || secondary.includes(normalizedQuery) || value.includes(normalizedQuery);
+  return contains ? OPTION_MATCH_RANK.CONTAINS : null;
 }
 
 /**

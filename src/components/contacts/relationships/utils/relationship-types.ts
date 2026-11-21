@@ -25,6 +25,10 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { hardcodedColorValues } from '@/design-system/tokens/colors';
 import { getStatusColor } from '@/lib/design-system';
 import { relationshipRoleLabelKey } from '@/types/contacts/relationships/core/relationship-orientation';
+import type {
+  PropertyRelationshipType,
+  RelationshipType,
+} from '@/types/contacts/relationships/core/relationship-types';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -75,7 +79,12 @@ const getRelationshipColors = (colors?: ReturnType<typeof useSemanticColors>) =>
 
 type VisualConfig = { icon: React.ComponentType<{ className?: string }>; colorKey: keyof ReturnType<typeof getRelationshipColors> };
 
-const VISUAL_REGISTRY: Record<string, VisualConfig> = {
+/** Every role a user picks between contacts — property roles (ADR-244) excluded. */
+type VisualRelationshipType = Exclude<RelationshipType, PropertyRelationshipType>;
+
+// ADR-372 §8.3 / CHECK 3.73: bound to the vocabulary root — a new role without
+// an icon breaks compilation instead of silently falling back to «other».
+const VISUAL_REGISTRY: Record<Exclude<RelationshipType, PropertyRelationshipType>, VisualConfig> = {
   // Employment
   employee:           { icon: User,       colorKey: 'employment' },
   manager:            { icon: Crown,      colorKey: 'employment' },
@@ -118,6 +127,10 @@ const VISUAL_REGISTRY: Record<string, VisualConfig> = {
   // Property types (ADR-244) are managed by the property module — excluded from contact relationship dropdown.
 };
 
+function isVisualRelationshipType(type: string): type is VisualRelationshipType {
+  return Object.prototype.hasOwnProperty.call(VISUAL_REGISTRY, type);
+}
+
 // ============================================================================
 // PUBLIC API
 // ============================================================================
@@ -130,8 +143,8 @@ export const getRelationshipTypeConfig = (
   type: string,
   colors?: ReturnType<typeof useSemanticColors>
 ): RelationshipTypeConfig | undefined => {
+  if (!isVisualRelationshipType(type)) return undefined;
   const visual = VISUAL_REGISTRY[type];
-  if (!visual) return undefined;
   const colorMap = getRelationshipColors(colors);
   return {
     icon: visual.icon,

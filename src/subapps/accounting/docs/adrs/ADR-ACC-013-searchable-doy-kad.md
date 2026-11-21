@@ -30,7 +30,7 @@
 |------|-------------|------|
 | `src/components/ui/searchable-combobox.tsx` | Generic SearchableCombobox | ~280 lines |
 | `src/subapps/accounting/data/greek-tax-offices.ts` | ~100 ΔΟΥ (ΑΑΔΕ) | ~5KB |
-| `src/subapps/accounting/data/greek-kad-codes.ts` | ~700 ΚΑΔ (NACE Rev.2) | ~40KB |
+| ~~`src/subapps/accounting/data/greek-kad-codes.ts`~~ | ~700 ΚΑΔ (NACE Rev.2) — ℹ️ **διαγράφηκε 2026-11-21** (βλ. παρακάτω· κατάλογος ΚΑΔ 2025 = `public/data/kad/kad-2025.json`) | ~40KB |
 | `scripts/fetch-kad-codes.ts` | One-time fetch script for full ΚΑΔ list | ~80 lines |
 
 ## Modified Files
@@ -114,3 +114,6 @@ Fetches paginated data from forin.gr DataTables API and outputs full TypeScript 
 |------|--------|
 | 2026-02-10 | Initial implementation — ADR-ACC-013 |
 | 2026-11-21 | ΚΑΔ 2025 (ΦΕΚ Β΄ 235/2026) catalogue + generator, `src/lib/kad` SSoT, single commit-on-select picker (fixes per-keystroke confirm), ΓΕΜΗ list paste, legacy-2008 badge |
+| 2026-11-21 | Removed the 3 locale keys of the old picker (`accounting-setup` → `setup.{searchKad, noKadFound, kadLoading}`, el+en, 0 consumers; the dynamic `t(\`setup.${value}\`)` in `SetupPageContent` only receives `validation.*`) + regenerated `src/types/i18n.ts` |
+| 2026-11-21 | `KadSection` new secondary ΚΑΔ: `activeFrom = calendarDayOf(new Date())` (operator day, Europe/Athens) instead of `nowISO().split('T')[0]` (UTC day — wrong between 00:00 and 02:00/03:00 Greek time) |
+| 2026-11-21 | KAD picker ranking: the shared `filterOptions` ranks before the 30-row cut-off (`OPTION_MATCH_RANK`, ADR-372 §8.5 b3) — «4100» now lists `41.00` first, not catalogue-order rows whose ΓΕΜΗ 8 digits merely contain `4100`. First unit tests for `src/lib/kad` (normalize/resolve/collision rule, catalogue reader, list paste) |

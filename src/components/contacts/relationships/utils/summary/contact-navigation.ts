@@ -8,6 +8,7 @@
 // ============================================================================
 
 import type { ContactRelationship } from '@/types/contacts/relationships';
+import { isManagerialRelationship } from '@/types/contacts/relationships/utils/type-guards';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -123,25 +124,8 @@ function getManagementContactNames(
   contactNames: ContactNamesMap,
   contactId: string
 ): string[] {
-  const managementTypes = ['director', 'manager', 'executive', 'ceo', 'chairman'];
-
-  // 🌐 i18n: Position keywords resolved from locale
-  const directorKeyword = t('navigation.positionKeywords.director');
-  const generalDirectorKeyword = t('navigation.positionKeywords.generalDirector');
-  const seniorExecutiveKeyword = t('navigation.positionKeywords.seniorExecutive');
-
   return relationships
-    .filter(rel =>
-      managementTypes.includes(rel.relationshipType) ||
-      (rel.position && (
-        rel.position.toLowerCase().includes(directorKeyword) ||
-        rel.position.toLowerCase().includes('manager') ||
-        rel.position.toLowerCase().includes('ceo') ||
-        rel.position.toLowerCase().includes('cto') ||
-        rel.position.toLowerCase().includes(generalDirectorKeyword) ||
-        rel.position.toLowerCase().includes(seniorExecutiveKeyword)
-      ))
-    )
+    .filter(isManagerialRelationship)
     .map(rel => {
       const targetContactId = rel.targetContactId === contactId ? rel.sourceContactId : rel.targetContactId;
       return contactNames[targetContactId];

@@ -17,6 +17,7 @@ import {
   RelationshipSearchCriteria
 } from '@/types/contacts/relationships';
 import { FirestoreRelationshipAdapter } from '../adapters/FirestoreRelationshipAdapter';
+import { ORG_CHART_RELATIONSHIP_TYPES } from '@/types/contacts/relationships/core/relationship-metadata';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('RelationshipSearchService');
 
@@ -201,10 +202,7 @@ export class RelationshipSearchService {
   ): Promise<SearchResult<ContactRelationship>> {
     const filters: AdvancedSearchFilters = {
       targetContactIds: [organizationId],
-      relationshipTypes: [
-        'employee', 'manager', 'director', 'executive',
-        'civil_servant', 'department_head', 'ministry_official'
-      ]
+      relationshipTypes: ORG_CHART_RELATIONSHIP_TYPES
     };
 
     return await this.advancedSearch(filters, options);

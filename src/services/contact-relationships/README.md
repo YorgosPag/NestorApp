@@ -150,7 +150,10 @@ Integration Tests:
 └── DepartmentManagementService.ts     # Department operations
 ```
 
-### Phase 3: Bulk Operations
+### Phase 3: Bulk Operations — ℹ️ DELETED 2026-11-21 (ADR-372 §8.5 b5)
+Never had a caller (`importOrganizationalStructure` even passed `''` as the CSV) and invented
+start days (`startDate || nowISO()`). A future import must go through `RelationshipCRUDService`
++ the §8.6 calendar-day codec.
 ```typescript
 // src/services/contact-relationships/bulk/
 ├── BulkRelationshipService.ts         # Bulk operations

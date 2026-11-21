@@ -1,9 +1,12 @@
 import {
   ContactRelationship,
   ContactWithRelationship,
-  OrganizationTree,
-  RelationshipType
+  OrganizationTree
 } from '@/types/contacts/relationships';
+import {
+  EMPLOYMENT_RELATIONSHIP_TYPES,
+  ORG_CHART_RELATIONSHIP_TYPES
+} from '@/types/contacts/relationships/core/relationship-metadata';
 import type { Contact, ContactType } from '@/types/contacts';
 
 import { generateRelationshipId } from '@/services/enterprise-id.service';
@@ -12,14 +15,10 @@ import { FirestoreRelationshipAdapter } from './adapters/FirestoreRelationshipAd
 import { RelationshipCacheAdapter } from './adapters/RelationshipCacheAdapter';
 import { OrganizationHierarchyService } from './hierarchy/OrganizationHierarchyService';
 import { DepartmentManagementService } from './hierarchy/DepartmentManagementService';
-import { BulkRelationshipService, BulkOperationResult as ServiceBulkOperationResult } from './bulk/BulkRelationshipService';
-import { ImportExportService } from './bulk/ImportExportService';
 import { DepartmentMetrics as ServiceDepartmentMetrics } from './hierarchy/DepartmentManagementService';
 import type { CacheStats } from './adapters/RelationshipCacheAdapter';
-import type { ExportResult } from './bulk/ImportExportService';
 import { RelationshipCRUDService } from './core/RelationshipCRUDService';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('ContactRelationshipExtendedService');
 
@@ -33,24 +32,11 @@ interface DepartmentHeadInfo {
   position?: string;
 }
 
-interface BulkOperationOptions {
-  validateBeforeCreate?: boolean;
-  skipDuplicates?: boolean;
-  batchSize?: number;
-  onProgress?: (progress: number) => void;
-}
-
 interface CacheConfig {
   enabled?: boolean;
   defaultTTL?: number;
   maxEntries?: number;
   cleanupInterval?: number;
-}
-
-interface ServiceImportError {
-  row: number;
-  data: unknown;
-  error: string;
 }
 
 /**
@@ -82,14 +68,9 @@ export class ContactRelationshipExtendedService {
         }));
       }
 
-      const relationshipTypes: RelationshipType[] = [
-        'employee', 'manager', 'director', 'executive',
-        'civil_servant', 'department_head', 'ministry_official'
-      ];
-
       const relationships = await FirestoreRelationshipAdapter.getOrganizationEmployees(
         organizationId,
-        relationshipTypes
+        ORG_CHART_RELATIONSHIP_TYPES
       );
 
       const filteredRelationships = includeInactive
@@ -124,7 +105,7 @@ export class ContactRelationshipExtendedService {
 
       const employmentRel = relationships.find(rel =>
         rel.sourceContactId === personId &&
-        ['employee', 'manager', 'director', 'executive', 'civil_servant'].includes(rel.relationshipType) &&
+        EMPLOYMENT_RELATIONSHIP_TYPES.includes(rel.relationshipType) &&
         rel.status === 'active'
       );
 
@@ -258,78 +239,6 @@ export class ContactRelationshipExtendedService {
       logger.warn('Bulk create had errors:', errors);
     }
     return results;
-  }
-
-  static async bulkCreateRelationshipsEnhanced(
-    relationships: Partial<ContactRelationship>[],
-    options: BulkOperationOptions = {}
-  ): Promise<ServiceBulkOperationResult> {
-    try {
-      const result = await BulkRelationshipService.bulkCreateRelationships(relationships, options);
-
-      const affectedContacts = new Set<string>();
-      const affectedOrganizations = new Set<string>();
-
-      relationships.forEach(rel => {
-        if (rel.sourceContactId) affectedContacts.add(rel.sourceContactId);
-        if (rel.targetContactId) affectedOrganizations.add(rel.targetContactId);
-      });
-
-      affectedContacts.forEach(contactId => RelationshipCacheAdapter.invalidateContact(contactId));
-      affectedOrganizations.forEach(orgId => RelationshipCacheAdapter.invalidateOrganization(orgId));
-      RelationshipCacheAdapter.invalidatePattern('search:*');
-
-      return result;
-    } catch (error) {
-      logger.error('Enhanced bulk create failed:', error);
-      throw error;
-    }
-  }
-
-  static async importOrganizationalStructure(
-    organizationId: string,
-    _employeeData: Array<{
-      firstName: string;
-      lastName: string;
-      email: string;
-      position: string;
-      department: string;
-      manager?: string;
-      startDate?: string;
-    }>
-  ): Promise<{ success: ContactRelationship[]; errors: ServiceImportError[] }> {
-    try {
-      const result = await ImportExportService.importOrganizationStructure(
-        '', organizationId,
-        { createMissingContacts: true, validateData: true, skipDuplicates: true }
-      );
-
-      RelationshipCacheAdapter.invalidateOrganization(organizationId);
-      RelationshipCacheAdapter.invalidatePattern('search:*');
-
-      return {
-        success: result.importedRelationships > 0 ? [] : [],
-        errors: result.errors
-      };
-    } catch (error) {
-      logger.error('Organization import failed:', error);
-      const importError: ServiceImportError = {
-        row: 0, data: null, error: getErrorMessage(error, 'Unknown import error')
-      };
-      return { success: [], errors: [importError] };
-    }
-  }
-
-  static async exportOrganizationData(
-    organizationId: string,
-    format: 'csv' | 'json' | 'xml' = 'csv',
-  ): Promise<ExportResult> {
-    try {
-      return await ImportExportService.exportOrganizationalChart(organizationId, format);
-    } catch (error) {
-      logger.error('Organization export failed:', error);
-      throw error;
-    }
   }
 
   // ========================================================================

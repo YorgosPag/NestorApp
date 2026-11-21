@@ -167,6 +167,10 @@ export function buildDefaultMetadata(category: RelationshipCategory): Relationsh
     isOwnership:  category === 'ownership',
     isGovernment: category === 'government',
     isProperty:   category === 'property',
+    // ADR-372 §8.3: a custom type declares no org-chart place and no people-management —
+    // never guessed from its category or its name.
+    orgChartLevel: null,
+    isManagerial: false,
     allowedFor,
     allowedCrossings,
   };

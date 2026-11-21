@@ -27,6 +27,7 @@ import {
   WhereFilterOp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { ORG_CHART_RELATIONSHIP_TYPES } from '@/types/contacts/relationships/core/relationship-metadata';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
@@ -82,10 +83,7 @@ export class RelationshipQueryBuilder {
   static forOrganization(organizationId: string): RelationshipQueryBuilder {
     return new RelationshipQueryBuilder()
       .where('targetContactId', '==', organizationId)
-      .whereIn('relationshipType', [
-        'employee', 'manager', 'director', 'executive',
-        'civil_servant', 'department_head', 'ministry_official'
-      ])
+      .whereIn('relationshipType', ORG_CHART_RELATIONSHIP_TYPES)
       .where(FIELDS.STATUS, '==', ENTITY_STATUS.ACTIVE);
   }
 

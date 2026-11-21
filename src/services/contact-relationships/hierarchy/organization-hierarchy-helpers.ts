@@ -8,9 +8,14 @@
 import {
   OrganizationTree,
   OrganizationHierarchyNode,
-  ContactWithRelationship,
-  RelationshipType
+  ContactWithRelationship
 } from '@/types/contacts/relationships';
+import {
+  ORG_CHART_RELATIONSHIP_TYPES,
+  TOP_LEVEL_ORG_CHART_LEVEL,
+  isManagerialRelationshipType,
+  orgChartLevelOf
+} from '@/types/contacts/relationships/core/relationship-metadata';
 import { departmentGroupKey } from '@/types/contacts/relationships/structures/organization';
 import { Contact, isCompanyContact, isServiceContact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
@@ -81,16 +86,16 @@ export function calculateTenure(startDate?: string): number {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
 }
 
+/** ADR-372 §8.3: level from the registry (`orgChartLevel`); non-members/custom ⇒ 1. */
 export function estimateHierarchyLevel(relationshipType: string): number {
-  const levelMap: Record<string, number> = {
-    'employee': 1,
-    'manager': 2,
-    'director': 3,
-    'executive': 4,
-    'ceo': 5,
-    'chairman': 6
-  };
-  return levelMap[relationshipType] || 1;
+  return orgChartLevelOf(relationshipType) ?? 1;
+}
+
+/** Highest-level people-managing member — the head of a department (ADR-372 §8.3). */
+function pickDepartmentHead(members: OrganizationHierarchyNode[]): OrganizationHierarchyNode | undefined {
+  return members
+    .filter(m => isManagerialRelationshipType(m.relationship.relationshipType))
+    .sort((a, b) => (b.level || 0) - (a.level || 0))[0];
 }
 
 export function getLevelName(level: number): string {
@@ -112,15 +117,10 @@ export function getLevelName(level: number): string {
 
 export async function getOrganizationEmployees(organizationId: string): Promise<ContactWithRelationship[]> {
   try {
-    const employmentTypes: RelationshipType[] = [
-      'employee',
-      'manager',
-      'director',
-      'executive',
-      'civil_servant',
-      'department_head'
-    ];
-    const relationships = await FirestoreRelationshipAdapter.getOrganizationEmployees(organizationId, employmentTypes);
+    const relationships = await FirestoreRelationshipAdapter.getOrganizationEmployees(
+      organizationId,
+      ORG_CHART_RELATIONSHIP_TYPES
+    );
 
     const employees: ContactWithRelationship[] = [];
 
@@ -177,7 +177,7 @@ export async function calculateHierarchyLevelsForNodes(nodes: OrganizationHierar
 
 export function identifyTopLevelExecutives(nodes: OrganizationHierarchyNode[]): OrganizationHierarchyNode[] {
   return nodes.filter(node =>
-    ['director', 'executive', 'ceo', 'chairman'].includes(node.relationship.relationshipType)
+    (orgChartLevelOf(node.relationship.relationshipType) ?? 0) >= TOP_LEVEL_ORG_CHART_LEVEL
   );
 }
 
@@ -194,9 +194,7 @@ export function buildDepartmentBreakdown(nodes: OrganizationHierarchyNode[]): Or
   });
 
   departmentGroups.forEach((employees, deptName) => {
-    const departmentHead = employees
-      .filter(emp => ['manager', 'director', 'department_head'].includes(emp.relationship.relationshipType))
-      .sort((a, b) => (b.level || 0) - (a.level || 0))[0];
+    const departmentHead = pickDepartmentHead(employees);
 
     departments[deptName] = {
       head: departmentHead,
@@ -263,7 +261,7 @@ export async function analyzeDepartments(tree: OrganizationTree): Promise<Record
   for (const [deptName, dept] of Object.entries(tree.departments)) {
     const employees = dept.employees || [];
     const managers = employees.filter(emp =>
-      ['manager', 'director', 'department_head'].includes(emp.relationship.relationshipType)
+      isManagerialRelationshipType(emp.relationship.relationshipType)
     );
 
     const tenures = employees.map(emp => calculateTenure(emp.relationship.startDate ?? undefined));
@@ -294,7 +292,7 @@ export function buildHierarchyLevelsList(tree: OrganizationTree): HierarchyLevel
       .filter(emp => (emp.level || 0) === level);
 
     const managers = levelEmployees.filter(emp =>
-      ['manager', 'director', 'executive'].includes(emp.relationship.relationshipType)
+      isManagerialRelationshipType(emp.relationship.relationshipType)
     );
 
     levels.push({

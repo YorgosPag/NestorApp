@@ -26,7 +26,7 @@ import type { KadSelection } from '@/lib/kad/kad-types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
-import { nowISO } from '@/lib/date-local';
+import { calendarDayOf } from '@/constants/platform-operator';
 
 // ============================================================================
 // TYPES
@@ -47,7 +47,8 @@ function createEmptyKad(): KadEntry {
     code: '',
     description: '',
     type: 'secondary',
-    activeFrom: nowISO().split('T')[0],
+    // Operator calendar day (Europe/Athens) — not the UTC day of an ISO instant.
+    activeFrom: calendarDayOf(new Date()),
   };
 }
 
