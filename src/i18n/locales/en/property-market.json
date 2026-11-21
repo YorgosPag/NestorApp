@@ -1372,9 +1372,6 @@
       "lead": "Say that you want to be found. Until you do, your agency appears nowhere — and that is the correct starting point.",
       "aliasLabel": "Your address",
       "aliasHint": "The link you hand out on a card, a sign or a referral. It is your workspace alias and is not changed from here.",
-      "nameLabel": "Business name",
-      "nameHint": "How you want people to see you — on your storefront and on every one of your listings. It is written explicitly for publication — nothing is copied automatically from your company record.",
-      "namePlaceholder": "The agency's business name",
       "gemiLabel": "GEMI number",
       "gemiHint": "The proof that the agency exists and is licensed. Without it the directory becomes names that merely claim to be agents.",
       "gemiPlaceholder": "e.g. 123456789000",
@@ -1532,6 +1529,42 @@
       "cardDoor": "Business card",
       "cardDoorHint": "Head office, branches, opening hours, phone numbers and emails — as visitors to your storefront will see them.",
       "cardBackToShowcase": "Back to storefront",
+      "publicIdentity": {
+        "title": "What the public will see",
+        "lead": "Choose the name you appear under and how much of your registered address is shown on your public page. The preview shows exactly what will be published.",
+        "loading": "Loading preview…",
+        "forbidden": "Only the organisation's administrators can see the preview, because it contains the full registered address. You can still choose; it is checked when you publish.",
+        "unavailable": "The preview could not be loaded. You can still choose; it is checked when you publish.",
+        "nameLegend": "Name on the public page",
+        "nameLegal": "The legal name: {name}",
+        "nameTitle": "The trade name: {title}",
+        "noTitles": "A trade name can be chosen only if it is registered in GEMI under your number.",
+        "registryLink": "GEMI details",
+        "seatLegend": "How much of the registered address is shown",
+        "seatRequired": "For a sole proprietorship or general partnership the choice is yours alone, because the registered address may be your home. Nothing is preselected.",
+        "recommended": "Recommended",
+        "willShow": "Will show: {seat}",
+        "fixProfile": "Complete your business details",
+        "fixCard": "Complete your card",
+        "cardAfterPublish": "The card can be completed after the first publication.",
+        "previewTitle": "Preview",
+        "previewEmpty": "Choose how much of the address is shown to see the preview.",
+        "privacy": "Your full registered address stays in your business details and is published only if you choose “Full registered address”.",
+        "seat": {
+          "full": {
+            "title": "Full registered address",
+            "hint": "Street, number, postcode and town, as in your business details."
+          },
+          "business-address": {
+            "title": "Office address",
+            "hint": "The head-office address from your business card, instead of the registered address."
+          },
+          "municipality": {
+            "title": "Municipality only",
+            "hint": "Only the municipality is shown, without a street. Suitable if you work from home or at the client's premises."
+          }
+        }
+      },
       "registry": {
         "door": "Business registry (GEMI)",
         "doorHint": "Check your business name and status against the public registry.",

@@ -47,9 +47,8 @@ export const SHOWCASE_KEYS = {
   copyLink: `${K}.copyLink`,
   linkCopied: `${K}.linkCopied`,
   publicViewHint: `${K}.publicViewHint`,
-  nameLabel: `${K}.nameLabel`,
-  nameHint: `${K}.nameHint`,
-  namePlaceholder: `${K}.namePlaceholder`,
+  // ⛔ Τα `nameLabel`/`nameHint`/`namePlaceholder` αφαιρέθηκαν (ADR-841 §7 Α23.14): το πεδίο ελεύθερου ονόματος
+  //    δεν έφτανε στο σύρμα από την Α23 (Δ5) — το όνομα είναι **επιλογή** στο «Τι θα δει ο κόσμος».
   // ── Η ΕΙΔΙΚΟΤΗΤΑ (Φ6-Β4) ─────────────────────────────────────────────────
   occupationLabel: `${K}.occupationLabel`,
   occupationHint: `${K}.occupationHint`,

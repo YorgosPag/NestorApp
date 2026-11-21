@@ -48,6 +48,7 @@ import type {
   ShowcaseLegalDeclaration,
   ShowcaseLegalForm,
   ShowcaseLegalIdentity,
+  ShowcaseLegalIdentityBase,
   ShowcaseSeat,
 } from '@/types/showcase-legal-identity';
 
@@ -64,6 +65,27 @@ export interface LegalIdentityInputs {
 export type LegalIdentityResolution =
   | { readonly identity: ShowcaseLegalIdentity; readonly displayName: string }
   | { readonly reason: AgencyProfileRejection };
+
+/** Μία επιλογή έδρας: η έδρα **ακριβώς όπως θα δημοσιευτεί**, ή ο λόγος που ο γραφέας θα αρνιόταν. */
+export type SeatPreview =
+  | { readonly kind: 'ok'; readonly seat: ShowcaseSeat }
+  | { readonly kind: 'rejected'; readonly reason: AgencyProfileRejection };
+
+/**
+ * **Η προεπισκόπηση της οθόνης «Τι θα δει ο κόσμος»** (Α23.14).
+ * `rejected` = δεν υπάρχει καν επωνυμία — καμία επιλογή δεν μπορεί να περάσει, και ο λόγος λέγεται **μία** φορά.
+ */
+export type LegalIdentityPreview =
+  | { readonly kind: 'rejected'; readonly reason: AgencyProfileRejection }
+  | {
+      readonly kind: 'ready';
+      readonly base: ShowcaseLegalIdentityBase;
+      /** `null` = ατομική · ΟΕ · άγνωστη μορφή ⇒ η επιλογή είναι **υποχρεωτική και ρητή** (Δ7). */
+      readonly defaultSeat: SeatDisclosure | null;
+      readonly seats: Readonly<Record<SeatDisclosure, SeatPreview>>;
+      /** Οι διακριτικοί τίτλοι του ΓΕΜΗ **για αυτόν τον αριθμό**, με την ορθογραφία του μητρώου — μόνο όσοι θα περνούσαν. */
+      readonly titles: readonly string[];
+    };
 
 const NO_SEAT: CompanySeatDeclaration = { address: null, city: null, postalCode: null };
 
@@ -163,6 +185,21 @@ function closureOf(judgment: RegistryIdentityJudgment): RegistryClosure | null {
   return { issuer: 'gemi', checkedAt: judgment.check.checkedAt };
 }
 
+/** Ό,τι η ταυτότητα λέει **ανεξάρτητα από τις δύο επιλογές** — ένας συναρμολογητής για κρίση **και** προεπισκόπηση. */
+function baseIdentityOf(
+  declaration: CompanyRegistryDeclaration,
+  judgment: RegistryIdentityJudgment,
+  legalName: string,
+): ShowcaseLegalIdentityBase {
+  return {
+    legalName,
+    legalForm: declaration.entityType,
+    gemiNumber: canonicalGemiNumber(declaration.gemiNumber),
+    attestation: attestationOf(judgment),
+    registryClosure: closureOf(judgment),
+  };
+}
+
 /** **Η κρίση.** Επιστρέφει την ταυτότητα **και** το δημόσιο όνομα — ή τον πρώτο ονομασμένο λόγο. */
 export function resolveShowcaseLegalIdentity(
   inputs: LegalIdentityInputs,
@@ -183,16 +220,43 @@ export function resolveShowcaseLegalIdentity(
 
   return {
     displayName,
-    identity: {
-      publicName: choice.publicName.kind,
-      legalName,
-      legalForm: declaration.entityType,
-      gemiNumber: canonicalGemiNumber(declaration.gemiNumber),
-      seat,
-      attestation: attestationOf(judgment),
-      registryClosure: closureOf(judgment),
-    },
+    identity: { ...baseIdentityOf(declaration, judgment, legalName), publicName: choice.publicName.kind, seat },
   };
+}
+
+/**
+ * **Τι θα δει ο κόσμος, για ΚΑΘΕ επιλογή** — ADR-841 §7 Α23.14 (Φ3.3 οθόνη).
+ *
+ * 🔑 **Καμία δεύτερη κρίση**: κάθε έδρα περνά από τον **ίδιο** `resolveShowcaseLegalIdentity` που θα τρέξει η
+ * δημοσίευση, και κάθε τίτλος από τον ίδιο `publicNameOf`. Η οθόνη δείχνει **το ακριβές κείμενο** που θα
+ * δημοσιευτεί — ή τον **ίδιο** λόγο άρνησης που θα έδινε ο γραφέας — **πριν** πατηθεί «Δημοσίευση».
+ */
+export function previewShowcaseLegalIdentity(inputs: LegalIdentityInputs): LegalIdentityPreview {
+  const { declaration } = inputs;
+  if (declaration === null || declaration.businessName === null) {
+    return { kind: 'rejected', reason: 'agency-profile-name-missing' };
+  }
+  const judgment = judgmentOf(declaration, inputs.stored);
+  const legalName = legalNameOf(declaration.businessName, judgment);
+  const check = checkForNumber(declaration, inputs.stored);
+  const titles = (check?.record.distinctiveTitles ?? []).filter(
+    (title) => publicNameOf({ kind: 'distinctive-title', title }, legalName, check) !== null,
+  );
+  return {
+    kind: 'ready',
+    base: baseIdentityOf(declaration, judgment, legalName),
+    defaultSeat: defaultSeatDisclosure(declaration.entityType),
+    seats: seatPreviewsOf(inputs),
+    titles,
+  };
+}
+
+function seatPreviewsOf(inputs: LegalIdentityInputs): Readonly<Record<SeatDisclosure, SeatPreview>> {
+  const previewOf = (seatDisclosure: SeatDisclosure): SeatPreview => {
+    const resolved = resolveShowcaseLegalIdentity(inputs, { publicName: { kind: 'legal-name' }, seatDisclosure });
+    return 'reason' in resolved ? { kind: 'rejected', reason: resolved.reason } : { kind: 'ok', seat: resolved.identity.seat };
+  };
+  return { full: previewOf('full'), 'business-address': previewOf('business-address'), municipality: previewOf('municipality') };
 }
 
 /**

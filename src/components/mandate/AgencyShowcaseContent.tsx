@@ -38,6 +38,7 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ShowcaseIdentityFields } from '@/components/mandate/ShowcaseIdentityFields';
+import { ShowcasePublicIdentitySection } from '@/components/mandate/ShowcasePublicIdentitySection';
 import { ShowcasePublicDoor } from '@/components/mandate/ShowcasePublicDoor';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import {
@@ -66,6 +67,9 @@ import {
 } from '@/lib/auth/brokerage-authority';
 import { isCapabilityActive } from '@/types/organization-capability';
 import { useAgencyShowcase, type ShowcaseFailure } from '@/hooks/mandate/useAgencyShowcase';
+import { useShowcaseLegalPreview } from '@/hooks/mandate/useShowcaseLegalPreview';
+import { declarationOfStored } from '@/lib/agency/showcase-legal-identity';
+import type { ShowcaseLegalDeclaration } from '@/types/showcase-legal-identity';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { pickBilingualLabel, resolveEscoLang } from '@/components/shared/esco/esco-label';
 import type { EscoLanguage } from '@/types/contacts/esco-types';
@@ -88,6 +92,12 @@ import routeSlice from '@/i18n/generated/routes/o__workspace__settings__agency-p
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
+
+/**
+ * ⚖️ **Καμία επιλογή έδρας πριν διαλέξει ο άνθρωπος** (Δ7 · GDPR 25(2)): `null` ⇒ ο γραφέας δέχεται μόνο την
+ * προεπιλογή ΑΕ/ΕΠΕ. Το όνομα ξεκινά από την **επωνυμία** — την αληθή, πάντα διαθέσιμη επιλογή.
+ */
+const INITIAL_LEGAL_DECLARATION: ShowcaseLegalDeclaration = { publicName: { kind: 'legal-name' }, seatDisclosure: null };
 
 /**
  * **Δημοσιευμένο credential → πεδία φόρμας.**
@@ -223,7 +233,9 @@ export function AgencyShowcaseContent(): React.ReactElement {
   const { state, busy, failure, publish, withdraw } = useAgencyShowcase();
 
   const published = state.phase === 'published' ? state.profile : null;
-  const [displayName, setDisplayName] = React.useState('');
+  // 🏆 ADR-841 §7 Α23.14 — «Τι θα δει ο κόσμος»: οι δύο **επιλογές** + η προεπισκόπηση από τον **ίδιο** κριτή.
+  const legalPreview = useShowcaseLegalPreview();
+  const [legal, setLegal] = React.useState<ShowcaseLegalDeclaration>(INITIAL_LEGAL_DECLARATION);
   const [credentials, setCredentials] = React.useState<readonly ShowcaseCredentialDraft[]>([
     EMPTY_CREDENTIAL_DRAFT,
   ]);
@@ -238,7 +250,8 @@ export function AgencyShowcaseContent(): React.ReactElement {
   const publishedAt = published?.publishedAt ?? null;
   React.useEffect(() => {
     if (published === null) return;
-    setDisplayName(published.displayName);
+    // 🔑 Η επιλογή που είχε γίνει, ξαναχτισμένη από τον **ίδιο** `declarationOfStored` που χρησιμοποιεί η ανανέωση.
+    if (published.legalIdentity !== null) setLegal(declarationOfStored(published.legalIdentity, published.displayName));
     setCredentials(published.credentials.map((credential) => draftOf(credential, lang)));
     // 🔴 **ΚΑΙ Ο ΤΟΠΟΣ — ΠΟΥ ΜΕΧΡΙ ΤΗ Φ6-Β4 ΗΤΑΝ ΔΟΜΙΚΑ ΝΕΚΡΟΣ.** Η φόρμα
     //    έστελνε `place: published?.place ?? null`, δηλαδή **πάντα ό,τι ήδη
@@ -281,7 +294,14 @@ export function AgencyShowcaseContent(): React.ReactElement {
       {/* 🏆 Α21.11 — η πόρτα προς τη δημόσια όψη, **στην κορυφή**, όπως η Zillow. */}
       <ShowcasePublicDoor alias={alias} published={published !== null} />
 
-      <ShowcaseIdentityFields alias={alias} displayName={displayName} onName={setDisplayName} />
+      <ShowcaseIdentityFields alias={alias} />
+
+      <ShowcasePublicIdentitySection
+        state={legalPreview}
+        value={legal}
+        published={published !== null}
+        onChange={setLegal}
+      />
 
       <CredentialList credentials={credentials} onChange={setCredentials} />
 
@@ -330,7 +350,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
       <ShowcaseActions
         busy={busy}
         published={published}
-        onPublish={() => publish(declarationOf(alias, credentials, place, coverage))}
+        onPublish={() => publish(declarationOf(alias, credentials, place, coverage, legal))}
         onWithdraw={withdraw}
       />
     </section>

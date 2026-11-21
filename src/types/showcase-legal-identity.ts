@@ -113,20 +113,27 @@ export interface CompanySeatDeclaration {
 /** Οι νομικές μορφές που ξέρει το προφίλ — **παράγωγο** της ρίζας, ποτέ δεύτερη λίστα. */
 export type ShowcaseLegalForm = NonNullable<CompanyRegistryDeclaration['entityType']>;
 
-/** **Η νομική ταυτότητα της βιτρίνας** (ν. 4919/2022 άρθ. 22 §4 · Π.Δ. 131/2003 άρθ. 4). */
-export interface ShowcaseLegalIdentity {
-  /** Η **επιλογή** — ώστε η ανανέωση μετά από μετονομασία να ξέρει τι να ξαναλύσει. */
-  readonly publicName: PublicNameKind;
+/**
+ * **Ό,τι λέει η νομική ταυτότητα ΑΝΕΞΑΡΤΗΤΑ από τις δύο επιλογές** (όνομα · έδρα) — το κοινό μέρος της κρίσης
+ * και της προεπισκόπησης «Τι θα δει ο κόσμος» (ADR-841 §7 Α23.14).
+ */
+export interface ShowcaseLegalIdentityBase {
   /** Η επωνυμία — του ΓΕΜΗ όταν `verified` (η ορθογραφία της αρχής), του προφίλ όταν `declared`. */
   readonly legalName: string;
   /** `null` = τιμή προφίλ που δεν αναγνωρίζεται — **ποτέ** μαντεψιά. */
   readonly legalForm: ShowcaseLegalForm | null;
   /** Κανονική μορφή · `null` = ο οργανισμός δεν έχει (ελεύθερος επαγγελματίας). */
   readonly gemiNumber: string | null;
-  readonly seat: ShowcaseSeat;
   readonly attestation: LegalIdentityAttestation;
   /** `null` = το ΓΕΜΗ δεν είπε «ανενεργή» (ή δεν ρωτήθηκε). Μη-`null` ⇒ `attestation` είναι `declared`. */
   readonly registryClosure: RegistryClosure | null;
+}
+
+/** **Η νομική ταυτότητα της βιτρίνας** (ν. 4919/2022 άρθ. 22 §4 · Π.Δ. 131/2003 άρθ. 4). */
+export interface ShowcaseLegalIdentity extends ShowcaseLegalIdentityBase {
+  /** Η **επιλογή** — ώστε η ανανέωση μετά από μετονομασία να ξέρει τι να ξαναλύσει. */
+  readonly publicName: PublicNameKind;
+  readonly seat: ShowcaseSeat;
 }
 
 /** **Ό,τι στέλνει η οθόνη** για τη νομική ταυτότητα — επιλογές, ποτέ κείμενο. */

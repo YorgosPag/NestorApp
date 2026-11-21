@@ -11,6 +11,7 @@
 import {
   declarationOfStored,
   defaultSeatDisclosure,
+  previewShowcaseLegalIdentity,
   reresolveShowcaseLegalIdentity,
   resolveShowcaseLegalIdentity,
   type LegalIdentityInputs,
@@ -19,7 +20,11 @@ import {
 import { REGISTRY_CHECKED_AT, registryCheck } from '@/lib/company/__fixtures__/registry-record-fixture';
 import { COMPANY_PROFILE } from '@/services/mandate/__tests__/showcase-legal-fixture';
 import type { RegistryCompanyRecord } from '@/types/company-registry';
-import type { ShowcaseLegalDeclaration, ShowcaseLegalIdentity } from '@/types/showcase-legal-identity';
+import {
+  SEAT_DISCLOSURES,
+  type ShowcaseLegalDeclaration,
+  type ShowcaseLegalIdentity,
+} from '@/types/showcase-legal-identity';
 
 const LEGAL_NAME: ShowcaseLegalDeclaration = { publicName: { kind: 'legal-name' }, seatDisclosure: null };
 
@@ -255,5 +260,71 @@ describe('Α — η ανανέωση ξαναλύνει την ΙΔΙΑ επιλ
     expect(reasonOf(reresolveShowcaseLegalIdentity(later, first.identity, first.displayName))).toBe(
       'agency-profile-name-missing',
     );
+  });
+});
+
+describe('Π — η ΠΡΟΕΠΙΣΚΟΠΗΣΗ «Τι θα δει ο κόσμος» λέει ό,τι θα πει ο γραφέας (Α23.14)', () => {
+  const SOLE = { entityType: 'sole_proprietor', businessName: 'Γ. Παγώνης', gemiNumber: null } as const;
+
+  function ready(given: LegalIdentityInputs) {
+    const preview = previewShowcaseLegalIdentity(given);
+    if (preview.kind !== 'ready') throw new Error(`Περίμενα προεπισκόπηση, πήρα ${preview.reason}`);
+    return preview;
+  }
+
+  it.each([
+    ['πλήρη στοιχεία', inputs()],
+    ['χωρίς απάντηση μητρώου', inputs({}, null)],
+    ['χωρίς έδρα κάρτας', inputs({ headquarters: null })],
+    ['χωρίς διεύθυνση προφίλ', inputs({ seat: { address: null, city: 'Θεσσαλονίκη', postalCode: null } })],
+    ['ατομική χωρίς τίποτα', inputs({ declaration: SOLE, seat: null, headquarters: null }, null)],
+  ])('🔴 Π1 — %s: ΚΑΘΕ επιλογή έδρας = η κρίση της δημοσίευσης για την ίδια επιλογή (ένας κριτής)', (_label, given) => {
+    const { seats } = ready(given);
+    for (const seatDisclosure of SEAT_DISCLOSURES) {
+      const published = resolveShowcaseLegalIdentity(given, { publicName: { kind: 'legal-name' }, seatDisclosure });
+      const expected = 'reason' in published
+        ? { kind: 'rejected', reason: published.reason }
+        : { kind: 'ok', seat: published.identity.seat };
+      expect(seats[seatDisclosure]).toEqual(expected);
+    }
+  });
+
+  it('⚖️ Π2 — ατομική: ΚΑΜΙΑ προεπιλογή, και το «μόνο ο δήμος» δεν φέρνει ούτε γράμμα οδού', () => {
+    const preview = ready(inputs({ declaration: SOLE }, null));
+
+    expect(preview.defaultSeat).toBeNull();
+    expect(preview.seats.municipality).toEqual({
+      kind: 'ok',
+      seat: { disclosure: 'municipality', streetLine: null, postalCode: null, locality: 'Θεσσαλονίκη' },
+    });
+    expect(JSON.stringify(preview.seats.municipality)).not.toContain('Σαμοθράκης');
+  });
+
+  it('🔑 Π3 — ΑΕ: προεπιλογή `full`, η ίδια με του γραφέα', () => {
+    expect(ready(inputs()).defaultSeat).toBe('full');
+  });
+
+  it('🔴 Π4 — τίτλοι: ΜΟΝΟ του ΓΕΜΗ για αυτόν τον αριθμό· χωρίς απάντηση μητρώου ⇒ κανένας', () => {
+    expect(ready(inputs()).titles).toEqual(['ΠΑΓΩΝΗΣ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ']);
+    expect(ready(inputs({}, null)).titles).toEqual([]);
+    // Κάθε τίτλος που προσφέρεται ΠΕΡΝΑ τη δημοσίευση — κανένας δεν οδηγεί σε άρνηση.
+    for (const title of ready(inputs()).titles) {
+      const choice: ShowcaseLegalDeclaration = { publicName: { kind: 'distinctive-title', title }, seatDisclosure: null };
+      expect(resolved(resolveShowcaseLegalIdentity(inputs(), choice)).displayName).toBe(title);
+    }
+  });
+
+  it('🔑 Π5 — η βάση = η ταυτότητα της δημοσίευσης χωρίς τις δύο επιλογές', () => {
+    const { identity } = resolved(resolveShowcaseLegalIdentity(inputs(), LEGAL_NAME));
+    const { publicName: _publicName, seat: _seat, ...base } = identity;
+
+    expect(ready(inputs()).base).toEqual(base);
+  });
+
+  it('🔴 Π6 — χωρίς επωνυμία ⇒ ΜΙΑ άρνηση, ο ίδιος λόγος με τη δημοσίευση', () => {
+    const given = inputs({ declaration: { ...SOLE, businessName: null } });
+
+    expect(previewShowcaseLegalIdentity(given)).toEqual({ kind: 'rejected', reason: 'agency-profile-name-missing' });
+    expect(reasonOf(resolveShowcaseLegalIdentity(given, LEGAL_NAME))).toBe('agency-profile-name-missing');
   });
 });
