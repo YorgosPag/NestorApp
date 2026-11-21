@@ -32,12 +32,12 @@ import {
 import {
   BRAND,
   buildSharedTextFallback,
-  escapeHtml,
   renderMediaList,
   renderPhotoGrid,
   renderShareCta,
   type ShowcaseEmailMedia,
 } from '@/services/email-templates/showcase-email-shared';
+import { plainTextToHtml } from '@/lib/html/plain-text-html';
 import type { ShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
 import type { EmailHeaderContactLabels } from '@/services/email-templates/base-email-template';
 
@@ -164,7 +164,7 @@ export type ShowcaseEmailBuilder<TSnapshot, TLabels, TPhoto, TExtras = void> = (
 // =============================================================================
 
 function renderIntroHtml(introText: string): string {
-  const escaped = escapeHtml(introText).replace(/\n/g, '<br />');
+  const escaped = plainTextToHtml(introText);
   return `<p style="margin:0 0 16px;font-size:14px;color:${BRAND.navyDark};line-height:1.6;">${escaped}</p>`;
 }
 

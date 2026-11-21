@@ -12,17 +12,25 @@ import type { DeliveryChannel } from '../../types/vendor-invite';
 export interface VendorInviteMessage {
   /** Stable identifier of the invite this message belongs to. */
   inviteId: string;
-  /** Vendor display name (used in greeting). */
-  vendorName: string;
+  /**
+   * Ο άνθρωπος που χαιρετάμε — `null` ⇒ ουδέτερος χαιρετισμός (ADR-327 §7.5). Ποτέ email, ποτέ κενό:
+   * το εγγυάται ο ΕΝΑΣ builder `buildVendorInviteMessage` (`greetingName`).
+   */
+  vendorName: string | null;
   /** Vendor contact target (email address / phone). Channel decides what it accepts. */
   recipient: string;
-  /** Project + RFQ context for subject/body composition. */
+  /** Ο τίτλος του αιτήματος προσφοράς (RFQ) — **όχι** το έργο. */
   rfqTitle: string;
+  /** Το όνομα του **έργου** στο οποίο ανήκει το RFQ (tenant-checked), `null` ⇒ η γραμμή του έργου παραλείπεται. */
   projectName: string | null;
   /** Absolute public URL to the vendor portal page (already includes the token). */
   portalUrl: string;
   /** ISO timestamp when the link expires. */
   expiresAt: string;
+  /** ISO προθεσμία υποβολής προσφορών του RFQ (`deadlineDate`), `null` ⇒ η γραμμή παραλείπεται. */
+  responseDueAt: string | null;
+  /** Το προσωπικό σημείωμα του αγοραστή — **απλό κείμενο**, escaped κατά την απόδοση, `null` ⇒ χωρίς πλαίσιο. */
+  buyerNote: string | null;
   /** Locale for body composition (`el` default). */
   locale: 'el' | 'en';
   /** Optional decline link. */

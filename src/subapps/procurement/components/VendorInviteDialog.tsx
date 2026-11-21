@@ -1,50 +1,49 @@
 /**
  * =============================================================================
- * VendorInviteDialog — Multi-select invite flow (§5.Y, Phase 12)
+ * VendorInviteDialog — Multi-select invite flow (§5.Y, Phase 12 · ADR-327 §7.5)
  * =============================================================================
  *
  * Supports:
  *   - Suggested vendors (category-based) + all vendors (checkboxes)
- *   - Ad-hoc email field (one-off invites)
- *   - Deadline quick presets (3/5/7/14d or custom date)
- *   - Single shared message template with inline subject+body edit
+ *   - Ad-hoc email field (one-off invites) με **προαιρετικό όνομα** (Ε3 — ποτέ το email ως όνομα)
+ *   - Λήξη συνδέσμου = πάντα **ημερομηνία** (συντομεύσεις ή ημερολόγιο, `VendorInviteExpiryField`, Ε1β)
+ *   - Προσωπικό σημείωμα (`PersonalMessageField`) πάνω στο **πρότυπο συστήματος** (Ε1)
+ *   - Προεπισκόπηση «ως <παραλήπτης>» από τον server — αυτό ακριβώς θα σταλεί (`VendorInvitePreview`)
  *   - Batch send: createInvite() called for each checked vendor
  *
  * ADR-598 «(θ)» — `<form>` + SSoT `useFormSubmission`/`FormActions`. Αποστολή με `allSettled`:
  * όσοι παραλήπτες ΠΕΤΥΧΑΝ φεύγουν από την επιλογή, ώστε η επανάληψη να στείλει ΜΟΝΟ τις
  * αποτυχημένες (πριν: `Promise.all` + ένα γενικό toast ⇒ η επανάληψη ξανάστελνε και τις
  * επιτυχημένες = διπλές προσκλήσεις).
- * ⚠️ Ανοιχτό (ADR-598 «(θ)»): το θέμα/κείμενο ΔΕΝ περνά στο `CreateInviteInput` — ο server
- * στέλνει το δικό του πρότυπο· και τα προεπιλεγμένα κείμενα είναι ωμά ελληνικά.
+ * ✅ Κλειστό (ADR-327 §7.5 · ADR-598 «(θ)»): το θέμα/κείμενο ήταν **διακοσμητικός** editor με ωμά ελληνικά, που
+ * δεν έφευγε ποτέ. Πλέον το μήνυμα είναι το πρότυπο του server στη γλώσσα του παραλήπτη + το σημείωμα του αγοραστή.
+ * Κάθε άνοιγμα = νέα φόρμα (κλειδί γενιάς): η αρχική κατάσταση διαβάζει το RFQ **τη στιγμή που ανοίγει**.
  *
  * @module subapps/procurement/components/VendorInviteDialog
- * @see ADR-328 §5.Y Phase 12
+ * @see ADR-327 §7.5 · ADR-598 «(θ)»
  */
 
 'use client';
 
-import { useCallback, useId, useMemo, useState } from 'react';
-import { EmailMessageFields } from './EmailMessageFields';
+import { useCallback, useId, useMemo, useState, type KeyboardEvent } from 'react';
 import { useTranslation, type Translate } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FormDialog } from '@/components/ui/form/FormDialog';
+import { PersonalMessageField } from '@/components/sharing/fields/PersonalMessageField';
 import { useFormSubmission } from '@/hooks/useFormSubmission';
+import { normalizeToMillisOrNull } from '@/lib/date-local';
+import { isValidEmail } from '@/lib/validation/email-validation';
 import { toast } from 'sonner';
 import type { CreateInviteInput, CreateInviteOutput, VendorContactOption } from '../hooks/useVendorInvites';
+import { initialInviteExpiryDay } from '../config/vendor-invite-policy';
 import { rankVendors } from '../utils/vendor-suggestions';
 import type { RFQ } from '../types/rfq';
+import { VendorInviteExpiryField } from './VendorInviteExpiryField';
+import { VendorInvitePreview, type VendorInvitePreviewOption } from './VendorInvitePreview';
 
 // ============================================================================
 // TYPES
@@ -63,34 +62,47 @@ export interface VendorInviteDialogProps {
   onViewInvites?: () => void;
 }
 
-type DeadlinePreset = '3' | '5' | '7' | '14' | 'custom';
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const DEFAULT_SUBJECT = 'Πρόσκληση για προσφορά: {{rfqTitle}}';
-const DEFAULT_BODY = `Αγαπητέ {{vendorName}},\n\nΣας προσκαλούμε να υποβάλετε προσφορά για το αίτημα «{{rfqTitle}}».\n\nΠροθεσμία απάντησης: {{deadline}}.\n\nΜε εκτίμηση,\n{{senderName}}`;
+/** Ένας ad-hoc παραλήπτης — το όνομα είναι προαιρετικό (Ε3). */
+interface AdHocRecipient {
+  readonly email: string;
+  readonly name: string | null;
+}
 
 /** Ένας παραλήπτης της παρτίδας — επαφή ή ad-hoc email. */
-type Recipient = { readonly kind: 'contact'; readonly id: string } | { readonly kind: 'adhoc'; readonly email: string };
+type Recipient = { readonly kind: 'contact'; readonly id: string } | ({ readonly kind: 'adhoc' } & AdHocRecipient);
+
+/** Ό,τι κοινό έχουν όλες οι προσκλήσεις της παρτίδας. */
+interface InviteMessage {
+  readonly expiresOn: string;
+  readonly buyerNote: string;
+}
 
 // ============================================================================
 // PURE: αποστολή παρτίδας με μερική αποτυχία
 // ============================================================================
 
-function inviteInput(recipient: Recipient, expiresInDays: number): CreateInviteInput {
+function inviteInput(recipient: Recipient, message: InviteMessage): CreateInviteInput {
+  const shared = { deliveryChannel: 'email' as const, expiresOn: message.expiresOn, buyerNote: message.buyerNote };
   return recipient.kind === 'contact'
-    ? { vendorContactId: recipient.id, deliveryChannel: 'email', expiresInDays }
-    : { manualEmail: recipient.email, manualName: recipient.email, deliveryChannel: 'email', expiresInDays };
+    ? { ...shared, vendorContactId: recipient.id }
+    : { ...shared, manualEmail: recipient.email, ...(recipient.name ? { manualName: recipient.name } : {}) };
 }
 
 /** Στέλνει σε όλους (`allSettled`) και επιστρέφει ΟΣΟΥΣ απέτυχαν. */
 async function sendBatch(
   recipients: readonly Recipient[],
-  expiresInDays: number,
+  message: InviteMessage,
   onCreate: VendorInviteDialogProps['onCreate'],
 ): Promise<Recipient[]> {
-  const results = await Promise.allSettled(recipients.map((r) => onCreate(inviteInput(r, expiresInDays))));
+  const results = await Promise.allSettled(recipients.map((r) => onCreate(inviteInput(r, message))));
   return recipients.filter((_, i) => results[i].status === 'rejected');
+}
+
+/** Οι επιλογές της προεπισκόπησης — ένας ανά παραλήπτη, με το όνομα που θα δει ο αγοραστής. */
+function previewOptions(recipients: readonly Recipient[], vendorContacts: readonly VendorContactOption[]): VendorInvitePreviewOption[] {
+  return recipients.map((r) => (r.kind === 'contact'
+    ? { key: `contact:${r.id}`, label: vendorContacts.find((c) => c.id === r.id)?.displayName ?? r.id, recipient: { vendorContactId: r.id } }
+    : { key: `adhoc:${r.email}`, label: r.name ?? r.email, recipient: { manualEmail: r.email, ...(r.name ? { manualName: r.name } : {}) } }));
 }
 
 // ============================================================================
@@ -99,7 +111,7 @@ async function sendBatch(
 
 function useRecipients(vendorContacts: VendorContactOption[]) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [adHocList, setAdHocList] = useState<string[]>([]);
+  const [adHocList, setAdHocList] = useState<AdHocRecipient[]>([]);
 
   const toggleId = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -113,13 +125,13 @@ function useRecipients(vendorContacts: VendorContactOption[]) {
   /** Επαφές χωρίς email παραλείπονται (όπως πριν). */
   const recipients = useMemo<Recipient[]>(() => [
     ...[...selectedIds].filter((id) => vendorContacts.find((c) => c.id === id)?.email).map((id) => ({ kind: 'contact' as const, id })),
-    ...adHocList.map((email) => ({ kind: 'adhoc' as const, email })),
+    ...adHocList.map((entry) => ({ kind: 'adhoc' as const, ...entry })),
   ], [selectedIds, adHocList, vendorContacts]);
 
   /** Μένουν επιλεγμένοι ΜΟΝΟ όσοι απέτυχαν — η επανάληψη δεν ξαναστέλνει στους υπόλοιπους. */
   const keepOnly = useCallback((failed: readonly Recipient[]) => {
     setSelectedIds(new Set(failed.flatMap((r) => (r.kind === 'contact' ? [r.id] : []))));
-    setAdHocList(failed.flatMap((r) => (r.kind === 'adhoc' ? [r.email] : [])));
+    setAdHocList(failed.flatMap((r) => (r.kind === 'adhoc' ? [{ email: r.email, name: r.name }] : [])));
   }, []);
 
   return { selectedIds, toggleId, adHocList, setAdHocList, totalCount: selectedIds.size + adHocList.length, recipients, keepOnly };
@@ -128,16 +140,16 @@ function useRecipients(vendorContacts: VendorContactOption[]) {
 function useVendorInviteForm(props: VendorInviteDialogProps, t: Translate) {
   const { rfq, vendorContacts, onCreate, onAfterSend, onOpenChange } = props;
   const recipients = useRecipients(vendorContacts);
-  const [deadlinePreset, setDeadlinePreset] = useState<DeadlinePreset>('5');
-  const [subject, setSubject] = useState(DEFAULT_SUBJECT.replace('{{rfqTitle}}', rfq?.title ?? ''));
-  const [body, setBody] = useState(DEFAULT_BODY.replace(/\{\{rfqTitle\}\}/g, rfq?.title ?? ''));
-  const canSubmit = recipients.totalCount > 0 && subject.trim() !== '' && body.trim() !== '';
+  const rfqDeadlineMs = normalizeToMillisOrNull(rfq?.deadlineDate ?? null);
+  const [expiresOn, setExpiresOn] = useState(() => initialInviteExpiryDay(rfqDeadlineMs, new Date()));
+  const [buyerNote, setBuyerNote] = useState('');
+  const canSubmit = recipients.totalCount > 0;
 
   const submission = useFormSubmission({
     canSubmit,
     submit: async () => {
       const batch = recipients.recipients;
-      const failed = await sendBatch(batch, deadlinePreset !== 'custom' ? Number(deadlinePreset) : 7, onCreate);
+      const failed = await sendBatch(batch, { expiresOn, buyerNote }, onCreate);
       recipients.keepOnly(failed);
       if (failed.length < batch.length) await onAfterSend?.();
       if (failed.length > 0) throw new Error(t('rfqs.invite.errors.partialFailed', { failed: failed.length, total: batch.length }));
@@ -149,40 +161,54 @@ function useVendorInviteForm(props: VendorInviteDialogProps, t: Translate) {
     errorFallback: t('rfqs.invite.errors.sendFailed'),
   });
 
-  return { ...recipients, deadlinePreset, setDeadlinePreset, subject, setSubject, body, setBody, canSubmit, submission };
+  return { ...recipients, rfqDeadlineMs, expiresOn, setExpiresOn, buyerNote, setBuyerNote, canSubmit, submission };
 }
 
-function useAdHocEntry(list: string[], setList: (next: string[]) => void, t: Translate) {
+function useAdHocEntry(list: AdHocRecipient[], setList: (next: AdHocRecipient[]) => void, t: Translate) {
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const add = useCallback(() => {
     const trimmed = email.trim();
-    if (!EMAIL_REGEX.test(trimmed)) {
+    if (!isValidEmail(trimmed)) {
       setError(t('rfqs.invite.errors.invalidEmail'));
       return;
     }
-    if (!list.includes(trimmed)) setList([...list, trimmed]);
+    if (!list.some((entry) => entry.email === trimmed)) setList([...list, { email: trimmed, name: name.trim() || null }]);
     setEmail('');
+    setName('');
     setError(null);
-  }, [email, list, setList, t]);
+  }, [email, name, list, setList, t]);
 
-  const remove = useCallback((target: string) => setList(list.filter((e) => e !== target)), [list, setList]);
+  const remove = useCallback((target: string) => setList(list.filter((entry) => entry.email !== target)), [list, setList]);
 
-  return { email, setEmail, error, add, remove };
+  return { email, setEmail, name, setName, error, add, remove };
 }
 
 // ============================================================================
 // COMPONENT
 // ============================================================================
 
+/** Κάθε άνοιγμα = νέα φόρμα: ό,τι έμεινε από την προηγούμενη φορά δεν ξαναεμφανίζεται (πρότυπο `NewVersionDialog`). */
 export function VendorInviteDialog(props: VendorInviteDialogProps) {
-  const { rfq, open, onOpenChange } = props;
-  const { t } = useTranslation('quotes');
+  const [lastOpen, setLastOpen] = useState(props.open);
+  const [generation, setGeneration] = useState(0);
+  if (props.open !== lastOpen) {
+    setLastOpen(props.open);
+    if (props.open) setGeneration((n) => n + 1);
+  }
+  return <VendorInviteForm key={generation} {...props} />;
+}
+
+function VendorInviteForm(props: VendorInviteDialogProps) {
+  const { rfqId, rfq, open, onOpenChange, vendorContacts } = props;
+  const { t, currentLanguage } = useTranslation('quotes');
   const idBase = useId(); // `${idBase}-<πεδίο>`: η <Label> ονομάζει το πεδίο (ADR-598 G11)
   const f = useVendorInviteForm(props, t);
   const adHoc = useAdHocEntry(f.adHocList, f.setAdHocList, t);
   const sending = f.submission.submitting;
+  const options = useMemo(() => previewOptions(f.recipients, vendorContacts), [f.recipients, vendorContacts]);
 
   // Ο διάλογος ΔΕΝ κλείνει όσο στέλνει — το εγγυάται πλέον το SSoT `FormDialog`.
   return (
@@ -199,18 +225,18 @@ export function VendorInviteDialog(props: VendorInviteDialogProps) {
       submitDisabled={!f.canSubmit}
     >
       <VendorPicker {...props} selectedIds={f.selectedIds} onToggle={f.toggleId} t={t} />
-
-      <AdHocSection
-        email={adHoc.email}
-        onEmailChange={adHoc.setEmail}
-        onAdd={adHoc.add}
-        list={f.adHocList}
-        onRemove={adHoc.remove}
-        error={adHoc.error}
-        sending={sending}
+      <AdHocSection entry={adHoc} list={f.adHocList} sending={sending} t={t} />
+      <VendorInviteExpiryField
+        id={`${idBase}-deadline`}
+        value={f.expiresOn}
+        onChange={f.setExpiresOn}
+        rfqDeadlineMs={f.rfqDeadlineMs}
+        disabled={sending}
+        language={currentLanguage}
         t={t}
       />
-      <InviteMessage f={f} deadlineId={`${idBase}-deadline`} sending={sending} t={t} />
+      <PersonalMessageField value={f.buyerNote} onChange={f.setBuyerNote} disabled={sending} />
+      <VendorInvitePreview rfqId={rfqId} options={options} expiresOn={f.expiresOn} buyerNote={f.buyerNote} t={t} />
     </FormDialog>
   );
 }
@@ -243,26 +269,6 @@ function VendorPicker({ rfq, vendorContacts, contactsLoading, alreadyInvitedIds,
   );
 }
 
-function InviteMessage({ f, deadlineId, sending, t }: {
-  f: ReturnType<typeof useVendorInviteForm>; deadlineId: string; sending: boolean; t: Translate;
-}) {
-  return (
-    <>
-      <DeadlineField id={deadlineId} value={f.deadlinePreset} onChange={f.setDeadlinePreset} t={t} />
-      <EmailMessageFields
-        subjectLabel={t('rfqs.invite.subject.label')}
-        bodyLabel={t('rfqs.invite.body.label')}
-        subject={f.subject}
-        body={f.body}
-        onSubjectChange={f.setSubject}
-        onBodyChange={f.setBody}
-        bodyRows={5}
-        disabled={sending}
-      />
-    </>
-  );
-}
-
 function AlreadyInvitedBanner({ count, onViewInvites, t }: { count: number; onViewInvites?: () => void; t: Translate }) {
   if (count === 0) return null;
   return (
@@ -274,25 +280,6 @@ function AlreadyInvitedBanner({ count, onViewInvites, t }: { count: number; onVi
         </Button>
       )}
     </p>
-  );
-}
-
-function DeadlineField({ id, value, onChange, t }: { id: string; value: DeadlinePreset; onChange: (v: DeadlinePreset) => void; t: Translate }) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-sm font-medium">{t('rfqs.invite.deadline.label')}</Label>
-      <Select value={value} onValueChange={(v) => onChange(v as DeadlinePreset)}>
-        <SelectTrigger id={id} className="w-48">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {(['3', '5', '7', '14'] as const).map((d) => (
-            <SelectItem key={d} value={d}>{t(`rfqs.invite.deadline.preset.${d}d`)}</SelectItem>
-          ))}
-          <SelectItem value="custom">{t('rfqs.invite.deadline.preset.custom')}</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
   );
 }
 
@@ -327,48 +314,59 @@ function VendorGroup({ label, vendors, selectedIds, onToggle }: VendorGroupProps
 }
 
 interface AdHocSectionProps {
-  email: string;
-  onEmailChange: (e: string) => void;
-  onAdd: () => void;
-  list: string[];
-  onRemove: (e: string) => void;
-  error: string | null;
+  entry: ReturnType<typeof useAdHocEntry>;
+  list: readonly AdHocRecipient[];
   sending: boolean;
   t: Translate;
 }
 
-function AdHocSection({ email, onEmailChange, onAdd, list, onRemove, error, sending, t }: AdHocSectionProps) {
+/** Enter σε οποιοδήποτε πεδίο εδώ = «Προσθήκη» στη λίστα, ΟΧΙ αποστολή της φόρμας. */
+const addOnEnter = (onAdd: () => void) => (e: KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === 'Enter') { e.preventDefault(); onAdd(); }
+};
+
+function AdHocSection({ entry, list, sending, t }: AdHocSectionProps) {
   return (
     <div className="space-y-2 rounded-md border p-3">
       <p className="text-xs font-semibold text-muted-foreground">{t('rfqs.invite.section.adHoc')}</p>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Input
           type="email"
           aria-label={t('rfqs.invite.section.adHoc')}
-          value={email}
-          onChange={(e) => onEmailChange(e.target.value)}
+          value={entry.email}
+          onChange={(e) => entry.setEmail(e.target.value)}
           placeholder={t('rfqs.invite.adhocPlaceholder')}
           disabled={sending}
-          className={error ? 'border-destructive' : ''}
-          // Enter εδώ = «Προσθήκη» στη λίστα, ΟΧΙ αποστολή της φόρμας.
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
+          className={`min-w-48 flex-1 ${entry.error ? 'border-destructive' : ''}`}
+          onKeyDown={addOnEnter(entry.add)}
         />
-        <Button type="button" variant="outline" size="sm" onClick={onAdd} disabled={sending || !email}>
+        <Input
+          aria-label={t('rfqs.invite.adhocNameLabel')}
+          value={entry.name}
+          onChange={(e) => entry.setName(e.target.value)}
+          placeholder={t('rfqs.invite.adhocNamePlaceholder')}
+          disabled={sending}
+          className="min-w-40 flex-1"
+          onKeyDown={addOnEnter(entry.add)}
+        />
+        <Button type="button" variant="outline" size="sm" onClick={entry.add} disabled={sending || !entry.email}>
           {t('rfqs.invite.addAdhocButton')}
         </Button>
       </div>
-      {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
+      {entry.error && <p className="text-xs text-destructive" role="alert">{entry.error}</p>}
       {list.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {list.map((e) => (
-            <Badge key={e} variant="secondary" className="gap-1">
-              {e}
-              <button type="button" onClick={() => onRemove(e)} className="ml-1 rounded hover:text-destructive" aria-label={t('rfqs.invite.removeAdhoc', { email: e })}>
-                ×
-              </button>
-            </Badge>
+        <ul className="flex flex-wrap gap-1.5">
+          {list.map((r) => (
+            <li key={r.email}>
+              <Badge variant="secondary" className="gap-1">
+                {r.name ? `${r.name} · ${r.email}` : r.email}
+                <button type="button" onClick={() => entry.remove(r.email)} className="ml-1 rounded hover:text-destructive" aria-label={t('rfqs.invite.removeAdhoc', { email: r.email })}>
+                  ×
+                </button>
+              </Badge>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

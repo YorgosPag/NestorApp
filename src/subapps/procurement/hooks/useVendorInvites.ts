@@ -46,12 +46,16 @@ async function inviteRequest<T = unknown>(url: string, method: 'GET' | 'POST', b
 interface CreateInviteBaseInput {
   deliveryChannel: 'email' | 'copy_link';
   expiresInDays?: number;
+  /** ADR-327 §7.5 — ημέρα `YYYY-MM-DD` ως την οποία ισχύει ο σύνδεσμος (κερδίζει το `expiresInDays`). */
+  expiresOn?: string;
+  /** ADR-327 §7.5 — προσωπικό σημείωμα, απλό κείμενο. */
+  buyerNote?: string | null;
   locale?: 'el' | 'en';
 }
 
 export type CreateInviteInput =
   | (CreateInviteBaseInput & { vendorContactId: string; manualEmail?: undefined; manualName?: undefined })
-  | (CreateInviteBaseInput & { vendorContactId?: undefined; manualEmail: string; manualName: string });
+  | (CreateInviteBaseInput & { vendorContactId?: undefined; manualEmail: string; manualName?: string });
 
 export interface CreateInviteOutput {
   inviteId: string;

@@ -60,8 +60,16 @@ export interface VendorInvite {
    * quote-intake address is private and this document is readable by every member of the buyer's company.
    */
   recipientEmail: string | null;
-  /** Snapshot of recipient display name at creation (always set, both modes). */
+  /**
+   * Snapshot of the recipient's display name at creation — `null` when a manual invite was sent without a name
+   * (ADR-327 §7.5, Ε3: the greeting is then neutral; the email address is never used as a name).
+   */
   recipientName: string | null;
+  /**
+   * ADR-327 §7.5 — the buyer's personal note (plain text, ≤ `VENDOR_INVITE_NOTE_MAX_LENGTH`), carried by EVERY
+   * delivery of this invite (first send · outbox · resend · self-service renew). Absent on invites before §7.5.
+   */
+  buyerNote?: string | null;
   /** ADR-923 §5.13 Τ5 — the delivery outbox of an RFQ fan-out invite. Absent on manual and legacy invites. */
   delivery?: VendorInviteDelivery;
 }
@@ -74,6 +82,13 @@ interface CreateVendorInviteBaseDTO {
   rfqId: string;
   deliveryChannel: DeliveryChannel;
   expiresInDays?: number;
+  /**
+   * ADR-327 §7.5 (Ε1β) — η ημέρα `YYYY-MM-DD` ως την οποία ισχύει ο σύνδεσμος (ολόκληρη, ώρα του φορέα).
+   * Κερδίζει το `expiresInDays`. Κρίση: `judgeInviteExpiryDay` (`config/vendor-invite-policy`).
+   */
+  expiresOn?: string;
+  /** ADR-327 §7.5 (Ε1) — προσωπικό σημείωμα του αγοραστή, απλό κείμενο ≤ `VENDOR_INVITE_NOTE_MAX_LENGTH`. */
+  buyerNote?: string | null;
 }
 
 interface CreateVendorInviteFromContactDTO extends CreateVendorInviteBaseDTO {
@@ -85,7 +100,8 @@ interface CreateVendorInviteFromContactDTO extends CreateVendorInviteBaseDTO {
 interface CreateVendorInviteManualDTO extends CreateVendorInviteBaseDTO {
   vendorContactId?: undefined;
   manualEmail: string;
-  manualName: string;
+  /** Προαιρετικό (Ε3): χωρίς όνομα ο χαιρετισμός είναι ουδέτερος — ποτέ το email στη θέση του. */
+  manualName?: string;
 }
 
 export type CreateVendorInviteDTO =

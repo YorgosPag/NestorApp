@@ -31,6 +31,7 @@ import { RFQ_ACCEPTING_QUOTES } from '../types/rfq';
 import { resolveChannel } from './channels';
 import { getRfq } from './rfq-service';
 import { issueAdditionalVendorLink } from './vendor-invite-issue';
+import { buildVendorInviteMessage } from './vendor-invite-message';
 import { resolveInviteRecipient } from './vendor-invite-links-service';
 import { inviteEmailLanguage } from './vendor-recipient';
 import type { HumanLanguage } from '@/i18n/languages';
@@ -77,16 +78,9 @@ export async function renewVendorLink(input: RenewVendorLinkInput): Promise<Vend
     expiresAtMs,
     requesterIpHash: input.requesterIpHash,
   });
-  const dispatch = await emailChannel.send({
-    inviteId: invite.id,
-    vendorName: recipient.name,
-    recipient: recipient.email,
-    rfqTitle: rfq.title,
-    projectName: null,
-    portalUrl: link.portalUrl,
-    expiresAt: link.expiresAtIso,
-    locale: inviteEmailLanguage(recipient, input.locale),
-    declineUrl: link.declineUrl,
-  });
+  const dispatch = await emailChannel.send(await buildVendorInviteMessage({
+    companyId: invite.companyId, inviteId: invite.id, rfq, to: recipient.email,
+    recipientName: recipient.name, link, buyerNote: invite.buyerNote, locale: inviteEmailLanguage(recipient, input.locale),
+  }));
   return dispatch.success ? 'sent' : 'delivery_failed';
 }

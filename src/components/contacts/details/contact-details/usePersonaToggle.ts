@@ -4,7 +4,7 @@ import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PersonaType } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
-import type { OptimisticPersonaState } from './contact-details-helpers';
+import { resolveEditingFormData, type OptimisticPersonaState } from './contact-details-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { SettledGuardOutcome } from '@/hooks/impact-guard/guard-result';
 
@@ -41,8 +41,8 @@ export function usePersonaToggle({
       return;
     }
 
-    // ADR-323: editedData = diff, merge for read.
-    const currentFormData = isEditing ? { ...enhancedFormData, ...editedData } : enhancedFormData;
+    // ADR-323: editedData = diff, merge for read — η ΙΔΙΑ εικόνα με την κεφαλίδα (ADR-121 Ε4).
+    const currentFormData = resolveEditingFormData(enhancedFormData, editedData, isEditing);
     const currentActive = currentFormData.activePersonas ?? [];
     const isActive = currentActive.includes(personaType);
 

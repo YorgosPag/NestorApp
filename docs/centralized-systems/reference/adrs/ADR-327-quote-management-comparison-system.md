@@ -553,6 +553,52 @@ Notify PM (in-app + Telegram)
 - Audit: `submittedAt`, `submitterIp` (hashed), `userAgent`, `editHistory[]`
 - CSRF: token-bound (το token είναι το credential)
 
+### 7.5 Το μήνυμα της πρόσκλησης — πρότυπο συστήματος + σημείωμα αγοραστή (2026-11-06)
+
+**Απόφαση (Ε1, «όπως οι μεγάλοι»)**: οι μεγάλοι χωρίζονται — το BuildingConnected στέλνει **κλειδωμένο** πρότυπο
+συστήματος, το Procore αφήνει **ελεύθερο** θέμα/σώμα. Διαλέξαμε **πρότυπο συστήματος + προαιρετικό προσωπικό σημείωμα**:
+ο σύνδεσμος, η λήξη, η άρνηση και η προειδοποίηση anti-phishing (§11) μένουν λόγια του **συστήματος**· το μήνυμα
+ακολουθεί τη **γλώσσα του παραλήπτη**· και το σημείωμα γράφεται **στην πρόσκληση** (`vendor_invites.buyerNote`), άρα το
+κουβαλά **κάθε** αποστολή της — πρώτη, outbox, επαναποστολή, ανανέωση — όχι μόνο η πρώτη.
+
+**Πέρα από τους δύο — προεπισκόπηση από τον server**: `POST /api/rfqs/[id]/invites/preview` συνθέτει με τον **ίδιο**
+builder και τον **ίδιο** composer με την αποστολή ⇒ η οθόνη δείχνει **byte προς byte** αυτό που θα λάβει ο παραλήπτης,
+με τη σωστή γλώσσα (και για προμηθευτή της πλατφόρμας, που ο browser δεν μπορεί να ξέρει) και το πραγματικό όνομα έργου.
+«Προεπισκόπηση ως: <παραλήπτης>» όταν η παρτίδα έχει πολλούς. Μηδέν παρενέργειες: καμία εγγραφή, κανένα διαπιστευτήριο,
+κανένα όριο· σύνδεσμος-δείγμα με το ίδιο σχήμα. Η διεύθυνση του παραλήπτη **δεν** επιστρέφεται (ADR-923 §5.13 Τ5).
+
+| Πεδίο | Πηγή (ΕΝΑ σημείο) |
+|---|---|
+| Μήνυμα για κάθε διαδρομή | `services/vendor-invite-message.ts` `buildVendorInviteMessage` — outbox · νέα πρόσκληση · επαναποστολή · ανανέωση (ήταν 4 χειρόγραφα `send({… projectName: null …})`) |
+| Θέμα / HTML / κείμενο | `services/channels/vendor-invite-email-compose.ts` `composeVendorInviteEmail` — αποστολή **και** προεπισκόπηση |
+| Λόγια ανά γλώσσα | `services/channels/vendor-invite-email-texts.ts` |
+| Όνομα έργου | `resolveCompanyProjectNameOrNull` (`financial-intelligence/project-reference.ts`) — μόνο έργο του **ίδιου** tenant· ανώνυμο/ξένο/βλάβη ⇒ χωρίς γραμμή, **ποτέ** «Unknown»· η βλάβη **δεν** σταματά την αποστολή |
+| Χαιρετισμός | `greetingName` — κενό ή όνομα με `@` ⇒ ουδέτερος («Αξιότιμοι κύριοι/κυρίες,» / «Dear Sir or Madam,») |
+| Σημείωμα | `services/email-templates/personal-note-block.ts` — απλό κείμενο, escape, `\n`→`<br />`, χωρίς autolink, επικεφαλίδα «Μήνυμα από τον αποστολέα»· όριο `MAX_PERSONAL_MESSAGE_LENGTH` (`config/personal-message-policy.ts`, ίδιο με το `PersonalMessageField`) |
+| Λήξη συνδέσμου | `config/vendor-invite-policy.ts` `judgeInviteExpiryDay` — πάντα **ημέρα** `YYYY-MM-DD`, 1…90 ημέρες, ως το **τέλος** της ημέρας στην ώρα του φορέα (`endOfCalendarDay`)· αρχική τιμή = προθεσμία του RFQ αν χωρά, αλλιώς 5 ημέρες |
+| Προθεσμία προσφορών | `rfq.deadlineDate` ⇒ γραμμή «Προθεσμία υποβολής προσφορών» μόνο όταν υπάρχει |
+
+**Τα ευρήματα που έκλεισαν (ζωντανή δοκιμή Τ5, 2026-11-05)**:
+- **Ε2** — «για το έργο <τίτλος RFQ>»: πλέον «αίτημα προσφοράς «X»[ για το έργο Y]».
+- **Ε3** — «Γεια σας <email>»: το `manualName` είναι προαιρετικό σε όλη την αλυσίδα (zod · DTO · hook · `resolveRecipient`)· η επαναποστολή δεν πέφτει πια στο email ως όνομα (`resolveInviteRecipient`).
+- **Ε1** — διακοσμητικός editor θέματος/κειμένου με ωμά ελληνικά (N.11), που δεν έφευγε ποτέ, και κενός τίτλος επειδή η φόρμα ήταν mounted πριν φορτώσει το RFQ: φεύγει ο editor, και κάθε άνοιγμα είναι **νέα** φόρμα (κλειδί γενιάς).
+- **Ε1β** — «Προσαρμοσμένη…» χωρίς πεδίο ⇒ σιωπηλά 7 ημέρες: πραγματικό ημερολόγιο (`DatePickerField`) με τα όρια της πολιτικής· ο server αρνείται εκτός ορίων με `invalid_expiry` (400), πριν γραφτεί οτιδήποτε.
+
+♿ **Το πεδίο σημειώματος (`PersonalMessageField`, κοινό με την κοινοποίηση ακινήτων) ήταν ασύνδετο** (2026-11-06): η
+ετικέτα δεν ονόμαζε το textarea και ο μετρητής δεν το περιέγραφε. Πλέον `htmlFor`/`id` (`useId`) · `aria-describedby` προς τον
+μετρητή · `maxLength` μαζί με το `slice` της επικόλλησης. Άγκυρα `PersonalMessageField.a11y.test.tsx` (axe · 2/2 μεταλλάξεις).
+
+🔒 **Ένα escape για κάθε μήνυμα ανθρώπου σε email** (2026-11-06): `plainTextToHtml` (`lib/html/plain-text-html.ts`, καθαρό,
+χωρίς `server-only`). Το χρησιμοποιούν το σημείωμα της πρόσκλησης, το photo-share (πριν escape **χωρίς** αλλαγές γραμμής) και
+το intro του showcase (πριν αντίγραφο της ίδιας λογικής). Κάθε πρότυπο κρατά το δικό του σχέδιο πλαισίου· κοινό είναι μόνο το
+encoding, τη στιγμή της απόδοσης (OWASP, contextual output encoding). Άγκυρα `plain-text-html.test.ts` (μεταλλάξεις κόκκινες).
+🔴 **ΑΝΟΙΧΤΟ — τα 3 πρότυπα του `email-templates.service.ts`** (κοινοποίηση ακινήτου, ζωντανά ως εφεδρεία του διαλόγου
+κοινοποίησης χωρίς `showcaseContext`): βάζουν το `personalMessage` **ωμό** στο HTML — το `sanitizeString` της εισόδου είναι
+μαύρη λίστα και αφήνει `<a href>`/`<img>` — και στέλνουν **κατασκευασμένα** στοιχεία (τηλέφωνο `+30 210 123 4567`,
+`commercial@`/`premium@`, «20+ χρόνια εμπειρίας») παρακάμπτοντας την ταυτότητα αποστολέα (ADR-857 Φ9). Δεν διορθώθηκαν μόνα
+τους: το αρχείο έχει 17 ωμά ελληνικά εκτός baseline (N.11, μηδενική ανοχή στο άγγιγμα). Κατεύθυνση: **ένας** δρόμος
+κοινοποίησης με email (πρακτική Zillow/Idealista), βλ. `pending-ratchet-work.md`.
+
 ---
 
 ## 8. COMPARISON ENGINE (Phase 4)
@@ -1027,3 +1073,5 @@ These four decisions evolve the original §5.1 domain model (which had `invitedV
 | 2026-11-02 | **ADR-923 §5.8 (Φ6β Σ8): SKU στη γραμμή RFQ και προσφοράς, και η έξοδος προς προμηθευτή ως λίστα επιτρεπόμενων.** `RfqLine.catalogRef` + `priceSnapshot` αντιγράφονται παγωμένα από το BOQ (Q29)· ο πελάτης δεν τα γράφει, γιατί το εργοστάσιο τα παίρνει χωριστά από το DTO. `QuoteLine.catalogRef` = το SKU που **ζητήθηκε**, γεγονός του αιτήματος: το παίρνει η βασική απάντηση, όχι η εναλλακτική. Ο φρουρός του PM έγινε `bindPmRfqLines` και το ξαναπαράγει σε κάθε αποθήκευση, γιατί το zod το πετά από το σώμα, ίδιο σχήμα με το παλιό `rfqLineId`. 🔴 Το στιγμιότυπο είναι τιμή του προμηθευτή Α και το RFQ φτάνει στον Β· το `quoteView` έστελνε `data.lines` αυτούσιες. Τώρα `toPublicRfqLine` είναι η μία προβολή γραμμής RFQ και `toVendorQuoteLine` της προσφοράς, και οι δύο πεδίο προς πεδίο. **Έξοδοι που μετρήθηκαν:** GET/POST `/api/vendor/quote` · decline · renew · email πρόσκλησης · notify-vendor · request-renewal · παραγγελία (PDF, email, δημόσιος σύνδεσμος). Άγκυρα `vendor-egress-sku.test.ts` πάνω στους πραγματικούς handlers, μεταλλάξεις 15/15. ⚠️ `notify-vendor` · `request-renewal`: ελεύθερο κείμενο του αγοραστή, δεν ελέγχεται. |
 | 2026-11-03 | **§6.10: κύκλος ζωής εξαγωγής ρητός, και τέλος στο ατελείωτο spinner.** Η `QT-0002` (πύλη, `submitted`, 0 συνημμένα) έδειχνε «Επεξεργασία AI σε εξέλιξη» για πάντα, όπως και 2 από τις υπόλοιπες 3 προσφορές της βάσης. Ρίζα: η οθόνη συμπέραινε «τρέχει» από `extractedData === null`, ενώ η αποτυχημένη σάρωση έγραφε μόνο ωμό ελληνικό στο `notes` (ψέμα του docstring: «marks `under_review`»). Νέα: `Quote.extraction` (`pending/succeeded/failed` + κωδικός + `attempt`). Ένας γραφέας `quote-extraction-lifecycle` (compare-and-set στην επανάληψη, fencing token στην αποτυχία). Ένας κριτής `quote-intake-view`, τον ρωτούν η σελίδα, το polling του `useQuote` και η επανάληψη. `POST /api/quotes/[id]/rescan` (`loadOwnedFileBytes` · `after()`). Η σελίδα αποδίδει πλέον και την προβολή προσφοράς (`QuoteRightPane`) για πύλη/χειροκίνητη, και κάρτα αποτυχίας με «Επανάληψη»/«Χειροκίνητη καταχώριση». Boy-scout: `quoteAuditEntry` (2 χειρόγραφα) · `quoteHasOriginalDocument` (2 αντίγραφα κριτηρίου πηγής) · `resolveQuoteAnalyzer` · `useQuoteDetailActions` (σύνδεση κέντρου προσφορών). i18n: `quotes.intake.*` (el/en), στατικά κλειδιά ώστε το route slice να μην αρνηθεί. Το route slice σφραγίστηκε ξανά, 16230 → 23812 bytes, με γραμμένο `why`: η σελίδα έγινε σελίδα κάθε προσφοράς, τα ns μειώθηκαν 7 → 6. Άγκυρες: `quote-intake-view.test.ts` · `quote-extraction-lifecycle.test.ts` · `scan/__tests__/process.test.ts`. **Μεταλλάξεις 5/5 σκοτώθηκαν** (fencing · compare-and-set · πύλη ως σάρωση · όριο «κόλλησε» · κωδικός αποτυχίας). ⚠️ Ζωντανός έλεγχος οθόνης δεν έγινε σε αυτή τη συνεδρία. ⚠️ Το `useScanQueue` έμεινε, γιατί το `enqueue` του δεν το καλεί κανείς (νεκρός βρόχος, ξεχωριστή απόφαση). |
 | 2026-11-04 | **ADR-923 §5.13 Τ5: η παράδοση των προσκλήσεων RFQ έγινε outbox.** Το fan-out του `createRfq` δεν είναι πια `void dispatchRfqInviteEmails`: η πρόσκληση γράφεται με `delivery.state = pending` στη συναλλαγή του RFQ, η πρώτη απόπειρα τρέχει στο `after()` (`rfq-invite-delivery.ts`) και οι επόμενες σε cron με νέο διαπιστευτήριο `email_resend`. Ο παραλήπτης κρίνεται σε **ένα** σημείο (`vendor-recipient.ts`) για fan-out, `createVendorInvite` και `resolveInviteRecipient`. Επαφή προμηθευτή της πλατφόρμας ⇒ η διεύθυνση `quoteIntake` του, που δεν μένει ποτέ ως στιγμιότυπο (`recipientEmail: null`). Η πύλη και ο σύνδεσμός της (§7, ADR-876 §5) δεν άλλαξαν. |
+| 2026-11-06 | **§7.5 ΝΕΟ — το μήνυμα της πρόσκλησης (ευρήματα Ε1–Ε3 της ζωντανής δοκιμής Τ5).** Ένας builder (`buildVendorInviteMessage`) για τις 4 διαδρομές αποστολής, που έγραφαν όλες `projectName: null` ⇒ «αίτημα προσφοράς «X» για το έργο Y» με όνομα έργου tenant-checked (`resolveCompanyProjectNameOrNull`, ποτέ «Unknown»). Ουδέτερος χαιρετισμός χωρίς όνομα, `manualName` προαιρετικό σε όλη την αλυσίδα, ποτέ email ως όνομα (και στην επαναποστολή). Η φόρμα: πρότυπο συστήματος + προσωπικό σημείωμα (`buyerNote` στην πρόσκληση, σε κάθε αποστολή της) · λήξη πάντα ημερομηνία (`vendor-invite-policy`, τέλος ημέρας ώρας φορέα, 1…90, αρχική = προθεσμία RFQ) · προεπισκόπηση από τον server με τον ΙΔΙΟ composer (`POST invites/preview`, μηδέν παρενέργειες). Ο composer βγήκε από το `email-channel.ts` (`vendor-invite-email-compose.ts`). Άγκυρες: `vendor-invite-email-compose` · `vendor-invite-message` · `vendor-invite-policy` · `invite-message-schema` · `project-reference` — **15/15 μεταλλάξεις κόκκινες**. Ζωντανός έλεγχος: μετά την ένταξη, μόνο με εντολή. |
+| 2026-11-21 | **Εντάχθηκε στο `main` το §7.5 της 2026-11-06** (κλαδί `agent/xchange-report-typography`, cherry-pick των `75ecbfc6` · `9c5a8452` · `c44dccbc`, που είχαν μείνει εκτός). Ελέγχθηκε η σημασιολογία απέναντι στο `b3e9ee75` (ADR-923 §5.13 Τ5 Λ1δ), που μπήκε στο `main` μετά τη βάση του κλαδιού: στο αποτέλεσμα μένουν το `stopOnUncertain` του καναλιού email, η καταγραφή αντί για σφάλμα όταν αποτύχει η σήμανση μετά την αποστολή (Χ-Ε) και η εφεδρεία γλώσσας όταν η επαφή δεν διαβάζεται (Χ-ΣΤ). Ο νέος συνθέτης καλεί το `wrapInBrandedTemplate` με τις ίδιες παραμέτρους, άρα δεν τον επηρεάζει η αναδιάρθρωση της κεφαλίδας και του υποσέλιδου (`1bb816c8`). Συγκρούσεις μόνο σε παραγόμενα (`shell-slice.manifest.json` · `i18n.ts`), που ξαναπαράχθηκαν με τους γεννήτορες. Ξανακρίθηκε πάνω στο τρέχον `main`: 9 σουίτες (οι 8 της σειράς + `vendor-invite-resend`), **66/66**. |

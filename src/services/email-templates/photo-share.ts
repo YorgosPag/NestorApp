@@ -7,6 +7,7 @@
 
 import 'server-only';
 import { wrapInBrandedTemplate, BRAND, escapeHtml } from './base-email-template';
+import { plainTextToHtml } from '@/lib/html/plain-text-html';
 
 export interface PhotoShareEmailData {
   /** Photo direct URL (Firebase Storage) — primary/fallback */
@@ -47,7 +48,7 @@ export function buildPhotoShareEmail(data: PhotoShareEmailData): string {
       <tr>
         <td style="background-color:${BRAND.bgLight};border-left:3px solid ${BRAND.accent};padding:16px 20px;border-radius:0 6px 6px 0;">
           <p style="margin:0;font-size:14px;color:${BRAND.gray};font-style:italic;line-height:1.6;">
-            &ldquo;${escapeHtml(personalMessage)}&rdquo;
+            &ldquo;${plainTextToHtml(personalMessage)}&rdquo;
           </p>
         </td>
       </tr>
