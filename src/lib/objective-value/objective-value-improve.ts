@@ -23,8 +23,8 @@ import type { PublicListing } from '@/types/public-listing';
 
 import { objectiveValueBounds, type ObjectiveValueBounds, type OpenQuestion } from './objective-value-bounds';
 import {
+  DISCLOSED_UNDECLARED_LISTING_OBJECTIVE_VALUE,
   OBJECTIVE_VALUE_DECLARED_FIELDS,
-  UNDECLARED_LISTING_OBJECTIVE_VALUE,
   type ObjectiveValueDeclarations,
   type ObjectiveValueDeclarationsPatch,
   type ObjectiveValueDeclaredField,
@@ -93,7 +93,7 @@ export function boundsWidth(bounds: ObjectiveValueBounds): number | null {
 
 /** Ποια δηλώσιμα μετρούν για ΑΥΤΟ το ακίνητο — η μηχανή κρίνει, πάνω σε πρόχειρο χωρίς δηλώσεις. */
 function relevantFields(listing: PublicListing, verdict: ValueZoneVerdict, today: string): readonly ObjectiveValueDeclaredField[] {
-  const undeclared = { ...listing, frontage: null, objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE };
+  const undeclared = { ...listing, frontage: null, objectiveValueDeclarations: DISCLOSED_UNDECLARED_LISTING_OBJECTIVE_VALUE };
   const basis = listingObjectiveValueBasis(undeclared, verdict);
   if (basis.kind !== 'ready') return [];
   const zonePrice = basis.zoneCandidates[0]?.price ?? null;

@@ -98,20 +98,15 @@ export const LISTING_MIGRATIONS_11_20: readonly ListingMigration[] = [
   {
     to: 15,
     adr: 'ADR-898 Φ3β',
-    adds: [
-      'frontage',
-      'objectiveValueDeclarations.display',
-      'objectiveValueDeclarations.declared.zoneFront',
-      'objectiveValueDeclarations.declared.areaIncludesCommon',
-      'objectiveValueDeclarations.declared.permitDate',
-      'objectiveValueDeclarations.declared.hasCentralHeating',
-      'objectiveValueDeclarations.declared.hasElevator',
-    ],
+    // ADR-898 §23 — παλιό έγγραφο ⇒ απόκρυψη, άρα κανένα `declared.*` (η κρυμμένη μορφή δεν κρατά στοιχεία). Τα
+    // `declared.*` τα γράφει πλέον μόνο ο γραφέας, για αγγελία πώλησης με ρητή εμφάνιση.
+    adds: ['frontage', 'objectiveValueDeclarations.display'],
     /**
      * 🔴 **Η ΑΓΓΕΛΙΑ ΑΠΕΚΤΗΣΕ ΤΙΣ ΔΗΛΩΣΕΙΣ ΤΟΥ ΑΓΓΕΛΙΟΔΟΤΗ ΓΙΑ ΤΗΝ ΑΝΤΙΚΕΙΜΕΝΙΚΗ — ΤΑ ΠΑΛΙΑ ΕΓΓΡΑΦΑ ΔΕΝ ΤΙΣ ΕΧΟΥΝ.**
      *
-     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΛΩΘΗΚΕ ΤΙΠΟΤΑ, ΕΜΦΑΝΙΣΗ ΕΞ ΟΡΙΣΜΟΥ»** — ακριβώς η συμπεριφορά
-     * της Φ3α. Ποτέ «κρυμμένη»: η απόκρυψη είναι **επιλογή** του αγγελιοδότη, όχι απουσία.
+     * 🔑 **Η ΑΛΗΘΕΙΑ ΤΟΥ ΠΑΛΙΟΥ ΕΓΓΡΑΦΟΥ ΕΙΝΑΙ «ΔΕΝ ΔΗΛΩΘΗΚΕ ΤΙΠΟΤΑ» — ΑΡΑ ΑΠΟΚΡΥΨΗ** (ADR-898 §23, 2026-11-21): η
+     * εμφάνιση είναι πλέον **επιλογή** του αγγελιοδότη, και ένα έγγραφο χωρίς το πεδίο δεν την έκανε ποτέ. (Μέχρι τις
+     * 2026-11-21 ο κρίκος διάβαζε την απουσία ως «εμφάνιση εξ ορισμού» — η συμπεριφορά της Φ3α.)
      *
      * 🔑 **Περνά από τον ΕΝΑ αναγνώστη** (`readListingObjectiveValueDeclarations`), όπως ο κρίκος 13 από το
      * `readStayPetPolicy`: απουσία ή μισό κουτί ⇒ «τίποτα δηλωμένο», άκυρη τιμή ⇒ `null`, ποτέ μαντεψιά.

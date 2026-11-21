@@ -8,7 +8,12 @@ import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import type { ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
 import type { PublicListing } from '@/types/public-listing';
 
-import { CENTRAL_HEATING_OF, listingObjectiveValue, listingObjectiveValuePrefill } from '../listing-objective-value';
+import {
+  CENTRAL_HEATING_OF,
+  listingObjectiveValue,
+  listingObjectiveValueBasis,
+  listingObjectiveValuePrefill,
+} from '../listing-objective-value';
 import { legalAgeYears } from '../objective-value-common';
 import { objectiveValueBounds } from '../objective-value-bounds';
 import {
@@ -31,7 +36,8 @@ const DECLARED_2000 = { provenance: 'declared' as const, value: 2000, at: '2026-
 
 /** Οι δηλώσεις του αγγελιοδότη στη δημόσια μορφή — η πρόσοψη ζει στο `frontage` της αγγελίας. */
 const declared = (declarations: Partial<ObjectiveValueDeclarations>) =>
-  listingObjectiveValueDeclarationsOf({ ...UNDECLARED_OBJECTIVE_VALUE, ...declarations });
+  // ADR-898 §23 — ο διακόπτης αναμμένος: οι σουίτες κρίνουν τον υπολογισμό, όχι την προεπιλογή (απόκρυψη).
+  listingObjectiveValueDeclarationsOf({ ...UNDECLARED_OBJECTIVE_VALUE, display: 'shown', ...declarations });
 
 const FRONTED: ValueZoneVerdict = {
   ...READY,
@@ -309,5 +315,22 @@ describe('listingObjectiveValuePrefill — ο υπολογιστής ανοίγ�
 
   it('απόκρυψη ⇒ null (ο κάτοχος περνά την εμφανή εκδοχή — η κρυμμένη δεν κρατά καν τα στοιχεία)', () => {
     expect(listingObjectiveValuePrefill(home({ objectiveValueDeclarations: { display: 'hidden' as const } }))).toBeNull();
+  });
+});
+
+describe('listingObjectiveValue — μόνο σε πώληση (ADR-898 §23)', () => {
+  it.each([[['leaseOut']], [['leaseShort']], [['exchange']], [[]]] as const)(
+    '🔴 διάθεση %j ⇒ καμία ενότητα για τον αγοραστή, ακόμη και με αναμμένο διακόπτη (και σε παλιό έγγραφο)',
+    (offerKinds) => {
+      expect(listingObjectiveValue(home({ offerKinds: [...offerKinds] }), READY, TODAY)).toEqual({ kind: 'hidden' });
+    },
+  );
+
+  it('πώληση μαζί με μίσθωση ⇒ ο υπολογισμός μένει (αρκεί μία διάθεση που τη σηκώνει)', () => {
+    expect(listingObjectiveValue(home({ offerKinds: ['leaseOut', 'sell'] }), READY, TODAY)).toMatchObject({ kind: 'evaluated' });
+  });
+
+  it('η μηχανή του κατόχου ΔΕΝ κόβεται: η βάση δουλεύει και σε μίσθωση (ο κάτοχος μπορεί να θέλει το ποσό)', () => {
+    expect(listingObjectiveValueBasis(home({ offerKinds: ['leaseShort'] }), READY)).toMatchObject({ kind: 'ready' });
   });
 });

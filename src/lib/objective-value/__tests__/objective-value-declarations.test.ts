@@ -31,11 +31,18 @@ const FULL: ObjectiveValueDeclarations = {
 };
 
 describe('readObjectiveValueDeclarations — το σύνορο ανάγνωσης', () => {
-  it('απουσία (παλιό έγγραφο) ⇒ τίποτα δηλωμένο, εμφάνιση εξ ορισμού — ποτέ «κρυμμένη»', () => {
+  it('απουσία (παλιό έγγραφο) ⇒ τίποτα δηλωμένο, ΑΠΟΚΡΥΨΗ — η εμφάνιση είναι επιλογή (ADR-898 §23)', () => {
     expect(readObjectiveValueDeclarations(undefined)).toEqual(UNDECLARED_OBJECTIVE_VALUE);
     expect(readObjectiveValueDeclarations(null)).toEqual(UNDECLARED_OBJECTIVE_VALUE);
     expect(readObjectiveValueDeclarations([])).toEqual(UNDECLARED_OBJECTIVE_VALUE);
-    expect(UNDECLARED_OBJECTIVE_VALUE.display).toBe('shown');
+    expect(UNDECLARED_OBJECTIVE_VALUE.display).toBe('hidden');
+  });
+
+  it('🔴 ADR-898 §23 — μόνο ρητό `shown` εμφανίζει· άκυρη τιμή ⇒ απόκρυψη', () => {
+    expect(readObjectiveValueDeclarations({ display: 'shown' }).display).toBe('shown');
+    expect(readObjectiveValueDeclarations({ display: 'hidden' }).display).toBe('hidden');
+    expect(readObjectiveValueDeclarations({ display: 'yes' }).display).toBe('hidden');
+    expect(readObjectiveValueDeclarations({ frontage: 'single' }).display).toBe('hidden');
   });
 
   it('έγκυρη τιμή περνά αυτούσια — και η ανάγνωση είναι ιδιοδύναμη', () => {
@@ -54,9 +61,9 @@ describe('readObjectiveValueDeclarations — το σύνορο ανάγνωση�
     expect(read).toEqual({ ...FULL, frontage: null, permitDate: null, areaIncludesCommon: null, zoneFront: null });
   });
 
-  it('`display` άγνωστο ⇒ εμφάνιση· μόνο το ρητό `hidden` κρύβει', () => {
-    expect(readObjectiveValueDeclarations({ display: 'invisible' }).display).toBe('shown');
-    expect(readObjectiveValueDeclarations({ display: 'hidden' }).display).toBe('hidden');
+  it('`display` άγνωστο ⇒ απόκρυψη· μόνο το ρητό `shown` εμφανίζει (ADR-898 §23)', () => {
+    expect(readObjectiveValueDeclarations({ display: 'invisible' }).display).toBe('hidden');
+    expect(readObjectiveValueDeclarations({ display: 'shown' }).display).toBe('shown');
   });
 });
 
@@ -135,7 +142,8 @@ describe('η δημόσια μορφή — ελαχιστοποίηση δεδο
     expect(listingObjectiveValueDeclarationsOf({ ...FULL, display: 'hidden' })).toEqual({ display: 'hidden' });
   });
 
-  it('ο αναγνώστης της δημόσιας μορφής: απουσία ή μισό κουτί ⇒ τίποτα δηλωμένο · ιδιοδύναμος', () => {
+  it('ο αναγνώστης της δημόσιας μορφής: απουσία ή μισό κουτί ⇒ απόκρυψη (ADR-898 §23) · ιδιοδύναμος', () => {
+    expect(UNDECLARED_LISTING_OBJECTIVE_VALUE).toEqual({ display: 'hidden' });
     expect(readListingObjectiveValueDeclarations(undefined)).toEqual(UNDECLARED_LISTING_OBJECTIVE_VALUE);
     expect(readListingObjectiveValueDeclarations({ declared: {} })).toEqual(UNDECLARED_LISTING_OBJECTIVE_VALUE);
     const shown = listingObjectiveValueDeclarationsOf(FULL);

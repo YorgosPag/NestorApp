@@ -23,7 +23,9 @@ import {
   type ListingObjectiveValueDeclarations,
   type ObjectiveValueDeclarations,
 } from '@/lib/objective-value/objective-value-declarations';
+import { offersObjectiveValue } from '@/lib/objective-value/objective-value-offer-kinds';
 import { readLevelAreas, type LevelArea } from '@/lib/properties/level-areas';
+import type { OfferKind } from '@/types/property-offers';
 import type { ListingAttributeFields, PublicListing } from '@/types/public-listing';
 
 import type { ProjectableProperty } from './public-listing-projection-types';
@@ -66,12 +68,21 @@ export function disclosedLevelAreas(
   return declarations.display === 'hidden' ? null : levelAreas;
 }
 
-/** Ό,τι μπαίνει στη δημόσια αγγελία για τον υπολογισμό: οι δηλώσεις **και** το μικτό ανά όροφο, πίσω από την πύλη. */
+/**
+ * Ό,τι μπαίνει στη δημόσια αγγελία για τον υπολογισμό: οι δηλώσεις **και** το μικτό ανά όροφο, πίσω από την πύλη.
+ *
+ * 🔑 **Μόνο σε πώληση** (ADR-898 §23, `offersObjectiveValue`): σε μίσθωση ο αγοραστής δεν βλέπει αντικειμενική, άρα
+ * ούτε τα στοιχεία από τα οποία ξαναβγαίνει (ελαχιστοποίηση δεδομένων). `offerKinds` = οι διαθέσεις της **ίδιας**
+ * προβολής — ποτέ δεύτερη απάντηση στο «τι διατίθεται».
+ */
 export function projectObjectiveValueBasis(
   property: ProjectableProperty,
   areaSqm: number | null,
+  offerKinds: readonly OfferKind[],
 ): Pick<PublicListing, 'objectiveValueDeclarations' | 'levelAreas'> {
-  const objectiveValueDeclarations = projectObjectiveValueDeclarations(property);
+  const objectiveValueDeclarations: ListingObjectiveValueDeclarations = offersObjectiveValue(offerKinds)
+    ? projectObjectiveValueDeclarations(property)
+    : { display: 'hidden' };
   return { objectiveValueDeclarations, levelAreas: disclosedLevelAreas(objectiveValueDeclarations, projectLevelAreas(property, areaSqm)) };
 }
 

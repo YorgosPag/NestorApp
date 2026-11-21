@@ -94,7 +94,7 @@
     "src/i18n/generated/routes/offers__new.el.json": "73fda44762c96c57da71ce042617e5b51ecea89deb30ef26d920e64beaa6d5bf",
     "src/i18n/generated/routes/offers__offerId.el.json": "e683a6cbea3f2469b0778bd4e714b6516299271d7fc1789fb405c16457aa0a2c",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
-    "src/i18n/generated/routes/offers__offerId__improve.el.json": "f343ed711991a7d84a7c199c61a779b8ffa6e576432e4b251b8aa5485283d6a3",
+    "src/i18n/generated/routes/offers__offerId__improve.el.json": "7be238b7d50fa7841cd27afc4b07bd3e114d147bb3b036e76ac6cbde9ef081be",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
     "src/i18n/generated/routes/open-source.el.json": "8baf220e88bdc6a0ee04cd0a52a67d8cb4940ca7c4577693695d852b211636ce",
     "src/i18n/generated/routes/privacy-policy.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "89d43e10c6512dd97652649db06dfb4ee0affd423639205627ae586de2114cd5",
+  "inputsSha256": "ea79a83796ce3bd41fae557c0aa458209a37f4d2f81b1541d3284c88e1f08fb4",
   "languages": [
     "el"
   ],
@@ -41310,7 +41310,7 @@
   ],
   "stats": {
     "matchedKeys": 280,
-    "sliceBytes": 1367163
+    "sliceBytes": 1367188
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

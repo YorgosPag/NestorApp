@@ -40,7 +40,14 @@ function contextOf(parts: { charges?: unknown; certificate?: unknown; zone?: unk
 
 const READY_ZONE = {
   kind: 'answered',
-  improvement: { kind: 'ready', bounds: RANGE, questions: [{}, {}], levelBasis: { kind: 'none' } },
+  // Δύο ανοιχτές + μία απαντημένη: η λίστα της μηχανής κρατά ΚΑΙ τις απαντημένες, ο μετρητής μετρά μόνο τις ανοιχτές
+  // (στην παραγωγή έλεγε «5» εκεί που η ενότητα έλεγε «καμία», ADR-946 §7 · ADR-898 §23).
+  improvement: {
+    kind: 'ready',
+    bounds: RANGE,
+    questions: [{ state: 'open' }, { state: 'answered' }, { state: 'open' }],
+    levelBasis: { kind: 'none' },
+  },
 };
 
 describe('«Βελτίωσε» — κατάσταση ενοτήτων και διάταξη (ADR-946)', () => {

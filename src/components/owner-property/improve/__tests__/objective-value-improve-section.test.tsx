@@ -17,6 +17,7 @@ import type { ObjectiveValueImproveSubject } from '@/lib/objective-value/objecti
 import { validOwnerProperty } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import { placeKnowledgeFromOwnerProperty, projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
 import { projectListingShape } from '@/services/listings/public-listing-projection';
+import { UNDECLARED_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 import type { OwnerListingResult } from '@/services/owner-property/owner-property.service';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PublicListing } from '@/types/public-listing';
@@ -65,7 +66,13 @@ function serverListingOf(owner: OwnerProperty, facts: Partial<PublicListing> = {
   };
 }
 
-const property = validOwnerProperty({ floor: 4, areaSqm: 90 });
+// ADR-898 §23 — ο διακόπτης ΑΝΑΜΜΕΝΟΣ: η σουίτα κρίνει ερωτήσεις, απόκρυψη και συνδέσμους πάνω σε εμφανή αντικειμενική.
+// Η προεπιλογή (απουσία ⇒ κρυμμένη) κρίνεται ρητά πιο κάτω.
+const property = validOwnerProperty({
+  floor: 4,
+  areaSqm: 90,
+  objectiveValueDeclarations: { ...UNDECLARED_OBJECTIVE_VALUE, display: 'shown' },
+});
 
 beforeEach(() => {
   pending.length = 0;
@@ -132,6 +139,15 @@ describe('ObjectiveValueImproveSection — ADR-898 Φ3β-2', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'objective-value:improve.visibility.label' }));
     expect(pending.map((call) => call.patch)).toEqual([{ display: 'hidden' }]);
     expect(screen.getByText('objective-value:improve.visibility.hiddenPreview')).toBeInTheDocument();
+  });
+
+  it('🔴 ADR-898 §23 — χωρίς επιλογή ο διακόπτης είναι ΚΛΕΙΣΤΟΣ και ο αγοραστής δεν βλέπει τίποτα· ένα πάτημα = `shown`', () => {
+    render(<OwnerSection owner={validOwnerProperty({ floor: 4, areaSqm: 90 })} />);
+    const toggle = screen.getByRole('switch', { name: 'objective-value:improve.visibility.label' });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText('objective-value:improve.visibility.hiddenPreview')).toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(pending.map((call) => call.patch)).toEqual([{ display: 'shown' }]);
   });
 });
 

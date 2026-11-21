@@ -60,8 +60,9 @@ describe('projectObjectiveValueDeclarations — τα στοιχεία υπολο
     });
   });
 
-  it('εταιρεία χωρίς το πεδίο (σημερινή αλήθεια) ⇒ τίποτα δηλωμένο, εμφάνιση εξ ορισμού', () => {
+  it('εταιρεία χωρίς το πεδίο ⇒ τίποτα δηλωμένο, ΑΠΟΚΡΥΨΗ (ADR-898 §23: εμφάνιση μόνο με επιλογή)', () => {
     expect(projectObjectiveValueDeclarations({ id: 'prop_1' })).toEqual(UNDECLARED_LISTING_OBJECTIVE_VALUE);
+    expect(UNDECLARED_LISTING_OBJECTIVE_VALUE).toEqual({ display: 'hidden' });
   });
 });
 
@@ -124,12 +125,28 @@ describe('ADR-898 Φ3β-3β — το μικτό ανά όροφο: βάση υπ
   });
 
   it('εμφάνιση ⇒ οι δηλώσεις ΚΑΙ το μικτό ανά όροφο', () => {
-    expect(projectObjectiveValueBasis(MAISONETTE, 100)).toMatchObject({ objectiveValueDeclarations: { display: 'shown' }, levelAreas: AREAS });
+    expect(projectObjectiveValueBasis(MAISONETTE, 100, ['sell'])).toMatchObject({ objectiveValueDeclarations: { display: 'shown' }, levelAreas: AREAS });
   });
 
   it('🔴 απόκρυψη ⇒ ΟΥΤΕ το μικτό ανά όροφο (ελαχιστοποίηση δεδομένων)', () => {
     const hidden = { ...MAISONETTE, objectiveValueDeclarations: { ...RAW, display: 'hidden' } };
-    expect(projectObjectiveValueBasis(hidden, 100)).toEqual({ objectiveValueDeclarations: { display: 'hidden' }, levelAreas: null });
+    expect(projectObjectiveValueBasis(hidden, 100, ['sell'])).toEqual({ objectiveValueDeclarations: { display: 'hidden' }, levelAreas: null });
+  });
+
+  it.each([[['leaseOut']], [['leaseShort']], [['exchange']], [[]]] as const)(
+    '🔴 ADR-898 §23 — διάθεση %j (όχι πώληση) ⇒ απόκρυψη ακόμη κι αν ο αγγελιοδότης επέλεξε εμφάνιση',
+    (offerKinds) => {
+      expect(projectObjectiveValueBasis(MAISONETTE, 100, offerKinds)).toEqual({
+        objectiveValueDeclarations: { display: 'hidden' },
+        levelAreas: null,
+      });
+    },
+  );
+
+  it('πώληση μαζί με μίσθωση ⇒ εμφάνιση (αρκεί μία διάθεση που τη σηκώνει)', () => {
+    expect(projectObjectiveValueBasis(MAISONETTE, 100, ['leaseOut', 'sell'])).toMatchObject({
+      objectiveValueDeclarations: { display: 'shown' },
+    });
   });
 
   it('🔴 η επικάλυψη περνά από την ΙΔΙΑ πύλη: κρυμμένη ⇒ `null`, εμφανής ⇒ η βάση μένει', () => {

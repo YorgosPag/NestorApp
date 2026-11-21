@@ -31,6 +31,7 @@ import type { EnergyCertificateImproveSubject } from '@/lib/energy-certificate/e
 import { isLandProperty } from '@/constants/property-classification';
 import type { ObjectiveValueBounds } from '@/lib/objective-value/objective-value-bounds';
 import { objectiveValueFormOf } from '@/lib/objective-value/objective-value-form-of-type';
+import { offersObjectiveValue } from '@/lib/objective-value/objective-value-offer-kinds';
 import type { ObjectiveValueImproveSubject } from '@/lib/objective-value/objective-value-improve-subject';
 import type { TerrainImproveSubject } from '@/lib/terrain/publication/terrain-improve-subject';
 import type { PublicListingLookup } from '@/services/realtime/hooks/usePublicListings';
@@ -91,7 +92,10 @@ function objectiveValueStatus({ zone }: ObjectiveValueImproveState): ImproveSect
   if (zone.kind === 'idle' || zone.kind === 'loading') return { kind: 'loading' };
   if (zone.kind === 'failed' || zone.improvement.kind !== 'ready') return { kind: 'unavailable' };
   const { bounds, questions } = zone.improvement;
-  return { kind: 'objectiveValue', bounds, openQuestions: questions.length };
+  // Μόνο όσες μένουν: η λίστα της μηχανής κρατά ΚΑΙ τις απαντημένες («Τι ξέρει ήδη ο υπολογισμός») — ίδιο κριτήριο με
+  // την ενότητα (`ObjectiveValueImproveQuestions`), αλλιώς η λίστα λέει «5» εκεί που η ενότητα λέει «καμία».
+  const openQuestions = questions.filter((question) => question.state === 'open').length;
+  return { kind: 'objectiveValue', bounds, openQuestions };
 }
 
 export const IMPROVE_SECTIONS: Readonly<Record<ImproveSectionId, ImproveSectionDefinition>> = {
@@ -126,8 +130,9 @@ export const IMPROVE_SECTIONS: Readonly<Record<ImproveSectionId, ImproveSectionD
         : { kind: 'terrain', published: publishedTerrainOf(publicListing) !== null },
   },
   objectiveValue: {
-    // Ποια είδη αποτιμώνται το λέει ο ΕΝΑΣ πίνακας εντύπων — καμία δεύτερη λίστα ειδών εδώ.
-    isApplicable: (listing) => objectiveValueFormOf(listing.type) !== null,
+    // Ποια είδη αποτιμώνται το λέει ο ΕΝΑΣ πίνακας εντύπων· σε ποια διάθεση φαίνεται, ο ΕΝΑΣ πίνακας διαθέσεων
+    // (ADR-898 §23: μόνο πώληση). Η ενότητα ρωτά για ό,τι θα δει ο αγοραστής — σε μίσθωση δεν βλέπει τίποτα.
+    isApplicable: (listing) => objectiveValueFormOf(listing.type) !== null && offersObjectiveValue(listing.offerKinds),
     // `preview: false` — η προεπισκόπηση αγοραστή ζει στο πλαϊνό της σελίδας (ένα αντίτυπο, ADR-946).
     render: ({ subjects, objectiveValue }) =>
       createElement(ObjectiveValueImproveSectionView, { subject: subjects.objectiveValue, state: objectiveValue, preview: false }),

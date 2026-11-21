@@ -25,7 +25,10 @@ import { isPlainRecord } from '@/lib/type-guards';
 
 import { RESIDENCE_FRONTAGES, type ResidenceFrontage } from './objective-value-types';
 
-/** Εμφάνιση στην αγγελία — εξ ορισμού `shown` (απόφαση Giorgio, ADR-898 §11.1). Η λίστα είναι η πηγή. */
+/**
+ * Εμφάνιση στην αγγελία — **εξ ορισμού `hidden`**: εμφανίζεται μόνο όταν το επιλέξει ο αγγελιοδότης (ADR-898 §23,
+ * απόφαση Giorgio 2026-11-21 — αντικαθιστά το «εξ ορισμού εμφάνιση» του §11.1). Η λίστα είναι η πηγή.
+ */
 export const OBJECTIVE_VALUE_DISPLAYS = ['shown', 'hidden'] as const;
 export type ObjectiveValueDisplay = (typeof OBJECTIVE_VALUE_DISPLAYS)[number];
 
@@ -62,8 +65,9 @@ export const OBJECTIVE_VALUE_DECLARED_FIELDS = [
 ] as const satisfies readonly (keyof ObjectiveValueDeclarations)[];
 export type ObjectiveValueDeclaredField = (typeof OBJECTIVE_VALUE_DECLARED_FIELDS)[number];
 
+/** Ο αγγελιοδότης δεν δήλωσε τίποτα — **ούτε** εμφάνιση (ADR-898 §23: η απουσία επιλογής = απόκρυψη). */
 export const UNDECLARED_OBJECTIVE_VALUE: ObjectiveValueDeclarations = {
-  display: 'shown',
+  display: 'hidden',
   frontage: null,
   zoneFront: null,
   areaIncludesCommon: null,
@@ -98,7 +102,8 @@ function zoneFrontOf(raw: unknown): ZoneFrontDeclaration | null {
 export function readObjectiveValueDeclarations(raw: unknown): ObjectiveValueDeclarations {
   const record = recordOf(raw);
   return {
-    display: record.display === 'hidden' ? 'hidden' : 'shown',
+    // ADR-898 §23 — μόνο ρητό `shown` εμφανίζει· απουσία ή άκυρη τιμή ⇒ απόκρυψη (ποτέ εμφάνιση χωρίς επιλογή).
+    display: record.display === 'shown' ? 'shown' : 'hidden',
     frontage: RESIDENCE_FRONTAGES.find((frontage) => frontage === record.frontage) ?? null,
     zoneFront: zoneFrontOf(record.zoneFront),
     areaIncludesCommon: booleanOrNull(record.areaIncludesCommon),
@@ -192,18 +197,25 @@ export function declaredOf(declarations: ObjectiveValueDeclarations): ListingObj
 
 /**
  * **Ό,τι είναι αποθηκευμένο στη δημόσια αγγελία → η δημόσια μορφή** — ο ΕΝΑΣ αναγνώστης της (τον καλεί ο κρίκος 15
- * του σχήματος). Αυστηρός ανά πεδίο όπως ο αναγνώστης του εγγράφου· `hidden` μένει `hidden`, οτιδήποτε άλλο
- * διαβάζεται ως εμφάνιση εξ ορισμού. **Ιδιοδύναμος**: έγκυρη τιμή περνά αυτούσια.
+ * του σχήματος). Αυστηρός ανά πεδίο όπως ο αναγνώστης του εγγράφου· μόνο ρητό `shown` μένει `shown`, οτιδήποτε άλλο
+ * διαβάζεται ως απόκρυψη (ADR-898 §23). **Ιδιοδύναμος**: έγκυρη τιμή περνά αυτούσια.
  */
 export function readListingObjectiveValueDeclarations(raw: unknown): ListingObjectiveValueDeclarations {
   const record = recordOf(raw);
-  if (record.display === 'hidden') return { display: 'hidden' };
+  if (record.display !== 'shown') return { display: 'hidden' };
   return listingObjectiveValueDeclarationsOf(readObjectiveValueDeclarations({ ...recordOf(record.declared), display: 'shown' }));
 }
 
 /** **Η αγγελία για την οποία ο αγγελιοδότης δεν δήλωσε τίποτα** — ονομασμένη απουσία (ίδιο ιδίωμα με το `UNASKED_LISTING_ATTRIBUTES`). */
 export const UNDECLARED_LISTING_OBJECTIVE_VALUE: ListingObjectiveValueDeclarations =
   listingObjectiveValueDeclarationsOf(UNDECLARED_OBJECTIVE_VALUE);
+
+/**
+ * **Εμφανής, χωρίς καμία δήλωση** — ό,τι θα έβλεπε η μηχανή αν ο αγγελιοδότης είχε ανάψει μόνο τον διακόπτη. Τη
+ * χρειάζεται η μηχανή ερωτήσεων («ποια στοιχεία μετρούν, πριν από κάθε δήλωση;»), που κρίνει πάνω σε εμφανή βάση.
+ */
+export const DISCLOSED_UNDECLARED_LISTING_OBJECTIVE_VALUE: ListingObjectiveValueDeclarations =
+  listingObjectiveValueDeclarationsOf({ ...UNDECLARED_OBJECTIVE_VALUE, display: 'shown' });
 
 /** Τα στοιχεία που δηλώθηκαν (μη `null`), με τη σειρά της λίστας-πηγής. */
 export function declaredFieldsOf(

@@ -42,6 +42,7 @@ import {
 import { INITIAL_DRAFT, type LevelDraft, type ObjectiveValueDraft } from './objective-value-draft';
 import type { ObjectiveValuePrefill } from './objective-value-prefill';
 import { OBJECTIVE_VALUE_FORM_OF_TYPE, objectiveValueFormOf } from './objective-value-form-of-type';
+import { offersObjectiveValue } from './objective-value-offer-kinds';
 import type { ObjectiveValueForm } from './objective-value-types';
 import { declaredZoneCandidates, streetFrontPrices, type ZoneCandidate } from './objective-value-zone';
 
@@ -103,7 +104,10 @@ export type ListingObjectiveValueAssumption = BoundToAssumptionKinds<
 >;
 
 export type ListingObjectiveValue =
-  /** Ο αγγελιοδότης επέλεξε απόκρυψη (ADR-898 Φ3β · πρότυπο NAR IDX): **κανένας** υπολογισμός, κανένα ποσό. */
+  /**
+   * Ο αγγελιοδότης **δεν** επέλεξε εμφάνιση (ADR-898 Φ3β · §23: προεπιλογή η απόκρυψη) **ή** η αγγελία δεν είναι
+   * πώληση (`objective-value-offer-kinds.ts`): **κανένας** υπολογισμός, κανένα ποσό, καμία ενότητα.
+   */
   | { readonly kind: 'hidden' }
   /**
    * Εκτός εντύπων 1/4/5: είδος (κατάστημα, γραφείο…) · ή αποθήκη σε **όροφο**, που ο νόμος λογίζει χώρο κύριας χρήσης
@@ -334,6 +338,9 @@ export function objectiveValueBasisOf(
  * αποτίμησης για την παλαιότητα.
  */
 export function listingObjectiveValue(listing: PublicListing, valueZone: ValueZoneVerdict, today: string): ListingObjectiveValue {
+  // ADR-898 §23 — ό,τι βλέπει ο ΑΓΟΡΑΣΤΗΣ: μόνο σε πώληση. Εδώ και όχι στη βάση, γιατί τη βάση τη μοιράζεται η μηχανή
+  // του κατόχου, που δουλεύει για κάθε ακίνητο. Και για παλιά έγγραφα αγγελιών, πριν τα ξαναπροβάλει ο γραφέας.
+  if (!offersObjectiveValue(listing.offerKinds)) return { kind: 'hidden' };
   const basis = listingObjectiveValueBasis(listing, valueZone);
   if (basis.kind !== 'ready') return basis;
   const { form, resolution, zoneCandidates } = basis;

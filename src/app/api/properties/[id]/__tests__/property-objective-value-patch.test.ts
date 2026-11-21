@@ -79,7 +79,8 @@ describe('patchPropertyObjectiveValue — μερική διόρθωση σε σ�
     const response = await run(db, stale, { objectiveValueDeclarations: { permitDate: '2001-05-01' } });
     expect(response.status).toBe(200);
     expect(doc.data.objectiveValueDeclarations).toEqual(
-      expect.objectContaining({ frontage: 'single', hasElevator: true, permitDate: '2001-05-01', display: 'shown' }),
+      // ADR-898 §23 — κανείς δεν άναψε τον διακόπτη ⇒ η κανονικοποιημένη μορφή λέει `hidden`.
+      expect.objectContaining({ frontage: 'single', hasElevator: true, permitDate: '2001-05-01', display: 'hidden' }),
     );
     expect(doc.data._v).toBe(5);
     expect(doc.data.updatedBy).toBe('u1');

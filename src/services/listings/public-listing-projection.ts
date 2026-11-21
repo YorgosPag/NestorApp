@@ -528,7 +528,8 @@ export function projectListingShape(
     //    ζει στο `public-listing-attributes.ts` — δες εκεί γιατί δεν είναι `as`.
     ...projectListingAttributes(property, projectedAt),
     // ADR-898 Φ3β — κρυμμένη ⇒ μόνο η απόκρυψη, κανένα στοιχείο από το οποίο ξαναβγαίνει το ποσό (ούτε `levelAreas`).
-    ...projectObjectiveValueBasis(property, areaSqm),
+    // ADR-898 §23 — και μόνο σε πώληση: ίδιο `offerKinds` με το πεδίο της αγγελίας.
+    ...projectObjectiveValueBasis(property, areaSqm, offerKinds),
     title: (property.name ?? '').trim(),
     // §8.33 — δες τον κανόνα της απουσίας στο `ProjectableProperty.authorship`.
     // ── Α17 (ADR-838) — η ΒΑΘΜΙΔΑ φεύγει, το έγγραφο ποτέ. Δες projectLegality.

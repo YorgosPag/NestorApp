@@ -26,7 +26,7 @@ import type { OfferKind } from '@/types/property-offers';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 import type { ListingMatchFacts } from '../demand-match-vocabulary';
 import { LISTING_AVAILABILITY_UNKNOWN } from '@/types/listing-availability';
-import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
+import { DISCLOSED_UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
 
 /** Η σταθερή «σήμερα» όλων των σουιτών ζήτησης. */
 export const TODAY = '2026-08-11';
@@ -124,7 +124,9 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     // ADR-919 §10 — καμία δημόσια υπόσχεση ⇒ καμία ιστορία.
     availabilityTrack: null,
     priceReduction: null,
-    objectiveValueDeclarations: UNDECLARED_LISTING_OBJECTIVE_VALUE,
+    // ADR-898 §23 — αγγελία πώλησης με ΑΝΑΜΜΕΝΟ διακόπτη και τίποτα δηλωμένο: η εμφάνιση είναι πλέον επιλογή, και οι
+    // σουίτες της μηχανής κρίνουν τον υπολογισμό, όχι την προεπιλογή. Την απουσία (= απόκρυψη) την κρίνουν ρητά.
+    objectiveValueDeclarations: DISCLOSED_UNDECLARED_LISTING_OBJECTIVE_VALUE,
     levelAreas: null,
     ...overrides,
   };

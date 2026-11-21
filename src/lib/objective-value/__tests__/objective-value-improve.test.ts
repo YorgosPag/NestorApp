@@ -48,7 +48,8 @@ const FRONTED: ValueZoneVerdict = {
 const DECLARED_2000 = { provenance: 'declared' as const, value: 2000, at: '2026-09-02T00:00:00.000Z' };
 
 const declared = (declarations: Partial<ObjectiveValueDeclarations>) =>
-  listingObjectiveValueDeclarationsOf({ ...UNDECLARED_OBJECTIVE_VALUE, ...declarations });
+  // ADR-898 §23 — ο διακόπτης αναμμένος: οι σουίτες κρίνουν τον υπολογισμό, όχι την προεπιλογή (απόκρυψη).
+  listingObjectiveValueDeclarationsOf({ ...UNDECLARED_OBJECTIVE_VALUE, display: 'shown', ...declarations });
 
 const home = (overrides: Parameters<typeof listing>[0] = {}) =>
   listing({ floor: 4, areaSqm: 90, heatingType: 'central', amenities: ['elevator'], constructionYear: DECLARED_2000, ...overrides });

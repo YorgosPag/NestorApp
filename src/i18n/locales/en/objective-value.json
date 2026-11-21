@@ -329,7 +329,7 @@
     },
     "visibility": {
       "label": "Show the objective value on the listing",
-      "help": "Shown by default. If you hide it, the section does not exist on the listing at all: no amount and no calculation inputs. Every lister has the same right.",
+      "help": "Hidden by default. If you show it, buyers see the amount and the calculation inputs. It appears only on sale listings. Every lister has the same right.",
       "frontageStays": "Frontage stays visible as a property attribute.",
       "previewTitle": "What buyers see",
       "hiddenPreview": "Buyers see no objective value section."

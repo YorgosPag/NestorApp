@@ -74,7 +74,8 @@ beforeEach(() => {
 describe('Δ1 — θεματοφυλακή και κανόνες', () => {
   it('ο κάτοχος γράφει · η δήλωση φτάνει στο έγγραφο και στη δημόσια αγγελία', async () => {
     const { property, db, adminDb } = seeded();
-    const result = await setDeclarations(adminDb, property.id, { frontage: 'multiple', permitDate: '1998-03-15' }, OWNER);
+    // ADR-898 §23 — η εμφάνιση είναι ρητή επιλογή: ο κάτοχος ανάβει τον διακόπτη μαζί με τις απαντήσεις.
+    const result = await setDeclarations(adminDb, property.id, { frontage: 'multiple', permitDate: '1998-03-15', display: 'shown' }, OWNER);
     expect(result.kind).toBe('saved');
     expect(storedDeclarations(db, property.id)).toMatchObject({ frontage: 'multiple', permitDate: '1998-03-15', display: 'shown' });
     const published = db.all<Record<string, unknown>>(COLLECTIONS.PUBLIC_LISTINGS).find((doc) => doc.id === property.id);
@@ -169,7 +170,8 @@ describe('Δ3 — το μέτωπο επαληθεύεται στον server', (
 describe('Δ4 — ίχνος ελέγχου (CHECK 3.17)', () => {
   it('ΕΝΑ ίχνος ανά πράξη, με τα πεδία που άλλαξαν', async () => {
     const { property, adminDb } = seeded();
-    await setDeclarations(adminDb, property.id, { frontage: 'single', display: 'hidden' }, OWNER);
+    // ADR-898 §23 — η προεπιλογή είναι `hidden`, άρα αλλαγή = άναμμα του διακόπτη.
+    await setDeclarations(adminDb, property.id, { frontage: 'single', display: 'shown' }, OWNER);
     expect(recordChange).toHaveBeenCalledTimes(1);
     const fields = (recordChange.mock.calls[0][0].changes as ReadonlyArray<{ field: string }>).map((c) => c.field).sort();
     expect(fields).toEqual(['objectiveValueDeclarations.display', 'objectiveValueDeclarations.frontage']);
