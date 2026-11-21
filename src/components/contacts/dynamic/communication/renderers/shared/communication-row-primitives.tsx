@@ -15,7 +15,7 @@ import '@/lib/design-system';
 // 🏢 ENTERPRISE IMPORTS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ SYSTEMS
 // ============================================================================
 
-import { COMMUNICATION_STYLES } from '../../config';
+import { COMMUNICATION_STYLES, typeOptionsWithStored } from '../../config';
 import type {
   CommunicationItem,
   CommunicationConfig,
@@ -241,7 +241,7 @@ export const CommunicationRowShell: React.FC<CommunicationRowShellProps> = ({
       {/* 1. Τύπος */}
       <CommunicationSelectCell
         value={item.type}
-        options={config.types}
+        options={typeOptionsWithStored(config, item.type)}
         disabled={disabled}
         onValueChange={(value) => updateItem(index, 'type', value)}
       />

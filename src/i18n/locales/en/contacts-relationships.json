@@ -81,6 +81,12 @@
       "title": "Add New Relationship",
       "editTitle": "Edit Relationship",
       "alreadyRegistered": "Already registered",
+      "channels": {
+        "copyFromContact": "Copy from contact",
+        "copyHint": "Copies the phones and e-mails of the contact who holds the role, replacing the ones here.",
+        "nothingToCopy": "The contact has no phones or e-mails.",
+        "copyFailed": "The contact could not be read. Try again."
+      },
       "labels": {
         "contact": "Contact",
         "relationshipType": "Relationship Type",

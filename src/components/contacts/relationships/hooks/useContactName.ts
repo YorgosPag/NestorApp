@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ContactsService } from '@/services/contacts.service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { ContactType } from '@/types/contacts';
 
 const logger = createModuleLogger('useContactName');
 
@@ -26,6 +27,9 @@ export const useContactName = (contactId: string | undefined) => {
   const { t } = useTranslation('contacts');
   const [contactName, setContactName] = useState<string>('');
   const [contactStatus, setContactStatus] = useState<'active' | 'deleted' | null>(null);
+  // ADR-372 §8.5 b1: the type rides along (same read) — the relationship form needs it to
+  // know whose channels these are when it opens a stored relationship.
+  const [contactType, setContactType] = useState<ContactType | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -33,6 +37,7 @@ export const useContactName = (contactId: string | undefined) => {
       if (!contactId) {
         setContactName('');
         setContactStatus(null);
+        setContactType(null);
         return;
       }
 
@@ -58,13 +63,16 @@ export const useContactName = (contactId: string | undefined) => {
 
           setContactName(resolved);
           setContactStatus((contact.status as 'active' | 'deleted') ?? 'active');
+          setContactType(contact.type ?? null);
         } else {
           logger.warn('Contact not found', { contactId });
+          setContactType(null);
           setContactName(t('relationships.organizationTree.unknownContact'));
           setContactStatus(null);
         }
       } catch (error) {
         logger.error('Error fetching contact name', { error });
+        setContactType(null);
         setContactName(t('relationships.organizationTree.unknownContact'));
         setContactStatus(null);
       } finally {
@@ -75,5 +83,5 @@ export const useContactName = (contactId: string | undefined) => {
     fetchContactName();
   }, [contactId, t]);
 
-  return { contactName, contactStatus, loading };
+  return { contactName, contactStatus, contactType, loading };
 };

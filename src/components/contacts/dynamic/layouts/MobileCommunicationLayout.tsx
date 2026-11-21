@@ -43,7 +43,8 @@ import {
   COMMUNICATION_STYLES,
   getPrimaryFieldLabel,
   getSecondaryFieldLabel,
-  getInputType
+  getInputType,
+  typeOptionsWithStored
 } from '../communication';
 
 /**
@@ -191,7 +192,7 @@ function MobileCommunicationItem({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {config.types.map(type => (
+              {typeOptionsWithStored(config, item.type).map(type => (
                 <SelectItem key={type.value} value={type.value}>
                   {t(type.label)}
                 </SelectItem>

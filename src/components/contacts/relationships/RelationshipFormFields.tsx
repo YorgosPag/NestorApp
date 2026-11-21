@@ -21,14 +21,7 @@ import {
   getPositionOptions,
   getDepartmentOptions
 } from './config/relationship-form-presets';
-import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
-import { getEntityAwareCommunicationConfig } from '@/components/contacts/dynamic/communication';
-import type { CommunicationItem } from '@/components/contacts/dynamic/communication';
-import type { PhoneInfo, EmailInfo } from '@/types/contacts';
-import {
-  phonesToCommunicationItems, emailsToCommunicationItems, communicationItemsToPhones, communicationItemsToEmails,
-} from '@/components/contacts/dynamic/communication/utils/communication-item-mappers';
-import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
+import { RelationshipChannelsSection } from './RelationshipChannelsSection';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { RelationshipFormData } from './types/relationship-manager.types';
 import { getRelationshipMetadata } from '@/types/contacts/relationships/core/relationship-metadata';
@@ -43,6 +36,8 @@ export interface RelationshipFormFieldsProps {
   setFormData: React.Dispatch<React.SetStateAction<RelationshipFormData>>;
   /** Source contact type (page owner). */
   contactType: ContactType;
+  /** The page owner's id — «Copy from contact» reads it when it holds the channels (ADR-372 §8.5 b1). */
+  currentContactId?: string;
   /** ADR-372: target contact type. Enables 2D crossing filter when provided. */
   targetContactType?: ContactType;
   loading?: boolean;
@@ -71,6 +66,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   formData,
   setFormData,
   contactType,
+  currentContactId,
   targetContactType,
   loading = false,
   errors = {},
@@ -166,54 +162,6 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
     setCustomDepartments(prev => [...prev, { value, label }]);
     setFormData(prev => ({ ...prev, department: label }));
   }, [departmentOptions, setFormData]);
-
-  // ============================================================================
-  // COMMUNICATION HANDLERS
-  // ============================================================================
-
-  const phoneConfig = useMemo(
-    () => getEntityAwareCommunicationConfig('phone', contactType),
-    [contactType]
-  );
-  const emailConfig = useMemo(
-    () => getEntityAwareCommunicationConfig('email', contactType),
-    [contactType]
-  );
-
-  const phoneItems = useMemo(
-    () => phonesToCommunicationItems(formData.phones || []),
-    [formData.phones]
-  );
-  const emailItems = useMemo(
-    () => emailsToCommunicationItems(formData.emails || []),
-    [formData.emails]
-  );
-
-  const handlePhonesChange = useCallback((items: CommunicationItem[]) => {
-    const phones = communicationItemsToPhones(items, contactType);
-    const primaryPhone = phones.find(p => p.isPrimary) || phones[0];
-    setFormData(prev => ({
-      ...prev,
-      phones,
-      contactInfo: {
-        ...prev.contactInfo,
-        businessPhone: formatPhoneDisplay(primaryPhone)
-      }
-    }));
-  }, [setFormData, contactType]);
-
-  const handleEmailsChange = useCallback((items: CommunicationItem[]) => {
-    const emails = communicationItemsToEmails(items, contactType);
-    const primaryEmail = emails.find(e => e.isPrimary) || emails[0];
-    setFormData(prev => ({
-      ...prev,
-      emails,
-      contactInfo: {
-        ...prev.contactInfo,
-        businessEmail: primaryEmail?.email || ''
-      }
-    }));
-  }, [setFormData, contactType]);
 
   // ============================================================================
   // RENDER HELPERS
@@ -370,30 +318,15 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
           </div>
         )}
 
-        {/* ── Centralized Communication Section ── */}
+        {/* ── Channels — owner = the role holder (ADR-372 §8.5 b1) ── */}
         {finalFieldConfig.showContactInfo && (
-          <section className="md:col-span-2 space-y-2" aria-label={t('relationships.form.labels.professionalInfo')}>
-            <Label className={designSystem.cn(
-              designSystem.getTypographyClass('sm', 'medium'),
-              "block"
-            )}>
-              {t('relationships.form.labels.professionalInfo')}
-            </Label>
-
-            <UniversalCommunicationManager
-              config={phoneConfig}
-              items={phoneItems}
-              disabled={loading}
-              onChange={handlePhonesChange}
-            />
-
-            <UniversalCommunicationManager
-              config={emailConfig}
-              items={emailItems}
-              disabled={loading}
-              onChange={handleEmailsChange}
-            />
-          </section>
+          <RelationshipChannelsSection
+            formData={formData}
+            setFormData={setFormData}
+            currentContactId={currentContactId}
+            currentContactType={contactType}
+            disabled={loading}
+          />
         )}
 
         {/* ── Notes ── */}

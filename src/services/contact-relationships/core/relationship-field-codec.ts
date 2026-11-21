@@ -20,6 +20,7 @@ import type { ContactRelationship, ProfessionalContactInfo } from '@/types/conta
 import { normalizeCalendarDay, normalizeToDate } from '@/lib/date-local';
 import { calendarDayOf } from '@/constants/platform-operator';
 import { formatPhoneDisplay, parsePhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
+import { contactOwnerKindOf } from '@/lib/contact/contact-owner-kind';
 
 /**
  * A relationship day (`startDate` / `endDate`) as `YYYY-MM-DD`, or `null` = unknown.
@@ -45,6 +46,20 @@ export function normalizeUpdateDays(updates: Partial<ContactRelationship>): Part
   if ('startDate' in updates) normalized.startDate = relationshipCalendarDay(updates.startDate);
   if ('endDate' in updates) normalized.endDate = relationshipCalendarDay(updates.endDate);
   return normalized;
+}
+
+/**
+ * **Whose channels are these?** — the side whose contact type decides which phone/e-mail
+ * types a relationship offers, and whose channels «Copy from contact» reads (ADR-372 §8.5 b1). The channels belong to the ROLE HOLDER, not to the
+ * card the form happens to be opened on (Google People: a «work phone» is the PERSON's line;
+ * Salesforce `AccountContactRelation` keeps none of the account's channels):
+ * - exactly one person ⇒ that person (the employee's / shareholder's own lines);
+ * - otherwise (person ↔ person, organisation ↔ organisation) ⇒ the stored SOURCE.
+ */
+export function relationshipChannelOwnerSide(sourceType: unknown, targetType: unknown): 'source' | 'target' {
+  const sourceIsPerson = contactOwnerKindOf(sourceType) === 'individual';
+  const targetIsPerson = contactOwnerKindOf(targetType) === 'individual';
+  return targetIsPerson && !sourceIsPerson ? 'target' : 'source';
 }
 
 type ChannelSource =Pick<ContactRelationship, 'phones' | 'emails' | 'contactInfo'>;

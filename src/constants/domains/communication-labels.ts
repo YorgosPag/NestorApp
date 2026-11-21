@@ -10,8 +10,8 @@
 
 // ADR-327 §8.5.4 — οι πίνακες τύπου τηλεφώνου / email / ιστοσελίδας / social δένονται στις ρίζες τους (CHECK 3.73):
 // τύπος που ο κάτοχος προσφέρει χωρίς ετικέτα = σφάλμα μεταγλώττισης, όχι κενή γραμμή στη φόρμα.
-import type { PhoneTypeLabels } from '@/lib/contact/phone-type-vocabulary';
-import type { EmailTypeLabels } from '@/lib/contact/email-type-vocabulary';
+import type { PhoneType, PhoneTypeLabels } from '@/lib/contact/phone-type-vocabulary';
+import type { EmailType, EmailTypeLabels } from '@/lib/contact/email-type-vocabulary';
 import type { WebsiteTypeLabels } from '@/lib/contact/website-type-vocabulary';
 import type { SocialMediaTypeLabels, SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
 
@@ -142,3 +142,23 @@ export const COMPANY_SOCIAL_MEDIA_TYPE_LABELS = {
   marketing: 'communication.companySocialMediaTypes.marketing',
   other: 'communication.companySocialMediaTypes.other'
 } as const satisfies SocialMediaTypeLabels<'company'>;
+
+// ============================================================================
+// ROOT-WIDE LABELS — a label for EVERY stored value (ADR-372 §8.5 b1)
+// ============================================================================
+// A stored type the CURRENT owner does not offer (e.g. a relationship channel saved as
+// `work` before its owner was the role holder) must still show its name, never an empty
+// «Type» cell — and never be rewritten silently. Bound to the roots (CHECK 3.73): a new
+// root value without a label is a compile error.
+
+export const ALL_PHONE_TYPE_LABELS = {
+  ...SERVICE_PHONE_TYPE_LABELS,
+  ...COMPANY_PHONE_TYPE_LABELS,
+  ...PHONE_TYPE_LABELS,
+} as const satisfies Readonly<Record<PhoneType, string>>;
+
+export const ALL_EMAIL_TYPE_LABELS = {
+  ...SERVICE_EMAIL_TYPE_LABELS,
+  ...COMPANY_EMAIL_TYPE_LABELS,
+  ...EMAIL_TYPE_LABELS,
+} as const satisfies Readonly<Record<EmailType, string>>;

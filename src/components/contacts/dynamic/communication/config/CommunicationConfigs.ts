@@ -10,7 +10,7 @@
 
 // 🏢 ENTERPRISE: Single source of truth for communication icons
 import { COMMUNICATION_ICONS } from './CommunicationIcons';
-import type { CommunicationType, CommunicationConfig, CommunicationConfigRecord } from '../types/CommunicationTypes';
+import type { CommunicationType, CommunicationConfig, CommunicationConfigRecord, TypeOption } from '../types/CommunicationTypes';
 import { DEFAULT_PHONE_TYPE, PHONE_TYPES_BY_OWNER } from '@/lib/contact/phone-type-vocabulary';
 import { DEFAULT_EMAIL_TYPE, EMAIL_TYPES_BY_OWNER } from '@/lib/contact/email-type-vocabulary';
 import { DEFAULT_WEBSITE_TYPE, WEBSITE_TYPES_BY_OWNER } from '@/lib/contact/website-type-vocabulary';
@@ -32,7 +32,9 @@ import {
   COMPANY_PHONE_TYPE_LABELS,
   COMPANY_EMAIL_TYPE_LABELS,
   COMPANY_WEBSITE_TYPE_LABELS,
-  COMPANY_SOCIAL_MEDIA_TYPE_LABELS
+  COMPANY_SOCIAL_MEDIA_TYPE_LABELS,
+  ALL_PHONE_TYPE_LABELS,
+  ALL_EMAIL_TYPE_LABELS
 } from '@/constants/property-statuses-enterprise';
 
 /**
@@ -337,4 +339,22 @@ export function getEntityAwareCommunicationConfig(
     types: overrides.types,
     defaultType: overrides.defaultType
   };
+}
+/** Root-wide label of a stored phone/e-mail type — `undefined` for other channels or unknown values. */
+const ROOT_TYPE_LABELS: Partial<Record<CommunicationType, Readonly<Record<string, string>>>> = {
+  phone: ALL_PHONE_TYPE_LABELS,
+  email: ALL_EMAIL_TYPE_LABELS,
+};
+
+/**
+ * The «Type» options for ONE row: the owner's offered types, plus the row's STORED type
+ * when the owner does not offer it (ADR-372 §8.5 b1). Zero loss: the stored value is shown
+ * with its own label and kept until a human picks another — never an empty cell, never a
+ * silent rewrite. Values outside the root stay as they are (nothing to label them with).
+ */
+export function typeOptionsWithStored(config: CommunicationConfig, storedType: string | undefined): TypeOption[] {
+  if (!storedType || config.types.some((option) => option.value === storedType)) return config.types;
+  const roots = ROOT_TYPE_LABELS[config.type];
+  if (!roots || !Object.hasOwn(roots, storedType)) return config.types;
+  return [...config.types, { value: storedType, label: roots[storedType] }];
 }

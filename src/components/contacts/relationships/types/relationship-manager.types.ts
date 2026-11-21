@@ -56,6 +56,11 @@ export interface RelationshipFormData {
   /** Centralized email entries (replaces plain-text businessEmail) */
   emails?: EmailInfo[];
   /**
+   * ADR-372 §8.5 b1 — form-only (never stored): the contact whose channels «Copy from contact»
+   * put into `phones`/`emails`. Picking another contact clears them — they belonged to the old one.
+   */
+  channelsCopiedFrom?: string;
+  /**
    * 🏢 ADR-318: per-instance override for optional work-address derivation.
    * Rendered as a toggle when the selected relationship type's metadata
    * has `derivesWorkAddress: 'optional'`.

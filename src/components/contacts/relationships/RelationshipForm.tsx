@@ -18,6 +18,8 @@ import { ContactSearchManager } from './ContactSearchManager';
 import { RelationshipFormFields, validateRelationshipFormData } from './RelationshipFormFields';
 import { designSystem, getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useContactName } from './hooks/useContactName';
+import { projectContactInfo } from '@/services/contact-relationships/core/relationship-field-codec';
 
 export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   formData,
@@ -60,34 +62,35 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
     if (error) setLocalError(null);
   }, [error]);
 
+  // ADR-372 §8.5 b1: the picked contact's type is also needed when a STORED relationship is
+  // opened (edit sets only the id) — it decides whose channels these are and the crossing filter.
+  const { contactType: pickedContactType } = useContactName(
+    formData.targetContactId && !formData.targetContactType ? formData.targetContactId : undefined
+  );
+  useEffect(() => {
+    if (!pickedContactType) return;
+    setFormData(prev => (prev.targetContactId && !prev.targetContactType
+      ? { ...prev, targetContactType: pickedContactType }
+      : prev));
+  }, [pickedContactType, setFormData]);
+
+  // ADR-372 §8.5 b1: picking a contact NO LONGER copies its channels (bare string, guessed +30,
+  // forced `work`, the previous contact's lines kept). Copying is the explicit «Copy from contact»;
+  // channels it copied belong to the old pick, so a new pick clears them. Typed rows stay.
   const handleContactSelect = useCallback((contact: ContactSummary | null) => {
     setFormData(prev => {
-      const autoPhones = (prev.phones && prev.phones.length > 0)
-        ? prev.phones
-        : (contact?.phone
-          ? [{ number: contact.phone, type: 'work' as const, isPrimary: true, label: '', countryCode: '+30' }]
-          : []);
-
-      const autoEmails = (prev.emails && prev.emails.length > 0)
-        ? prev.emails
-        : (contact?.email
-          ? [{ email: contact.email, type: 'work' as const, isPrimary: true, label: '' }]
-          : []);
-
+      const nextId = contact?.id || '';
+      const dropCopied = !!prev.channelsCopiedFrom && nextId !== prev.targetContactId;
       return {
         ...prev,
-        targetContactId: contact?.id || '',
+        targetContactId: nextId,
         // ADR-372: capture target type to enable 2D crossing filter in form fields
         targetContactType: contact?.type ?? undefined,
         // Reset type when target changes — old selection may be invalid for new crossing
         relationshipType: contact?.type === prev.targetContactType ? prev.relationshipType : '',
-        phones: autoPhones,
-        emails: autoEmails,
-        contactInfo: {
-          ...prev.contactInfo,
-          businessPhone: autoPhones[0]?.number || '',
-          businessEmail: autoEmails[0]?.email || ''
-        }
+        ...(dropCopied
+          ? { phones: [], emails: [], channelsCopiedFrom: undefined, contactInfo: projectContactInfo(prev.contactInfo, [], []) ?? undefined }
+          : {}),
       };
     });
 
@@ -224,6 +227,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
             formData={formData}
             setFormData={setFormData}
             contactType={contactType}
+            currentContactId={currentContactId}
             loading={loading || !hasContact}
             errors={validationErrors}
             usedRelationshipTypes={usedRelationshipTypes}
