@@ -45,12 +45,20 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isValidGreekVat, normalizeVat } from '@/lib/validation/greek-vat-number';
 import type {
+  RegistryCatalogEntry,
+  RegistryCatalogsVerdict,
   RegistryLookupVerdict,
   RegistryTaxSearchVerdict,
   RegistryUnavailableReason,
 } from '@/types/company-registry';
 
-import { parseGemiCompany, parseGemiStatusCatalog, parseGemiTaxSearch, type StatusCatalog } from './gemi-opendata-parse';
+import {
+  parseGemiCatalog,
+  parseGemiCompany,
+  parseGemiStatusCatalog,
+  parseGemiTaxSearch,
+  type StatusCatalog,
+} from './gemi-opendata-parse';
 
 const logger = createModuleLogger('gemi-opendata.client');
 
@@ -66,6 +74,8 @@ const TIMEOUT_MS = Number.parseInt(process.env.GEMI_OPENDATA_TIMEOUT_MS || '8000
  * σχήμα διαδρομής Storage για το SSoT ratchet (`storage-path-construction`), και εδώ δεν είναι.
  */
 const COMPANY_ENDPOINT = '/companies';
+const LEGAL_TYPES_CATALOG_ENDPOINT = '/metadata/legalTypes';
+const STATUS_CATALOG_ENDPOINT = '/metadata/companyStatuses';
 
 /** Το ανώτατο `resultsSize` του OpenAPI. Περισσότερα από τόσα ⇒ ο αναλυτής αρνείται, δεν κόβει. */
 const TAX_SEARCH_PAGE_SIZE = 200;
@@ -140,7 +150,7 @@ function unavailableReasonOf(status: number): RegistryUnavailableReason {
 async function loadStatusCatalog(apiKey: string, transport: RegistryTransport): Promise<StatusCatalog | null> {
   const cached = apiCache.get<StatusCatalog>(STATUS_CATALOG_KEY);
   if (cached !== null) return cached;
-  const fetched = await getJson('/metadata/companyStatuses', apiKey, transport);
+  const fetched = await getJson(STATUS_CATALOG_ENDPOINT, apiKey, transport);
   const catalog = fetched.kind === 'ok' ? parseGemiStatusCatalog(fetched.body) : null;
   if (catalog !== null) apiCache.set(STATUS_CATALOG_KEY, catalog, STATUS_CATALOG_TTL_MS);
   return catalog;
@@ -209,6 +219,38 @@ export async function lookupRegistryNumbersByTaxId(
   const registrationNumbers = parseGemiTaxSearch(fetched.body);
   if (registrationNumbers === null) return { kind: 'unavailable', reason: 'malformed-response' };
   return { kind: 'results', registrationNumbers };
+}
+
+type CatalogFetch =
+  | { readonly kind: 'ok'; readonly entries: readonly RegistryCatalogEntry[] }
+  | { readonly kind: 'unavailable'; readonly reason: RegistryUnavailableReason };
+
+async function fetchCatalog(path: string, apiKey: string, transport: RegistryTransport): Promise<CatalogFetch> {
+  const fetched = await getJson(path, apiKey, transport);
+  if (fetched.kind === 'network') return { kind: 'unavailable', reason: 'network' };
+  if (fetched.kind === 'status') return { kind: 'unavailable', reason: unavailableReasonOf(fetched.status) };
+  const entries = parseGemiCatalog(fetched.body);
+  return entries === null ? { kind: 'unavailable', reason: 'malformed-response' } : { kind: 'ok', entries };
+}
+
+/**
+ * **Οι δύο κατάλογοι, ολόκληροι και χωρίς μνήμη** — για τη σύγκριση με το στιγμιότυπο του χάρτη
+ * (`config/company-registry/gemi-legal-forms.ts`, ADR-948 §8 Βήμα 3).
+ *
+ * ⛔ Τον καλεί **μόνο** το εργαλείο συντήρησης `npm run gemi:catalog-diff`, με πράξη ανθρώπου — **ποτέ** ο
+ * έλεγχος επαφής: εκεί η ολίσθηση κρίνεται πάνω στο `legalType.descr` της ίδιας της απάντησης, χωρίς κλήση.
+ * Δύο κλήσεις, η μία μετά την άλλη (όριο 8/λεπτό ανά κλειδί).
+ */
+export async function fetchRegistryCatalogs(
+  transport: RegistryTransport = LIVE_TRANSPORT,
+): Promise<RegistryCatalogsVerdict> {
+  const apiKey = readConfiguredValue(transport.env, API_KEY_ENV);
+  if (apiKey === null) return { kind: 'unavailable', reason: 'not-configured' };
+  const legalTypes = await fetchCatalog(LEGAL_TYPES_CATALOG_ENDPOINT, apiKey, transport);
+  if (legalTypes.kind === 'unavailable') return legalTypes;
+  const statuses = await fetchCatalog(STATUS_CATALOG_ENDPOINT, apiKey, transport);
+  if (statuses.kind === 'unavailable') return statuses;
+  return { kind: 'found', legalTypes: legalTypes.entries, statuses: statuses.entries };
 }
 
 /** Αδειάζει **όλη** τη μνήμη του ΓΕΜΗ (επιχειρήσεις + κατάλογο καταστάσεων) — για απομόνωση αγκυρών. */

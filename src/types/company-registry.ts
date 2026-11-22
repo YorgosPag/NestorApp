@@ -213,3 +213,26 @@ export type RegistryTaxBinding =
   | { readonly state: 'not-asked' }
   | { readonly state: 'not-comparable'; readonly gap: 'no-registration-number' | 'invalid-tax-id' }
   | { readonly state: 'undetermined'; readonly reason: RegistryUnavailableReason };
+
+// =============================================================================
+// ΟΙ ΚΑΤΑΛΟΓΟΙ — `/metadata/legalTypes` · `/metadata/companyStatuses` (ADR-948 §8 Βήμα 3)
+// =============================================================================
+
+/**
+ * Μία γραμμή καταλόγου όπως τη δίνει το ΓΕΜΗ. `isActive` υπάρχει **μόνο** στον κατάλογο καταστάσεων.
+ * Τη διαβάζει **μόνο** το εργαλείο συντήρησης του χάρτη (`npm run gemi:catalog-diff`) — ποτέ ο έλεγχος επαφής.
+ */
+export interface RegistryCatalogEntry {
+  readonly id: string;
+  readonly descr: string;
+  readonly descrEn: string | null;
+  readonly isActive: boolean | null;
+}
+
+export type RegistryCatalogsVerdict =
+  | {
+      readonly kind: 'found';
+      readonly legalTypes: readonly RegistryCatalogEntry[];
+      readonly statuses: readonly RegistryCatalogEntry[];
+    }
+  | { readonly kind: 'unavailable'; readonly reason: RegistryUnavailableReason };

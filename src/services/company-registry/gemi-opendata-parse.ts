@@ -28,6 +28,7 @@ import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import {
   GEMI_REGISTRY_SOURCE,
   type RegistryActivity,
+  type RegistryCatalogEntry,
   type RegistryCode,
   type RegistryCompanyRecord,
   type RegistrySeat,
@@ -131,6 +132,29 @@ export function parseGemiStatusCatalog(payload: unknown): StatusCatalog | null {
     }
   }
   return catalog.size > 0 ? catalog : null;
+}
+
+function catalogEntryOf(entry: unknown): RegistryCatalogEntry | null {
+  const code = codeOf(entry, WIRE);
+  if (code === null || !isLoose(entry)) return null;
+  return {
+    id: code.id,
+    descr: code.label,
+    descrEn: text(entry.descrEn),
+    isActive: typeof entry.isActive === 'boolean' ? entry.isActive : null,
+  };
+}
+
+/**
+ * Ένας κατάλογος `/metadata/*` **ολόκληρος** — για τη σύγκριση με το στιγμιότυπο του χάρτη (ADR-948 §8 Βήμα 3).
+ *
+ * ⛔ **Μία άκυρη γραμμή ⇒ `null` για όλο τον κατάλογο**, όχι παράλειψη: εδώ μια γραμμή που χάνεται σιωπηλά
+ * θα διαβαζόταν «ο κωδικός αφαιρέθηκε» — ψευδής ολίσθηση. Άδειος κατάλογος ⇒ επίσης `null`.
+ */
+export function parseGemiCatalog(payload: unknown): readonly RegistryCatalogEntry[] | null {
+  if (!Array.isArray(payload) || payload.length === 0) return null;
+  const entries = payload.map(catalogEntryOf);
+  return entries.every((entry): entry is RegistryCatalogEntry => entry !== null) ? entries : null;
 }
 
 function activityOf(code: RegistryCode | null, catalog: StatusCatalog | null): RegistryActivity {

@@ -231,3 +231,13 @@ Data Integration Rules **δεν** ερευνήθηκαν.
   `sameAddressFieldValue` (έδρα ανά μέρος, ίδια κρίση με τον γεωκωδικοποιητή) · `sameDescription` (έγινε εξαγώγιμο —
   ολίσθηση κατάστασης ⇒ `not-comparable`). Έδρα επαφής = **θέση 0** της `companyAddresses` (`contact-hq-state.ts`),
   όχι «`type:'headquarters'` ή θέση 0». Άγκυρες: `src/lib/company/__tests__/contact-registry-comparison.test.ts`.
+- **2026-11-22** — §8 Βήμα 3 (απόφαση Giorgio «όπως οι μεγάλοι»): **ΚΑΝΕΝΑ** `loadLegalTypeCatalog` στη διαδρομή
+  ελέγχου επαφής. Η απάντηση εταιρείας φέρει ήδη `legalType.descr` ⇒ η ολίσθηση κρίνεται ανά απάντηση, αμέσως, χωρίς
+  δεύτερη κλήση (ενώ μνήμη 24h θα την έκρυβε έως μία μέρα). Πρακτική καταλόγων κωδικών των μεγάλων (Google
+  libphonenumber / address metadata · GLEIF ELF ανά έκδοση · BvD/Orbis crosswalks): ο χάρτης ζει **στον κώδικα, σε
+  έκδοση**, και τον ενημερώνει **άνθρωπος** που βλέπει τη διαφορά. Στη θέση του: εργαλείο συντήρησης
+  `npm run gemi:catalog-diff` (`scripts/gemi-catalog-diff.ts`, μόνο ανάγνωση, δύο κλήσεις, έξοδος 0/1/2) μέσα από την
+  **ίδια** πόρτα (`fetchRegistryCatalogs` στον client · `parseGemiCatalog` — μία άκυρη γραμμή ⇒ `null` για όλο τον
+  κατάλογο, ώστε να μη διαβαστεί «αφαιρέθηκε») και καθαρή σύγκριση `src/lib/company/gemi-catalog-drift.ts`
+  (`added` · `descr-changed` · `activity-changed` · `removed` · `descr-en-changed`, με την ίδια `sameDescription`).
+  Άγκυρες: `src/lib/company/__tests__/gemi-catalog-drift.test.ts` · `src/services/company-registry/__tests__/gemi-catalogs.test.ts`.
