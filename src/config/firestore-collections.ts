@@ -329,6 +329,18 @@ export const COLLECTIONS = {
     process.env.NEXT_PUBLIC_PROFESSIONAL_REGISTRY_CHECKS_COLLECTION || 'professional_registry_checks',
 
   /**
+   * 🏆 ADR-948 §8 — **ΤΙ ΑΠΑΝΤΗΣΕ ΤΟ ΓΕΜΗ ΓΙΑ ΜΙΑ ΕΠΑΦΗ-ΕΤΑΙΡΕΙΑ**. Κλειδί: `contactId` — μία απάντηση ανά επαφή,
+   * ολική αντικατάσταση σε κάθε έλεγχο.
+   *
+   * 🔴 **Γιατί όχι μέσα στην επαφή**: την επαφή τη γράφει ο **πελάτης** — η απάντηση της αρχής εκεί θα ήταν
+   * αυτο-επαλήθευση (ίδιο σκεπτικό με το `COMPANY_REGISTRY_RECORDS`). Γράφει και διαβάζει μόνο ο διακομιστής.
+   * 🔒 Γράφεται **μόνο** απάντηση που πέρασε τον φράχτη «όχι φυσικό πρόσωπο» (§8.3)· ελαχιστοποίηση **με τύπο**
+   * (`RegistryCompanyRecord` — κανένα `persons`/`afm`).
+   */
+  CONTACT_REGISTRY_CHECKS:
+    process.env.NEXT_PUBLIC_CONTACT_REGISTRY_CHECKS_COLLECTION || 'contact_registry_checks',
+
+  /**
    * 🎯 ADR-827 §8.7 — **ΤΟ ΑΙΤΗΜΑ ΑΝΑΘΕΣΗΣ**. IDs `mreq_*`.
    *
    * 🔴 **`read: false` ΚΑΙ `write: false` — και οι ΔΥΟ πλευρές περνούν από τον
