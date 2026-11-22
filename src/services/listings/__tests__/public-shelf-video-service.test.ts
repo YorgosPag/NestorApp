@@ -31,6 +31,7 @@ class FakeBucket {
   /** Bytes του **περιεχομένου** που διαβάστηκαν (όχι μεταδεδομένα) — η μέτρηση της γρήγορης διαδρομής. */
   bytesRead = 0;
   writes = 0;
+  metadataUpdates = 0;
   readonly pinnedGenerations: number[] = [];
   private nextGeneration = 100;
 
@@ -83,6 +84,12 @@ class FakeBucket {
             done();
           },
         });
+      },
+      // ADR-920 §14.9 Β — όπως το GCS: ενημέρωση ΜΟΝΟ μεταδεδομένων, τα προσαρμοσμένα κλειδιά συγχωνεύονται, bytes ίδια.
+      setMetadata: async ({ metadata }: { metadata: Record<string, string> }) => {
+        const found = bucket.need(name);
+        bucket.metadataUpdates += 1;
+        bucket.objects.set(name, { ...found, custom: { ...found.custom, ...metadata } });
       },
       delete: async () => {
         bucket.objects.delete(name);
@@ -201,6 +208,14 @@ describe('reconcilePublicVideoShelf — η γρήγορη διαδρομή', () 
 
     expect(privateBucket.bytesRead).toBeGreaterThan(0);
     expect(report.published[0]).toMatchObject({ width: 1920, height: 1080 });
+
+    // 🏆 ADR-920 §14.9 Β — ίδια bytes ⇒ ίδιο κλειδί: η ΕΓΓΡΑΦΗ διορθώνεται, τα bytes ΔΕΝ ξαναγράφονται, και το επόμενο
+    //    πέρασμα είναι ξανά γρήγορη διαδρομή (πριν, το χαλασμένο μεταδεδομένο έμενε και το βίντεο ξαναψηνόταν ΠΑΝΤΑ).
+    expect(shelf.objects.get(key)!.custom!.shelfPixelWidth).toBe('1920');
+    expect(shelf.objects.get(key)!.generation).toBe(saved.generation);
+    privateBucket.bytesRead = 0;
+    await reconcilePublicVideoShelf(LISTING_VIDEO_SHELF, LISTING, [SOURCE]);
+    expect(privateBucket.bytesRead).toBe(0);
   });
 });
 

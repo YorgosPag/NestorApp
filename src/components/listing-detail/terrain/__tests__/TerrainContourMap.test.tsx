@@ -217,22 +217,30 @@ describe('TerrainContourMap — πίνακας και υπόμνημα', () => {
 
   describe('Β6.9 — καμία ενδιάμεση δεν χωρά: δηλώνεται ΜΟΝΟ ό,τι σχεδιάζεται', () => {
     const NONE: TerrainMapModel = { ...PLANE, minorShown: 'none', minorContoursPathData: '' };
-    const interval = lookup('listing-detail:terrain.map.metres')
+    // Υπολογίζεται ΜΕΣΑ στο test, όπως στο πρώτο test του αρχείου: η μορφοποίηση αριθμών ακολουθεί το locale της ώρας
+    //    της κλήσης. Τιμή της ώρας φόρτωσης («0,1 m» έναντι «0.1 m» της όψης) θα έκανε το `not.toContain` ΚΕΝΟ.
+    const interval = (): string => lookup('listing-detail:terrain.map.metres')
       .replace('{value}', formatNumber(0.1, { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 
-    it('η λεζάντα και η περιγραφή του SVG δεν αναφέρουν το διάστημα των ενδιάμεσων', () => {
+    it('η λεζάντα και η περιγραφή του SVG («Υψόμετρα») δεν αναφέρουν το διάστημα των ενδιάμεσων — η «some» ΝΑΙ', () => {
+      const some = renderMap({ ...PLANE, minorShown: 'some' });
+      expect(some.container.querySelector('figcaption > p')?.textContent).toContain(interval());
+      some.unmount();
       const { container, svg } = renderMap(NONE);
       const caption = container.querySelector('figcaption > p')?.textContent ?? '';
       expect(caption.length).toBeGreaterThan(0);
-      expect(caption).not.toContain(interval);
-      expect(svg.querySelector('desc')?.textContent ?? '').not.toContain(interval);
-      const slope = renderMap(NONE, 'slope');
-      expect(slope.svg.querySelector('desc')?.textContent ?? '').not.toContain(interval);
+      expect(caption).not.toContain(interval());
+      expect(svg.querySelector('desc')?.textContent ?? '').not.toContain(interval());
+    });
+
+    it('και η περιγραφή στις «Κλίσεις»', () => {
+      const { svg } = renderMap(NONE, 'slope');
+      expect(svg.querySelector('desc')?.textContent ?? '').not.toContain(interval());
     });
 
     it('σημείωση περιθωρίου με το διάστημα που λείπει — και ΚΑΝΕΝΑ δείγμα γραμμής που δεν σχεδιάστηκε', () => {
       const { container } = renderMap(NONE);
-      expect(container.querySelector('[data-terrain-minor-hidden]')?.textContent).toContain(interval);
+      expect(container.querySelector('[data-terrain-minor-hidden]')?.textContent).toContain(interval());
       expect(container.querySelector('figcaption li [data-terrain-swatch="contourMinor"]')).toBeNull();
     });
 
