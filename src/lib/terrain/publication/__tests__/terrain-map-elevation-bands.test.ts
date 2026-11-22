@@ -125,7 +125,7 @@ describe('bandLevelsOf — όρια ζωνών σε ΖΩΓΡΑΦΙΣΜΕΝΑ ε�
       points: [0, 0, 1, 1],
     }));
   const rule = (majorContourIntervalM: number): BandLevelRule =>
-    ({ majorContourIntervalM, minorContoursThinned: false, intermediateBandsNarrow: false });
+    ({ majorContourIntervalM, minorShown: 'all', intermediateBandsNarrow: false });
   const tenths = (from: number, count: number) => Array.from({ length: count }, (_, i) => Math.round((from + i / 10) * 10) / 10);
 
   it('λίγα επίπεδα ⇒ όλα (καμία αλλαγή από το Β6.2)', () => {
@@ -139,10 +139,13 @@ describe('bandLevelsOf — όρια ζωνών σε ΖΩΓΡΑΦΙΣΜΕΝΑ ε�
     expect(out.length + 1).toBeLessThanOrEqual(LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS);
   });
 
-  it('όταν αραιώθηκαν ενδιάμεσες, καμία ενδιάμεση δεν γίνεται όριο (εκεί μπορεί να λείπει η γραμμή)', () => {
-    const levels = tenths(120.1, 8);
-    expect(bandLevelsOf(contoursAt(levels, 0.5), { ...rule(0.5), minorContoursThinned: true })).toEqual([120.5]);
-  });
+  it.each(['some', 'none'] as const)(
+    'όταν οι ενδιάμεσες δεν σχεδιάζονται όλες (%s), καμία ενδιάμεση δεν γίνεται όριο (εκεί μπορεί να λείπει η γραμμή)',
+    (minorShown) => {
+      const levels = tenths(120.1, 8);
+      expect(bandLevelsOf(contoursAt(levels, 0.5), { ...rule(0.5), minorShown })).toEqual([120.5]);
+    },
+  );
 
   it('ακόμη και οι κύριες πολλές ⇒ πολλαπλάσια της κύριας (2, 5, 10 …)', () => {
     const metres = Array.from({ length: 30 }, (_, i) => i + 1);

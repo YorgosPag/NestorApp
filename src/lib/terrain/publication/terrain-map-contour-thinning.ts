@@ -29,10 +29,17 @@ export interface TerrainMapContourPiece {
   readonly closed: boolean;
 }
 
+/**
+ * ADR-920 Β6.9 — **how much of the plot's interval THIS map draws**, decided once, here: every intermediate (`'all'`,
+ * also when the plot has none to draw — nothing was withheld), some of them (`'some'` — thinned on steep ground), or
+ * none at all (`'none'` — the map then declares only the index spacing: what is declared is what is drawn, USGS /
+ * Esri multi-scale contours). Consumers read this; none re-infers it from path lengths.
+ */
+export type TerrainMapMinorShown = 'all' | 'some' | 'none';
+
 export interface ThinnedMinorContours {
   readonly pieces: readonly TerrainMapContourPiece[];
-  /** `true` when any intermediate stretch was dropped — the legend then says so. */
-  readonly thinned: boolean;
+  readonly shown: TerrainMapMinorShown;
 }
 
 /** Where the map is drawn: the plot's interval and the css px per metre of THIS map. */
@@ -158,12 +165,21 @@ export function thinMinorContours(
 ): ThinnedMinorContours {
   const field = gradientFieldOf(mesh);
   const pieces: TerrainMapContourPiece[] = [];
+  let eligible = 0;
   let thinned = false;
   for (const contour of contours) {
     if (contour.major || contour.points.length < 4) continue;
+    eligible += 1;
     const one = thinOne(contour, field, scale);
     pieces.push(...one.pieces);
     thinned ||= one.thinned;
   }
-  return { pieces, thinned };
+  return { pieces, shown: minorShownOf(eligible, pieces.length, thinned) };
+}
+
+/** No intermediates to draw withholds nothing (`'all'`); intermediates that ALL fell out are `'none'`, never `'some'`. */
+function minorShownOf(eligible: number, drawnPieces: number, thinned: boolean): TerrainMapMinorShown {
+  if (eligible === 0) return 'all';
+  if (drawnPieces === 0) return 'none';
+  return thinned ? 'some' : 'all';
 }

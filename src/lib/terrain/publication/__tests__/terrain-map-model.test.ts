@@ -109,6 +109,8 @@ describe('contours and their labels', () => {
 
   it('minor and index contours are one path each', () => {
     expect(model.minorContoursPathData.length).toBeGreaterThan(0);
+    // Β6.9 — a legible plane draws its whole interval; the decision is the thinning's, carried as is.
+    expect(model.minorShown).toBe('all');
     expect(model.majorContoursPathData.length).toBeGreaterThan(0);
     expect(model.contourIntervalM).toBe(0.1);
     // Index spacing = interval × majorEvery (the legend and caption name it).

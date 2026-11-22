@@ -25,7 +25,7 @@ import type { SurveyPointMark } from '../survey-import/survey-upload-preparation
 import type { ListingTerrainSnapshot } from './listing-terrain-types';
 import { contourLabelsOf, contourPathData, type TerrainMapContourLabel } from './terrain-map-contours';
 import { mapPxPerM } from './terrain-contour-density';
-import { thinMinorContours, type ThinnedMinorContours } from './terrain-map-contour-thinning';
+import { thinMinorContours, type TerrainMapMinorShown, type ThinnedMinorContours } from './terrain-map-contour-thinning';
 import {
   bandLevelsOf,
   elevationBandsOf,
@@ -71,8 +71,12 @@ export interface TerrainMapModel {
   readonly sparsePathData: string | null;
   /** The intermediate contours as drawn at THIS map's size — thinned locally where crowded (Β6.8). */
   readonly minorContoursPathData: string;
-  /** ADR-920 Β6.8 — some intermediate stretches were dropped on steep ground; the legend says so. */
-  readonly minorContoursThinned: boolean;
+  /**
+   * ADR-920 Β6.9 — how much of `contourIntervalM` this map draws (`thinMinorContours` decides; the view only reads it):
+   * `'some'` ⇒ the legend says intermediates were dropped on steep ground (Β6.8); `'none'` ⇒ caption and description
+   * declare the index spacing only, and a margin note says where the intermediates are shown.
+   */
+  readonly minorShown: TerrainMapMinorShown;
   readonly majorContoursPathData: string;
   readonly contourLabels: readonly TerrainMapContourLabel[];
   readonly contourIntervalM: number;
@@ -164,7 +168,7 @@ export function terrainMapModelOf(
   const majorContourIntervalM = roundPublished(snapshot.contourIntervalM * snapshot.contourMajorEvery);
   const bandLevels = mapBandLevelsOf(snapshot, viewBox, display, {
     majorContourIntervalM,
-    minorContoursThinned: minor.thinned,
+    minorShown: minor.shown,
   });
   return {
     viewBox,
@@ -175,7 +179,7 @@ export function terrainMapModelOf(
     elevationRangeM: { min, max },
     sparsePathData: sparseAreaPathData(snapshot.mesh, triangles),
     minorContoursPathData: joinPathData(minor.pieces.map((piece) => polylinePathData(piece.points, piece.closed))),
-    minorContoursThinned: minor.thinned,
+    minorShown: minor.shown,
     majorContoursPathData: contourPathData(snapshot.contours, true),
     contourLabels: contourLabelsOf(snapshot.contours, labelHeightM),
     contourIntervalM: snapshot.contourIntervalM,

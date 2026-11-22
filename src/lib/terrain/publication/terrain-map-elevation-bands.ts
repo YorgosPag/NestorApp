@@ -27,7 +27,7 @@ import {
 } from './listing-terrain-config';
 import type { ListingTerrainContour, ListingTerrainMesh } from './listing-terrain-types';
 import { areaWeightedGradientQuantile, contourSpacingPx } from './terrain-contour-density';
-import { meshTriangleGradients } from './terrain-map-contour-thinning';
+import { meshTriangleGradients, type TerrainMapMinorShown } from './terrain-map-contour-thinning';
 import { meshTriangles, regionPathData, triangleArea as areaOf } from './terrain-map-regions';
 
 /** One elevation band on the map — and in its legend. */
@@ -139,7 +139,8 @@ const INDEX_MULTIPLES = [2, 5, 10, 20, 50, 100] as const;
 /** How the band edges are chosen: the plot's contour spacing and what the map knows about its intermediates. */
 export interface BandLevelRule {
   readonly majorContourIntervalM: number;
-  readonly minorContoursThinned: boolean;
+  /** ADR-920 Β6.9 — intermediates are band edges only when ALL of them are drawn (`'all'`). */
+  readonly minorShown: TerrainMapMinorShown;
   /** Bands one interval wide would be narrower on screen than {@link LISTING_TERRAIN_MAP_MIN_BAND_WIDTH_PX}. */
   readonly intermediateBandsNarrow: boolean;
 }
@@ -167,7 +168,7 @@ export function intermediateBandsNarrow(mesh: ListingTerrainMesh, intervalM: num
 export function bandLevelsOf(contours: readonly ListingTerrainContour[], rule: BandLevelRule): number[] {
   const fits = (levels: readonly number[]) => levels.length + 1 <= LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS;
   const all = contourLevelsOf(contours);
-  if (!rule.minorContoursThinned && !rule.intermediateBandsNarrow && fits(all)) return all;
+  if (rule.minorShown === 'all' && !rule.intermediateBandsNarrow && fits(all)) return all;
   const index = contourLevelsOf(contours.filter((c) => c.major));
   if (fits(index) || !(rule.majorContourIntervalM > 0)) return index;
   const step = (levelM: number) => Math.round(levelM / rule.majorContourIntervalM);

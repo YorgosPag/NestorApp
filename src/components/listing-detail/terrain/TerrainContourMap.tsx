@@ -37,11 +37,24 @@ const MARK_KINDS: readonly TerrainMapMark['kind'][] = ['conflicting', 'coinciden
 /** Οι δύο χρωματισμοί, με τη σειρά του διακόπτη — πρώτο το υψόμετρο, όπως στον DXF viewer (ADR-920 Β6.2). */
 const FILLS: readonly TerrainMapFill[] = ['elevation', 'slope'];
 
+/**
+ * ADR-920 Β6.9 — «ό,τι δηλώνεται = ό,τι σχεδιάζεται» (USGS · Esri multi-scale contours): όταν δεν χωρά **καμία** ενδιάμεση
+ * (`minorShown === 'none'`), λεζάντα και περιγραφή δηλώνουν μόνο τις κύριες. Η απόφαση είναι του μοντέλου.
+ */
+function indexOnly(model: TerrainMapModel): boolean {
+  return model.minorShown === 'none';
+}
+
+function descriptionKeyOf(model: TerrainMapModel, fill: TerrainMapFill): string {
+  const base = fill === 'elevation' ? `${NS}.descriptionElevation` : `${NS}.description`;
+  return indexOnly(model) ? `${base}IndexOnly` : base;
+}
+
 function svgWordsOf(t: T, model: TerrainMapModel, fill: TerrainMapFill): TerrainMapSvgWords {
   const interval = lengthLabel(t, model.contourIntervalM);
   return {
     title: t(`${NS}.title`),
-    description: t(fill === 'elevation' ? `${NS}.descriptionElevation` : `${NS}.description`, {
+    description: t(descriptionKeyOf(model, fill), {
       interval, major: lengthLabel(t, model.majorContourIntervalM), scale: lengthLabel(t, model.scaleBar.lengthM),
     }),
     north: t(`${NS}.north`),
@@ -56,9 +69,10 @@ function legendItemsOf(t: T, model: TerrainMapModel, sparsePatternId: string): M
   const items: MapLegendItem[] = [];
   const add = (key: string, node: ReactNode, label: string) =>
     items.push({ key, swatch: { kind: 'symbol', node }, label });
-  if (model.minorContoursPathData.length > 0) {
+  // Σύμβολο μόνο για γραμμή που ΣΧΕΔΙΑΣΤΗΚΕ — στο `'none'` δεν υπάρχει, και το λέει η σημείωση `MinorHiddenNote` (Β6.9).
+  if (model.minorShown !== 'none' && model.minorContoursPathData.length > 0) {
     // Β6.8 — the reader is told when intermediates were dropped on steep ground (OS / USGS practice), never left to guess.
-    const minorKey = model.minorContoursThinned ? `${NS}.legend.minorThinned` : `${NS}.legend.minor`;
+    const minorKey = model.minorShown === 'some' ? `${NS}.legend.minorThinned` : `${NS}.legend.minor`;
     add('contourMinor', <TerrainLineSwatch kind="contourMinor" />, t(minorKey, { interval: lengthLabel(t, model.contourIntervalM) }));
   }
   if (model.majorContoursPathData.length > 0) {
@@ -102,6 +116,25 @@ function FillKey({ model, fill, t }: { readonly model: TerrainMapModel; readonly
   );
 }
 
+/** Η λεζάντα: το διάστημα που ΣΧΕΔΙΑΖΕΤΑΙ σε αυτό το μέγεθος (USGS: η δήλωση διαστήματος ζει στο περιθώριο). */
+function CaptionLine({ model, t }: { readonly model: TerrainMapModel; readonly t: T }) {
+  const words = { interval: lengthLabel(t, model.contourIntervalM), major: lengthLabel(t, model.majorContourIntervalM) };
+  return <p className="m-0 text-sm text-foreground">{t(indexOnly(model) ? `${NS}.captionIndexOnly` : `${NS}.caption`, words)}</p>;
+}
+
+/**
+ * ADR-920 Β6.9 — σημείωση περιθωρίου, **όχι** γραμμή υπομνήματος: δείγμα για γραμμή που δεν υπάρχει στον χάρτη θα έλεγε
+ * ψέματα. Λέει ποιο διάστημα λείπει και πού φαίνεται· το διάστημα του οικοπέδου (στατιστικά · 3Δ) δεν αλλάζει.
+ */
+function MinorHiddenNote({ model, t }: { readonly model: TerrainMapModel; readonly t: T }) {
+  if (!indexOnly(model)) return null;
+  return (
+    <p className="m-0 text-xs text-muted-foreground" data-terrain-minor-hidden="">
+      {t(`${NS}.minorHidden`, { interval: lengthLabel(t, model.contourIntervalM) })}
+    </p>
+  );
+}
+
 export function TerrainContourMap({ model }: TerrainContourMapProps) {
   const { t } = useTranslation([...TERRAIN_MAP_WORD_NAMESPACES]);
   const [fill, setFill] = useState<TerrainMapFill>('elevation');
@@ -113,9 +146,8 @@ export function TerrainContourMap({ model }: TerrainContourMapProps) {
       <FillSwitch fill={fill} onFill={setFill} t={t} />
       <TerrainMapSvg model={model} words={words} fill={fill} />
       <figcaption className="flex flex-col gap-3">
-        <p className="m-0 text-sm text-foreground">
-          {t(`${NS}.caption`, { interval: lengthLabel(t, model.contourIntervalM), major: lengthLabel(t, model.majorContourIntervalM) })}
-        </p>
+        <CaptionLine model={model} t={t} />
+        <MinorHiddenNote model={model} t={t} />
         <FillKey model={model} fill={fill} t={t} />
         <MapRampLegend caption={t(`${NS}.legend.caption`)} items={legend} />
       </figcaption>

@@ -283,6 +283,10 @@
       "description": "Contour lines every {interval}, index contours every {major}, and slope classes of the ground. North is up; the scale bar shows {scale}.",
       "caption": "Contours every {interval} · labelled index contours every {major}",
       "descriptionElevation": "Contour lines every {interval}, index contours every {major}, and colouring by elevation, from green at the lowest point to pale at the highest. North is up; the scale bar shows {scale}.",
+      "captionIndexOnly": "Labelled index contours every {major}",
+      "descriptionIndexOnly": "Labelled index contours every {major}, and slope classes of the ground. North is up; the scale bar shows {scale}.",
+      "descriptionElevationIndexOnly": "Labelled index contours every {major}, and colouring by elevation, from green at the lowest point to pale at the highest. North is up; the scale bar shows {scale}.",
+      "minorHidden": "The intermediate contours every {interval} do not fit at this width; they are shown in a wider view and in 3D.",
       "indicative": "Slope classes are indicative: they help read the terrain and are not a construction cost estimate.",
       "fill": {
         "label": "Map colouring",

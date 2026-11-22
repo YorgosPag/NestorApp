@@ -209,9 +209,36 @@ describe('TerrainContourMap — πίνακας και υπόμνημα', () => {
   it('Β6.8 — όταν αραιώθηκαν ενδιάμεσες, το υπόμνημα το ΛΕΕΙ· αλλιώς σιωπά', () => {
     const note = lookup('listing-detail:terrain.map.legend.minorThinned').split('·')[1]?.trim() ?? '';
     expect(note.length).toBeGreaterThan(0);
-    expect(PLANE.minorContoursThinned).toBe(false);
+    expect(PLANE.minorShown).toBe('all');
     expect(renderMap(PLANE).container.querySelector('figcaption')?.textContent).not.toContain(note);
-    const thinned = renderMap({ ...PLANE, minorContoursThinned: true });
+    const thinned = renderMap({ ...PLANE, minorShown: 'some' });
     expect(thinned.container.querySelector('figcaption')?.textContent).toContain(note);
+  });
+
+  describe('Β6.9 — καμία ενδιάμεση δεν χωρά: δηλώνεται ΜΟΝΟ ό,τι σχεδιάζεται', () => {
+    const NONE: TerrainMapModel = { ...PLANE, minorShown: 'none', minorContoursPathData: '' };
+    const interval = lookup('listing-detail:terrain.map.metres')
+      .replace('{value}', formatNumber(0.1, { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+
+    it('η λεζάντα και η περιγραφή του SVG δεν αναφέρουν το διάστημα των ενδιάμεσων', () => {
+      const { container, svg } = renderMap(NONE);
+      const caption = container.querySelector('figcaption > p')?.textContent ?? '';
+      expect(caption.length).toBeGreaterThan(0);
+      expect(caption).not.toContain(interval);
+      expect(svg.querySelector('desc')?.textContent ?? '').not.toContain(interval);
+      const slope = renderMap(NONE, 'slope');
+      expect(slope.svg.querySelector('desc')?.textContent ?? '').not.toContain(interval);
+    });
+
+    it('σημείωση περιθωρίου με το διάστημα που λείπει — και ΚΑΝΕΝΑ δείγμα γραμμής που δεν σχεδιάστηκε', () => {
+      const { container } = renderMap(NONE);
+      expect(container.querySelector('[data-terrain-minor-hidden]')?.textContent).toContain(interval);
+      expect(container.querySelector('figcaption li [data-terrain-swatch="contourMinor"]')).toBeNull();
+    });
+
+    it('στο «all» και στο «some» η σημείωση σιωπά', () => {
+      expect(renderMap(PLANE).container.querySelector('[data-terrain-minor-hidden]')).toBeNull();
+      expect(renderMap({ ...PLANE, minorShown: 'some' }).container.querySelector('[data-terrain-minor-hidden]')).toBeNull();
+    });
   });
 });

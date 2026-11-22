@@ -41,25 +41,25 @@ const scaleOf = (snapshot: ListingTerrainSnapshot, pxPerM: number) => ({ interva
 describe('thinMinorContours — legible ground is drawn untouched', () => {
   it('at the reference scale a 10 % plane draws EXACTLY the intermediate contours of the snapshot', () => {
     const out = thinMinorContours(PLANE.contours, PLANE.mesh, scaleOf(PLANE, 20));
-    expect(out.thinned).toBe(false);
+    expect(out.shown).toBe('all');
     expect(pathOf(out.pieces)).toBe(contourPathData(PLANE.contours, false));
   });
 });
 
 describe('thinMinorContours — crowded ground', () => {
-  it('drops every intermediate where all of them crowd — and says so', () => {
+  it('drops every intermediate where all of them crowd — and says «none» (Β6.9), never «some»', () => {
     const out = thinMinorContours(PLANE.contours, PLANE.mesh, scaleOf(PLANE, 3));
-    expect(out.thinned).toBe(true);
+    expect(out.shown).toBe('none');
     expect(out.pieces).toHaveLength(0);
   });
 
-  it('never touches an index contour — not even at a scale where nothing crowds (it is not its input)', () => {
+  it('never touches an index contour — not even at a scale where nothing crowds (it is not its input) — and «nothing to draw» withholds nothing: «all»', () => {
     const indexOnly = PLANE.contours.filter((c) => c.major);
     expect(indexOnly.length).toBeGreaterThan(0);
     for (const pxPerM of [3, 20]) {
       const out = thinMinorContours(indexOnly, PLANE.mesh, scaleOf(PLANE, pxPerM));
       expect(out.pieces).toHaveLength(0);
-      expect(out.thinned).toBe(false);
+      expect(out.shown).toBe('all');
     }
   });
 });
@@ -69,7 +69,7 @@ describe('thinMinorContours — the same line, legible in one place and crowded 
   const out = thinMinorContours(FAN.contours, FAN.mesh, scaleOf(FAN, 2));
 
   it('keeps the legible stretches and drops the crowded ones', () => {
-    expect(out.thinned).toBe(true);
+    expect(out.shown).toBe('some');
     expect(out.pieces.length).toBeGreaterThan(0);
     expect(pathOf(out.pieces)).not.toBe(contourPathData(FAN.contours, false));
   });
