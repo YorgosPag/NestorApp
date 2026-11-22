@@ -21,47 +21,18 @@ import type { LevelDraft, ObjectiveValueDraft, UpdateDraft } from '@/lib/objecti
 import { MAX_LEVELS, OBJECTIVE_VALUE_FLOOR_BOUNDS } from '@/lib/objective-value/objective-value-prefill';
 import { OBJECTIVE_VALUE_FORMS, PARKING_POSITIONS, STORAGE_POSITIONS } from '@/lib/objective-value/objective-value-types';
 
+import { FLOOR_VALUES, floorValueOf, useBucketLabel, useFloorValueLabel } from './objective-value-floor-label';
 import { CalculatorStep, ChoiceSelect, LabelledNumber } from './objective-value-inputs';
 import { ObjectiveValueProvenanceBadge } from './ObjectiveValueProvenanceBadge';
 
 const NS = 'objective-value';
 
-/** Όροφος → γραμμή του πίνακα του άρθ. 3 §4 (`< 0` υπόγειο · `0` ισόγειο · … · ΣΤ' και πάνω ίδια στήλη). */
-const FLOORS = {
-  '-1': 'basement',
-  '0': 'ground',
-  '1': 'first',
-  '2': 'second',
-  '3': 'third',
-  '4': 'fourth',
-  '5': 'fifth',
-  '6': 'sixthPlus',
-} as const;
-type FloorValue = keyof typeof FLOORS;
-const FLOOR_VALUES = Object.keys(FLOORS) as FloorValue[];
-
-
-/** Ο όροφος ⇒ ο κάδος του πίνακα. Ο πραγματικός αριθμός μένει στο πρόχειρο (ΣΤ'+Ζ' = 6 και 7, ίδιος κάδος). */
-function bucketOf(floor: number): FloorValue {
-  return String(Math.max(-1, Math.min(6, floor))) as FloorValue;
-}
-
-function floorValueOf(floor: number | null): FloorValue | null {
-  return floor === null ? null : bucketOf(floor);
-}
-
-/** Η ετικέτα ενός ορόφου στο λεξιλόγιο του πεδίου (ο κάδος του νόμου). */
-function useBucketLabel(): (floor: number) => string {
-  const { t } = useTranslation([NS]);
-  return (floor) => t(`${NS}:property.floor.${FLOORS[bucketOf(floor)]}`);
-}
-
 /** Η αρχική τιμή ορόφου στο λεξιλόγιο του πεδίου — ίδια ετικέτα με την επιλογή. */
 function useFloorOriginal(): (value: string | number | boolean) => string {
-  const { t } = useTranslation([NS]);
+  const valueLabel = useFloorValueLabel();
   return (value) => {
     const floor = typeof value === 'number' ? floorValueOf(value) : null;
-    return floor === null ? String(value) : t(`${NS}:property.floor.${FLOORS[floor]}`);
+    return floor === null ? String(value) : valueLabel(floor);
   };
 }
 
@@ -114,6 +85,7 @@ function LevelFloorField({ level, index, neighbours, onFloor }: LevelFloorProps)
   const { t } = useTranslation([NS]);
   const floorId = useId();
   const label = useBucketLabel();
+  const valueLabel = useFloorValueLabel();
   if (index === 0) {
     return (
       <>
@@ -122,7 +94,7 @@ function LevelFloorField({ level, index, neighbours, onFloor }: LevelFloorProps)
           id={floorId}
           value={floorValueOf(level.floor)}
           values={FLOOR_VALUES}
-          getLabel={(value) => t(`${NS}:property.floor.${FLOORS[value]}`)}
+          getLabel={valueLabel}
           placeholder={t(`${NS}:property.floorPlaceholder`)}
           onChange={(value) => onFloor(Number(value))}
         />

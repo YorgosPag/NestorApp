@@ -27,12 +27,28 @@ import {
   objectiveValueEvidencePlan,
   type ObjectiveValueEvidenceStep,
 } from '@/lib/objective-value/objective-value-evidence-plan';
+import type { ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
+import type { ObjectiveValueReadingApplication } from '@/lib/objective-value/objective-value-declared-reading';
+import { deviceReaderOf } from '@/lib/objective-value/objective-value-document-reading';
 import type { ObjectiveValueMissing } from '@/lib/objective-value/objective-value-types';
+
+import { ObjectiveValueDocumentReader } from './ObjectiveValueDocumentReader';
 
 const NS = 'objective-value';
 const E = `${NS}:evidence`;
 
-function EvidenceStep({ step }: { readonly step: ObjectiveValueEvidenceStep }) {
+/** ADR-949 Α-2 — ό,τι χρειάζεται η ανάγνωση στη συσκευή: το πρόχειρο (για «τώρα → από το έγγραφο») και η αποδοχή. */
+interface ObjectiveValueEvidenceReading {
+  readonly draft: ObjectiveValueDraft;
+  readonly onApply: (application: ObjectiveValueReadingApplication) => void;
+}
+
+interface EvidenceStepProps {
+  readonly step: ObjectiveValueEvidenceStep;
+  readonly reading: ObjectiveValueEvidenceReading | null;
+}
+
+function EvidenceStep({ step, reading }: EvidenceStepProps) {
   const { t } = useTranslation([NS, REGISTRY_NS]);
   const fields = step.covers.map(({ field }) => t(`${NS}:result.missing.${field}`)).join(', ');
   return (
@@ -52,11 +68,20 @@ function EvidenceStep({ step }: { readonly step: ObjectiveValueEvidenceStep }) {
       ) : (
         <span className="text-xs text-muted-foreground">{t(`${E}.held`)}</span>
       )}
+      {reading !== null && deviceReaderOf(step.document) !== null && (
+        <ObjectiveValueDocumentReader document={step.document} draft={reading.draft} onApply={reading.onApply} />
+      )}
     </li>
   );
 }
 
-export function ObjectiveValueEvidenceGuide({ missing }: { readonly missing: readonly ObjectiveValueMissing[] }) {
+interface EvidenceGuideProps {
+  readonly missing: readonly ObjectiveValueMissing[];
+  /** Απόν ⇒ ο οδηγός μόνο δείχνει (π.χ. όπου δεν υπάρχει πρόχειρο να γεμίσει). */
+  readonly reading?: ObjectiveValueEvidenceReading;
+}
+
+export function ObjectiveValueEvidenceGuide({ missing, reading }: EvidenceGuideProps) {
   const { t } = useTranslation([NS]);
   const headingId = React.useId();
   const plan = React.useMemo(() => objectiveValueEvidencePlan(missing), [missing]);
@@ -70,7 +95,7 @@ export function ObjectiveValueEvidenceGuide({ missing }: { readonly missing: rea
       <h3 id={headingId} className="m-0 text-sm font-semibold text-foreground">{t(`${E}.title`)}</h3>
       {plan.steps.length > 0 && (
         <ol className="m-0 flex list-decimal flex-col gap-3 pl-5">
-          {plan.steps.map((step) => <EvidenceStep key={step.document} step={step} />)}
+          {plan.steps.map((step) => <EvidenceStep key={step.document} step={step} reading={reading ?? null} />)}
         </ol>
       )}
       {OBJECTIVE_VALUE_NO_EVIDENCE_REASONS.map((reason) => {

@@ -4,6 +4,7 @@
  */
 
 import { computeObjectiveValue } from '../compute-objective-value';
+import type { ObjectiveValueDeclaredReading } from '../objective-value-declared-reading';
 import { draftToInput, INITIAL_DRAFT, type ObjectiveValueDraft } from '../objective-value-draft';
 import {
   deriveInputProvenance,
@@ -164,5 +165,49 @@ describe('το άρθρο του νόμου — από την ανάλυση τ�
         'zonePrice',
       ].sort(),
     );
+  });
+});
+
+describe('ADR-949 Α4 — «δηλώσατε από το έγγραφο»', () => {
+  const source = { document: 'owner-e9', page: 2 } as const;
+  const declared: readonly ObjectiveValueDeclaredReading[] = [
+    { target: { input: 'levelFloor', level: 0 }, value: 1, source },
+    { target: { input: 'levelArea', level: 0 }, value: 93.51, source },
+  ];
+  const fromE9: ObjectiveValueDraft = { ...INITIAL_DRAFT, levels: [{ floor: 1, area: 93.51 }] };
+
+  it('χωρίς προσυμπλήρωση: η τιμή που αποδέχθηκε ο άνθρωπος παίρνει σήμα «δική σας, από το Ε9, σελ. 2»', () => {
+    const provenance = deriveInputProvenance({ draft: fromE9, prefill: null, location: NO_ZONE, declared });
+    expect(provenance.levels[0]).toEqual({
+      floor: { kind: 'user', overrides: null, declaredFrom: source },
+      area: { kind: 'user', overrides: null, declaredFrom: source },
+    });
+  });
+
+  it('την άλλαξε μετά ⇒ η δήλωση χάνεται (παράγωγο, όχι αποθηκευμένο)', () => {
+    const edited: ObjectiveValueDraft = { ...fromE9, levels: [{ floor: 1, area: 90 }] };
+    const provenance = deriveInputProvenance({ draft: edited, prefill: null, location: NO_ZONE, declared });
+    expect(provenance.levels[0].area).toBeNull();
+    expect(provenance.levels[0].floor).toEqual({ kind: 'user', overrides: null, declaredFrom: source });
+  });
+
+  it('παρακάμπτει τιμή του ακινήτου ⇒ μένει παράκαμψη (με επαναφορά) ΚΑΙ λέει από πού', () => {
+    const draft: ObjectiveValueDraft = { ...PREFILLED, levels: [{ floor: 1, area: 93.51 }] };
+    const provenance = deriveInputProvenance({ draft, prefill: PREFILL, location: NO_ZONE, declared });
+    expect(provenance.levels[0].area).toMatchObject({ kind: 'user', overrides: { original: 85 }, declaredFrom: source });
+    expect(provenance.overrideCount).toBe(2);
+  });
+
+  it('ίδια τιμή με το ακίνητο ⇒ μένει «από το ακίνητο»', () => {
+    const same: readonly ObjectiveValueDeclaredReading[] = [{ target: { input: 'levelArea', level: 0 }, value: 85, source }];
+    const provenance = deriveInputProvenance({ draft: PREFILLED, prefill: PREFILL, location: NO_ZONE, declared: same });
+    expect(provenance.levels[0].area).toEqual({ kind: 'property', provenance: PREFILL_PROVENANCE });
+  });
+
+  it('η επιφάνεια αποθήκης δηλώνεται στο πεδίο `area`, όχι στα επίπεδα', () => {
+    const storage: ObjectiveValueDraft = { ...INITIAL_DRAFT, form: 'storage', area: 8.61 };
+    const area: readonly ObjectiveValueDeclaredReading[] = [{ target: { input: 'area' }, value: 8.61, source }];
+    const provenance = deriveInputProvenance({ draft: storage, prefill: null, location: NO_ZONE, declared: area });
+    expect(provenance.fields.area).toEqual({ kind: 'user', overrides: null, declaredFrom: source });
   });
 });

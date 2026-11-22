@@ -9,7 +9,8 @@
  * 1. `property` — προσυμπληρώθηκε από το ακίνητο/αγγελία· φέρει `AttributeProvenance`.
  * 2. `openData` — τιμή ζώνης / ΣΕ από την πηγή· φέρει `OpenDataSourceId`.
  * 3. `assumption` — νόμιμη προεπιλογή· φέρει `ObjectiveValueAssumptionKind` (το ΕΝΑ λεξιλόγιο υποθέσεων).
- * 4. `user` — δική σας τιμή· όταν **παρακάμπτει** το σκέλος 1, φέρει την αρχική τιμή και την επαναφορά.
+ * 4. `user` — δική σας τιμή· όταν **παρακάμπτει** το σκέλος 1, φέρει την αρχική τιμή και την επαναφορά· όταν τη
+ *    **δηλώσατε από έγγραφο** που διάβασε η συσκευή (ADR-949 Α4), φέρει το έγγραφο και τη σελίδα (`declaredFrom`).
  *
  * 🔑 **Παράγωγο, ποτέ αποθηκευμένο** (ίδια φιλοσοφία με το αποτέλεσμα της μηχανής): η προέλευση βγαίνει από τη
  * σύγκριση προχείρου ↔ προσυμπλήρωσης σε κάθε απόδοση, άρα δεν μπορεί να μείνει πίσω από την τιμή.
@@ -30,6 +31,11 @@ import type { OpenDataSourceId } from '@/config/open-data-sources';
 import type { AttributeProvenance } from '@/lib/property/attribute-provenance';
 
 import type { ObjectiveValueAssumptionKind } from './listing-objective-value';
+import type {
+  ObjectiveValueDeclarationSource,
+  ObjectiveValueDeclaredReading,
+  ObjectiveValueDeclaredTarget,
+} from './objective-value-declared-reading';
 import type { LevelDraft, ObjectiveValueDraft } from './objective-value-draft';
 import type { AppliedFactor, ObjectiveValueResult } from './objective-value-types';
 
@@ -59,7 +65,15 @@ export type ObjectiveValueInputSource =
   | { readonly kind: 'property'; readonly provenance: AttributeProvenance }
   | { readonly kind: 'openData'; readonly source: OpenDataSourceId }
   | { readonly kind: 'assumption'; readonly assumption: CalculatorAssumption }
-  | { readonly kind: 'user'; readonly overrides: ObjectiveValueOverride | null };
+  | {
+      readonly kind: 'user';
+      readonly overrides: ObjectiveValueOverride | null;
+      /**
+       * ADR-949 Α4 — η τιμή **δηλώθηκε από έγγραφο** που διάβασε η συσκευή («δηλώσατε από το Ε9, σελ. 2»). Παραμένει
+       * **δήλωση** (ένα PDF στη συσκευή το φτιάχνει οποιοσδήποτε): ποτέ `public-record`/`attested`. Απόν = πληκτρολόγηση.
+       */
+      readonly declaredFrom?: ObjectiveValueDeclarationSource;
+    };
 
 /** Οι είσοδοι με σήμα — κλειστή λίστα· τα επίπεδα της κατοικίας έχουν δικό τους δείκτη. */
 export type ObjectiveValueScalarInput =
@@ -104,6 +118,8 @@ export interface ObjectiveValueProvenanceInput {
   /** Ό,τι εφάρμοσε η προσυμπλήρωση — η βάση σύγκρισης· `null` = ο υπολογιστής άνοιξε κενός. */
   readonly prefill: Partial<ObjectiveValueDraft> | null;
   readonly location: ObjectiveValueLocationFacts;
+  /** ADR-949 Α4 — όσα αποδέχθηκε ο άνθρωπος από έγγραφο που διάβασε η συσκευή (μόνο στη μνήμη της σελίδας). */
+  readonly declared?: readonly ObjectiveValueDeclaredReading[];
 }
 
 const FROM_PROPERTY: ObjectiveValueInputSource = { kind: 'property', provenance: PREFILL_PROVENANCE };
@@ -201,6 +217,51 @@ function commercialitySource(draft: ObjectiveValueDraft, location: ObjectiveValu
   return draft.commercialityFactor === null ? null : USER_VALUE;
 }
 
+function declarationFor(
+  declared: readonly ObjectiveValueDeclaredReading[],
+  matches: (target: ObjectiveValueDeclaredTarget) => boolean,
+): ObjectiveValueDeclaredReading | undefined {
+  return declared.find(({ target }) => matches(target));
+}
+
+/**
+ * ADR-949 Α4 — **παράγωγο, όπως όλη η προέλευση**: «δηλώσατε από το έγγραφο» **μόνο όσο** η τιμή ισούται με ό,τι
+ * αποδέχθηκε ο άνθρωπος. Την άλλαξε ⇒ απλό «δική σας τιμή». Ίδια με το ακίνητο ⇒ μένει «από το ακίνητο» (ίση τιμή ≠
+ * παράκαμψη, βλ. 🔑 πάνω).
+ */
+function withDeclaration(
+  source: ObjectiveValueInputSource | null,
+  value: number | null,
+  declaration: ObjectiveValueDeclaredReading | undefined,
+): ObjectiveValueInputSource | null {
+  if (declaration === undefined || value !== declaration.value || source?.kind === 'property') return source;
+  return source?.kind === 'user'
+    ? { ...source, declaredFrom: declaration.source }
+    : { kind: 'user', overrides: null, declaredFrom: declaration.source };
+}
+
+function declaredLevels(
+  levels: readonly ObjectiveValueLevelSources[],
+  draft: ObjectiveValueDraft,
+  declared: readonly ObjectiveValueDeclaredReading[],
+): readonly ObjectiveValueLevelSources[] {
+  return levels.map((level, index) => ({
+    floor: withDeclaration(level.floor, draft.levels[index]?.floor ?? null,
+      declarationFor(declared, (target) => target.input === 'levelFloor' && target.level === index)),
+    area: withDeclaration(level.area, draft.levels[index]?.area ?? null,
+      declarationFor(declared, (target) => target.input === 'levelArea' && target.level === index)),
+  }));
+}
+
+function declaredArea(
+  source: ObjectiveValueInputSource | null,
+  draft: ObjectiveValueDraft,
+  declared: readonly ObjectiveValueDeclaredReading[],
+): ObjectiveValueInputSource | null {
+  if (!scalarApplies('area', draft.form)) return source;
+  return withDeclaration(source, draft.area, declarationFor(declared, (target) => target.input === 'area'));
+}
+
 function overridesOf(sources: readonly (ObjectiveValueInputSource | null)[]): readonly ObjectiveValueOverride[] {
   return sources.flatMap((source) => (source?.kind === 'user' && source.overrides !== null ? [source.overrides] : []));
 }
@@ -220,17 +281,17 @@ function revertAllOf(
 }
 
 /** **Η προέλευση όλων των εισόδων** — καλείται σε κάθε απόδοση (`useMemo`), ποτέ αποθηκευμένη. */
-export function deriveInputProvenance({ draft, prefill, location }: ObjectiveValueProvenanceInput): ObjectiveValueProvenance {
+export function deriveInputProvenance({ draft, prefill, location, declared = [] }: ObjectiveValueProvenanceInput): ObjectiveValueProvenance {
   const fields: Record<ObjectiveValueScalarInput, ObjectiveValueInputSource | null> = {
     form: scalarSource('form', draft, prefill),
-    area: scalarSource('area', draft, prefill),
+    area: declaredArea(scalarSource('area', draft, prefill), draft, declared),
     frontage: scalarSource('frontage', draft, prefill),
     hasCentralHeating: scalarSource('hasCentralHeating', draft, prefill),
     hasElevator: scalarSource('hasElevator', draft, prefill),
     permitDate: scalarSource('permitDate', draft, prefill),
     areaIncludesCommon: scalarSource('areaIncludesCommon', draft, prefill),
   };
-  const levels = levelSources(draft, prefill);
+  const levels = declaredLevels(levelSources(draft, prefill), draft, declared);
   const scalarOverrides = overridesOf(SCALAR_INPUTS.map((key) => fields[key]));
   const levelOverrides = overridesOf(levels.flatMap((level) => [level.floor, level.area])).length;
   return {

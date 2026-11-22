@@ -11,6 +11,8 @@
  * @enterprise ADR-191 Phase 2.1 — Thumbnail Generation
  */
 
+// Ο ΕΝΑΣ φορτωτής pdf.js της εφαρμογής (singleton + worker) — ADR-949 Α-2: ήταν τρία αντίγραφα.
+import { loadPdfJs, type PdfDocProxy } from '@/components/file-manager/pdf-canvas-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { fileCompanionPath } from '@/lib/files/file-companion-objects';
 
@@ -83,36 +85,6 @@ async function generateImageThumbnail(file: File): Promise<Blob | null> {
 // PDF THUMBNAIL
 // ============================================================================
 
-/** Minimal pdfjs-dist types for thumbnail generation */
-interface PdfDocProxy {
-  numPages: number;
-  getPage(pageNumber: number): Promise<PdfPageProxy>;
-  destroy(): Promise<void>;
-}
-
-interface PdfPageProxy {
-  getViewport(params: { scale: number }): { width: number; height: number };
-  render(params: {
-    canvasContext: CanvasRenderingContext2D;
-    viewport: { width: number; height: number };
-  }): { promise: Promise<void> };
-}
-
-interface PdfJsLib {
-  getDocument(params: { data: ArrayBuffer }): { promise: Promise<PdfDocProxy> };
-  GlobalWorkerOptions: { workerSrc: string };
-}
-
-let cachedPdfJs: PdfJsLib | null = null;
-
-async function loadPdfJs(): Promise<PdfJsLib> {
-  if (cachedPdfJs) return cachedPdfJs;
-  const lib = await import('pdfjs-dist');
-  lib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-  cachedPdfJs = lib as unknown as PdfJsLib;
-  return cachedPdfJs;
-}
-
 /**
  * Generate a thumbnail from a PDF File by rendering page 1.
  */
@@ -120,7 +92,7 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   let doc: PdfDocProxy | null = null;
   try {
     const lib = await loadPdfJs();
-    const data = await file.arrayBuffer();
+    const data = new Uint8Array(await file.arrayBuffer());
     doc = await lib.getDocument({ data }).promise;
 
     const page = await doc.getPage(1);

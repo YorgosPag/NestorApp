@@ -35,11 +35,8 @@ const storageReader: FileBytesReader = async (file) => {
   };
 };
 
-/**
- * Το ΕΝΑ όριο για έγγραφα-κείμενο (ΠΚΑ · ΠΕΑ · ενημερότητες — ADR-900 §3.8 · ADR-915 §20): μία-δύο σελίδες κειμένου
- * είναι λίγα KB· 10 MB κόβουν το PDF-βόμβα πριν φτάσει στον αναλυτή.
- */
-export const DOCUMENT_TEXT_MAX_BYTES = 10 * 1024 * 1024;
+/** Το ΕΝΑ όριο για έγγραφα-κείμενο — ζει στο καθαρό `lib/pdf/pdf-page-text` ώστε να το μοιράζεται και η συσκευή (ADR-949 Α-2). */
+export { DOCUMENT_TEXT_MAX_BYTES } from '@/lib/pdf/pdf-page-text';
 
 /** Ο τύπος που δέχεται κάθε ανάγνωση κειμένου εγγράφου — το `pdf.js` δεν διαβάζει τίποτε άλλο. */
 export const PDF_CONTENT_TYPE = 'application/pdf';

@@ -27,6 +27,11 @@ import { prefersReducedMotion } from '@/lib/a11y/reduced-motion';
 import { marketDayOf } from '@/lib/listings/listing-stats';
 import { computeObjectiveValue } from '@/lib/objective-value/compute-objective-value';
 import { draftToInput, INITIAL_DRAFT, missingOf, relevantQuestions, type ObjectiveValueDraft, type UpdateDraft } from '@/lib/objective-value/objective-value-draft';
+import {
+  mergeDeclaredReadings,
+  type ObjectiveValueDeclaredReading,
+  type ObjectiveValueReadingApplication,
+} from '@/lib/objective-value/objective-value-declared-reading';
 import { deriveInputProvenance } from '@/lib/objective-value/objective-value-input-provenance';
 import { objectiveValueReturnHref, type ObjectiveValueReturn } from '@/lib/objective-value/objective-value-return';
 import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
@@ -119,8 +124,25 @@ function useCalculatorEvaluation(draft: ObjectiveValueDraft, location: Objective
   };
 }
 
+/**
+ * ADR-949 Α-2 — **οι τιμές που δηλώσατε από έγγραφο**, μόνο στη μνήμη της σελίδας (ποτέ στη διεύθυνση, ποτέ αποθήκη:
+ * ADR-947 Δ2 🔴). Η αποδοχή περνά από το **ίδιο** `update` με το χέρι· η προέλευση τις διαβάζει ως παράγωγο.
+ */
+function useDeclaredReadings(update: UpdateDraft) {
+  const [declared, setDeclared] = useState<readonly ObjectiveValueDeclaredReading[]>([]);
+  const apply = useCallback(
+    (application: ObjectiveValueReadingApplication) => {
+      update(application.patch);
+      setDeclared((current) => mergeDeclaredReadings(current, application.declared));
+    },
+    [update],
+  );
+  return { declared, apply };
+}
+
 interface ProvenanceArgs {
   readonly draft: ObjectiveValueDraft;
+  readonly declared: readonly ObjectiveValueDeclaredReading[];
   readonly prefill: Partial<ObjectiveValueDraft> | null;
   readonly location: ObjectiveValueLocationState;
   readonly result: EngineResult;
@@ -129,7 +151,7 @@ interface ProvenanceArgs {
 }
 
 /** Η προέλευση όλων των εισόδων + ό,τι χρειάζεται το σήμα — ένα αντικείμενο για το πλαίσιο, σταθερό ανάμεσα σε αποδόσεις. */
-function useCalculatorProvenance({ draft, prefill, location, result, update, sourcedFactor }: ProvenanceArgs) {
+function useCalculatorProvenance({ draft, declared, prefill, location, result, update, sourcedFactor }: ProvenanceArgs) {
   const { lookup, zonePrice } = location;
   const zonePriceFromSource = lookup.kind === 'answered' && lookup.verdict.kind === 'ready';
   const provenance = useMemo(
@@ -137,9 +159,10 @@ function useCalculatorProvenance({ draft, prefill, location, result, update, sou
       deriveInputProvenance({
         draft,
         prefill,
+        declared,
         location: { zonePrice, zonePriceFromSource, sourcedCommercialityFactor: sourcedFactor },
       }),
-    [draft, prefill, zonePrice, zonePriceFromSource, sourcedFactor],
+    [draft, prefill, declared, zonePrice, zonePriceFromSource, sourcedFactor],
   );
   return useMemo(
     () => ({ provenance, result, update, sourcedCommercialityFactor: sourcedFactor }),
@@ -167,9 +190,10 @@ interface WorkspaceProps {
   readonly today: string;
   readonly evaluation: ReturnType<typeof useCalculatorEvaluation>;
   readonly resultRef: (element: HTMLElement | null) => void;
+  readonly onApplyReading: (application: ObjectiveValueReadingApplication) => void;
 }
 
-function CalculatorWorkspace({ draft, update, location, today, evaluation, resultRef }: WorkspaceProps) {
+function CalculatorWorkspace({ draft, update, location, today, evaluation, resultRef, onApplyReading }: WorkspaceProps) {
   const { result, questions, commercialityAssumed, sourcedFactor } = evaluation;
   return (
     // 🔑 `data-shell-span="full"` (ADR-797 §Β.11 breakout): το ΕΡΓΑΛΕΙΟ απλώνεται· κεφαλίδα και FAQ μένουν στο μέτρο.
@@ -197,7 +221,12 @@ function CalculatorWorkspace({ draft, update, location, today, evaluation, resul
           sourcedCommercialityFactor={sourcedFactor}
           commercialityProvenance={<ObjectiveValueProvenanceBadge input="commercialityFactor" />}
           overrides={<ObjectiveValueOverrideSummary />}
-          evidence={<ObjectiveValueEvidenceSurfaces.ObjectiveValueEvidenceGuide missing={missingOf(result)} />}
+          evidence={
+            <ObjectiveValueEvidenceSurfaces.ObjectiveValueEvidenceGuide
+              missing={missingOf(result)}
+              reading={{ draft, onApply: onApplyReading }}
+            />
+          }
         />
       </aside>
     </div>
@@ -214,7 +243,8 @@ export function ObjectiveValueContent() {
   // Η τιμή ζώνης ανήκει στη θέση (ζώνη · δηλωμένο μέτωπο · χειροκίνητη)· το πρόχειρο την παίρνει τη στιγμή του υπολογισμού.
   const evaluation = useCalculatorEvaluation(draft, location, today);
   const { result, sourcedFactor } = evaluation;
-  const provenance = useCalculatorProvenance({ draft, prefill: prefill?.draft ?? null, location, result, update, sourcedFactor });
+  const { declared, apply: applyReading } = useDeclaredReadings(update);
+  const provenance = useCalculatorProvenance({ draft, declared, prefill: prefill?.draft ?? null, location, result, update, sourcedFactor });
   const resultView = useElementInView<HTMLElement>();
   const showBreakdown = useCallback(
     () => resultView.element.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' }),
@@ -228,7 +258,7 @@ export function ObjectiveValueContent() {
       <ShellSurface as="main" measure="wide" busy={false} className="gap-y-6 py-4">
         <BackLink back={prefill?.back ?? null} />
         <PageHeader />
-        <CalculatorWorkspace draft={draft} update={update} location={location} today={today} evaluation={evaluation} resultRef={resultView.ref} />
+        <CalculatorWorkspace draft={draft} update={update} location={location} today={today} evaluation={evaluation} resultRef={resultView.ref} onApplyReading={applyReading} />
         <ObjectiveValueFaq />
         {/* Τελευταίο παιδί του `<main>`: το `sticky` προσγειώνεται εδώ στο τέλος, χωρίς να καλύπτει τίποτα. */}
         <ObjectiveValueMobileBar result={result} resultInView={resultView.inView} onShowBreakdown={showBreakdown} />

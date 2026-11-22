@@ -19,6 +19,7 @@
 import 'server-only';
 
 import type { Affine2x3 } from '@/lib/geometry/affine-2x3';
+import { pageTextOf } from '@/lib/pdf/pdf-page-text';
 import { readPageStructure, type PageStructureRule, type PageStructureTagTable, type PdfjsOperators, type StructurePage } from './pdf-page-structure';
 
 export interface RasterizeOptions {
@@ -486,7 +487,7 @@ export async function extractPdfText(
       const page = await doc.getPage(pageNum);
       try {
         const { items } = await page.getTextContent();
-        pages.push(items.map((item) => (item.str ?? '') + (item.hasEOL ? '\n' : ' ')).join(''));
+        pages.push(pageTextOf(items));
       } finally {
         page.cleanup();
       }

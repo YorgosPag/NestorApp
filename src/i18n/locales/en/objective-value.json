@@ -224,6 +224,46 @@
     "noDocument": {
       "zone-tables": "From the zone tables of the location, not from your documents: {fields}",
       "property-fact": "No public document states these; answer from what you know about the property: {fields}"
+    },
+    "reader": {
+      "open": "Read it from the document",
+      "title": "Read from: {document}",
+      "privacy": "The file is read on your device and is not sent anywhere. We do not store it.",
+      "fileLabel": "Choose the PDF file",
+      "reading": "Reading…",
+      "rowsLegend": "Which row is the property you are calculating?",
+      "rowUnsupported": "Other use (not calculated here)",
+      "rowArea": "{area} m²",
+      "rowYear": "built {year}",
+      "rowPage": "p. {page}",
+      "noRows": "The document was read, but it lists no buildings (only plots or land). Fill in the fields by hand.",
+      "proposalTitle": "From: {document}, p. {page}",
+      "current": "Now: {value}",
+      "empty": "empty",
+      "declaredNote": "The values are entered as your own declaration from the document. You can change them afterwards.",
+      "acceptAll": "Fill in all",
+      "acceptSelected": "Fill in selected",
+      "flags": {
+        "maisonette-single-row": "E9 lists a maisonette on one row, with the highest floor and the total area. It cannot be split into levels automatically: fill in each level from the deed or the permit.",
+        "unfinished": "The document declares an unfinished building. Check the completion stage in the questions.",
+        "form-unsupported": "This use is not calculated here. The calculator values homes, storage rooms and parking spaces.",
+        "form-changes": "The property type will become “{form}”.",
+        "right-not-full": "The right on this row is not full ownership (e.g. bare ownership or usufruct). The calculator values full ownership; the share is not filled in automatically.",
+        "ownership-unread": "The type of right or the share could not be read with certainty. Check the share in the special cases.",
+        "condition-to-check": "The document declares the special condition “expropriation or demolition”. It is not always the same as “to be expropriated”; check the special status by hand."
+      },
+      "outcome": {
+        "no-reader": "This document cannot be read automatically yet. Fill in the fields by hand.",
+        "not-pdf": "The file is not a PDF. Download the document as a PDF from the service and try again.",
+        "too-large": "The file is too large for a text document (over 10 MB).",
+        "unparsable": "The PDF does not open: it may be damaged or password-protected.",
+        "unreadable": "The PDF text cannot be read (scanned image or a font without characters). We do not guess values; fill in the fields by hand or download the document again from the service.",
+        "not-recognized": "This document does not look like the one you chose. Check that you picked the right file.",
+        "failed": "Reading did not finish. Try again."
+      },
+      "yes": "Yes",
+      "no": "No",
+      "percent": "{pct}%"
     }
   },
   "listing": {
@@ -590,14 +630,16 @@
       "openData": "Open data",
       "assumption": "Assumption",
       "user": "Your value",
-      "override": "You changed this"
+      "override": "You changed this",
+      "declared": "From a document"
     },
     "detail": {
       "property": "Prefilled from the property details, as declared by the owner or the lister. Not confirmed by a professional.",
       "zonePrice": "Zone price from the Ministry's objective value zone data for this location.",
       "user": "You entered this value.",
       "override": "The property value was {original}. You changed it.",
-      "revert": "Restore the property value"
+      "revert": "Restore the property value",
+      "declared": "You declared it from the document “{document}”, p. {page}. The file was read on your device; the value remains your own declaration, not a certification."
     },
     "law": {
       "applied": "Counts in the calculation: {ref} (coefficient {factor}).",

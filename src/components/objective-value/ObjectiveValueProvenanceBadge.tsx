@@ -16,7 +16,7 @@
  */
 
 import React, { createContext, useContext } from 'react';
-import { Database, Home, PenLine, Scale, Undo2 } from 'lucide-react';
+import { Database, FileText, Home, PenLine, Scale, Undo2 } from 'lucide-react';
 
 import { OpenDataAttribution } from '@/components/market/OpenDataAttribution';
 import { Badge, type BadgeVariantProps } from '@/components/ui/badge';
@@ -37,6 +37,8 @@ import {
 } from '@/lib/objective-value/objective-value-input-provenance';
 import { formatCommercialityFactor } from '@/lib/objective-value/objective-value-zone';
 import type { ObjectiveValueResult } from '@/lib/objective-value/objective-value-types';
+
+import { EVIDENCE_DOCUMENT_LABEL_KEYS } from './objective-value-document-labels';
 
 const NS = 'objective-value';
 const P = `${NS}:provenance`;
@@ -98,7 +100,7 @@ function SourceIcon({ source }: { readonly source: ObjectiveValueInputSource }) 
     case 'assumption':
       return <Scale {...props} />;
     case 'user':
-      return <PenLine {...props} />;
+      return source.declaredFrom === undefined ? <PenLine {...props} /> : <FileText {...props} />;
   }
 }
 
@@ -113,6 +115,7 @@ function useBadgeLabel(): (source: ObjectiveValueInputSource) => string {
       case 'assumption':
         return t(`${P}.badge.assumption`);
       case 'user':
+        if (source.declaredFrom !== undefined) return t(`${P}.badge.declared`);
         return source.overrides === null ? t(`${P}.badge.user`) : t(`${P}.badge.override`);
     }
   };
@@ -160,12 +163,23 @@ function SourceDetail({ source, input, context, formatOriginal }: DetailProps) {
       return <p className="m-0">{t(`${P}.detail.property`)}</p>;
     case 'assumption':
       return <p className="m-0">{assumptionText(source.assumption)}</p>;
-    case 'user':
-      return source.overrides === null ? (
-        <p className="m-0">{t(`${P}.detail.user`)}</p>
-      ) : (
-        <p className="m-0">{t(`${P}.detail.override`, { original: formatOriginal(source.overrides.original) })}</p>
+    case 'user': {
+      const { declaredFrom, overrides } = source;
+      return (
+        <>
+          {overrides === null ? (
+            declaredFrom === undefined && <p className="m-0">{t(`${P}.detail.user`)}</p>
+          ) : (
+            <p className="m-0">{t(`${P}.detail.override`, { original: formatOriginal(overrides.original) })}</p>
+          )}
+          {declaredFrom !== undefined && (
+            <p className="m-0">
+              {t(`${P}.detail.declared`, { document: t(EVIDENCE_DOCUMENT_LABEL_KEYS[declaredFrom.document]), page: declaredFrom.page })}
+            </p>
+          )}
+        </>
       );
+    }
     case 'openData': {
       const factor = context.sourcedCommercialityFactor;
       const text =

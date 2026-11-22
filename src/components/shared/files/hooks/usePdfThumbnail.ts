@@ -18,46 +18,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-// ============================================================================
-// PDF.JS TYPES (minimal — avoid importing full pdfjs-dist types)
-// ============================================================================
-
-interface PdfDocProxy {
-  numPages: number;
-  getPage(pageNumber: number): Promise<PdfPageProxy>;
-  destroy(): Promise<void>;
-}
-
-interface PdfPageProxy {
-  getViewport(params: { scale: number; rotation?: number }): PdfViewport;
-  render(params: { canvasContext: CanvasRenderingContext2D; viewport: PdfViewport }): { promise: Promise<void> };
-}
-
-interface PdfViewport {
-  width: number;
-  height: number;
-}
-
-interface PdfJsLib {
-  getDocument(params: { data: Uint8Array }): { promise: Promise<PdfDocProxy> };
-  GlobalWorkerOptions: { workerSrc: string };
-}
-
-// ============================================================================
-// PDF.JS LAZY LOADER (shared singleton)
-// ============================================================================
-
-const WORKER_URL = '/pdf.worker.min.mjs';
-
-let pdfjsLib: PdfJsLib | null = null;
-
-async function loadPdfJs(): Promise<PdfJsLib> {
-  if (pdfjsLib) return pdfjsLib;
-  const lib = await import('pdfjs-dist');
-  lib.GlobalWorkerOptions.workerSrc = WORKER_URL;
-  pdfjsLib = lib as unknown as PdfJsLib;
-  return pdfjsLib;
-}
+// Ο ΕΝΑΣ φορτωτής pdf.js της εφαρμογής (singleton + worker) — ADR-949 Α-2: εδώ ζούσε δεύτερο αντίγραφο.
+import { loadPdfJs, type PdfDocProxy } from '@/components/file-manager/pdf-canvas-config';
 
 // ============================================================================
 // THUMBNAIL CACHE (in-memory, per session)

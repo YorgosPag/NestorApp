@@ -180,6 +180,10 @@ export interface PdfPageProxy {
     viewport: PageViewport;
   }): { promise: Promise<void>; cancel(): void };
   streamTextContent(params?: { includeMarkedContent?: boolean }): ReadableStream<TextContent>;
+  /** Όλο το κείμενο της σελίδας μαζί — για ανάγνωση εγγράφου στη συσκευή (ADR-949 Α-2), όχι για απόδοση. */
+  getTextContent(): Promise<TextContent>;
+  /** Απελευθέρωση πόρων της σελίδας μετά την ανάγνωση. */
+  cleanup(): boolean;
   getAnnotations(params?: { intent?: 'display' }): Promise<PdfAnnotationData[]>;
 }
 
