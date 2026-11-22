@@ -86,6 +86,49 @@ export const TERRAIN_STROKE_PX = {
   markCasing: 3.5,
 } as const;
 
+/**
+ * ADR-920 §14.10 — **η επιθεώρηση πάνω στον χάρτη**. Ματζέντα για τη φωτισμένη ισοϋψή, κυανό για το νερό (`globals.css`,
+ * ίδια στα δύο θέματα). Όλα πάνω σε λευκό περίβλημα, όπως οι ισοϋψείς. Το σταυρόνημα, το βέλος κατηφόρας και η γραμμή
+ * προφίλ είναι μελάνι: δείχνουν θέση και διεύθυνση, όχι κατηγορία. Το νερό «κυλά» μόνο με `motion-safe` (WCAG 2.3.3).
+ */
+export const TERRAIN_INSPECT_CLASS = {
+  casing: 'fill-none stroke-white',
+  contour: 'fill-none stroke-[hsl(var(--terrain-inspect-contour))]',
+  contourLabel: `${SPACE_LABEL_CLASS} tabular-nums fill-[hsl(var(--terrain-inspect-contour))]`,
+  ink: 'fill-none stroke-[hsl(var(--plan-ink))]',
+  inkFill: 'fill-[hsl(var(--plan-ink))] stroke-white',
+  pinned: 'fill-white stroke-[hsl(var(--plan-ink))]',
+  profileLabel: `${SPACE_LABEL_CLASS} font-bold`,
+  water: 'fill-none stroke-[hsl(var(--terrain-water))] [stroke-dasharray:6_6] motion-safe:animate-terrain-flow',
+  waterDrop: 'fill-[hsl(var(--terrain-water))] stroke-white',
+} as const;
+
+/**
+ * ADR-920 §14.10 Ε3 — **η υψομετρική τομή**. Κάθεται στην κάρτα της σελίδας (όχι σε χαρτί) ⇒ χρώματα ΘΕΜΑΤΟΣ για έδαφος και
+ * γραμμή· η λωρίδα κλίσεων κρατά τα `--terrain-slope-*` του χάρτη (ίδια κλάση = ίδιο χρώμα σε χάρτη και τομή). Η παρεμβολή
+ * είναι **διακεκομμένη** γραμμή (σχήμα, όχι απόχρωση).
+ */
+export const TERRAIN_PROFILE_CLASS = {
+  area: 'fill-muted',
+  line: 'fill-none stroke-foreground',
+  sparseLine: 'fill-none stroke-muted-foreground [stroke-dasharray:4_3]',
+  hover: 'fill-none stroke-foreground [stroke-dasharray:2_2]',
+  hoverDot: 'fill-background stroke-foreground',
+} as const;
+
+/** Πάχος της λευκής άλω κάθε κειμένου του χάρτη, ως κλάσμα του ύψους του κειμένου (ετικέτες, κλίμακα, επιθεώρηση). */
+export const TERRAIN_LABEL_HALO_RATIO = 0.28;
+
+/** Πάχη της επιθεώρησης, css px (`non-scaling-stroke`) — η φωτισμένη ισοϋψής φαίνεται πάνω από την κύρια (1,5 px). */
+export const TERRAIN_INSPECT_STROKE_PX = {
+  contour: 3,
+  contourCasing: 5,
+  ink: 1.5,
+  inkCasing: 3.5,
+  water: 2.5,
+  waterCasing: 4.5,
+} as const;
+
 /** Σημάνσεις της προεπισκόπησης: μελάνι πάνω σε λευκό περίβλημα· το σχήμα (σταυρός / δαχτυλίδι) λέει ποιο είναι. */
 export const TERRAIN_MARK_CLASS = {
   casing: 'fill-none stroke-white',

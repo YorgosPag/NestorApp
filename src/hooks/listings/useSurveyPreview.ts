@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
 import type { TerrainMapModel } from '@/lib/terrain/publication/terrain-map-model';
 import type { TopoPoint } from '@/lib/terrain/terrain-types';
@@ -38,6 +39,11 @@ export interface SurveyPreviewState {
    * ίδια σημεία, όποιο κι αν είναι το πλάτος.
    */
   readonly snapshot: ListingTerrainSnapshot | null;
+  /**
+   * ADR-920 §14.10 — η ΠΑΓΚΟΣΜΙΑ θέση (mm) του κέντρου του ίδιου στιγμιότυπου: ο ιδιοκτήτης βλέπει τις συντεταγμένες του
+   * αρχείου του στο σημείο που δείχνει. Μόνο εδώ, στην προεπισκόπηση — ποτέ στο snapshot ή στο wire (Δ3).
+   */
+  readonly worldCentreMm: PlanarPoint | null;
   /** Νεότερη απάντηση είναι καθ' οδόν — ό,τι φαίνεται μπορεί να είναι παλιό. */
   readonly updating: boolean;
   /** Η τρέχουσα ερώτηση απέτυχε (Worker **και** δίχτυ) — ποτέ σιωπηλά «ενημερώνεται» για πάντα. */
@@ -66,18 +72,23 @@ interface Answer {
   readonly reply: SurveyPreviewReply | null;
   /** Το στιγμιότυπο του `reply` — το ΠΡΩΤΟ που ήρθε για το κλειδί του (σταθερή ταυτότητα). */
   readonly snapshot: ListingTerrainSnapshot | null;
+  /** Το παγκόσμιο κέντρο του `snapshot` — ίδια ζωή και ίδια ταυτότητα με αυτό. */
+  readonly worldCentreMm: PlanarPoint | null;
   /** Η ερώτηση που απέτυχε τελευταία, `key:width`. */
   readonly failedFor: string | null;
 }
 
-const NO_ANSWER: Answer = { reply: null, snapshot: null, failedFor: null };
+const NO_ANSWER: Answer = { reply: null, snapshot: null, worldCentreMm: null, failedFor: null };
 const questionId = (key: number, widthPx: number | null): string => `${key}:${widthPx ?? '-'}`;
 
 /** Νέα απάντηση: ίδιο κλειδί ⇒ τα ίδια σημεία ⇒ κρατά το στιγμιότυπο που ήδη έχει (το 3Δ δεν ξαναχτίζεται). */
 function answerOf(previous: Answer, reply: SurveyPreviewReply): Answer {
   const sameSurvey = previous.reply !== null && previous.reply.key === reply.key;
-  const snapshot = sameSurvey ? previous.snapshot : reply.preparation.ok ? reply.preparation.snapshot : null;
-  return { reply, snapshot, failedFor: null };
+  if (sameSurvey) return { reply, snapshot: previous.snapshot, worldCentreMm: previous.worldCentreMm, failedFor: null };
+  const { preparation } = reply;
+  return preparation.ok
+    ? { reply, snapshot: preparation.snapshot, worldCentreMm: preparation.centreWorldMm, failedFor: null }
+    : { reply, snapshot: null, worldCentreMm: null, failedFor: null };
 }
 
 /** Ένας previewer ανά οθόνη — ο Worker τερματίζεται στο unmount (ξαναγεννιέται αν το StrictMode ξαναπροσαρτήσει). */
@@ -121,6 +132,7 @@ export function useSurveyPreview(points: readonly TopoPoint[], widthPx: number |
     preparation: current ? reply.preparation : null,
     model: empty ? null : reply?.model ?? null,
     snapshot: empty ? null : answer.snapshot,
+    worldCentreMm: empty ? null : answer.worldCentreMm,
     updating: !empty && !failed && !(current && reply.widthPx === widthPx),
     failed,
     warm,

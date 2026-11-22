@@ -78,11 +78,21 @@ export function slopeRegionsOf(
   });
   return byClass.map((members, classIndex) => ({
     classIndex,
-    fromPct: classIndex === 0 ? 0 : bandsPct[classIndex - 1],
-    toPct: classIndex < bandsPct.length ? bandsPct[classIndex] : null,
+    ...slopeClassRange(bandsPct, classIndex),
     areaShare: total > 0 ? areaByClass[classIndex] / total : 0,
     pathData: regionPathData(mesh, members),
   }));
+}
+
+/**
+ * The range of slope class `classIndex` — the ONE definition: the map's regions and the point inspector's «class 5 % –
+ * 15 %» (ADR-920 §14.10) both read it. `toPct: null` for the last, open class.
+ */
+export function slopeClassRange(bandsPct: readonly number[], classIndex: number): Pick<TerrainMapSlopeRegion, 'fromPct' | 'toPct'> {
+  return {
+    fromPct: classIndex === 0 ? 0 : bandsPct[classIndex - 1],
+    toPct: classIndex < bandsPct.length ? bandsPct[classIndex] : null,
+  };
 }
 
 /** Plan length of the edge `a–b`, metres. */
@@ -104,18 +114,32 @@ function medianEdgeLength(positions: readonly number[], triangles: readonly Tria
 }
 
 /**
- * The triangles that span unmeasured ground: longest edge > {@link LISTING_TERRAIN_MAP_SPARSE_EDGE_FACTOR} × the median
- * edge. `null` when there are none — the map then says nothing, rather than drawing an empty hatch.
+ * Per triangle: does it span unmeasured ground? Longest edge > {@link LISTING_TERRAIN_MAP_SPARSE_EDGE_FACTOR} × the
+ * median edge. The ONE definition — the hatched area of the map and the «interpolated» reading of the point inspector
+ * (ADR-920 §14.10) both ask it.
+ */
+export function sparseTriangleFlags(
+  positions: readonly number[],
+  triangles: readonly TriangleIndices[],
+  factor: number = LISTING_TERRAIN_MAP_SPARSE_EDGE_FACTOR,
+): boolean[] {
+  if (triangles.length === 0) return [];
+  const limit = factor * medianEdgeLength(positions, triangles);
+  return triangles.map(([i, j, k]) =>
+    Math.max(edgeLength(positions, i, j), edgeLength(positions, j, k), edgeLength(positions, k, i)) > limit,
+  );
+}
+
+/**
+ * The triangles that span unmeasured ground ({@link sparseTriangleFlags}) as one path. `null` when there are none — the
+ * map then says nothing, rather than drawing an empty hatch.
  */
 export function sparseAreaPathData(
   mesh: ListingTerrainMesh,
   triangles: readonly TriangleIndices[],
   factor: number = LISTING_TERRAIN_MAP_SPARSE_EDGE_FACTOR,
 ): string | null {
-  if (triangles.length === 0) return null;
-  const limit = factor * medianEdgeLength(mesh.positions, triangles);
-  const sparse = triangles.filter(([i, j, k]) =>
-    Math.max(edgeLength(mesh.positions, i, j), edgeLength(mesh.positions, j, k), edgeLength(mesh.positions, k, i)) > limit,
-  );
+  const flags = sparseTriangleFlags(mesh.positions, triangles, factor);
+  const sparse = triangles.filter((_, t) => flags[t]);
   return sparse.length === 0 ? null : regionPathData(mesh, sparse);
 }

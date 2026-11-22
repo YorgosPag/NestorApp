@@ -23,6 +23,8 @@ import {
 } from '../publication/listing-terrain-source';
 import type { TerrainRefusalCode } from '../publication/terrain-publication-contract';
 import type { ListingTerrainSnapshot } from '../publication/listing-terrain-types';
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
+
 import type { SnapshotFrame } from '../publication/listing-terrain-frame';
 import type { TopoPoint } from '../terrain-types';
 import { censusOf, surveyFactsOf, type SurveyFacts } from './survey-position-census';
@@ -52,6 +54,11 @@ export type SurveyUploadPreparation =
       readonly facts: SurveyFacts;
       /** One mark per repeated position, in source order. */
       readonly marks: readonly SurveyPointMark[];
+      /**
+       * ADR-920 §14.10 — the WORLD position (mm) of the snapshot's centre, for the owner's point inspector (survey
+       * coordinates of the point under the cursor). Never on the wire: `encoded` is built from `source` alone (Δ3).
+       */
+      readonly centreWorldMm: PlanarPoint;
     }
   | { readonly ok: false; readonly code: TerrainRefusalCode; readonly facts: SurveyFacts | null };
 
@@ -101,5 +108,5 @@ export function prepareSurveyUpload(points: readonly TopoPoint[]): SurveyUploadP
   if (byteLengthOf(encoded) > LISTING_TERRAIN_SOURCE_MAX_BYTES) return { ok: false, code: 'TERRAIN_SOURCE_TOO_LARGE', facts };
 
   const marks = surveyMarksOf(verdict.source.points, verdict.frame);
-  return { ok: true, source: verdict.source, encoded, snapshot: verdict.snapshot, facts, marks };
+  return { ok: true, source: verdict.source, encoded, snapshot: verdict.snapshot, facts, marks, centreWorldMm: verdict.frame.centreWorldMm };
 }

@@ -15,15 +15,19 @@
  *   συμβόλων, μόνο όσων **υπάρχουν** στον χάρτη (Revit / ArchiCAD: υπόμνημα του φύλλου, όχι κατάλογος βιβλιοθήκης).
  */
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import { MapRampLegend, type MapLegendItem } from '@/components/market/MapRampLegend';
 import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
 import { useSvgFragmentId } from '@/hooks/media/useSvgFragmentId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { TerrainPointReading } from '@/lib/terrain/inspect/terrain-point-reading';
 import type { TerrainMapMark, TerrainMapModel } from '@/lib/terrain/publication/terrain-map-model';
 
 import { TerrainElevationLegend } from './TerrainElevationLegend';
+import { TerrainInspectAnnouncer, TerrainInspectCard, opposingCorner } from './TerrainInspectCard';
+import { useTerrainInspectStore } from './TerrainInspectContext';
+import type { TerrainInspectLayerWords } from './TerrainInspectLayer';
 import { TerrainMapSvg, type TerrainMapFill, type TerrainMapSvgWords } from './TerrainMapSvg';
 import { TerrainSlopeTable } from './TerrainSlopeTable';
 import { MarkSwatch, SparseSwatch, TerrainLineSwatch } from './terrain-map-symbols';
@@ -135,6 +139,39 @@ function MinorHiddenNote({ model, t }: { readonly model: TerrainMapModel; readon
   );
 }
 
+function inspectWordsOf(t: T, model: TerrainMapModel): TerrainInspectLayerWords {
+  return {
+    contourLabelOf: (levelM) => t(`${NS}.inspect.contourLabel`, { level: lengthLabel(t, levelM, model.contourIntervalM) }),
+    profileStart: t(`${NS}.profile.start`),
+    profileEnd: t(`${NS}.profile.end`),
+  };
+}
+
+/**
+ * ADR-920 §14.10 — ο χάρτης **με** επιθεώρηση όταν υπάρχει πάροχος (δημόσια αγγελία · προεπισκόπηση), αλλιώς σκέτο σχέδιο.
+ * Το περιτύλιγμα υπάρχει μόνο ως πλαίσιο θέσης της κάρτας (`relative`), η οποία κάθεται στη γωνία απέναντι από το σημείο.
+ */
+function MapStage({ model, words, fill, t }: { readonly model: TerrainMapModel; readonly words: TerrainMapSvgWords; readonly fill: TerrainMapFill; readonly t: T }) {
+  const store = useTerrainInspectStore();
+  const inspect = useMemo(() => (store ? inspectWordsOf(t, model) : undefined), [store, t, model]);
+  const { viewBox: box } = model;
+  const cornerOf = useCallback(
+    (reading: TerrainPointReading) => opposingCorner(reading.x, reading.y, box.minX + box.width / 2, -(box.minY + box.height / 2)),
+    [box],
+  );
+  if (!inspect) return <TerrainMapSvg model={model} words={words} fill={fill} />;
+  return (
+    <>
+      <div className="relative" data-terrain-map-stage="">
+        <TerrainMapSvg model={model} words={words} fill={fill} inspect={inspect} />
+        <TerrainInspectCard cornerOf={cornerOf} />
+      </div>
+      <p className="m-0 text-xs text-muted-foreground" data-terrain-inspect-hint="">{t(`${NS}.inspect.hint`)}</p>
+      <TerrainInspectAnnouncer />
+    </>
+  );
+}
+
 export function TerrainContourMap({ model }: TerrainContourMapProps) {
   const { t } = useTranslation([...TERRAIN_MAP_WORD_NAMESPACES]);
   const [fill, setFill] = useState<TerrainMapFill>('elevation');
@@ -144,7 +181,7 @@ export function TerrainContourMap({ model }: TerrainContourMapProps) {
   return (
     <figure className="m-0 flex flex-col gap-3" data-terrain-contour-map="" data-terrain-fill={fill}>
       <FillSwitch fill={fill} onFill={setFill} t={t} />
-      <TerrainMapSvg model={model} words={words} fill={fill} />
+      <MapStage model={model} words={words} fill={fill} t={t} />
       <figcaption className="flex flex-col gap-3">
         <CaptionLine model={model} t={t} />
         <MinorHiddenNote model={model} t={t} />

@@ -42,6 +42,8 @@ export interface Terrain3dBuffers {
 /** Everything the 3D viewer draws, in metres. */
 export interface Terrain3dGeometry {
   readonly exaggeration: ListingTerrain3dExaggeration;
+  /** ADR-920 §14.10 — the vertical mapping these buffers were built with: overlays stand on the ground through it. */
+  readonly vertical: Terrain3dVertical;
   /** The ground: linear-space RGB per vertex (`BufferGeometry` `color` attribute). */
   readonly surface: Terrain3dBuffers & { readonly colors: Float32Array };
   /** Walls + bottom of the soil block — one material. */
@@ -71,8 +73,43 @@ interface Vertical {
   readonly exaggeration: number;
 }
 
-function heightY(elevationM: number, v: Vertical): number {
+/** The vertical mapping of a scene: its lowest point and its exaggeration — what an overlay needs to stand on the ground. */
+export type Terrain3dVertical = Pick<Vertical, 'minM' | 'exaggeration'>;
+
+function heightY(elevationM: number, v: Terrain3dVertical): number {
   return (elevationM - v.minM) * v.exaggeration;
+}
+
+/**
+ * ADR-920 §14.10 — **the ONE snapshot → scene mapping, for overlays too** (the inspector's marker, the lit contour, the
+ * profile, the water drop): x east = scene x, height = scene y (exaggerated, from the lowest point), north = scene −z.
+ * The SAME axes as {@link writeVertex}, so an overlay sits exactly on the buffers it decorates.
+ */
+export function terrain3dScenePoint(xM: number, yM: number, elevationM: number, v: Terrain3dVertical): [number, number, number] {
+  return [xM, heightY(elevationM, v), -yM];
+}
+
+/** The inverse, in plan: scene (x, z) → snapshot frame (x east, y north). Height is never read back from the scene. */
+export function snapshotPlanOfScene(sceneX: number, sceneZ: number): { readonly x: number; readonly y: number } {
+  return { x: sceneX, y: -sceneZ };
+}
+
+/** A polyline on the ground (`z` = absolute elevation) → segment pairs for `LineSegmentsGeometry.setPositions`. */
+export function terrain3dPolylinePairs(
+  points: readonly { readonly x: number; readonly y: number; readonly z: number }[],
+  v: Terrain3dVertical,
+): Float32Array {
+  const scene = points.map((p) => terrain3dScenePoint(p.x, p.y, p.z, v));
+  const out = new Float32Array(Math.max(0, scene.length - 1) * 6);
+  for (let i = 0; i + 1 < scene.length; i++) out.set([...scene[i], ...scene[i + 1]], i * 6);
+  return out;
+}
+
+/** One contour as segment pairs — the SAME segments the contour buffers carry for it (lit by the inspector). */
+export function terrain3dContourPairs(contour: ListingTerrainContour, v: Terrain3dVertical): Float32Array {
+  const out: number[] = [];
+  pushContourSegments(out, contour, v);
+  return Float32Array.from(out);
 }
 
 /** Plan extent of the mesh (snapshot frame: x east, y north). */
@@ -138,7 +175,7 @@ function soilBuffers(mesh: ListingTerrainMesh, v: Vertical, baseY: number): Terr
 }
 
 /** One contour's segments, appended to `out` (closed lines get their closing segment). */
-function pushContourSegments(out: number[], contour: ListingTerrainContour, v: Vertical): void {
+function pushContourSegments(out: number[], contour: ListingTerrainContour, v: Terrain3dVertical): void {
   const y = heightY(contour.levelM, v);
   const p = contour.points;
   const pointCount = p.length / 2;
@@ -178,6 +215,7 @@ export function buildTerrain3dGeometry(
     ok: true,
     geometry: {
       exaggeration,
+      vertical: { minM: minElevationM, exaggeration },
       surface: surfaceBuffers(snapshot.mesh, v),
       soil: soilBuffers(snapshot.mesh, v, baseY),
       contours: contourBuffers(snapshot.contours, v),

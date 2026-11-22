@@ -2242,9 +2242,11 @@
     "public-catalog"
   ],
   "Terrain3dCanvas": [
-    "listing-detail"
+    "listing-detail",
+    "properties-enums"
   ],
   "TerrainSnapshotStage": [
-    "listing-detail"
+    "listing-detail",
+    "properties-enums"
   ]
 }

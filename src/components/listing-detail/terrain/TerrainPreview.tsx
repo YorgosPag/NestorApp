@@ -47,7 +47,7 @@ export function TerrainPreview({ preview, onWidth }: TerrainPreviewProps) {
       )}>
       <p role="status" className="m-0 text-sm text-muted-foreground">{status}</p>
       {preview.model !== null && preview.snapshot !== null && (
-        <TerrainViewStage model={preview.model} snapshot={preview.snapshot} />
+        <TerrainViewStage model={preview.model} snapshot={preview.snapshot} worldCentreMm={preview.worldCentreMm} />
       )}
     </section>
   );

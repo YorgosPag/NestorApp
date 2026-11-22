@@ -27,8 +27,9 @@ const REPLY = previewReplyOf(1, 480);
 const MODEL = REPLY.model;
 const SNAPSHOT = REPLY.preparation.ok ? REPLY.preparation.snapshot : null;
 
-function renderPreview(preview: TerrainPreviewProps['preview']) {
-  const view = render(<TerrainPreview preview={preview} onWidth={jest.fn()} />);
+/** Οι περιπτώσεις εδώ δεν αφορούν τις συντεταγμένες του ιδιοκτήτη (ADR-920 §14.10) — πάντα `null`. */
+function renderPreview(preview: Omit<TerrainPreviewProps['preview'], 'worldCentreMm'>) {
+  const view = render(<TerrainPreview preview={{ ...preview, worldCentreMm: null }} onWidth={jest.fn()} />);
   return { region: screen.getByRole('region', { name: `${NS}.label` }), status: screen.getByRole('status'), ...view };
 }
 

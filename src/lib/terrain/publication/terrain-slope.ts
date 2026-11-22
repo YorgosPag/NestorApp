@@ -93,8 +93,11 @@ export function summariseSlope(tin: TinSurface): SurfaceSlopeSummary {
   };
 }
 
-/** Azimuth (clockwise from north) of the DOWNHILL direction `−∇z`; `null` on flat ground. */
-function downslopeAzimuth(gradX: number, gradY: number): number | null {
+/**
+ * Azimuth (clockwise from north) of the DOWNHILL direction `−∇z`; `null` on flat ground. Exported for the point
+ * inspector (ADR-920 §14.10), so the plot summary and the reading under the cursor share ONE convention.
+ */
+export function downslopeAzimuth(gradX: number, gradY: number): number | null {
   if (Math.hypot(gradX, gradY) * 100 < LISTING_TERRAIN_FLAT_GRADIENT_PCT) return null;
   const deg = (Math.atan2(-gradX, -gradY) * 180) / Math.PI;
   return (deg + 360) % 360;

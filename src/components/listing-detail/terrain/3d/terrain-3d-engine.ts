@@ -14,6 +14,9 @@
  * 🔑 **Ο κύβος του viewer, χωρίς δεύτερο WebGL context**: `sync` πριν από το καρέ, `composite()` στο τέλος (ADR-553).
  *   Χωρίς `onRoll`: η κύλιση γύρω από τον άξονα θέασης δεν έχει νόημα πάνω σε έδαφος.
  * ♿ Βέλη πληκτρολογίου μετακινούν τη σκηνή (`listenToKeyEvents`).
+ * 🔍 **Επιθεώρηση (ADR-920 §14.10)**: `pick` = θέση σε κάτοψη κάτω από τον δείκτη (`terrain-3d-pick.ts`) · `setInspect` =
+ *   ό,τι δείχνει η επιθεώρηση (`terrain-3d-inspect-overlay.ts`), ξαναστημένο σε κάθε αλλαγή υπερβολής. Το νερό που κυλά
+ *   είναι η ΜΟΝΗ αιτία συνεχών καρέ — και μόνο όσο φαίνεται και επιτρέπεται κίνηση.
  * ⚠️ **Χαμένο πλαίσιο GPU** ⇒ `onContextLost`: ο καταναλωτής δείχνει ονομασμένη αποτυχία, ποτέ μαύρο κουτί.
  */
 
@@ -35,10 +38,17 @@ import {
   type TerrainPose,
 } from './terrain-3d-camera';
 import { createTerrain3dFlight, type Terrain3dFlight } from './terrain-3d-flight';
+import { createTerrain3dInspectOverlay, type Terrain3dInspectOverlay, type Terrain3dInspectView } from './terrain-3d-inspect-overlay';
+import { createTerrain3dPicker, type Terrain3dPick } from './terrain-3d-pick';
 import { createTerrain3dScene, type Terrain3dScene } from './terrain-3d-scene';
 
 /** Ανώτατη πυκνότητα pixel: πάνω από 2× ένα έδαφος λίγων χιλιάδων τριγώνων δεν κερδίζει τίποτα ορατό. */
 const MAX_PIXEL_RATIO = 2;
+
+/** Μέγεθος του δείκτη επιθεώρησης ως κλάσμα της μεγαλύτερης πλευράς του οικοπέδου. */
+const INSPECT_MARKER_FRACTION = 0.008;
+
+const NO_INSPECT: Terrain3dInspectView = { probe: null, pinned: null, contour: null, profileRuns: [], flow: null };
 
 export interface Terrain3dEngineOptions {
   readonly canvas: HTMLCanvasElement;
@@ -55,6 +65,10 @@ export interface Terrain3dEngine {
   setGeometry(geometry: Terrain3dGeometry): void;
   /** Επαναφορά: ισομετρική ΒΑ όψη, όλο το οικόπεδο στην οθόνη. */
   home(): void;
+  /** ADR-920 §14.10 — θέση σε κάτοψη (πλαίσιο snapshot) του εδάφους κάτω από το σημείο της οθόνης, ή `null`. */
+  pick: Terrain3dPick;
+  /** ADR-920 §14.10 — ό,τι δείχνει τώρα η επιθεώρηση. */
+  setInspect(view: Terrain3dInspectView): void;
   dispose(): void;
 }
 
@@ -65,9 +79,12 @@ interface Rig {
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: OrbitControls;
   readonly terrain: Terrain3dScene;
+  readonly inspect: Terrain3dInspectOverlay;
   readonly flight: Terrain3dFlight;
   readonly request: () => void;
   bounds: Terrain3dBounds;
+  geometry: Terrain3dGeometry;
+  inspectView: Terrain3dInspectView;
 }
 
 /** Το `toCamera` μιας κανονικής όψης (το `lookDir` του κύβου είναι κάμερα → στόχος). */
@@ -115,6 +132,15 @@ function resizeRig(rig: Rig, widthCss: number, heightCss: number): void {
   rig.camera.aspect = width / height;
   rig.camera.updateProjectionMatrix();
   rig.terrain.setLineResolution(width, height);
+  rig.inspect.setResolution(width, height);
+  rig.request();
+}
+
+/** Η επιθεώρηση πάνω στην ΤΡΕΧΟΥΣΑ γεωμετρία (υπερβολή, μέγεθος οικοπέδου). */
+function applyInspect(rig: Rig): void {
+  const { bounds } = rig.geometry;
+  const sizeM = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) * INSPECT_MARKER_FRACTION;
+  rig.inspect.update(rig.inspectView, rig.geometry.vertical, sizeM);
   rig.request();
 }
 
@@ -149,15 +175,19 @@ function createTerrainCube(rig: Rig, host: HTMLElement, labels: ViewCubeOptions[
 function createRig(options: Terrain3dEngineOptions, request: () => void): Rig {
   const camera = new THREE.PerspectiveCamera(TERRAIN_3D_FOV_DEG, 1, 0.1, 1000);
   const controls = createControls(camera, options.canvas);
+  const terrain = createTerrain3dScene(options.geometry);
   return {
     canvas: options.canvas,
     renderer: createRenderer(options.canvas),
     camera,
     controls,
-    terrain: createTerrain3dScene(options.geometry),
+    terrain,
+    inspect: createTerrain3dInspectOverlay(terrain.scene),
     flight: createTerrain3dFlight({ camera, controls, onFrame: request }),
     request,
     bounds: options.geometry.bounds,
+    geometry: options.geometry,
+    inspectView: NO_INSPECT,
   };
 }
 
@@ -183,11 +213,18 @@ export function createTerrain3dEngine(options: Terrain3dEngineOptions): Terrain3
   const scheduler = createFrameScheduler(() => draw());
   const rig = createRig(options, scheduler.request);
   const cube = createTerrainCube(rig, options.cubeHost, options.cubeLabels);
+  let lastFrameMs = 0;
   const draw = (): void => {
+    const now = performance.now();
+    const deltaMs = lastFrameMs === 0 ? 0 : Math.min(now - lastFrameMs, 100);
+    lastFrameMs = now;
     if (!rig.flight.isFlying()) rig.controls.update();
     cube.sync(rig.camera, rig.controls.target);
     rig.renderer.render(rig.terrain.scene, rig.camera);
     cube.composite();
+    // Το νερό που κυλά κρατά τα καρέ ζωντανά· όταν σταματήσει, το επόμενο αίτημα ξεκινά καθαρό μέτρημα χρόνου.
+    if (rig.inspect.tick(deltaMs)) rig.request();
+    else lastFrameMs = 0;
   };
   const onContextLost = (event: Event): void => {
     event.preventDefault();
@@ -202,16 +239,27 @@ export function createTerrain3dEngine(options: Terrain3dEngineOptions): Terrain3
     rig.camera.position.copy(initial.position);
     rig.controls.target.copy(initial.target);
   }
+  return engineApi(rig, () => disposeRig(rig, cube, scheduler.cancel, onContextLost));
+}
+
+/** Η δημόσια όψη της μηχανής πάνω σε έτοιμο rig. */
+function engineApi(rig: Rig, dispose: () => void): Terrain3dEngine {
   return {
     resize: (width, height) => resizeRig(rig, width, height),
     setGeometry: (geometry) => {
       rig.bounds = geometry.bounds;
+      rig.geometry = geometry;
       rig.terrain.replace(geometry);
       applyLimits(rig);
-      rig.request();
+      applyInspect(rig);
     },
     home: () => rig.flight.flyTo(poseToward(rig, toCameraOf(HOME_CANONICAL_VIEW_ID))),
-    dispose: () => disposeRig(rig, cube, scheduler.cancel, onContextLost),
+    pick: createTerrain3dPicker(rig.canvas, rig.camera, rig.terrain.objects.surface),
+    setInspect: (view) => {
+      rig.inspectView = view;
+      applyInspect(rig);
+    },
+    dispose,
   };
 }
 
@@ -223,6 +271,7 @@ function disposeRig(rig: Rig, cube: ViewCubeEngine, cancelFrame: () => void, onC
   rig.controls.stopListenToKeyEvents();
   rig.controls.dispose();
   cube.dispose();
+  rig.inspect.dispose();
   rig.terrain.dispose();
   rig.renderer.dispose();
 }

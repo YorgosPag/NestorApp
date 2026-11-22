@@ -26,6 +26,7 @@ import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmente
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isWebGLAvailable } from '@/lib/browser/webgl-support';
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import {
   LISTING_TERRAIN_3D_EXAGGERATIONS,
   type ListingTerrain3dExaggeration,
@@ -34,6 +35,9 @@ import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-t
 import type { TerrainMapModel } from '@/lib/terrain/publication/terrain-map-model';
 
 import { TerrainContourMap } from './TerrainContourMap';
+import { TerrainInspectProvider } from './TerrainInspectContext';
+import { TerrainInspectToolbar } from './TerrainInspectToolbar';
+import { TerrainProfilePanel } from './TerrainProfileChart';
 import { LazyTerrain3dCanvas, TERRAIN_STAGE_NOTICE_BOX as NOTICE_BOX } from './terrain-surfaces';
 
 const NS = 'listing-detail:terrain.view';
@@ -44,9 +48,26 @@ type ThreeDState = 'idle' | 'revealed' | 'failed' | 'unsupported';
 export interface TerrainViewStageProps {
   readonly model: TerrainMapModel;
   readonly snapshot: ListingTerrainSnapshot;
+  /**
+   * ADR-920 §14.10 — η παγκόσμια θέση (mm) του κέντρου, **μόνο** από την προεπισκόπηση του ιδιοκτήτη: η κάρτα σημείου δείχνει
+   * τότε και ΕΓΣΑ'87 / WGS84. Η δημόσια αγγελία δεν το έχει (Δ3) ⇒ μόνο θέση ως προς το κέντρο.
+   */
+  readonly worldCentreMm?: PlanarPoint | null;
 }
 
-export function TerrainViewStage({ model, snapshot }: TerrainViewStageProps) {
+/**
+ * 🔍 **Ένας πάροχος επιθεώρησης γύρω από Κάτοψη ΚΑΙ 3Δ** (ADR-920 §14.10): το σημείο που καρφιτσώνεις στην κάτοψη το
+ * βρίσκεις στο 3Δ, και η γραμμή προφίλ είναι η ίδια στα δύο. Η σκηνή ΔΕΝ ξαναποδίδεται από hover — μόνο τα φύλλα.
+ */
+export function TerrainViewStage({ model, snapshot, worldCentreMm = null }: TerrainViewStageProps) {
+  return (
+    <TerrainInspectProvider snapshot={snapshot} worldCentreMm={worldCentreMm}>
+      <TerrainViewTabs model={model} snapshot={snapshot} />
+    </TerrainInspectProvider>
+  );
+}
+
+function TerrainViewTabs({ model, snapshot }: Pick<TerrainViewStageProps, 'model' | 'snapshot'>) {
   const { t } = useTranslation(['listing-detail']);
   const [threeD, setThreeD] = useState<ThreeDState>('idle');
   const [exaggeration, setExaggeration] = useState<ListingTerrain3dExaggeration>(1);
@@ -54,10 +75,13 @@ export function TerrainViewStage({ model, snapshot }: TerrainViewStageProps) {
   const fail = useCallback(() => setThreeD('failed'), []);
   return (
     <Tabs defaultValue="plan" className="flex flex-col gap-3" data-terrain-view-stage="">
-      <TabsList aria-label={t(`${NS}.tabs.label`)} className="self-start">
-        <TabsTrigger value="plan">{t(`${NS}.tabs.plan`)}</TabsTrigger>
-        <TabsTrigger value="threeD">{t(`${NS}.tabs.threeD`)}</TabsTrigger>
-      </TabsList>
+      <header className="flex flex-wrap items-center gap-3">
+        <TabsList aria-label={t(`${NS}.tabs.label`)} className="self-start">
+          <TabsTrigger value="plan">{t(`${NS}.tabs.plan`)}</TabsTrigger>
+          <TabsTrigger value="threeD">{t(`${NS}.tabs.threeD`)}</TabsTrigger>
+        </TabsList>
+        <TerrainInspectToolbar t={t} />
+      </header>
       <TabsContent value="plan" forceMount>
         <TerrainContourMap model={model} />
       </TabsContent>
@@ -71,6 +95,7 @@ export function TerrainViewStage({ model, snapshot }: TerrainViewStageProps) {
           </Card>
         </ThreeDPanel>
       </TabsContent>
+      <TerrainProfilePanel t={t} />
     </Tabs>
   );
 }

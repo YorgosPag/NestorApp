@@ -16,6 +16,10 @@
 import type { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TerrainMapModel } from '@/lib/terrain/publication/terrain-map-model';
 
+import { useTerrainInspect } from './TerrainInspectContext';
+import { TERRAIN_INSPECT_CLASS as INK, TERRAIN_INSPECT_STROKE_PX as PX } from './terrain-map-palette';
+import { NON_SCALING } from './terrain-map-symbols';
+import { activeReading, type TerrainInspectState } from './terrain-inspect-store';
 import { lengthLabel } from './terrain-map-words';
 
 type T = ReturnType<typeof useTranslation>['t'];
@@ -28,6 +32,29 @@ const STRIP_HEIGHT = 4;
 export interface TerrainElevationLegendProps {
   readonly model: TerrainMapModel;
   readonly t: T;
+}
+
+const selectElevation = (s: TerrainInspectState): number | null => activeReading(s)?.elevationM ?? null;
+
+/**
+ * ADR-920 §14.10 — **φύλλο**: το υψόμετρο του σημείου που δείχνεται, πάνω στη λωρίδα (γραμμή) και η ζώνη του (περίγραμμα).
+ * Ξαναποδίδεται μόνο αυτό· η λωρίδα όχι.
+ */
+function LegendProbe({ model, xOf }: { readonly model: TerrainMapModel; readonly xOf: (m: number) => number }) {
+  const elevation = useTerrainInspect(selectElevation);
+  if (elevation === null) return null;
+  const band = model.elevationBands.find((b) => elevation >= b.fromM && elevation <= b.toM);
+  const x = xOf(elevation);
+  return (
+    <g data-terrain-legend-probe="" data-elevation-from={band?.fromM}>
+      {band && (
+        <rect x={xOf(band.fromM)} y={0} width={xOf(band.toM) - xOf(band.fromM)} height={STRIP_HEIGHT}
+          className={INK.ink} strokeWidth={PX.ink} {...NON_SCALING} />
+      )}
+      <line x1={x} x2={x} y1={0} y2={STRIP_HEIGHT} className={INK.casing} strokeWidth={PX.inkCasing} {...NON_SCALING} />
+      <line x1={x} x2={x} y1={0} y2={STRIP_HEIGHT} className={INK.ink} strokeWidth={PX.ink} {...NON_SCALING} />
+    </g>
+  );
 }
 
 export function TerrainElevationLegend({ model, t }: TerrainElevationLegendProps) {
@@ -43,6 +70,7 @@ export function TerrainElevationLegend({ model, t }: TerrainElevationLegendProps
           <rect key={band.fromM} x={xOf(band.fromM)} y={0} height={STRIP_HEIGHT}
             width={span > 0 ? xOf(band.toM) - xOf(band.fromM) : STRIP_WIDTH} fill={band.color} />
         ))}
+        <LegendProbe model={model} xOf={xOf} />
       </svg>
       <p className="m-0 flex justify-between gap-2 text-xs tabular-nums text-foreground">
         <span>{t(`${NS}.low`, { value: lengthLabel(t, min, model.contourIntervalM) })}</span>

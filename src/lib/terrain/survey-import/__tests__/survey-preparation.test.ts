@@ -78,7 +78,9 @@ describe('surveyFactsOf — what the TIN would resolve silently', () => {
 
 describe('surveyMarksOf — the repeats ON the preview map (ADR-920 Β4.8), never on the wire', () => {
   /** A frame that only divides by 1000 — the marks must go through whatever frame they are given. */
-  const METRES: SnapshotFrame = { planM: (x, y) => [x / 1000, y / 1000], elevationM: (z) => z / 1000 };
+  const METRES: SnapshotFrame = {
+    planM: (x, y) => [x / 1000, y / 1000], elevationM: (z) => z / 1000, centreWorldMm: { x: 0, y: 0 },
+  };
 
   it('one mark per repeated position, source order; a contradiction wins over a plain repeat', () => {
     const marks = surveyMarksOf(

@@ -15,14 +15,20 @@
  * 🎨 Μηδέν inline style (N.3): θέσεις σε γνωρίσματα, χρώματα σε κλάσεις της παλέτας.
  */
 
+import { useRef } from 'react';
+
 import { useSvgFragmentId } from '@/hooks/media/useSvgFragmentId';
 import type { TerrainMapModel } from '@/lib/terrain/publication/terrain-map-model';
 
+import { useTerrainInspect } from './TerrainInspectContext';
+import { TerrainInspectLayer, type TerrainInspectLayerWords } from './TerrainInspectLayer';
 import {
-  TERRAIN_CONTOUR_LABEL_CLASS, TERRAIN_NORTH_CLASS, TERRAIN_PAPER_CLASS, TERRAIN_SCALE_BAR_CLASS, TERRAIN_STROKE_PX,
-  terrainSlopeFillClass,
+  TERRAIN_CONTOUR_LABEL_CLASS, TERRAIN_LABEL_HALO_RATIO as HALO_RATIO, TERRAIN_NORTH_CLASS, TERRAIN_PAPER_CLASS,
+  TERRAIN_SCALE_BAR_CLASS, TERRAIN_STROKE_PX, terrainSlopeFillClass,
 } from './terrain-map-palette';
 import { MarkGlyph, NON_SCALING, SparseHatchPattern, TerrainLine } from './terrain-map-symbols';
+import type { TerrainInspectState } from './terrain-inspect-store';
+import { useTerrainMapPointer } from './useTerrainMapPointer';
 
 /** Τα κείμενα του SVG — ήδη μεταφρασμένα και μορφοποιημένα από τον καλούντα. */
 export interface TerrainMapSvgWords {
@@ -36,7 +42,6 @@ export interface TerrainMapSvgWords {
 }
 
 /** Αναλογίες προς το ύψος κειμένου του μοντέλου — όλα τα σύμβολα μεγαλώνουν μαζί με τα γράμματα. */
-const HALO_RATIO = 0.28;
 const MARK_RADIUS_RATIO = 0.4;
 const HATCH_TILE_RATIO = 0.8;
 const NORTH_LETTER_RATIO = 1.1;
@@ -138,17 +143,18 @@ export interface TerrainMapSvgProps {
   readonly model: TerrainMapModel;
   readonly words: TerrainMapSvgWords;
   readonly fill: TerrainMapFill;
+  /**
+   * ADR-920 §14.10 — τα κείμενα της επιθεώρησης. Παρόντα ⇒ ο χάρτης είναι **διαδραστικός** (δείκτης, αφή, πληκτρολόγιο)·
+   * απόντα (PDF, στατική απόδοση) ⇒ σκέτο σχέδιο, όπως πριν.
+   */
+  readonly inspect?: TerrainInspectLayerWords;
 }
 
-export function TerrainMapSvg({ model, words, fill }: TerrainMapSvgProps) {
-  const id = useSvgFragmentId('terrain');
+/** Τα στρώματα του σχεδίου, με τη σειρά τους (z = σειρά στο DOM). */
+function MapLayers({ model, words, fill, sparseId }: Omit<TerrainMapSvgProps, 'inspect'> & { readonly sparseId: string }) {
   const { viewBox: box } = model;
-  const sparseId = `${id}-sparse`;
   return (
-    <svg viewBox={`${box.minX} ${box.minY} ${box.width} ${box.height}`} role="img"
-      aria-labelledby={`${id}-title ${id}-desc`} data-terrain-map="" className="block h-auto w-full rounded-md border border-border">
-      <title id={`${id}-title`}>{words.title}</title>
-      <desc id={`${id}-desc`}>{words.description}</desc>
+    <>
       {model.sparsePathData !== null && (
         <defs><SparseHatchPattern id={sparseId} tile={model.labelHeightM * HATCH_TILE_RATIO} /></defs>
       )}
@@ -163,6 +169,31 @@ export function TerrainMapSvg({ model, words, fill }: TerrainMapSvgProps) {
       {model.majorContoursPathData.length > 0 && <TerrainLine kind="contourMajor" d={model.majorContoursPathData} />}
       <ContourLabels model={model} levelOf={words.levelOf} />
       <Marks model={model} />
+    </>
+  );
+}
+
+const selectProfileTool = (s: TerrainInspectState): boolean => s.tool === 'profile';
+/** Χωρίς επιθεώρηση: σκέτο σχέδιο. Με επιθεώρηση: εστιάσιμο, με δακτύλιο εστίασης· στο προφίλ κρατά και το δάχτυλο. */
+const MAP_CLASS = 'block h-auto w-full rounded-md border border-border';
+const INTERACTIVE_CLASS = `${MAP_CLASS} cursor-crosshair focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`;
+
+export function TerrainMapSvg({ model, words, fill, inspect }: TerrainMapSvgProps) {
+  const id = useSvgFragmentId('terrain');
+  const svgRef = useRef<SVGSVGElement>(null);
+  const handlers = useTerrainMapPointer(svgRef);
+  const profileTool = useTerrainInspect(selectProfileTool);
+  const { viewBox: box } = model;
+  const interactive = inspect !== undefined;
+  const className = interactive ? `${INTERACTIVE_CLASS}${profileTool ? ' touch-none' : ''}` : MAP_CLASS;
+  return (
+    <svg ref={svgRef} viewBox={`${box.minX} ${box.minY} ${box.width} ${box.height}`} role="img"
+      aria-labelledby={`${id}-title ${id}-desc`} data-terrain-map="" className={className}
+      {...(interactive ? { ...handlers, tabIndex: 0, 'aria-keyshortcuts': 'ArrowUp ArrowDown ArrowLeft ArrowRight Enter Escape' } : {})}>
+      <title id={`${id}-title`}>{words.title}</title>
+      <desc id={`${id}-desc`}>{words.description}</desc>
+      <MapLayers model={model} words={words} fill={fill} sparseId={`${id}-sparse`} />
+      {interactive && <TerrainInspectLayer labelHeightM={model.labelHeightM} words={inspect} />}
       <NorthArrow model={model} letter={words.north} />
       <ScaleBar model={model} start={words.scaleStart} end={words.scaleEnd} />
     </svg>

@@ -14,7 +14,10 @@
 
 import type { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TerrainMapSlopeRegion } from '@/lib/terrain/publication/terrain-map-regions';
+import { cn } from '@/lib/utils';
 
+import { useTerrainInspect } from './TerrainInspectContext';
+import { activeReading, type TerrainInspectState } from './terrain-inspect-store';
 import { terrainSlopeFillClass } from './terrain-map-palette';
 import { SlopeSwatch } from './terrain-map-symbols';
 import { areaShareLabel, slopeRangeLabel } from './terrain-map-words';
@@ -28,7 +31,11 @@ export interface TerrainSlopeTableProps {
   readonly t: T;
 }
 
+/** ADR-920 §14.10 — η κλάση του σημείου που δείχνεται (`-1` = κανένα). Πρωτογενής τιμή: ο πίνακας ξαναποδίδεται μόνο σε αλλαγή κλάσης. */
+const selectActiveClass = (s: TerrainInspectState): number => activeReading(s)?.slopeClass ?? -1;
+
 export function TerrainSlopeTable({ regions, t }: TerrainSlopeTableProps) {
+  const activeClass = useTerrainInspect(selectActiveClass);
   return (
     <table className="w-full border-collapse text-left text-sm" data-terrain-slope-table="">
       <caption className="pb-1 text-left text-xs font-medium text-muted-foreground">{t(`${NS}.caption`)}</caption>
@@ -40,7 +47,9 @@ export function TerrainSlopeTable({ regions, t }: TerrainSlopeTableProps) {
       </thead>
       <tbody>
         {regions.map((region) => (
-          <tr key={region.classIndex} data-slope-class={region.classIndex} className="border-t border-border">
+          <tr key={region.classIndex} data-slope-class={region.classIndex}
+            data-active={region.classIndex === activeClass ? '' : undefined}
+            className={cn('border-t border-border', region.classIndex === activeClass && 'bg-accent font-semibold')}>
             <th scope="row" className="py-1 pr-3 font-normal text-foreground">
               <span className="flex items-center gap-2">
                 <SlopeSwatch fillClass={terrainSlopeFillClass(region.classIndex)} classIndex={region.classIndex} />

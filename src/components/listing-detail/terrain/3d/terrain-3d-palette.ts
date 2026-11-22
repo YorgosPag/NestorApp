@@ -25,6 +25,19 @@ export const TERRAIN_3D_CONTOUR_MINOR_COLOR = 0x525252;
 export const TERRAIN_3D_CONTOUR_MAJOR_WIDTH_PX = 1.6;
 export const TERRAIN_3D_CONTOUR_MINOR_WIDTH_PX = 0.8;
 
+/**
+ * ADR-920 §14.10 — **η επιθεώρηση σε 3Δ**, οι ΙΔΙΕΣ τιμές με την κάτοψη (`globals.css`): φωτισμένη ισοϋψής =
+ * `--terrain-inspect-contour`, νερό = `--terrain-water`, δείκτης / προφίλ = `--plan-ink`. Πάχη σε CSS px, πάνω από την
+ * κύρια ισοϋψή (1,6 px) ώστε η φωτισμένη να ξεχωρίζει και από σχήμα, όχι μόνο από χρώμα.
+ */
+export const TERRAIN_3D_INSPECT_CONTOUR_COLOR = 0xa21caf;
+export const TERRAIN_3D_WATER_COLOR = 0x0369a1;
+export const TERRAIN_3D_INK_COLOR = 0x171717;
+export const TERRAIN_3D_PIN_HEAD_COLOR = 0xffffff;
+export const TERRAIN_3D_INSPECT_CONTOUR_WIDTH_PX = 3.2;
+export const TERRAIN_3D_WATER_WIDTH_PX = 3.2;
+export const TERRAIN_3D_INK_WIDTH_PX = 2;
+
 /** Ημισφαιρικό: ουρανός / έδαφος. */
 export const TERRAIN_3D_SKY_COLOR = 0xffffff;
 export const TERRAIN_3D_GROUND_COLOR = 0x8a7f72;

@@ -264,10 +264,16 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        // ADR-920 §14.10 — the water drop's path «flows»: the dashes travel downhill (the path is drawn from the drop on).
+        'terrain-flow': {
+          from: { strokeDashoffset: '12' },
+          to: { strokeDashoffset: '0' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'terrain-flow': 'terrain-flow 0.8s linear infinite',
       },
       boxShadow: {
         'custom-light': '0 2px 8px rgba(0, 0, 0, 0.1)',

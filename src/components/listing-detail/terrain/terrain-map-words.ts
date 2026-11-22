@@ -49,7 +49,7 @@ export function lengthLabel(t: T, valueM: number, stepM: number = valueM): strin
 const pct = (value: number): string => formatPercentage(value, { maximumFractionDigits: 0 });
 
 /** Το εύρος μιας κλάσης κλίσης: «5 % – 15 %» · η τελευταία, ανοιχτή: «25 % και άνω». */
-export function slopeRangeLabel(t: T, region: TerrainMapSlopeRegion): string {
+export function slopeRangeLabel(t: T, region: Pick<TerrainMapSlopeRegion, 'fromPct' | 'toPct'>): string {
   if (region.toPct === null) return t(`${NS}.slope.rangeOpen`, { from: pct(region.fromPct) });
   return t(`${NS}.slope.range`, { from: pct(region.fromPct), to: pct(region.toPct) });
 }

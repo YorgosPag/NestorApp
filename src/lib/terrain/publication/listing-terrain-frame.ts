@@ -26,6 +26,13 @@ export interface SnapshotFrame {
   readonly planM: (worldXMm: number, worldYMm: number) => readonly [number, number];
   /** Elevation mm → absolute metres, rounded. */
   readonly elevationM: (zMm: number) => number;
+  /**
+   * ADR-920 §14.10 — the WORLD position (mm) of the frame's origin, i.e. of the surface centre. **For the owner's own
+   * preview only** (the owner holds the file, so it reveals nothing to them): it lets the inspector show the survey
+   * coordinates of a point (Revit «survey point» vs «project base point»). It is NEVER written into the snapshot, the
+   * wire or the shelf — Δ3 stays exactly as it was: the published picture carries no world coordinate.
+   */
+  readonly centreWorldMm: PlanarPoint;
 }
 
 /** The frame centred on the plan bounds of `tin` (its bounds are LOCAL, `origin` lifts them to world). */
@@ -35,6 +42,7 @@ export function frameOf(tin: TinSurface): SnapshotFrame {
   return {
     planM: (x, y) => [roundPublished((x - cx) / 1000), roundPublished((y - cy) / 1000)],
     elevationM: (z) => roundPublished(z / 1000),
+    centreWorldMm: { x: cx, y: cy },
   };
 }
 
