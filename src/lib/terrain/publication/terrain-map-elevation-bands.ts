@@ -20,9 +20,15 @@
 
 import { terrainElevationHex } from '../elevation-ramp';
 import type { TriangleIndices } from '../tin-boundary-loops';
-import { LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS } from './listing-terrain-config';
+import {
+  LISTING_TERRAIN_CONTOUR_SLOPE_QUANTILE,
+  LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS,
+  LISTING_TERRAIN_MAP_MIN_BAND_WIDTH_PX,
+} from './listing-terrain-config';
 import type { ListingTerrainContour, ListingTerrainMesh } from './listing-terrain-types';
-import { regionPathData, triangleArea as areaOf } from './terrain-map-regions';
+import { areaWeightedGradientQuantile, contourSpacingPx } from './terrain-contour-density';
+import { meshTriangleGradients } from './terrain-map-contour-thinning';
+import { meshTriangles, regionPathData, triangleArea as areaOf } from './terrain-map-regions';
 
 /** One elevation band on the map — and in its legend. */
 export interface TerrainMapElevationBand {
@@ -130,22 +136,38 @@ export function contourLevelsOf(contours: readonly ListingTerrainContour[]): num
 /** Multiples of the index spacing tried, in order, once even the index levels make too many bands. */
 const INDEX_MULTIPLES = [2, 5, 10, 20, 50, 100] as const;
 
-/** How the band edges are chosen: the plot's contour spacing and whether the map thinned its intermediates. */
+/** How the band edges are chosen: the plot's contour spacing and what the map knows about its intermediates. */
 export interface BandLevelRule {
   readonly majorContourIntervalM: number;
   readonly minorContoursThinned: boolean;
+  /** Bands one interval wide would be narrower on screen than {@link LISTING_TERRAIN_MAP_MIN_BAND_WIDTH_PX}. */
+  readonly intermediateBandsNarrow: boolean;
+}
+
+/**
+ * ADR-920 Β6.8 — would bands ONE interval wide be too narrow on this map? Measured like the interval itself (the
+ * {@link LISTING_TERRAIN_CONTOUR_SLOPE_QUANTILE} gradient by plan area, `terrain-contour-density`), so a single steep
+ * wall does not coarsen the colour of a gentle plot.
+ */
+export function intermediateBandsNarrow(mesh: ListingTerrainMesh, intervalM: number, pxPerM: number): boolean {
+  const triangles = meshTriangles(mesh);
+  const gradients = meshTriangleGradients(mesh);
+  const samples = triangles.map((tri, t) => ({ gradient: gradients[t] ?? 0, area: areaOf(mesh.positions, tri) }));
+  const gradient = areaWeightedGradientQuantile(samples, LISTING_TERRAIN_CONTOUR_SLOPE_QUANTILE);
+  return contourSpacingPx(intervalM, gradient, pxPerM) < LISTING_TERRAIN_MAP_MIN_BAND_WIDTH_PX;
 }
 
 /**
  * ADR-920 Β6.8 — the band EDGES: the finest set of DRAWN contour levels that makes at most
  * {@link LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS} bands — every level, then the index levels, then multiples of the
  * index spacing (hypsometric tints are coarser than contours: swisstopo, Civil 3D «number of ranges»). A colour change
- * stays ON a drawn line; where intermediates were thinned, they are never an edge (the line may be missing there).
+ * stays ON a drawn line; where intermediates were thinned, they are never an edge (the line may be missing there), nor
+ * where bands one interval wide would be too narrow to read as areas (the colour would stripe line by line).
  */
 export function bandLevelsOf(contours: readonly ListingTerrainContour[], rule: BandLevelRule): number[] {
   const fits = (levels: readonly number[]) => levels.length + 1 <= LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS;
   const all = contourLevelsOf(contours);
-  if (!rule.minorContoursThinned && fits(all)) return all;
+  if (!rule.minorContoursThinned && !rule.intermediateBandsNarrow && fits(all)) return all;
   const index = contourLevelsOf(contours.filter((c) => c.major));
   if (fits(index) || !(rule.majorContourIntervalM > 0)) return index;
   const step = (levelM: number) => Math.round(levelM / rule.majorContourIntervalM);

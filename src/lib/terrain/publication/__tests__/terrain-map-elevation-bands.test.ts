@@ -10,9 +10,15 @@ import { terrainElevationHex } from '@/lib/terrain/elevation-ramp';
 import type { TopoPoint } from '@/lib/terrain/terrain-types';
 
 import { buildListingTerrainSnapshot } from '../listing-terrain-snapshot';
-import { LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS } from '../listing-terrain-config';
+import { LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS, LISTING_TERRAIN_MAP_MIN_BAND_WIDTH_PX } from '../listing-terrain-config';
 import type { ListingTerrainContour, ListingTerrainSnapshot } from '../listing-terrain-types';
-import { bandLevelsOf, contourLevelsOf, elevationBandsOf } from '../terrain-map-elevation-bands';
+import {
+  bandLevelsOf,
+  contourLevelsOf,
+  elevationBandsOf,
+  intermediateBandsNarrow,
+  type BandLevelRule,
+} from '../terrain-map-elevation-bands';
 import { meshTriangles } from '../terrain-map-regions';
 
 const E0 = 400_000_000;
@@ -118,27 +124,53 @@ describe('bandLevelsOf — όρια ζωνών σε ΖΩΓΡΑΦΙΣΜΕΝΑ ε�
       closed: false,
       points: [0, 0, 1, 1],
     }));
+  const rule = (majorContourIntervalM: number): BandLevelRule =>
+    ({ majorContourIntervalM, minorContoursThinned: false, intermediateBandsNarrow: false });
   const tenths = (from: number, count: number) => Array.from({ length: count }, (_, i) => Math.round((from + i / 10) * 10) / 10);
 
   it('λίγα επίπεδα ⇒ όλα (καμία αλλαγή από το Β6.2)', () => {
     const levels = tenths(120.1, 8);
-    expect(bandLevelsOf(contoursAt(levels, 0.5), { majorContourIntervalM: 0.5, minorContoursThinned: false })).toEqual(levels);
+    expect(bandLevelsOf(contoursAt(levels, 0.5), rule(0.5))).toEqual(levels);
   });
 
   it('πολλά επίπεδα ⇒ μόνο οι κύριες, ≤ όριο ζωνών', () => {
-    const out = bandLevelsOf(contoursAt(tenths(120.1, 19), 0.5), { majorContourIntervalM: 0.5, minorContoursThinned: false });
+    const out = bandLevelsOf(contoursAt(tenths(120.1, 19), 0.5), rule(0.5));
     expect(out).toEqual([120.5, 121, 121.5]);
     expect(out.length + 1).toBeLessThanOrEqual(LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS);
   });
 
   it('όταν αραιώθηκαν ενδιάμεσες, καμία ενδιάμεση δεν γίνεται όριο (εκεί μπορεί να λείπει η γραμμή)', () => {
     const levels = tenths(120.1, 8);
-    expect(bandLevelsOf(contoursAt(levels, 0.5), { majorContourIntervalM: 0.5, minorContoursThinned: true })).toEqual([120.5]);
+    expect(bandLevelsOf(contoursAt(levels, 0.5), { ...rule(0.5), minorContoursThinned: true })).toEqual([120.5]);
   });
 
   it('ακόμη και οι κύριες πολλές ⇒ πολλαπλάσια της κύριας (2, 5, 10 …)', () => {
     const metres = Array.from({ length: 30 }, (_, i) => i + 1);
-    const out = bandLevelsOf(contoursAt(metres, 1), { majorContourIntervalM: 1, minorContoursThinned: false });
+    const out = bandLevelsOf(contoursAt(metres, 1), rule(1));
     expect(out).toEqual([5, 10, 15, 20, 25, 30]);
+  });
+
+  it('ζώνες ενός διαστήματος πολύ στενές στην οθόνη ⇒ μόνο οι κύριες (το χρώμα δεν αλλάζει σε κάθε γραμμή)', () => {
+    const levels = tenths(120.1, 8);
+    expect(bandLevelsOf(contoursAt(levels, 0.5), { ...rule(0.5), intermediateBandsNarrow: true })).toEqual([120.5]);
+  });
+});
+
+describe('intermediateBandsNarrow — πλάτος ζώνης στην οθόνη = διάστημα / κλίση × px ανά m (Β6.8)', () => {
+  /** PLANE: κλίση 10 % παντού ⇒ ζώνη ενός διαστήματος = διάστημα / 0,1 m στο έδαφος. */
+  const bandWidthM = PLANE.contourIntervalM / 0.1;
+  const atBoundary = LISTING_TERRAIN_MAP_MIN_BAND_WIDTH_PX / bandWidthM;
+
+  it('κάτω από το όριο ⇒ στενές', () => {
+    expect(intermediateBandsNarrow(PLANE.mesh, PLANE.contourIntervalM, atBoundary * 0.9)).toBe(true);
+  });
+
+  it('πάνω από το όριο ⇒ όχι στενές', () => {
+    expect(intermediateBandsNarrow(PLANE.mesh, PLANE.contourIntervalM, atBoundary * 1.1)).toBe(false);
+  });
+
+  it('επίπεδο έδαφος ⇒ ποτέ στενές, σε οποιαδήποτε κλίμακα', () => {
+    const flat = snapshotOf(every(0, 20, 5), every(0, 20, 5), () => 120_000);
+    expect(intermediateBandsNarrow(flat.mesh, 0.1, 1)).toBe(false);
   });
 });

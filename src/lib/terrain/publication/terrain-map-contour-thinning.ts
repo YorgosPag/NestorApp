@@ -19,6 +19,7 @@ import { createTriangleLocator, type TriangleLocator } from '@/lib/terrain/trian
 import { LISTING_TERRAIN_MAP_THINNING_MIN_RUN_PX } from './listing-terrain-config';
 import type { ListingTerrainContour, ListingTerrainMesh } from './listing-terrain-types';
 import { contoursCrowded } from './terrain-contour-density';
+import { meshTriangles } from './terrain-map-regions';
 import { svgPointOf, type SvgPoint } from './terrain-map-svg';
 import { slopePct } from './terrain-slope';
 
@@ -46,20 +47,21 @@ interface GradientField {
   readonly gradients: readonly number[];
 }
 
+/** Gradient (rise/run) of every mesh triangle, in mesh order — `0` for a degenerate one. Also read by the bands rule. */
+export function meshTriangleGradients(mesh: ListingTerrainMesh): number[] {
+  const p = mesh.positions;
+  const vertex = (n: number) => ({ x: p[3 * n], y: p[3 * n + 1], dz: p[3 * n + 2] });
+  return meshTriangles(mesh).map(([i, j, k]) => {
+    const plane = fitDzPlane(vertex(i), vertex(j), vertex(k));
+    return plane ? slopePct(plane) / 100 : 0;
+  });
+}
+
 function gradientFieldOf(mesh: ListingTerrainMesh): GradientField {
   const p = mesh.positions;
   const xy: (readonly [number, number])[] = [];
   for (let i = 0; i + 2 < p.length; i += 3) xy.push([p[i], p[i + 1]]);
-  const triangles: (readonly [number, number, number])[] = [];
-  const gradients: number[] = [];
-  for (let t = 0; t + 2 < mesh.triangles.length; t += 3) {
-    const [i, j, k] = [mesh.triangles[t], mesh.triangles[t + 1], mesh.triangles[t + 2]];
-    triangles.push([i, j, k]);
-    const vertex = (n: number) => ({ x: p[3 * n], y: p[3 * n + 1], dz: p[3 * n + 2] });
-    const plane = fitDzPlane(vertex(i), vertex(j), vertex(k));
-    gradients.push(plane ? slopePct(plane) / 100 : 0);
-  }
-  return { locator: createTriangleLocator(xy, triangles), gradients };
+  return { locator: createTriangleLocator(xy, meshTriangles(mesh)), gradients: meshTriangleGradients(mesh) };
 }
 
 /** A run of consecutive segments that share one decision. */

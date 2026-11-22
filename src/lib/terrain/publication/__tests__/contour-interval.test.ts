@@ -4,7 +4,7 @@
  *   - `RIDGE`: the «barcode» of the live test (HANDOFFS/topo-test-ridge-dense.txt, rebuilt): 12 × 60 m, a saw-tooth
  *     0 → 3 → 0 → 3 → 0 m across x (gradient exactly 1, i.e. 100 %), constant along y. The relief alone (3 m) says 0.1 m
  *     ⇒ 30 lines in 12 m. Content 12 × 60 m ⇒ margin 6 m ⇒ view box 24 m wide ⇒ 480 / 24 = 20 px per metre at the
- *     reference width ⇒ 0.1 m lines fall 2 px apart, 0.2 m → 4 px, 0.25 m → 5 px, 0.5 m → 10 px ≥ 6 ⇒ 0.5 m.
+ *     reference width ⇒ 0.1 m lines fall 2 px apart, 0.2 m → 4 px, 0.25 m → 5 px, 0.5 m → 10 px ≥ 8 ⇒ 0.5 m.
  */
 
 import type { TopoPoint } from '@/lib/terrain/terrain-types';

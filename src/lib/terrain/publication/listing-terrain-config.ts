@@ -37,8 +37,11 @@ export const LISTING_TERRAIN_MAX_MINOR_LEVELS = 30;
  */
 export const LISTING_TERRAIN_CONTOUR_REFERENCE_WIDTH_PX = 480;
 
-/** Minimum on-screen gap (css px) between two adjacent contours, below which intermediates are «crowded». */
-export const LISTING_TERRAIN_CONTOUR_MIN_SPACING_PX = 6;
+/**
+ * Minimum on-screen gap (css px) between two adjacent contours, below which intermediates are «crowded». Calibrated
+ * live 2026-11-22 (ADR-920 §14.8): 7.5 px on a phone still read as a «barcode»; 8 px thins there and keeps ≥ 480 px.
+ */
+export const LISTING_TERRAIN_CONTOUR_MIN_SPACING_PX = 8;
 
 /**
  * Share of the plot (by plan AREA) the chosen interval must keep un-crowded at the reference width. The steepest rest
@@ -131,6 +134,14 @@ export const LISTING_TERRAIN_MAP_THINNING_MIN_RUN_PX = 16;
  * same idea as the analysis «number of ranges» (a style setting, no published default); 10 is our choice.
  */
 export const LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS = 10;
+
+/**
+ * ADR-920 Β6.8 — narrowest on-screen elevation band (css px, measured like contour spacing: at the plot's
+ * {@link LISTING_TERRAIN_CONTOUR_SLOPE_QUANTILE} gradient) for which the INTERMEDIATE levels may be band edges. Below it
+ * the colour would change on every line — a striped «barcode» even when the lines themselves are legible (measured
+ * live on a 100 % ridge: 10–13 px bands). A band is an area, not a line, so it is ≥ 3× the contour spacing; our value.
+ */
+export const LISTING_TERRAIN_MAP_MIN_BAND_WIDTH_PX = 24;
 
 /**
  * ADR-920 Β6.4 — the vertical exaggerations the 3D viewer offers. `1` (true scale) is the default and the first

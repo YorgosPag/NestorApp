@@ -26,7 +26,13 @@ import type { ListingTerrainSnapshot } from './listing-terrain-types';
 import { contourLabelsOf, contourPathData, type TerrainMapContourLabel } from './terrain-map-contours';
 import { mapPxPerM } from './terrain-contour-density';
 import { thinMinorContours, type ThinnedMinorContours } from './terrain-map-contour-thinning';
-import { bandLevelsOf, elevationBandsOf, type TerrainMapElevationBand } from './terrain-map-elevation-bands';
+import {
+  bandLevelsOf,
+  elevationBandsOf,
+  intermediateBandsNarrow,
+  type BandLevelRule,
+  type TerrainMapElevationBand,
+} from './terrain-map-elevation-bands';
 import {
   northArrowOf,
   scaleBarOf,
@@ -125,6 +131,23 @@ function minorContoursOf(
 }
 
 /**
+ * ADR-920 Β6.8 — the band edges at the size this map is shown: intermediates are edges only when they are all drawn and
+ * the bands they make are wide enough to read as areas (`intermediateBandsNarrow`).
+ */
+function mapBandLevelsOf(
+  snapshot: ListingTerrainSnapshot,
+  viewBox: TerrainMapViewBox,
+  display: TerrainMapDisplay | null,
+  rule: Omit<BandLevelRule, 'intermediateBandsNarrow'>,
+): number[] {
+  const pxPerM = mapPxPerM(viewBox.width, display?.widthPx ?? null);
+  return bandLevelsOf(snapshot.contours, {
+    ...rule,
+    intermediateBandsNarrow: intermediateBandsNarrow(snapshot.mesh, snapshot.contourIntervalM, pxPerM),
+  });
+}
+
+/**
  * The 2D map of a published terrain snapshot. `marks` = the owner's preview only (never on the public listing);
  * `display` = an on-screen map of known width (§13.8 decision 4) — without it, the drawing's own proportions.
  */
@@ -139,7 +162,10 @@ export function terrainMapModelOf(
   const { minElevationM: min, maxElevationM: max } = snapshot.stats;
   const minor = minorContoursOf(snapshot, viewBox, display);
   const majorContourIntervalM = roundPublished(snapshot.contourIntervalM * snapshot.contourMajorEvery);
-  const bandLevels = bandLevelsOf(snapshot.contours, { majorContourIntervalM, minorContoursThinned: minor.thinned });
+  const bandLevels = mapBandLevelsOf(snapshot, viewBox, display, {
+    majorContourIntervalM,
+    minorContoursThinned: minor.thinned,
+  });
   return {
     viewBox,
     extentPathData: regionPathData(snapshot.mesh, triangles),
