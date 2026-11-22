@@ -34,7 +34,9 @@ export async function fetchJson<T>(url: string, options?: RequestInit): Promise<
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => ({ error: 'Unknown error' }));
     const fields = errorFieldsFrom(body);
-    throw new ApiClientError(fields.message || `HTTP ${response.status}`, response.status, fields.errorCode, undefined, undefined, fields.details, body);
+    // `response` ⇒ «απάντησε κάποιος» (σύμβαση του `ApiClientError.response`)· από τα headers του ξεχωρίζει ο
+    // `classifyApiFailure` αν απάντησε ο server μας ή ενδιάμεσος (ADR-327 §7.5). Το σώμα είναι ήδη καταναλωμένο.
+    throw new ApiClientError(fields.message || `HTTP ${response.status}`, response.status, fields.errorCode, response, undefined, fields.details, body);
   }
 
   return response.json();

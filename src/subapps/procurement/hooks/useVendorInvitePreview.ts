@@ -12,6 +12,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { fetchJson, jsonRequest } from '@/lib/api/fetch-json';
+import { reportApiFailure } from '@/lib/telemetry/api-failure-report';
+
 import type { VendorInvitePreviewRecipient } from '../types/vendor-invite-preview';
 
 export interface VendorInvitePreviewRequest {
@@ -35,15 +38,15 @@ export type VendorInvitePreviewState =
 /** Αρκετό για να μη ζητείται προεπισκόπηση σε κάθε πλήκτρο του σημειώματος. */
 const PREVIEW_DEBOUNCE_MS = 400;
 
+/** Σταθερό όνομα της πράξης στην τηλεμετρία (ετικέτα + ομαδοποίηση στο Sentry). */
+const PREVIEW_OPERATION = 'rfq-invite-preview';
+
 async function fetchPreview(rfqId: string, request: VendorInvitePreviewRequest, signal: AbortSignal): Promise<VendorInvitePreviewData> {
-  const res = await fetch(`/api/rfqs/${rfqId}/invites/preview`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
+  const json = await fetchJson<{ data?: VendorInvitePreviewData }>(`/api/rfqs/${rfqId}/invites/preview`, {
+    ...jsonRequest('POST', request),
     signal,
   });
-  const json: { data?: VendorInvitePreviewData } = await res.json().catch(() => ({}));
-  if (!res.ok || !json.data) throw new Error(`HTTP ${res.status}`);
+  if (!json.data) throw new Error(`${PREVIEW_OPERATION}: response without data`);
   return json.data;
 }
 
@@ -67,7 +70,11 @@ export function useVendorInvitePreview(rfqId: string, request: VendorInvitePrevi
     const timer = setTimeout(() => {
       fetchPreview(rfqId, JSON.parse(requestKey) as VendorInvitePreviewRequest, controller.signal)
         .then((data) => { if (current === seq.current) setState({ kind: 'ready', data }); })
-        .catch(() => { if (current === seq.current && !controller.signal.aborted) setState({ kind: 'failed' }); });
+        .catch((cause: unknown) => {
+          if (controller.signal.aborted) return; // ακύρωση = δική μας απόφαση, όχι αποτυχία
+          reportApiFailure(PREVIEW_OPERATION, cause);
+          if (current === seq.current) setState({ kind: 'failed' });
+        });
     }, PREVIEW_DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);

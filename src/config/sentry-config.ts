@@ -35,6 +35,15 @@ export const SENTRY_TRACES_SAMPLE_RATE = 0.1;
 /** Only send errors in production */
 export const SENTRY_ENABLED = process.env.NODE_ENV === 'production';
 
+/**
+ * Αποτυχημένα αιτήματα του browser (ADR-327 §7.5): **μόνο** 5xx, **μόνο** προς το δικό μας `/api/`.
+ * Τα 4xx είναι ονομασμένες αρνήσεις που η οθόνη λέει στον άνθρωπο (`isClientRefusal`), όχι βλάβες· τρίτες
+ * υπηρεσίες (Firebase, χάρτες) δεν είναι δική μας βλάβη. Ο στόχος συντίθεται με το origin της σελίδας στο
+ * `instrumentation-client.ts` — το Sentry ελέγχει `url.includes(target)`.
+ */
+export const SENTRY_FAILED_REQUEST_STATUS_CODES: Array<[number, number]> = [[500, 599]];
+export const SENTRY_OWN_API_PATH = '/api/';
+
 /** Session replay: disabled for privacy */
 export const SENTRY_REPLAYS_SESSION_SAMPLE_RATE = 0;
 

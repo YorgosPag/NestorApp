@@ -48,6 +48,8 @@ import * as Sentry from '@sentry/nextjs';
 import {
   SENTRY_DSN,
   SENTRY_ENABLED,
+  SENTRY_FAILED_REQUEST_STATUS_CODES,
+  SENTRY_OWN_API_PATH,
   SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
   SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
   SENTRY_TRACES_SAMPLE_RATE,
@@ -68,6 +70,14 @@ Sentry.init({
   replaysSessionSampleRate: SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
   replaysOnErrorSampleRate: SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
   enabled: SENTRY_ENABLED,
+  // ADR-327 §7.5 — κάθε 5xx του δικού μας `/api/` γίνεται γεγονός (διαδρομή + status). Χωρίς αυτό ένα 503 υπήρχε
+  // μόνο στην καρτέλα Network όποιου έτυχε να κοιτάζει. «Ποιος απάντησε» το λέει το `reportApiFailure` της φόρμας.
+  integrations: [
+    Sentry.httpClientIntegration({
+      failedRequestStatusCodes: SENTRY_FAILED_REQUEST_STATUS_CODES,
+      failedRequestTargets: [`${window.location.origin}${SENTRY_OWN_API_PATH}`],
+    }),
+  ],
   // Drop known Session Replay race condition in SDK 10.45.0.
   // The Replay integration occasionally calls Range.selectNode() on DOM nodes
   // that were detached mid-snapshot (common on /properties during re-renders).
