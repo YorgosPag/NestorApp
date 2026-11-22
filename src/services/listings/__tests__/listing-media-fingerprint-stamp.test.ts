@@ -57,7 +57,7 @@ describe('ADR-845 §7.17 Α5 — το αποτύπωμα δίπλα στο `sche
     const doc = await written();
 
     expect(doc.mediaFingerprint).toBe(mediaFingerprintOf(SOURCES));
-    expect(doc.mediaFingerprint).toMatch(/^v2:[0-9a-f]{64}$/);
+    expect(doc.mediaFingerprint).toMatch(/^v3:[0-9a-f]{64}:[0-9a-f]{64}$/);
     expect(typeof doc.schemaVersion).toBe('number');
   });
 

@@ -58,6 +58,7 @@ import {
   toProjectedVideo,
 } from './listing-shelf-projected';
 import { splitVideoPosters, videoPosterSources } from './listing-video-poster';
+import { listingShelfLaneOf, type ListingShelfLane } from './listing-shelf-routing';
 import type { PublicListing } from '@/types/public-listing';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
@@ -78,35 +79,16 @@ import { reconcilePublicTerrainShelf } from './public-shelf-terrain.service';
 
 const logger = createModuleLogger('publish-public-listing-shelf');
 
-/** Οι πηγές μιας αγγελίας, **χωρισμένες κατά ράφι** — δες {@link partitionListingSources}. */
-interface ListingShelfSources {
-  readonly raster: readonly PublicShelfSource<ListingMaterial>[];
-  readonly model: readonly PublicShelfSource<ListingMaterial>[];
-  readonly video: readonly PublicShelfSource<ListingMaterial>[];
-  readonly terrain: readonly PublicShelfSource<ListingMaterial>[];
-}
+/** Οι πηγές μιας αγγελίας, **χωρισμένες κατά ράφι** — δες {@link partitionListingSources}. Ένα κλειδί ανά ράφι. */
+type ListingShelfSources = Readonly<Record<ListingShelfLane, readonly PublicShelfSource<ListingMaterial>[]>>;
 
 // ---------------------------------------------------------------------------
 // Η ΔΙΑΜΕΡΙΣΗ — ένα πέρασμα, εξαντλητικό
 // ---------------------------------------------------------------------------
 
 /**
- * **Ο ΦΡΟΥΡΟΣ ΤΟΥ ΛΕΞΙΛΟΓΙΟΥ** — τοπικός και **με όνομα**, όπως όλοι οι αδελφοί του.
- *
- * ⚠️ Το ιδίωμα του σπιτιού είναι **ΤΟΠΙΚΟ + ΟΝΟΜΑΣΜΕΝΟ** *(μετρημένο στη Φ4.1: τέσσερις τέτοιοι,
- * **κανένας κεντρικός**)*. ⛔ **Μην γεννήσεις κεντρικό `assertNever`**: η αξία δεν είναι το
- * `throw`, είναι το **μήνυμα** — αυτό λέει *ποια* ερώτηση έμεινε αναπάντητη.
- */
-function assertNeverShelfMaterial(material: never): never {
-  throw new Error(
-    `partitionListingSources: άγνωστο είδος υλικού — ${JSON.stringify(material)}. ` +
-      'Νέα τιμή στο LISTING_MATERIAL_KINDS χωρίς απάντηση στο «σε ποιο ΡΑΦΙ ' +
-      'δημοσιεύεται;» (ADR-845 Φ4.2β).',
-  );
-}
-
-/**
- * 🏆 **ΣΕ ΠΟΙΟ ΡΑΦΙ ΚΑΘΕΤΑΙ ΚΑΘΕ ΠΗΓΗ** — **ΕΝΑ** πέρασμα, `switch`, καμία άρνηση.
+ * 🏆 **ΣΕ ΠΟΙΟ ΡΑΦΙ ΚΑΘΕΤΑΙ ΚΑΘΕ ΠΗΓΗ** — **ΕΝΑ** πέρασμα, μέσω του εξαντλητικού `listingShelfLaneOf` (`switch`, καμία
+ * άρνηση· ο φρουρός του λεξιλογίου ζει εκεί).
  *
  * 🔴 **ΔΕΝ ΕΙΝΑΙ ΔΙΠΛΟΤΥΠΟ ΤΟΥ `withPublishedGallery`, ΚΑΙ Η ΔΙΑΚΡΙΣΗ ΕΙΝΑΙ ΠΡΑΓΜΑΤΙΚΗ**: εκείνο
  * ρωτά *«σε ποιο **ΚΟΥΤΙ** του δημόσιου εγγράφου κάθεται αυτό;»*, αυτό ρωτά *«σε ποιο **ΡΑΦΙ**
@@ -131,45 +113,13 @@ function assertNeverShelfMaterial(material: never): never {
 export function partitionListingSources(
   sources: readonly PublicShelfSource<ListingMaterial>[],
 ): ListingShelfSources {
-  const raster: PublicShelfSource<ListingMaterial>[] = [];
-  const model: PublicShelfSource<ListingMaterial>[] = [];
-  const video: PublicShelfSource<ListingMaterial>[] = [];
-  const terrain: PublicShelfSource<ListingMaterial>[] = [];
+  const lanes: Record<ListingShelfLane, PublicShelfSource<ListingMaterial>[]> = { raster: [], model: [], video: [], terrain: [] };
 
-  for (const source of sources) {
-    const material = source.material;
+  // 🔑 Ο διακόπτης «υλικό → ράφι» ζει στο `listing-shelf-routing` (ADR-920 §14.9 Γ): τον ρωτά ΚΑΙ το αποτύπωμα για τη
+  //    συνταγή, άρα δύο αντίγραφα θα μπορούσαν να διαφωνήσουν.
+  for (const source of sources) lanes[listingShelfLaneOf(source.material)].push(source);
 
-    switch (material.kind) {
-      case 'photo':
-      case 'floorplan':
-        raster.push(source);
-        break;
-
-      case 'floorPlate':
-        // ADR-907 §11.5 — raster όπως η κάτοψη του ακινήτου: **ίδιο** ράφι, ίδια κατάληξη, ίδια συμφιλίωση. Δικό της
-        //    σκέλος και όχι τρίτη ετικέτα στο από πάνω, γιατί η απάντηση «στο ράφι εικόνων» εδώ είναι **απόφαση**
-        //    (η εικόνα δείχνει ξένες μονάδες) — το αν φεύγει το κρίνει το `withinFloorPlateAdmission`, πριν από το ράφι.
-        raster.push(source);
-        break;
-
-      case 'model':
-        model.push(source);
-        break;
-
-      case 'video':
-        video.push(source);
-        break;
-
-      case 'terrain':
-        terrain.push(source);
-        break;
-
-      default:
-        return assertNeverShelfMaterial(material);
-    }
-  }
-
-  return { raster, model, video, terrain };
+  return lanes;
 }
 
 // ---------------------------------------------------------------------------

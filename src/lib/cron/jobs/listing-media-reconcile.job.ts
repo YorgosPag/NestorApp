@@ -8,6 +8,8 @@ import 'server-only';
  * 🔴 **Το `drifted` και το `missing` είναι ο λόγος ύπαρξής της**: με κάθε πόρτα αρχείου να
  * ξαναπροβάλλει, είναι **μηδέν**. Μη μηδενικό = πόρτα που ξέφυγε — φαίνεται στα μεγέθη της
  * εκτέλεσης και, με το ακίνητό της, στο ημερολόγιο σφαλμάτων.
+ * ⚠️ Το `recipeOutdated` **δεν** είναι σφάλμα (ADR-920 §14.9 Γ): μετά από αλλαγή συνταγής ραφιού ανεβαίνει για λίγες
+ * νύχτες και πέφτει στο μηδέν με ρυθμό (`recipeDeferred` = όσα έμειναν για το επόμενο βράδυ).
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -32,7 +34,8 @@ export async function runListingMediaReconcile(): Promise<CronJobResult> {
   return {
     summary:
       `listed ${report.listed}/${report.scanned}: agreed ${report.agreed}, drifted ${report.drifted}, `
-      + `unstamped ${report.unstamped}, missing ${report.missing}, republished ${report.republished}, `
+      + `unstamped ${report.unstamped}, missing ${report.missing}, `
+      + `recipe outdated ${report.recipeOutdated} (deferred ${report.recipeDeferred}), republished ${report.republished}, `
       + `failed ${report.failed} · cache healed ${cache.healed}/${cache.scanned}`
       + ` · tours healed ${tours.healed}/${tours.scanned}, failed ${tours.failed}`,
     metrics: {

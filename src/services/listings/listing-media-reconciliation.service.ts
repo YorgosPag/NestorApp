@@ -28,9 +28,16 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   MEDIA_FINGERPRINT_FIELD,
   mediaAgreement,
+  recipeAgreement,
   type ListingMediaVerdict,
   type MediaAgreement,
+  type RecipeAgreement,
 } from '@/lib/listings/listing-media-fingerprint';
+import {
+  LISTING_RECIPE_BACKFILL_PER_RUN,
+  recipeBackfillRunIndex,
+  recipeBackfillWindow,
+} from '@/lib/listings/listing-recipe-backfill';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createAgencyIdentityResolver } from '@/services/company/company-public-name.reader';
 
@@ -52,7 +59,10 @@ const logger = createModuleLogger('listings/media-reconciliation');
  * - `drifted` — 🔴 διαφέρει: **πόρτα που ξέφυγε** *(στόχος: μηδέν)*
  * - `unstamped` — η αγγελία δεν έχει αποτύπωμα *(γράφτηκε πριν από την Α5, ή το ράφι της απέτυχε)*
  * - `missing` — ακίνητο δημοσιεύσιμο **χωρίς** αγγελία *(ξέφυγε πόρτα της **πρώτης** πηγής)*
- * - `republished` · `failed` — τι έγινε σε όσα ξαναπροβλήθηκαν
+ * - `recipeOutdated` — σωστή στο υλικό, ψημένη με **παλιά συνταγή** *(αναμενόμενο μετά από αλλαγή συνταγής, όχι σφάλμα·
+ *   ADR-920 §14.9 Γ)* — μετρά **μέσα** στο `agreed`
+ * - `recipeDeferred` — από αυτές, όσες έμειναν για επόμενο πέρασμα ({@link LISTING_RECIPE_BACKFILL_PER_RUN})
+ * - `republished` · `failed` — τι έγινε σε όσα ξαναπροβλήθηκαν (απόκλιση υλικού **και** συνταγής)
  */
 export interface MediaReconciliationReport {
   readonly scanned: number;
@@ -61,12 +71,20 @@ export interface MediaReconciliationReport {
   readonly drifted: number;
   readonly unstamped: number;
   readonly missing: number;
+  readonly recipeOutdated: number;
+  readonly recipeDeferred: number;
   readonly republished: number;
   readonly failed: number;
 }
 
 /** Η ετυμηγορία του κριτή για **ένα** δημοσιεύσιμο ακίνητο. */
 type Finding = MediaAgreement | 'missing';
+
+/** Η πλήρης κρίση του βραδινού περάσματος: το υλικό **και** η συνταγή (ADR-920 §14.9 Γ). */
+interface Judgement {
+  readonly finding: Finding;
+  readonly recipe: RecipeAgreement;
+}
 
 /** Η δημόσια αγγελία ενός ακινήτου, όσο χρειάζεται ο κριτής: **υπάρχει;** και **τι αποτύπωμα γράφτηκε;** */
 interface StoredListing {
@@ -92,12 +110,28 @@ async function judgeProperty(
   stored: StoredListing,
   resolveMedia: ListingMediaResolver,
 ): Promise<Finding> {
-  if (!stored.exists) return 'missing';
+  return (await judgeWithRecipe(propertyId, property, stored, resolveMedia)).finding;
+}
+
+/**
+ * Ο κριτής, **και** η συνταγή — ένα αποτύπωμα, δύο ερωτήσεις. Η οθόνη και ο βρόχος ορόφου ρωτούν μόνο το υλικό
+ * ({@link judgeProperty})· μόνο το βραδινό πέρασμα ρωτά και αν ψήθηκε με τις τρέχουσες συνταγές.
+ */
+async function judgeWithRecipe(
+  propertyId: string,
+  property: ListingSourceProperty,
+  stored: StoredListing,
+  resolveMedia: ListingMediaResolver,
+): Promise<Judgement> {
+  if (!stored.exists) return { finding: 'missing', recipe: 'current' };
 
   // 🔑 Ο **ίδιος** επιλυτής με τον γραφέα (ADR-907 §11.7): αρχεία του ακινήτου **και** κάτοψη ορόφου — αλλιώς το
   //    αποτύπωμα εδώ θα διέφερε **πάντα** από το γραμμένο, και η αγγελία θα ξαναψηνόταν κάθε βράδυ.
-  const sources = await resolveMedia(propertyId, property);
-  return mediaAgreement(stored.fingerprint, mediaFingerprintOf(sources));
+  const current = mediaFingerprintOf(await resolveMedia(propertyId, property));
+  return {
+    finding: mediaAgreement(stored.fingerprint, current),
+    recipe: recipeAgreement(stored.fingerprint, current),
+  };
 }
 
 /**
@@ -175,6 +209,14 @@ const OUTCOME_TALLY = {
   failed: 'failed',
 } as const satisfies Record<PublishOutcome, keyof MediaReconciliationReport>;
 
+type Tally = { -readonly [K in keyof MediaReconciliationReport]: MediaReconciliationReport[K] };
+
+/** Ένα ακίνητο που περιμένει επαναπροβολή — με ό,τι χρειάζεται ο γραφέας. */
+interface Republication {
+  readonly propertyId: string;
+  readonly property: ListingSourceProperty;
+}
+
 /**
  * **Σύγκρινε κάθε δημοσιευμένη αγγελία γραφείου με το τρέχον υλικό της· ξαναπρόβαλε ό,τι διαφέρει.**
  *
@@ -182,13 +224,50 @@ const OUTCOME_TALLY = {
  *
  * ⚠️ **Σειριακά** — ίδια πολιτική κόστους με την επανασύνθεση: μία ανάγνωση αρχείων ανά
  * δημοσιευμένο ακίνητο, και επαναπροβολή **μόνο** όπου αποδείχθηκε απόκλιση.
+ *
+ * 🔑 **Δύο ουρές, δύο πολιτικές** *(ADR-920 §14.9 Γ)*: η απόκλιση **υλικού** (πόρτα που ξέφυγε) διορθώνεται **πάντα,
+ * όλη**, και καταγράφεται ως σφάλμα. Η απόκλιση **μόνο συνταγής** είναι αναμενόμενη μετά από αλλαγή συνταγής και
+ * ξαναψήνεται **με ρυθμό** (`recipeBackfillWindow`), καταγεγραμμένη ως πληροφορία. `nowMs` = η στιγμή του περάσματος.
  */
-export async function reconcileListingMedia(adminDb: AdminFirestore): Promise<MediaReconciliationReport> {
-  const tally = { scanned: 0, listed: 0, agreed: 0, drifted: 0, unstamped: 0, missing: 0, republished: 0, failed: 0 };
-  const stored = await readStoredFingerprints(adminDb);
+export async function reconcileListingMedia(
+  adminDb: AdminFirestore,
+  nowMs: number = Date.now(),
+): Promise<MediaReconciliationReport> {
+  const tally: Tally = {
+    scanned: 0, listed: 0, agreed: 0, drifted: 0, unstamped: 0, missing: 0,
+    recipeOutdated: 0, recipeDeferred: 0, republished: 0, failed: 0,
+  };
   const resolveMedia = createListingMediaResolver(adminDb);
   const resolveAgency = createAgencyIdentityResolver(adminDb);
+  const republish = async ({ propertyId, property }: Republication) => {
+    tally[OUTCOME_TALLY[await republishListing(adminDb, propertyId, property, resolveAgency, resolveMedia)]] += 1;
+  };
+
+  const outdated = await judgeAll(adminDb, resolveMedia, tally, republish);
+  const batch = recipeBackfillWindow(outdated, LISTING_RECIPE_BACKFILL_PER_RUN, recipeBackfillRunIndex(nowMs));
+  tally.recipeDeferred = outdated.length - batch.length;
+  for (const pending of batch) {
+    logger.info('Επαναπροβολή μετά από αλλαγή συνταγής ραφιού', { propertyId: pending.propertyId });
+    await republish(pending);
+  }
+
+  logger.info('Συμφιλίωση μέσων αγγελιών', tally);
+  return tally;
+}
+
+/**
+ * Το πρώτο σκέλος: κρίνει **κάθε** δημοσιεύσιμο ακίνητο, ξαναπροβάλλει **αμέσως** κάθε απόκλιση υλικού, και επιστρέφει
+ * τις αγγελίες που είναι σωστές στο υλικό αλλά ψημένες με παλιά συνταγή, με τη σειρά της σάρωσης.
+ */
+async function judgeAll(
+  adminDb: AdminFirestore,
+  resolveMedia: ListingMediaResolver,
+  tally: Tally,
+  republish: (pending: Republication) => Promise<void>,
+): Promise<Republication[]> {
+  const stored = await readStoredFingerprints(adminDb);
   const properties = await adminDb.collection(COLLECTIONS.PROPERTIES).get();
+  const outdated: Republication[] = [];
 
   for (const doc of properties.docs) {
     tally.scanned += 1;
@@ -197,14 +276,19 @@ export async function reconcileListingMedia(adminDb: AdminFirestore): Promise<Me
     tally.listed += 1;
 
     const listing = { exists: stored.has(doc.id), fingerprint: stored.get(doc.id) };
-    const finding = await judgeProperty(doc.id, property, listing, resolveMedia);
+    const { finding, recipe } = await judgeWithRecipe(doc.id, property, listing, resolveMedia);
     tally[FINDING_TALLY[finding]] += 1;
-    if (finding === 'current') continue;
+    if (finding === 'current') {
+      if (recipe === 'outdated') {
+        tally.recipeOutdated += 1;
+        outdated.push({ propertyId: doc.id, property });
+      }
+      continue;
+    }
 
     reportFinding(doc.id, finding);
-    tally[OUTCOME_TALLY[await republishListing(adminDb, doc.id, property, resolveAgency, resolveMedia)]] += 1;
+    await republish({ propertyId: doc.id, property });
   }
 
-  logger.info('Συμφιλίωση μέσων αγγελιών', tally);
-  return tally;
+  return outdated;
 }

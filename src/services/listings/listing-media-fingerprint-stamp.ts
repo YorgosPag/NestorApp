@@ -1,10 +1,11 @@
 /**
- * @fileoverview Το αποτύπωμα μέσων **στον διακομιστή** — η κανονική συμβολοσειρά περασμένη από SHA-256.
- * @related ADR-845 §7.17 Α5 · lib/listings/listing-media-fingerprint (η κανονική μορφή, κοινή με τον browser)
+ * @fileoverview Το αποτύπωμα μέσων **στον διακομιστή** — οι κανονικές συμβολοσειρές περασμένες από SHA-256.
+ * @related ADR-845 §7.17 Α5 · ADR-920 §14.9 Γ · lib/listings/listing-media-fingerprint (η κανονική μορφή) ·
+ *   services/listings/listing-shelf-routing (οι συνταγές)
  * @module services/listings/listing-media-fingerprint-stamp
  *
- * 🔑 Χωριστό από την κανονική μορφή **μόνο** για το εργαλείο του hash: εδώ `node:crypto`
- * *(σύγχρονο)*, στον browser Web Crypto *(ασύγχρονο)*. Η **μορφή** είναι μία.
+ * 🔑 Χωριστό από την κανονική μορφή **μόνο** για το εργαλείο του hash (`node:crypto`, σύγχρονο) και για τις
+ * **συνταγές**, που ξέρει μόνο ο διακομιστής (`PUBLIC_SHELF_KINDS`). Η **μορφή** είναι μία.
  */
 
 import 'server-only';
@@ -12,10 +13,20 @@ import 'server-only';
 import { createHash } from 'node:crypto';
 
 import type { ListingMaterial } from '@/lib/listings/listing-material';
-import { mediaFingerprintInput, stampOf } from '@/lib/listings/listing-media-fingerprint';
+import { mediaFingerprintInput, mediaRecipesInput, stampOf } from '@/lib/listings/listing-media-fingerprint';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
-/** **Το αποτύπωμα αυτών των μέσων**, όπως γράφεται και όπως συγκρίνεται. */
+import { listingShelfRecipesOf } from './listing-shelf-routing';
+
+const sha256Hex = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex');
+
+/**
+ * **Το αποτύπωμα αυτών των μέσων**, όπως γράφεται και όπως συγκρίνεται: `v3:<πηγές>:<συνταγές>`.
+ *
+ * 🔑 Οι συνταγές είναι **ανά πηγή, με τη σειρά της**: αλλαγή συνταγής εδάφους αλλάζει το αποτύπωμα **μόνο** των
+ * αγγελιών που έχουν έδαφος (ADR-920 §14.9 Γ).
+ */
 export function mediaFingerprintOf(sources: readonly PublicShelfSource<ListingMaterial>[]): string {
-  return stampOf(createHash('sha256').update(mediaFingerprintInput(sources), 'utf8').digest('hex'));
+  const recipes = sources.map(listingShelfRecipesOf);
+  return stampOf(sha256Hex(mediaFingerprintInput(sources)), sha256Hex(mediaRecipesInput(recipes)));
 }

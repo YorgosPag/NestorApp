@@ -42,8 +42,13 @@ export const MEDIA_FINGERPRINT_FIELD = 'mediaFingerprint';
  * διαβάζεται `unknown` *(ποτέ `stale`)* και ξαναγράφεται στην επόμενη συμφιλίωση.
  */
 // v2 (ADR-909 Α1, 2026-10-08): το υλικό της κάτοψης απέκτησε `provenance` ⇒ άλλη κανονική μορφή.
-const MEDIA_FINGERPRINT_VERSION = 'v2';
-const STAMP_PREFIX = `${MEDIA_FINGERPRINT_VERSION}:`;
+// v3 (ADR-920 §14.9 Γ, 2026-11-22): **δύο μέρη**, `v3:<πηγές>:<συνταγές>`. Το μέρος των πηγών είναι **ακριβώς** το hash
+//    του v2 ⇒ ένα v2 αποτύπωμα συγκρίνεται κανονικά στο υλικό (καμία πλημμύρα `unknown`, κανένα ψευδές «πόρτα που
+//    ξέφυγε»)· απλώς δεν έχει συνταγές, άρα η συνταγή του είναι `outdated`.
+const MEDIA_FINGERPRINT_VERSION = 'v3';
+/** Η προηγούμενη μορφή, που διαβάζεται ακόμη: ίδιο μέρος πηγών, χωρίς συνταγές. */
+const LEGACY_SOURCES_ONLY_VERSION = 'v2';
+const HEX_64 = /^[0-9a-f]{64}$/u;
 
 /** **Η κανονική συμβολοσειρά** — ό,τι ζητήθηκε από το ράφι, με τη σειρά του, κλειδιά ταξινομημένα. */
 export function mediaFingerprintInput(
@@ -52,9 +57,27 @@ export function mediaFingerprintInput(
   return canonicalJson(sources);
 }
 
-/** Το αποτύπωμα όπως αποθηκεύεται: `v2:<sha256 hex της κανονικής συμβολοσειράς>`. */
-export function stampOf(sha256Hex: string): string {
-  return `${STAMP_PREFIX}${sha256Hex}`;
+/**
+ * **Η κανονική συμβολοσειρά των ΣΥΝΤΑΓΩΝ** *(ADR-920 §14.9 Γ)* — για κάθε πηγή, με τη σειρά της, οι συνταγές των ραφιών
+ * που την ψήνουν (`listingShelfRecipesOf`). Αλλαγή συνταγής ⇒ άλλο hash **μόνο** στις αγγελίες που έχουν τέτοιο υλικό.
+ */
+export function mediaRecipesInput(recipes: readonly (readonly string[])[]): string {
+  return canonicalJson(recipes);
+}
+
+/** Το αποτύπωμα όπως αποθηκεύεται: `v3:<sha256 hex των πηγών>:<sha256 hex των συνταγών>`. */
+export function stampOf(sourcesSha256Hex: string, recipesSha256Hex: string): string {
+  return `${MEDIA_FINGERPRINT_VERSION}:${sourcesSha256Hex}:${recipesSha256Hex}`;
+}
+
+/** Τα δύο μέρη ενός αποθηκευμένου αποτυπώματος — ή `null` για ό,τι δεν είναι γνωστή μορφή. v2 ⇒ `recipes: null`. */
+function partsOf(stamp: unknown): { readonly sources: string; readonly recipes: string | null } | null {
+  if (typeof stamp !== 'string') return null;
+  const [version, sources, recipes, ...rest] = stamp.split(':');
+  if (rest.length > 0 || sources === undefined || !HEX_64.test(sources)) return null;
+  if (version === LEGACY_SOURCES_ONLY_VERSION && recipes === undefined) return { sources, recipes: null };
+  if (version === MEDIA_FINGERPRINT_VERSION && recipes !== undefined && HEX_64.test(recipes)) return { sources, recipes };
+  return null;
 }
 
 /**
@@ -68,17 +91,36 @@ export function stampOf(sha256Hex: string): string {
 export type MediaAgreement = 'current' | 'stale' | 'unknown';
 
 /**
- * **Συμφωνεί το αποθηκευμένο αποτύπωμα με το τρέχον;**
+ * **Συμφωνεί το αποθηκευμένο αποτύπωμα με το τρέχον — στο ΥΛΙΚΟ;**
  *
  * ⚠️ **Απουσία ⇒ `unknown`, ΠΟΤΕ `current`** — ίδια κατεύθυνση με το `modelFreshness`: το *«δεν
  * το μέτρησε κανείς»* δεν επιτρέπεται να διαβαστεί *«συμφωνεί»*.
+ *
+ * 🔑 Κοιτά **μόνο** το μέρος των πηγών: η συνταγή είναι άλλη ερώτηση ({@link recipeAgreement}). Μια αναβάθμιση της
+ * μηχανής δεν είναι «πόρτα που ξέφυγε», και ο άνθρωπος δεν τη βλέπει ως «η αγγελία διαφέρει από τα αρχεία σου».
  *
  * @param stored — το πεδίο **όπως βγήκε από τη βάση** (γι' αυτό `unknown`).
  * @param current — το αποτύπωμα του τρέχοντος υλικού, από {@link stampOf}.
  */
 export function mediaAgreement(stored: unknown, current: string): MediaAgreement {
-  if (typeof stored !== 'string' || !stored.startsWith(STAMP_PREFIX)) return 'unknown';
-  return stored === current ? 'current' : 'stale';
+  const was = partsOf(stored);
+  const now = partsOf(current);
+  if (was === null || now === null) return 'unknown';
+  return was.sources === now.sources ? 'current' : 'stale';
+}
+
+/**
+ * ADR-920 §14.9 Γ — **ψήθηκαν τα μέσα αυτής της αγγελίας με τις ΤΡΕΧΟΥΣΕΣ συνταγές;** `outdated` = μια αλλαγή συνταγής
+ * (π.χ. νέα αναθεώρηση του builder εδάφους) δεν έχει φτάσει ακόμη εδώ: η αγγελία είναι σωστή στο υλικό και ξαναψήνεται
+ * με ρυθμό. Μορφή που δεν ξέρει συνταγές (v2) ή δεν διαβάζεται ⇒ `outdated`, ποτέ `current`.
+ */
+export type RecipeAgreement = 'current' | 'outdated';
+
+export function recipeAgreement(stored: unknown, current: string): RecipeAgreement {
+  const was = partsOf(stored);
+  const now = partsOf(current);
+  const same = was !== null && now !== null && was.recipes !== null && was.recipes === now.recipes;
+  return same ? 'current' : 'outdated';
 }
 
 /**

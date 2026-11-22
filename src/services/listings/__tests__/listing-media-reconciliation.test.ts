@@ -46,10 +46,14 @@ const { mediaFingerprintOf } = require('../listing-media-fingerprint-stamp') as
 
 type Sources = Parameters<typeof mediaFingerprintOf>[0];
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { LISTING_RECIPE_BACKFILL_PER_RUN } = require('@/lib/listings/listing-recipe-backfill') as
+  typeof import('@/lib/listings/listing-recipe-backfill');
+
 let fake: FakeFirestore;
 
 function source(id: string): unknown {
-  return { privateStoragePath: `companies/c/${id}.jpg`, material: 'photo', sourceFileId: id, focalPoint: null };
+  return { privateStoragePath: `companies/c/${id}.jpg`, material: { kind: 'photo' }, sourceFileId: id, focalPoint: null };
 }
 
 /** Ακίνητο δημοσιευμένο, με αγγελία γραμμένη για `published` και τρέχον υλικό `now`. */
@@ -130,6 +134,75 @@ describe('ADR-845 §7.17 Α5 — η συμφιλίωση ΣΥΓΚΡΙΝΕΙ, δ�
     const report = await run();
 
     expect(report).toMatchObject({ drifted: 1, republished: 0, failed: 1 });
+  });
+});
+
+describe('ADR-920 §14.9 Γ — η ΣΥΝΤΑΓΗ στο αποτύπωμα: ξαναψήσιμο με ρυθμό, χωρίς ψευδή συναγερμό', () => {
+  /** Το αποτύπωμα όπως θα ήταν γραμμένο ΠΡΙΝ από το v3: ίδιο μέρος πηγών, χωρίς συνταγές. */
+  function legacyStamp(sources: unknown[]): string {
+    return `v2:${mediaFingerprintOf(sources as Sources).split(':')[1]}`;
+  }
+
+  /** Αγγελία σωστή στο υλικό, ψημένη με ΑΛΛΗ συνταγή (π.χ. πριν από νέα αναθεώρηση builder). */
+  function seedRecipeOutdated(propertyId: string, sources: unknown[], form: 'v2' | 'v3' = 'v3'): void {
+    fake.seed(COLLECTIONS.PROPERTIES, propertyId, { companyId: 'c_alpha', listed: true });
+    currentMedia.set(propertyId, sources);
+    const [, sourcesHex] = mediaFingerprintOf(sources as Sources).split(':');
+    const stamp = form === 'v2' ? legacyStamp(sources) : `v3:${sourcesHex}:${'0'.repeat(64)}`;
+    fake.seed(COLLECTIONS.PUBLIC_LISTINGS, propertyId, { id: propertyId, mediaFingerprint: stamp });
+  }
+
+  it('🏆 Γ1 — παλιά συνταγή ⇒ `agreed` στο υλικό (ΟΧΙ `drifted`, ΟΧΙ `unstamped`) και ξαναπροβάλλεται', async () => {
+    seedRecipeOutdated('prop_v3', [source('a')]);
+
+    const report = await run();
+
+    expect(report).toMatchObject({ agreed: 1, drifted: 0, unstamped: 0, recipeOutdated: 1, recipeDeferred: 0, republished: 1 });
+    expect(republishedIds()).toEqual(['prop_v3']);
+  });
+
+  it('🔑 Γ2 — ένα v2 αποτύπωμα (πριν από τις συνταγές) συγκρίνεται κανονικά στο υλικό: καμία πλημμύρα `unknown`', async () => {
+    seedRecipeOutdated('prop_v2', [source('a')], 'v2');
+    seedListed('prop_v2_drift', [source('a')], [source('b')]);
+    fake.seed(COLLECTIONS.PUBLIC_LISTINGS, 'prop_v2_drift', { id: 'prop_v2_drift', mediaFingerprint: legacyStamp([source('a')]) });
+
+    const report = await run();
+
+    expect(report).toMatchObject({ agreed: 1, drifted: 1, unstamped: 0, recipeOutdated: 1 });
+  });
+
+  it('🔑 Γ3 — ρυθμός: ως το όριο ανά πέρασμα · το υπόλοιπο `recipeDeferred` · η απόκλιση υλικού ΔΕΝ μετρά στο όριο', async () => {
+    const total = LISTING_RECIPE_BACKFILL_PER_RUN + 5;
+    for (let i = 0; i < total; i++) seedRecipeOutdated(`prop_r${String(i).padStart(2, '0')}`, [source(`r${i}`)]);
+    seedListed('prop_drift', [source('a')], [source('b')]);
+
+    const report = await reconcileListingMedia(fake as unknown as AdminFirestore, 0);
+
+    expect(report).toMatchObject({ recipeOutdated: total, recipeDeferred: 5, drifted: 1 });
+    expect(report.republished).toBe(LISTING_RECIPE_BACKFILL_PER_RUN + 1);
+    expect(republishedIds()).toContain('prop_drift');
+  });
+
+  it('🏆 Γ4 — το παράθυρο ΚΥΛΑ: το επόμενο βράδυ πιάνει ΑΛΛΕΣ υποψήφιες (καμία μόνιμη αποτυχία δεν μπλοκάρει)', async () => {
+    const total = LISTING_RECIPE_BACKFILL_PER_RUN + 5;
+    for (let i = 0; i < total; i++) seedRecipeOutdated(`prop_r${String(i).padStart(2, '0')}`, [source(`r${i}`)]);
+    republishListing.mockResolvedValue('failed');
+    try {
+      await reconcileListingMedia(fake as unknown as AdminFirestore, 0);
+      const first = new Set(republishedIds());
+      republishListing.mockClear();
+      await reconcileListingMedia(fake as unknown as AdminFirestore, 86_400_000);
+
+      expect(republishedIds().some((id) => !first.has(id))).toBe(true);
+    } finally {
+      republishListing.mockResolvedValue('published');
+    }
+  });
+
+  it('Γ5 — η κρίση της καρτέλας ΔΕΝ βλέπει τη συνταγή: για τον άνθρωπο η αγγελία συμφωνεί με τα αρχεία του', async () => {
+    seedRecipeOutdated('prop_v3', [source('a')]);
+
+    expect(await judgeListingMedia(fake as unknown as AdminFirestore, 'prop_v3', 'c_alpha')).toBe('current');
   });
 });
 

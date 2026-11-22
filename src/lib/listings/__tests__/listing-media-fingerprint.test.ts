@@ -7,7 +7,13 @@
  * αλλάζει το υλικό, η πόρτα που ξέφυγε μένει αόρατη.
  */
 
-import { mediaAgreement, mediaFingerprintInput, stampOf } from '../listing-media-fingerprint';
+import {
+  mediaAgreement,
+  mediaFingerprintInput,
+  mediaRecipesInput,
+  recipeAgreement,
+  stampOf,
+} from '../listing-media-fingerprint';
 
 type Sources = Parameters<typeof mediaFingerprintInput>[0];
 
@@ -51,19 +57,54 @@ describe('ADR-845 §7.17 Α5 — η κανονική μορφή του αποτ�
   });
 });
 
-describe('ADR-845 §7.17 Α5 — τρεις απαντήσεις, και η απουσία δεν είναι «συμφωνεί»', () => {
-  const current = stampOf('abc');
+const SRC_A = 'a'.repeat(64);
+const SRC_B = 'b'.repeat(64);
+const RCP_1 = '1'.repeat(64);
+const RCP_2 = '2'.repeat(64);
 
-  it('Φ5 — ίδιο αποτύπωμα ⇒ `current` · άλλο ⇒ `stale`', () => {
-    expect(mediaAgreement(stampOf('abc'), current)).toBe('current');
-    expect(mediaAgreement(stampOf('def'), current)).toBe('stale');
+describe('ADR-845 §7.17 Α5 — τρεις απαντήσεις, και η απουσία δεν είναι «συμφωνεί»', () => {
+  const current = stampOf(SRC_A, RCP_1);
+
+  it('Φ5 — ίδιο υλικό ⇒ `current` · άλλο ⇒ `stale`', () => {
+    expect(current).toBe(`v3:${SRC_A}:${RCP_1}`);
+    expect(mediaAgreement(stampOf(SRC_A, RCP_1), current)).toBe('current');
+    expect(mediaAgreement(stampOf(SRC_B, RCP_1), current)).toBe('stale');
   });
 
   it('🔴 Φ6 — απόν · άκυρο · ΑΛΛΗΣ έκδοσης ⇒ `unknown`, ΠΟΤΕ `current` και ΠΟΤΕ `stale`', () => {
     expect(mediaAgreement(undefined, current)).toBe('unknown');
     expect(mediaAgreement(null, current)).toBe('unknown');
     expect(mediaAgreement(42, current)).toBe('unknown');
-    expect(mediaAgreement('v0:abc', current)).toBe('unknown');
-    expect(mediaAgreement('abc', current)).toBe('unknown');
+    expect(mediaAgreement(`v0:${SRC_A}`, current)).toBe('unknown');
+    expect(mediaAgreement(SRC_A, current)).toBe('unknown');
+    expect(mediaAgreement(`v3:${SRC_A}`, current)).toBe('unknown');
+    expect(mediaAgreement(`v2:${SRC_A}:${RCP_1}`, current)).toBe('unknown');
+    expect(mediaAgreement(`v3:${SRC_A}:${RCP_1}:x`, current)).toBe('unknown');
+  });
+});
+
+describe('ADR-920 §14.9 Γ — η ΣΥΝΤΑΓΗ είναι άλλη ερώτηση από το ΥΛΙΚΟ', () => {
+  const current = stampOf(SRC_A, RCP_1);
+
+  it('🏆 Φ7 — άλλαξε ΜΟΝΟ η συνταγή ⇒ υλικό `current` (κανένας ψευδής συναγερμός) · συνταγή `outdated`', () => {
+    const stored = stampOf(SRC_A, RCP_2);
+    expect(mediaAgreement(stored, current)).toBe('current');
+    expect(recipeAgreement(stored, current)).toBe('outdated');
+    expect(recipeAgreement(current, current)).toBe('current');
+  });
+
+  it('🔑 Φ8 — ένα v2 (πριν από τις συνταγές) συγκρίνεται στο υλικό κανονικά · η συνταγή του είναι `outdated`', () => {
+    expect(mediaAgreement(`v2:${SRC_A}`, current)).toBe('current');
+    expect(mediaAgreement(`v2:${SRC_B}`, current)).toBe('stale');
+    expect(recipeAgreement(`v2:${SRC_A}`, current)).toBe('outdated');
+  });
+
+  it('🔴 Φ9 — ό,τι δεν διαβάζεται ⇒ συνταγή `outdated`, ΠΟΤΕ `current`', () => {
+    for (const stored of [undefined, null, 42, '', `v3:${SRC_A}`]) expect(recipeAgreement(stored, current)).toBe('outdated');
+  });
+
+  it('Φ10 — οι συνταγές είναι ανά πηγή, με τη ΣΕΙΡΑ της', () => {
+    expect(mediaRecipesInput([['a'], ['b']])).not.toBe(mediaRecipesInput([['b'], ['a']]));
+    expect(mediaRecipesInput([['a', 'b']])).not.toBe(mediaRecipesInput([['a'], ['b']]));
   });
 });
