@@ -21,17 +21,19 @@ import {
   ISSUER_AUTHORITY_LABEL_KEYS,
   NEXT_STEP_KEYS,
   REGISTRY_NS,
+  SELF_SERVICE_ACTION_KEYS,
 } from '@/components/document-registry/document-registry-labels';
 
+/** ADR-949 Α-1: η ετικέτα ακολουθεί την πράξη της υπηρεσίας (`issue` ⇒ «Έκδοση από …» · `lookup` ⇒ «Αναζήτηση στο …»). */
 export function RegistryAuthorityLink({ service }: { readonly service: AuthorityService }): React.ReactElement {
   const { t } = useTranslation([REGISTRY_NS]);
   const hintId = React.useId();
-  const { authority, entryUrl } = AUTHORITY_SERVICE_SPECS[service];
+  const { authority, action, entryUrl } = AUTHORITY_SERVICE_SPECS[service];
   return (
     <>
       <Button asChild variant="outline" size="sm" className="w-fit">
         <a href={entryUrl} target="_blank" rel="noopener noreferrer" aria-describedby={hintId}>
-          {t(NEXT_STEP_KEYS.selfService, { authority: t(ISSUER_AUTHORITY_LABEL_KEYS[authority]) })}
+          {t(SELF_SERVICE_ACTION_KEYS[action], { authority: t(ISSUER_AUTHORITY_LABEL_KEYS[authority]) })}
           <ExternalLink className="size-3" aria-hidden="true" />
         </a>
       </Button>

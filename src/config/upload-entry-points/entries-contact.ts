@@ -1080,6 +1080,23 @@ export const CONTACT_ENTRY_POINTS: UploadEntryPoint[] = [
       contactTypes: ['individual'],
       personas: ['property_owner'],
     },
+    // ADR-949 Α-1 — η ΠΡΑΞΗ προσδιορισμού ΕΝΦΙΑ (το «εκκαθαριστικό»), ΟΧΙ το πιστοποιητικό του `owner-enfia`: γράφει
+    // ανά ακίνητο όροφο, κύριους χώρους, έτος κατασκευής και τιμή ζώνης (επαληθευμένο σε δείγμα 2026-11-22).
+    {
+      id: 'owner-enfia-assessment',
+      purpose: 'owner-enfia-assessment',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Εκκαθαριστικό ΕΝΦΙΑ', en: 'ENFIA Tax Assessment' },
+      description: {
+        el: 'Πράξη διοικητικού προσδιορισμού ΕΝΦΙΑ (εκκαθαριστικό)',
+        en: 'ENFIA administrative tax assessment (statement)',
+      },
+      icon: 'Landmark',
+      order: 134,
+      contactTypes: ['individual'],
+      personas: ['property_owner'],
+    },
     {
       id: 'encumbrances-cert',
       purpose: 'encumbrances-cert',

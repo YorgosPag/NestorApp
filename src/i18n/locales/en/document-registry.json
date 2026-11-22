@@ -87,7 +87,8 @@
     },
     "authority": {
       "aade": "AADE (myAADE)",
-      "efka": "e-EFKA"
+      "efka": "e-EFKA",
+      "ypen": "YPEN (e-Adeies)"
     },
     "obligor": {
       "owner": "The owner"
@@ -121,12 +122,16 @@
     "findProfessionalNear": "In the property's area — only those who can issue it.",
     "findProfessionalAnywhere": "The property's area is not known: the directory opens for all of Greece — pick an area there.",
     "selfService": "Issue it on {authority}",
+    "selfServiceLookup": "Look it up on {authority}",
     "selfServiceHint": "Online, the same day, with the obligor's Taxisnet credentials.",
     "opensInNewTab": "Opens the official page in a new tab",
     "path": {
       "aade-tax-clearance": "Applications → Tax Services → Tax clearance → Issue certificate",
       "aade-enfia-certificate": "“Property register (E9/ENFIA)” application → ENFIA certificate",
-      "efka-insurance-clearance": "Online service “Social security clearance certificate”"
+      "efka-insurance-clearance": "Online service “Social security clearance certificate”",
+      "aade-e9": "“E9 / ENFIA declaration” application → choose the year → “Available actions” → print the E9 declaration",
+      "aade-enfia-assessment": "“E9 / ENFIA declaration” application → choose the year → “Available actions” → print the ENFIA tax assessment",
+      "ypen-e-adeies-search": "Public e-Adeies search; the engineer who filed it also has it"
     }
   },
   "dependents": {

@@ -108,20 +108,41 @@ export function qualificationRegistryAuthority(qualification: IssuerQualificatio
   return spec.kind === 'licence' ? PROFESSIONAL_LICENCE_SPECS[spec.licence].authority : null;
 }
 
-/** Δημόσιες αρχές που εκδίδουν έγγραφα του μητρώου. */
-export const ISSUER_AUTHORITIES = ['aade', 'efka'] as const;
+/** Δημόσιες αρχές που εκδίδουν (ή δημοσιεύουν) έγγραφα — `ypen`: το δημόσιο αρχείο πράξεων e-Άδειες (ADR-949 Α-1). */
+export const ISSUER_AUTHORITIES = ['aade', 'efka', 'ypen'] as const;
 export type IssuerAuthority = (typeof ISSUER_AUTHORITIES)[number];
 
 /**
- * Οι **ψηφιακές υπηρεσίες** από όπου ο υπόχρεος εκδίδει μόνος του ένα έγγραφο (ADR-915 §24 — «Πώς εκδίδεται»).
- * Μία ανά έγγραφο, όχι ανά αρχή: η ΑΑΔΕ βγάζει τη φορολογική ενημερότητα και το πιστοποιητικό ΕΝΦΙΑ από **άλλη**
- * εφαρμογή του myAADE. Η διαδρομή μέσα στην πύλη ζει στα locales (N.11)· εδώ μόνο αρχή, είσοδος και πηγή.
+ * Οι **ψηφιακές υπηρεσίες** από όπου ο υπόχρεος παίρνει μόνος του ένα έγγραφο (ADR-915 §24 — «Πώς εκδίδεται» ·
+ * ADR-949 Α-1 — «ποιο έγγραφο, από πού» στον υπολογιστή αντικειμενικής). Μία ανά έγγραφο, όχι ανά αρχή: η ΑΑΔΕ βγάζει
+ * τη φορολογική ενημερότητα, το πιστοποιητικό ΕΝΦΙΑ, το Ε9 και την πράξη προσδιορισμού ΕΝΦΙΑ από **άλλες** ενέργειες.
+ * Η διαδρομή μέσα στην πύλη ζει στα locales (N.11)· εδώ μόνο αρχή, είσοδος, πράξη και πηγή.
+ * ⚠️ **Κανένα κόστος/χρόνος εδώ**: η ΑΑΔΕ δεν γράφει στη σελίδα της ούτε «δωρεάν» ούτε «άμεσα» (ανάγνωση 2026-11-22) —
+ * ό,τι δεν το λέει η πηγή, δεν το λέμε εμείς (ADR-949 §8).
  */
-export const AUTHORITY_SERVICES = ['aade-tax-clearance', 'aade-enfia-certificate', 'efka-insurance-clearance'] as const;
+export const AUTHORITY_SERVICES = [
+  'aade-tax-clearance',
+  'aade-enfia-certificate',
+  'efka-insurance-clearance',
+  'aade-e9',
+  'aade-enfia-assessment',
+  'ypen-e-adeies-search',
+] as const;
 export type AuthorityService = (typeof AUTHORITY_SERVICES)[number];
+
+/**
+ * Τι κάνει ο άνθρωπος στην υπηρεσία: `issue` — εκδίδει/εκτυπώνει το δικό του έγγραφο · `lookup` — **αναζητά** ένα
+ * ήδη εκδοθέν έγγραφο σε δημόσιο αρχείο (e-Άδειες: με το κλειδί που τυπώνεται στο ίδιο το έγγραφο). Η ετικέτα του
+ * κουμπιού ακολουθεί την πράξη — «Έκδοση από ΥΠΕΝ» θα ήταν ψέμα.
+ */
+export type AuthorityServiceAction = 'issue' | 'lookup';
+
+/** Οι επίσημοι τομείς εισόδου — `gov.gr` και το δημόσιο αρχείο αδειών του ΥΠΕΝ. Κλειστή λίστα, όχι «οτιδήποτε .gr». */
+export const OFFICIAL_ENTRY_HOST_SUFFIXES = ['.gov.gr', '.ypen.gr'] as const;
 
 export interface AuthorityServiceSpec {
   readonly authority: IssuerAuthority;
+  readonly action: AuthorityServiceAction;
   /**
    * Η **επίσημη** είσοδος — ποτέ βαθύς σύνδεσμος σε εφαρμογή που αλλάζει όνομα. ⚠️ Η ΑΑΔΕ γράφει στις οδηγίες
    * ασφαλείας της: σύνδεση στο myAADE **μόνο** από το `myaade.gov.gr` ή το `www.aade.gr` — άρα αυτό δείχνουμε.
@@ -136,23 +157,57 @@ export interface AuthorityServiceSpec {
 export const AUTHORITY_SERVICE_SPECS: Readonly<Record<AuthorityService, AuthorityServiceSpec>> = {
   'aade-tax-clearance': {
     authority: 'aade',
+    action: 'issue',
     entryUrl: 'https://myaade.gov.gr',
     verifiedAt: '2026-10-16',
     pathSource: 'ΑΑΔΕ, βίντεο οδηγιών (iefimerida.gr 15/05/2024): Εφαρμογές → Φορολογικές Υπηρεσίες → Ενημερότητα',
   },
   'aade-enfia-certificate': {
     authority: 'aade',
+    action: 'issue',
     entryUrl: 'https://myaade.gov.gr',
     verifiedAt: '2026-10-16',
     pathSource: 'ΑΑΔΕ, δελτίο τύπου 31.05.2023 (ν.5036/2023): myAADE · Περιουσιολόγιο (Ε9/ΕΝΦΙΑ)',
   },
   'efka-insurance-clearance': {
     authority: 'efka',
+    action: 'issue',
     entryUrl: 'https://www.e-efka.gov.gr/el/elektronikes-yperesies/apodeiktiko-asphalistikes-enemerotetas',
     verifiedAt: '2026-10-16',
     pathSource: 'e-ΕΦΚΑ, σελίδα ηλεκτρονικής υπηρεσίας: σύνδεση με κωδικούς Taxisnet',
   },
+  // ADR-949 Α-1 — aade.gr/dilosi-e9-enfia (HTTP 200, 2026-11-22), βήμα Α.11.
+  'aade-e9': {
+    authority: 'aade',
+    action: 'issue',
+    entryUrl: 'https://myaade.gov.gr',
+    verifiedAt: '2026-11-22',
+    pathSource: 'aade.gr/dilosi-e9-enfia, Α.11: «Από τις διαθέσιμες ενέργειες μπορείτε να εκτυπώσετε … τις υποβληθείσες δηλώσεις Ε9»',
+  },
+  'aade-enfia-assessment': {
+    authority: 'aade',
+    action: 'issue',
+    entryUrl: 'https://myaade.gov.gr',
+    verifiedAt: '2026-11-22',
+    pathSource: 'aade.gr/dilosi-e9-enfia, Β: «Εκτύπωσης … πράξης Διοικητικού/Διορθωτικού προσδιορισμού φόρου ΕΝΦΙΑ για τα έτη 2014 και επόμενα»',
+  },
+  // Η «Ιστοσελίδα αναζήτησης e-Άδειες» όπως τη συνδέει το ΤΕΕ (web.tee.gr/e-adeies, 2026-11-22). Τα ψηφιακά έγγραφα
+  // τυπώνουν άλλη διεύθυνση (`apps.tee.gr/…/searchDocFile`, ανακατευθύνει στο services.tee.gr) — δεν τη δείχνουμε.
+  'ypen-e-adeies-search': {
+    authority: 'ypen',
+    action: 'lookup',
+    entryUrl: 'https://eadeies.ypen.gr/adeiapublic/faces/main',
+    verifiedAt: '2026-11-22',
+    pathSource: 'web.tee.gr/e-adeies: σύνδεσμος «Ιστοσελίδα αναζήτησης e-Άδειες»',
+  },
 };
+
+/** Είναι η είσοδος επίσημη; — η ΜΙΑ απάντηση για τις αναλλοίωτες (https + τομέας της {@link OFFICIAL_ENTRY_HOST_SUFFIXES}). */
+export function isOfficialEntryUrl(entryUrl: string): boolean {
+  if (!entryUrl.startsWith('https://')) return false;
+  const host = new URL(entryUrl).hostname;
+  return OFFICIAL_ENTRY_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
+}
 
 /**
  * Ποιος **εκδίδει** ένα είδος εγγράφου:

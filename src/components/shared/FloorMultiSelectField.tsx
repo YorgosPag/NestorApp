@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import type { PropertyLevel } from '@/types/property';
 import type { FloorOption } from '@/services/multi-level.service';
 import { buildLevelsFromSelection } from '@/services/multi-level.service';
+import { levelStackNeighbours } from '@/lib/floor/level-stack';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { FloorInlineCreateForm } from '@/components/building-management/tabs/FloorInlineCreateForm';
 
@@ -76,14 +77,12 @@ export function FloorMultiSelectField({
   const isDisabled = disabled || !buildingId;
   const existingFloorNumbers = useMemo(() => new Set(allFloors.map(f => f.number)), [allFloors]);
 
-  // Contiguity: find adjacent floors (UP = max+1, DOWN = min-1)
+  // Contiguity: the ONE level-stack rule (lib/floor/level-stack) — UP = max+1, DOWN = min-1
   const { floorAbove, floorBelow, canCreateAbove, canCreateBelow } = useMemo(() => {
-    if (value.length < 2) return { floorAbove: null, floorBelow: null, canCreateAbove: false, canCreateBelow: false };
-    const numbers = value.map(l => l.floorNumber);
-    const maxNum = Math.max(...numbers);
-    const minNum = Math.min(...numbers);
-    const above = allFloors.find(f => f.number === maxNum + 1) ?? null;
-    const below = allFloors.find(f => f.number === minNum - 1) ?? null;
+    const neighbours = value.length < 2 ? null : levelStackNeighbours(value.map(l => l.floorNumber));
+    if (neighbours === null) return { floorAbove: null, floorBelow: null, canCreateAbove: false, canCreateBelow: false };
+    const above = allFloors.find(f => f.number === neighbours.above) ?? null;
+    const below = allFloors.find(f => f.number === neighbours.below) ?? null;
     return {
       floorAbove: above,
       floorBelow: below,

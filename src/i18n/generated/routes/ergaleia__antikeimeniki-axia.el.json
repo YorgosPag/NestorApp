@@ -137,6 +137,7 @@
       "addLevel": "Προσθήκη επιπέδου (μεζονέτα)",
       "areaHelp": "Μαζί με τους εξωτερικούς τοίχους, όπως στον τίτλο.",
       "areaLabel": "Επιφάνεια (τ.μ.)",
+      "derivedFloor": "Όροφος: {floor}",
       "floor": {
         "basement": "Υπόγειο",
         "fifth": "Ε' όροφος",
@@ -155,6 +156,9 @@
         "storage": "Αποθήκη"
       },
       "formLabel": "Είδος",
+      "levelAbove": "Επίπεδο από πάνω: {floor}",
+      "levelBelow": "Επίπεδο από κάτω: {floor}",
+      "levelFloorPending": "Επιλέξτε πρώτα τον όροφο του επιπέδου 1.",
       "levelLegend": "Επίπεδο {number}",
       "parkingAreaHelp": "Αν ο τίτλος δεν γράφει επιφάνεια, αφήστε το κενό: λογίζονται 20 τ.μ.",
       "parkingPosition": {

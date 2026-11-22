@@ -1,0 +1,79 @@
+/**
+ * ADR-949 Α-1 — το πλάνο «ποιο έγγραφο, από πού»: άπληστη κάλυψη συνόλου, ειλικρινή «κανένα έγγραφο», κενό όταν δεν
+ * λείπει τίποτα.
+ */
+
+import {
+  OBJECTIVE_VALUE_EVIDENCE,
+  OBJECTIVE_VALUE_EVIDENCE_DOCUMENTS,
+  OBJECTIVE_VALUE_EVIDENCE_DOCUMENT_SPECS,
+} from '@/config/objective-value/objective-value-evidence';
+
+import { objectiveValueEvidencePlan } from '../objective-value-evidence-plan';
+import type { ObjectiveValueMissing } from '../objective-value-types';
+
+const documentsOf = (missing: readonly ObjectiveValueMissing[]) =>
+  objectiveValueEvidencePlan(missing).steps.map((step) => step.document);
+
+describe('ADR-949 Α-1 — objectiveValueEvidencePlan', () => {
+  it('κενό missing ⇒ κενό πλάνο', () => {
+    expect(objectiveValueEvidencePlan([])).toEqual({ steps: [], selfAnswered: [] });
+  });
+
+  it('πρώτο το έγγραφο που κλείνει τα περισσότερα κενά: επιφάνεια + όροφος + τιμή ζώνης ⇒ ΜΟΝΟ το ΕΝΦΙΑ', () => {
+    const plan = objectiveValueEvidencePlan(['area', 'floor', 'zonePrice']);
+    expect(plan.steps).toHaveLength(1);
+    expect(plan.steps[0].document).toBe('owner-enfia-assessment');
+    expect(plan.steps[0].covers.map((c) => c.field)).toEqual(['area', 'floor', 'zonePrice']);
+  });
+
+  it('ισοπαλία κάλυψης ⇒ αποδεδειγμένη θέση πριν από ευκολία (Ε9 πριν από συμβόλαιο) και μετά η σειρά του μητρώου (Ε9 πριν από ΕΝΦΙΑ)', () => {
+    expect(documentsOf(['area', 'floor'])).toEqual(['owner-e9']);
+  });
+
+  it('η ημερομηνία άδειας καλύπτεται ΜΟΝΟ από την άδεια — ποτέ από το έτος κατασκευής του Ε9', () => {
+    expect(documentsOf(['area', 'ageYears'])).toEqual(['owner-e9', 'unit-permit']);
+  });
+
+  it('κάθε έγγραφο εμφανίζεται μία φορά, και κάθε πεδίο καλύπτεται από ένα μόνο βήμα', () => {
+    const plan = objectiveValueEvidencePlan(['area', 'floor', 'zonePrice', 'ageYears', 'area']);
+    const documents = plan.steps.map((s) => s.document);
+    expect(new Set(documents).size).toBe(documents.length);
+    const fields = plan.steps.flatMap((s) => s.covers.map((c) => c.field));
+    expect(new Set(fields).size).toBe(fields.length);
+    expect([...fields].sort()).toEqual(['ageYears', 'area', 'floor', 'zonePrice']);
+  });
+
+  it('ό,τι κανένα έγγραφο δεν γράφει λέγεται με τον λόγο του, ποτέ σιωπηλά', () => {
+    const plan = objectiveValueEvidencePlan(['commercialityFactor', 'hasElevator', 'plotUtilisation']);
+    expect(plan.steps).toEqual([]);
+    expect(plan.selfAnswered).toEqual([
+      { field: 'commercialityFactor', reason: 'zone-tables' },
+      { field: 'hasElevator', reason: 'property-fact' },
+      { field: 'plotUtilisation', reason: 'zone-tables' },
+    ]);
+  });
+});
+
+describe('ADR-949 Α-1 — το μητρώο', () => {
+  it('κάθε έγγραφο του μητρώου το χρησιμοποιεί τουλάχιστον μία είσοδος (κανένα νεκρό)', () => {
+    const used = new Set(Object.values(OBJECTIVE_VALUE_EVIDENCE).flatMap((evidence) =>
+      evidence.kind === 'documents' ? evidence.sources.map((s) => s.document) : []));
+    expect([...used].sort()).toEqual([...OBJECTIVE_VALUE_EVIDENCE_DOCUMENTS].sort());
+  });
+
+  it('κανένα έγγραφο δύο φορές στην ίδια είσοδο', () => {
+    const bad = Object.entries(OBJECTIVE_VALUE_EVIDENCE).filter(([, evidence]) => {
+      if (evidence.kind !== 'documents') return false;
+      const documents = evidence.sources.map((s) => s.document);
+      return new Set(documents).size !== documents.length || documents.length === 0;
+    });
+    expect(bad).toEqual([]);
+  });
+
+  it('κάθε έγγραφο έχει τρόπο απόκτησης', () => {
+    for (const document of OBJECTIVE_VALUE_EVIDENCE_DOCUMENTS) {
+      expect(OBJECTIVE_VALUE_EVIDENCE_DOCUMENT_SPECS[document]).toBeDefined();
+    }
+  });
+});

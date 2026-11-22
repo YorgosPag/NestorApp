@@ -26,6 +26,7 @@ import {
 import {
   ISSUER_QUALIFICATION_SPECS,
   type AuthorityService,
+  type AuthorityServiceAction,
   type DocumentObligor,
   type IssuerAuthority,
   type IssuerQualification,
@@ -222,6 +223,7 @@ export function qualificationText(t: LabelTranslate, qualification: IssuerQualif
 export const ISSUER_AUTHORITY_LABEL_KEYS: Readonly<Record<IssuerAuthority, string>> = {
   aade: `${K}issuer.authority.aade`,
   efka: `${K}issuer.authority.efka`,
+  ypen: `${K}issuer.authority.ypen`,
 };
 
 export const OBLIGOR_LABEL_KEYS: Readonly<Record<DocumentObligor, string>> = {
@@ -303,15 +305,26 @@ export const NEXT_STEP_KEYS = {
   findProfessionalNear: `${K}nextStep.findProfessionalNear`,
   findProfessionalAnywhere: `${K}nextStep.findProfessionalAnywhere`,
   selfService: `${K}nextStep.selfService`,
+  selfServiceLookup: `${K}nextStep.selfServiceLookup`,
   selfServiceHint: `${K}nextStep.selfServiceHint`,
   opensInNewTab: `${K}nextStep.opensInNewTab`,
 } as const;
+
+/** Η ετικέτα του κουμπιού ανά πράξη της υπηρεσίας (ADR-949 Α-1) — ολική: νέα πράξη δεν μεταγλωττίζεται χωρίς λέξη. */
+export const SELF_SERVICE_ACTION_KEYS: Readonly<Record<AuthorityServiceAction, string>> = {
+  // Ωμά κλειδιά (όχι `NEXT_STEP_KEYS.…`): ο στατικός επιλυτής της 3.34 λύνει πίνακες με κυριολεκτικές τιμές.
+  issue: `${K}nextStep.selfService`,
+  lookup: `${K}nextStep.selfServiceLookup`,
+};
 
 /** Η διαδρομή μέσα στην πύλη της αρχής — μία ανά υπηρεσία· η πηγή της ζει στο `AUTHORITY_SERVICE_SPECS.pathSource`. */
 export const SELF_SERVICE_PATH_KEYS: Readonly<Record<AuthorityService, string>> = {
   'aade-tax-clearance': `${K}nextStep.path.aade-tax-clearance`,
   'aade-enfia-certificate': `${K}nextStep.path.aade-enfia-certificate`,
   'efka-insurance-clearance': `${K}nextStep.path.efka-insurance-clearance`,
+  'aade-e9': `${K}nextStep.path.aade-e9`,
+  'aade-enfia-assessment': `${K}nextStep.path.aade-enfia-assessment`,
+  'ypen-e-adeies-search': `${K}nextStep.path.ypen-e-adeies-search`,
 };
 
 /** ADR-915 §14 — από πού ήρθε η λήξη· `floor` = το εγγυημένο κατώτατο («τουλάχιστον έως»), όχι η πραγματική λήξη. */

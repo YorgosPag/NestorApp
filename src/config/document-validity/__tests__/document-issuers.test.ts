@@ -16,7 +16,9 @@ import {
   ISSUER_QUALIFICATIONS,
   ISSUER_QUALIFICATION_SPECS,
   issuerAuthorityOf,
+  isOfficialEntryUrl,
 } from '@/config/document-validity/document-issuers';
+import { OBJECTIVE_VALUE_EVIDENCE_DOCUMENT_SPECS } from '@/config/objective-value/objective-value-evidence';
 import { DOCUMENT_KINDS, documentKindSpec } from '@/config/document-validity/document-validity';
 import { escoDocIdOf, ESCO_OCCUPATION_URI_PREFIX } from '@/lib/esco/esco-uri';
 
@@ -90,18 +92,27 @@ describe('ADR-915 §21 — οι ετικέτες των αδειών ΔΕΝ ξα
     expect(LICENCE_REGISTRY_LABEL_KEYS['energy-inspector']).toBe(REGISTRY_AUTHORITY_PRESENTATION[spec.authority].nameKey);
   });
 
-  it('§23 — κάθε υπηρεσία αυτοεξυπηρέτησης χρησιμοποιείται, δείχνει επίσημη είσοδο https (gov.gr) και έχει ημερομηνία', () => {
-    const used = new Set(DOCUMENT_KINDS.flatMap((kind) => {
+  it('§23 · ADR-949 Α-1 — κάθε υπηρεσία χρησιμοποιείται (μητρώο λήξεων Ή οδηγός αντικειμενικής), δείχνει επίσημη είσοδο https και έχει ημερομηνία', () => {
+    const byRegistry = DOCUMENT_KINDS.flatMap((kind) => {
       const { issuer } = documentKindSpec(kind);
       return issuer.kind === 'authority' ? [issuer.service] : [];
-    }));
+    });
+    const byEvidence = Object.values(OBJECTIVE_VALUE_EVIDENCE_DOCUMENT_SPECS)
+      .flatMap((obtain) => (obtain.kind === 'authority' ? [obtain.service] : []));
+    const used = new Set([...byRegistry, ...byEvidence]);
     expect([...used].sort()).toEqual([...AUTHORITY_SERVICES].sort());
     const bad = AUTHORITY_SERVICES.filter((service) => {
       const { entryUrl, verifiedAt, pathSource } = AUTHORITY_SERVICE_SPECS[service];
-      const host = new URL(entryUrl).hostname;
-      return !entryUrl.startsWith('https://') || !host.endsWith('.gov.gr')
-        || Number.isNaN(Date.parse(verifiedAt)) || pathSource.trim() === '';
+      return !isOfficialEntryUrl(entryUrl) || Number.isNaN(Date.parse(verifiedAt)) || pathSource.trim() === '';
     });
     expect(bad).toEqual([]);
+  });
+
+  it('ADR-949 Α-1 — η κρίση «επίσημη είσοδος» δέχεται μόνο https σε κλειστή λίστα τομέων', () => {
+    expect(isOfficialEntryUrl('https://myaade.gov.gr')).toBe(true);
+    expect(isOfficialEntryUrl('https://eadeies.ypen.gr/adeiapublic/faces/main')).toBe(true);
+    expect(isOfficialEntryUrl('http://myaade.gov.gr')).toBe(false);
+    expect(isOfficialEntryUrl('https://myaade.gov.gr.evil.example')).toBe(false);
+    expect(isOfficialEntryUrl('https://example.gr')).toBe(false);
   });
 });

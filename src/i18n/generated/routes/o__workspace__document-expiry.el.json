@@ -95,7 +95,8 @@
     "issuer": {
       "authority": {
         "aade": "ΑΑΔΕ (myAADE)",
-        "efka": "e-ΕΦΚΑ"
+        "efka": "e-ΕΦΚΑ",
+        "ypen": "ΥΠΕΝ (e-Άδειες)"
       },
       "obligorUnavailable": "επαφή που δεν είναι πια διαθέσιμη",
       "obligorUnnamed": "Επαφή χωρίς όνομα",
@@ -183,7 +184,8 @@
     "nextStep": {
       "findProfessional": "Βρες επαγγελματία",
       "opensInNewTab": "Ανοίγει την επίσημη σελίδα σε νέα καρτέλα",
-      "selfService": "Έκδοση από {authority}"
+      "selfService": "Έκδοση από {authority}",
+      "selfServiceLookup": "Αναζήτηση στο {authority}"
     },
     "page": {
       "asOf": "Κατάσταση της {date}",

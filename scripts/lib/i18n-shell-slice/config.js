@@ -186,6 +186,9 @@ const DEFAULTS = Object.freeze({
     // ADR-915 §40 — ο λογαριασμός πίσω από την επαφή: μόνο όταν η επαφή έχει σύνδεση, με το λεξιλόγιο της
     // μεταβίβασης/του μητρώου εγγράφων στο chunk (όχι στο slice κάθε σελίδας επαφών).
     'src/components/contacts/contact-link-surfaces.tsx',
+    // ADR-949 Α-1 — ο οδηγός «ποιο έγγραφο, από πού» του υπολογιστή αντικειμενικής: μόνο όσο κάτι λείπει, με το
+    // λεξιλόγιο του μητρώου εγγράφων στο chunk (όχι στο slice της δημόσιας σελίδας).
+    'src/components/objective-value/objective-value-evidence-surfaces.tsx',
     // ADR-915 §40.7 — οι τάξεις μιας άδειας: μόνο όταν τσεκαριστεί άδεια με `gradeScheme`, με τα κείμενά τους στο chunk
     // (όχι στο slice της σελίδας «Άδειες» της βιτρίνας ούτε κάθε φόρμας επαφής).
     'src/components/mandate/licence-grade-surfaces.tsx',

@@ -26,7 +26,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { prefersReducedMotion } from '@/lib/a11y/reduced-motion';
 import { marketDayOf } from '@/lib/listings/listing-stats';
 import { computeObjectiveValue } from '@/lib/objective-value/compute-objective-value';
-import { draftToInput, INITIAL_DRAFT, relevantQuestions, type ObjectiveValueDraft, type UpdateDraft } from '@/lib/objective-value/objective-value-draft';
+import { draftToInput, INITIAL_DRAFT, missingOf, relevantQuestions, type ObjectiveValueDraft, type UpdateDraft } from '@/lib/objective-value/objective-value-draft';
 import { deriveInputProvenance } from '@/lib/objective-value/objective-value-input-provenance';
 import { objectiveValueReturnHref, type ObjectiveValueReturn } from '@/lib/objective-value/objective-value-return';
 import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
@@ -34,6 +34,7 @@ import { Link } from '@/lib/workspace/navigation';
 import type { ObjectiveValueResult as EngineResult } from '@/lib/objective-value/objective-value-types';
 
 import { ObjectiveValueAdjustments } from './ObjectiveValueAdjustments';
+import { ObjectiveValueEvidenceSurfaces } from './objective-value-evidence-surfaces';
 import { ObjectiveValueFaq } from './ObjectiveValueFaq';
 import { ObjectiveValueLocation } from './ObjectiveValueLocation';
 import { ObjectiveValueMobileBar } from './ObjectiveValueMobileBar';
@@ -196,6 +197,7 @@ function CalculatorWorkspace({ draft, update, location, today, evaluation, resul
           sourcedCommercialityFactor={sourcedFactor}
           commercialityProvenance={<ObjectiveValueProvenanceBadge input="commercialityFactor" />}
           overrides={<ObjectiveValueOverrideSummary />}
+          evidence={<ObjectiveValueEvidenceSurfaces.ObjectiveValueEvidenceGuide missing={missingOf(result)} />}
         />
       </aside>
     </div>

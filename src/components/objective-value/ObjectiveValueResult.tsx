@@ -109,6 +109,8 @@ interface ObjectiveValueResultProps {
   readonly commercialityProvenance?: React.ReactNode;
   /** Η σύνοψη των παρακάμψεων με «επαναφορά όλων» — υποδοχή. */
   readonly overrides?: React.ReactNode;
+  /** ADR-949 Α-1 — «ποιο έγγραφο, από πού» για ό,τι λείπει· υποδοχή, μόνο ο δημόσιος υπολογιστής τη γεμίζει. */
+  readonly evidence?: React.ReactNode;
 }
 
 export function ObjectiveValueResult({
@@ -117,6 +119,7 @@ export function ObjectiveValueResult({
   sourcedCommercialityFactor = null,
   commercialityProvenance = null,
   overrides = null,
+  evidence = null,
 }: ObjectiveValueResultProps) {
   const { t } = useTranslation([NS]);
   return (
@@ -133,6 +136,7 @@ export function ObjectiveValueResult({
           <ObjectiveValuePending result={result} />
         )}
       </div>
+      {result.kind !== 'computed' && evidence}
       {result.kind === 'computed' && commercialityAssumed && (
         <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-foreground">
           {t(`${NS}:questions.commercialityFactor.assumed`)}

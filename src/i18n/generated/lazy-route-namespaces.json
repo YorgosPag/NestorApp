@@ -1206,6 +1206,10 @@
     "navigation",
     "navigation-entities"
   ],
+  "ObjectiveValueEvidenceGuide": [
+    "document-registry",
+    "objective-value"
+  ],
   "ObligationsEdit": [
     "common",
     "common-account",

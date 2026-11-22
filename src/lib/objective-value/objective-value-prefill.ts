@@ -61,10 +61,12 @@ const PARAM = {
   back: 'back',
 } as const;
 
-const MAX_FLOOR = 99;
-const MIN_FLOOR = -9;
+/** Όροφοι που δέχεται η διεύθυνση — και ο **ίδιος** περιορισμός της στοίβας επιπέδων στην οθόνη (ADR-898 · `lib/floor/level-stack`). */
+export const OBJECTIVE_VALUE_FLOOR_BOUNDS = { min: -9, max: 99 } as const;
+const MAX_FLOOR = OBJECTIVE_VALUE_FLOOR_BOUNDS.max;
+const MIN_FLOOR = OBJECTIVE_VALUE_FLOOR_BOUNDS.min;
 /** Πάνω όριο επιπέδων στη διεύθυνση — άμυνα απέναντι σε είσοδο από οποιονδήποτε, όχι κανόνας του νόμου. */
-const MAX_LEVELS = 9;
+export const MAX_LEVELS = 9;
 const LEVEL_SEPARATOR = ',';
 const PAIR_SEPARATOR = ':';
 

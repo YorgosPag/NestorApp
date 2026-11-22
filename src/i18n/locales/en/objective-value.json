@@ -46,6 +46,10 @@
     "parkingAreaHelp": "If the title deed states no area, leave it empty: 20 m² is assumed.",
     "addLevel": "Add level (maisonette)",
     "removeLevel": "Remove level {number}",
+    "levelBelow": "Level below: {floor}",
+    "levelAbove": "Level above: {floor}",
+    "derivedFloor": "Floor: {floor}",
+    "levelFloorPending": "Choose the floor of level 1 first.",
     "floor": {
       "basement": "Basement",
       "ground": "Ground floor or semi-basement",
@@ -196,6 +200,30 @@
       "coOwnership": "Co-ownership",
       "position": "Position",
       "ownershipShare": "Ownership share"
+    }
+  },
+  "evidence": {
+    "title": "Which documents show these",
+    "covers": "Covers: {fields}",
+    "held": "You already have it: the notary handed it over when you acquired the property.",
+    "note": "The documents help you declare the values correctly. The calculation stays indicative and is not a certification.",
+    "documents": {
+      "owner-e9": "E9 declaration",
+      "owner-enfia-assessment": "ENFIA tax assessment",
+      "unit-permit": "Building permit",
+      "title-deed": "Acquisition deed"
+    },
+    "where": {
+      "e9Area": "E9 — Table 1, column “Area – Main spaces”",
+      "e9Floor": "E9 — Table 1, column “Floor”",
+      "enfiaArea": "ENFIA — section D, column “Main spaces (m²)”",
+      "enfiaFloor": "ENFIA — section D, column “Floor”",
+      "enfiaZonePrice": "ENFIA — section D, column “Zone price”",
+      "permitDate": "Permit — first page, “Act issue date”. If the document is an update or revision, the original permit it cites is what counts."
+    },
+    "noDocument": {
+      "zone-tables": "From the zone tables of the location, not from your documents: {fields}",
+      "property-fact": "No public document states these; answer from what you know about the property: {fields}"
     }
   },
   "listing": {

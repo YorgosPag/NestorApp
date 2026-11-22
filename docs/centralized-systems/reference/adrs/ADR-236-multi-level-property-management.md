@@ -255,6 +255,10 @@ Google contract: **αν A→B δημιουργεί N level cards, τότε B→A
 - Per-level finishes preservation σε flat (Phase 2 contract immutable)
 
 ## Changelog
+- **2026-11-22** (ADR-898 §24): **Ο κανόνας συνέχειας ορόφων έγινε καθαρή συνάρτηση.** Το «επόμενο επίπεδο = μόνο
+  min−1 / max+1» ζούσε μέσα στο `useMemo` του `FloorMultiSelectField`. Πλέον ζει στο `src/lib/floor/level-stack.ts`
+  (`levelStackNeighbours` · `shiftLevelStack` · `isLevelStackEnd`, πρότυπο Revit Base/Top Constraint). Τον καλεί και
+  ο υπολογιστής αντικειμενικής αξίας. Η συμπεριφορά των Μονάδων δεν αλλάζει.
 - **2026-10-13** (ADR-914 §2.20): **Το `levelFloorId` φτάνει στο αρχείο και από τον οδηγό εισαγωγής.** Ο αγωγός
   `uploadFileWithPolicy` (ADR-292) το έχανε· τα αρχεία επιπέδων γράφονταν χωρίς αυτό. Νέος κανόνας
   `floorplansOfLevel` (`src/lib/files/level-floorplans.ts`) για «ποιες κατόψεις ανήκουν σε αυτό το επίπεδο» — τον
