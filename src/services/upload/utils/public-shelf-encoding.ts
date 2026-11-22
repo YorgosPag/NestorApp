@@ -156,14 +156,19 @@ export interface VideoShelfEncoding {
 /**
  * ⛰️ **ΠΩΣ ΚΩΔΙΚΟΠΟΙΕΙΤΑΙ ΕΝΑ ΕΔΑΦΟΣ** *(ADR-920 Β3β)* — δεν κωδικοποιείται· **ψήνεται**: πηγή του τοπογράφου →
  * `ListingTerrainSnapshot` (JSON, gzip στη μεταφορά). Ισχύει ο κανόνας του {@link ModelShelfEncoding}: *ό,τι είναι
- * εδώ αλλάζει τα bytes*. Τα bytes τα αλλάζουν **δύο** συμβόλαια — του στιγμιοτύπου (τι παράγει ο builder) και της
- * πηγής (πώς διαβάζεται) — άρα και τα δύο είναι στη συνταγή: αλλαγή έκδοσης ⇒ νέα συνταγή ⇒ ξαναψήσιμο χωρίς τον
+ * εδώ αλλάζει τα bytes*. Τα bytes τα αλλάζουν **τρία** πράγματα — το σχήμα του στιγμιοτύπου, το συμβόλαιο της πηγής
+ * (πώς διαβάζεται) και η αναθεώρηση του builder (Β6.9 Β) — άρα και τα τρία είναι στη συνταγή: αλλαγή έκδοσης ⇒ νέα συνταγή ⇒ ξαναψήσιμο χωρίς τον
  * ιδιοκτήτη, στην επόμενη επαναπροβολή.
  */
 export interface TerrainShelfEncoding {
   readonly kind: 'terrain';
   readonly snapshotVersion: number;
   readonly sourceVersion: number;
+  /**
+   * ADR-920 Β6.9 Β — ο **τρίτος** παράγοντας των bytes: η αναθεώρηση του builder. Αλλάζει το περιεχόμενο **χωρίς** να
+   * αλλάζει το σχήμα, άρα δεν επιτρέπεται να ζει στο `snapshotVersion` (ο reader θα απέρριπτε κάθε παλιό στιγμιότυπο).
+   */
+  readonly builderRevision: number;
 }
 
 /**
@@ -285,7 +290,9 @@ export function shelfRecipe(encoding: ShelfEncoding, framing?: ShelfFraming): st
   // ADR-907 §10.3 — καταφατικά, όπως το μοντέλο: ένα «ό,τι δεν είναι μοντέλο είναι εικόνα» θα έγραφε `webp:` σε MP4.
   if (encoding.kind === 'video') return `mp4:${encoding.layout}`;
   // ADR-920 Β3β — καταφατικά, για τον ίδιο λόγο.
-  if (encoding.kind === 'terrain') return `json:terrain-s${encoding.snapshotVersion}-w${encoding.sourceVersion}`;
+  if (encoding.kind === 'terrain') {
+    return `json:terrain-s${encoding.snapshotVersion}-w${encoding.sourceVersion}-b${encoding.builderRevision}`;
+  }
 
   // ⚠️ **Ο ΤΥΠΟΣ ΤΟ ΕΓΓΥΑΤΑΙ, Ο ΕΛΕΓΧΟΣ ΤΟ ΕΚΤΕΛΕΙ.** Οι υπερφορτώσεις κάνουν το
   //    *«raster χωρίς πλαισίωμα»* αδύνατο σε χρόνο μεταγλώττισης — αλλά ο **N.17**

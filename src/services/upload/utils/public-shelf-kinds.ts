@@ -34,7 +34,7 @@ import type { ListingMaterial } from '@/lib/listings/listing-material';
 
 import { isLandingHeroRevisionId } from '@/lib/landing/landing-hero-vocabulary';
 
-import { LISTING_TERRAIN_SNAPSHOT_VERSION } from '@/lib/terrain/publication/listing-terrain-types';
+import { LISTING_TERRAIN_BUILDER_REVISION, LISTING_TERRAIN_SNAPSHOT_VERSION } from '@/lib/terrain/publication/listing-terrain-types';
 import { LISTING_TERRAIN_SOURCE_VERSION } from '@/lib/terrain/publication/listing-terrain-source';
 import { isValidPathSegment } from './storage-path-validation';
 import { LANDING_HERO_SHELF } from './public-shelf-landing-hero-kind';
@@ -468,12 +468,17 @@ export const LISTING_VIDEO_SHELF: VideoShelfKind<ListingMaterial> = {
 
 /**
  * ⛰️ **ΤΟ ΕΔΑΦΟΣ ΜΙΑΣ ΑΓΓΕΛΙΑΣ ΟΙΚΟΠΕΔΟΥ** *(ADR-920 Β3β)* — ίδια ρίζα και φρουρός, δική του κατάληξη (`.json`, άγκυρα
- * Α-1ε). Οι εκδόσεις των δύο συμβολαίων μπαίνουν στη συνταγή ⇒ νέα έκδοση = ξαναψήσιμο. Τύπος/φρουρός: `./public-shelf-terrain-kind`.
+ * Α-1ε). Οι εκδόσεις των δύο συμβολαίων **και** η αναθεώρηση του builder (Β6.9 Β) μπαίνουν στη συνταγή ⇒ νέα έκδοση = ξαναψήσιμο. Τύπος/φρουρός: `./public-shelf-terrain-kind`.
  */
 export const LISTING_TERRAIN_SHELF: TerrainShelfKind<ListingMaterial> = {
   root: PUBLIC_SHELF_LISTING_ROOT,
   acceptsSubject: isPublicShelfListingId,
-  encoding: { kind: 'terrain', snapshotVersion: LISTING_TERRAIN_SNAPSHOT_VERSION, sourceVersion: LISTING_TERRAIN_SOURCE_VERSION },
+  encoding: {
+    kind: 'terrain',
+    snapshotVersion: LISTING_TERRAIN_SNAPSHOT_VERSION,
+    sourceVersion: LISTING_TERRAIN_SOURCE_VERSION,
+    builderRevision: LISTING_TERRAIN_BUILDER_REVISION,
+  },
 };
 
 /**

@@ -422,7 +422,7 @@ export async function reconcilePublicShelf<M>(
     await uploadMissing(
       scan.bucket,
       desired.flatMap((image) => image.uploads).map(toShelfWrite),
-      scan.keys,
+      scan.files,
     );
     const removed = await deleteExtra(kind, scan.files, desiredKeys);
 

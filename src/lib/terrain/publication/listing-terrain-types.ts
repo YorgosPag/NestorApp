@@ -24,8 +24,23 @@ import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import type { Breakline, TopoPoint } from '@/lib/terrain/terrain-types';
 import type { SnapshotFrame } from './listing-terrain-frame';
 
-/** Bumped on any breaking change of the snapshot shape; readers refuse versions they do not know. */
+/**
+ * Bumped on any breaking change of the snapshot SHAPE; readers refuse versions they do not know.
+ * ⛔ Never bump it for a change of CONTENT — every published snapshot would read `unknown-version`. That is
+ * {@link LISTING_TERRAIN_BUILDER_REVISION}.
+ */
 export const LISTING_TERRAIN_SNAPSHOT_VERSION = 1 as const;
+
+/**
+ * ADR-920 Β6.9 Β — the revision of the builder (`buildListingTerrainSnapshot`): bumped on ANY change to the bytes it
+ * produces for the same source (interval rule, simplification, rounding …), with the shape unchanged. It is part of
+ * the public shelf's recipe ⇒ a bump re-bakes published snapshots on their next reconciliation, and the nightly pass
+ * (ADR-845) finds them. Producer version in the cache key, apart from the schema version (Mapbox MTS recipes ·
+ * Cloudinary named transformations · Bazel action keys).
+ *
+ * History: 1 = up to Β6.7 · 2 = Β6.8 (interval from on-screen density, 8 px minimum spacing).
+ */
+export const LISTING_TERRAIN_BUILDER_REVISION = 2 as const;
 
 /** The terrain mesh, in the snapshot frame (see module doc). */
 export interface ListingTerrainMesh {

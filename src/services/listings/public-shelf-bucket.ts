@@ -86,7 +86,7 @@ export interface ShelfWrite {
 }
 
 /**
- * **Τι κάθεται ήδη στο πρόθεμα αυτού του υποκειμένου** — μία σάρωση, τρεις απαντήσεις.
+ * **Τι κάθεται ήδη στο πρόθεμα αυτού του υποκειμένου** — μία σάρωση, τρεις απαντήσεις (κάδος, πρόθεμα, αντικείμενα).
  *
  * ⚠️ Το {@link files} περιέχει **ΟΛΑ** τα αντικείμενα του προθέματος, **και των δύο ειδών**:
  * η διαμέριση γίνεται από το `parsePublicShelfKey` μέσα στον {@link deleteExtra}, ποτέ εδώ.
@@ -95,9 +95,8 @@ export interface ShelfWrite {
 export interface ShelfScan {
   readonly bucket: Bucket;
   readonly prefix: string;
+  /** Και η απάντηση στο *«υπάρχει ήδη, και με ποια εγγραφή;»* — το {@link uploadMissing} τα κάνει χάρτη (Β6.9 Β). */
   readonly files: readonly File[];
-  /** Τα ονόματα του {@link files}, ως σύνολο — η ερώτηση *«υπάρχει ήδη;»* σε O(1). */
-  readonly keys: ReadonlySet<string>;
 }
 
 /**
@@ -180,7 +179,7 @@ export async function scanShelfPrefix(
   const bucket = shelfBucket();
   const [files] = await bucket.getFiles({ prefix });
 
-  return { bucket, prefix, files, keys: new Set(files.map((file) => file.name)) };
+  return { bucket, prefix, files };
 }
 
 // ---------------------------------------------------------------------------
@@ -204,18 +203,51 @@ export async function scanShelfPrefix(
  * με πλάτη, μοντέλο χωρίς)*. Ένας υπολογισμός εδώ θα έγραφε τη **μία** απάντηση πάνω σε bytes
  * της **άλλης**, και επειδή η γρήγορη διαδρομή δεν αποκωδικοποιεί τίποτα, το ψέμα θα ήταν
  * **μόνιμο**.
+ *
+ * 🏆 **ΙΔΙΑ BYTES, ΑΛΛΗ ΣΥΝΤΑΓΗ ⇒ ΑΝΑΝΕΩΝΕΤΑΙ Η ΕΓΓΡΑΦΗ, ΟΧΙ ΤΑ BYTES** *(ADR-920 Β6.9 Β)*. Το κλειδί είναι το sha256
+ * του περιεχομένου (το CAS του Bazel REAPI)· τα μεταδεδομένα `sourceRef` + `recipe` είναι η εγγραφή «ενέργεια →
+ * αποτέλεσμα» (το ActionCache). Όταν μια **νέα** συνταγή βγάζει **τα ίδια** bytes, το «υπάρχει ήδη» ίσχυε, αλλά η εγγραφή
+ * έμενε στην **παλιά** συνταγή ⇒ το `cachedShelfFile` αστοχούσε σε **κάθε** συμφιλίωση και το αντικείμενο ξαναψηνόταν
+ * για πάντα (για μοντέλο: εκ νέου κωδικοποίηση GLB). Τώρα, κλειδί που υπάρχει με **άλλα** μεταδεδομένα παίρνει **μία**
+ * ενημέρωση μόνο μεταδεδομένων. Είναι **αληθής**: ίδιο digest ⇒ ίδια bytes ⇒ η νέα συνταγή τα παράγει πράγματι.
+ * ⚠️ Το «ποτέ δεύτερη κλήση» παραπάνω αφορά **νέα** αντικείμενα (bytes χωρίς εγγραφή). Εδώ, αν η ενημέρωση αποτύχει,
+ * μένει η παλιά εγγραφή, η επόμενη συμφιλίωση ξαναψήνει και ξαναπροσπαθεί (αυτοθεραπεία, ιδεμποτικό). Συγκρίνονται και
+ * γράφονται **μόνο** τα κλειδιά του παραγωγού· ξένα κλειδιά του αντικειμένου δεν αγγίζονται.
  */
 export async function uploadMissing(
   bucket: Bucket,
   writes: readonly AnyShelfWrite[],
-  existing: ReadonlySet<string>,
+  existingFiles: readonly File[],
 ): Promise<void> {
+  const existing = new Map(existingFiles.map((file) => [file.name, file]));
   const missing = writes.filter((write) => !existing.has(write.key));
 
   // 🔑 **ΜΙΑ είσοδος, δύο τρόποι μεταφοράς** (ADR-907 §10.3): το «τι λείπει;» απαντιέται μία φορά για όλα τα είδη.
-  await Promise.all(
-    missing.map((write) => (isStreamWrite(write) ? streamOne(bucket, write) : saveOne(bucket, write))),
-  );
+  await Promise.all([
+    ...missing.map((write) => (isStreamWrite(write) ? streamOne(bucket, write) : saveOne(bucket, write))),
+    ...staleRecords(writes, existing).map(({ file, metadata }) => file.setMetadata({ metadata })),
+  ]);
+}
+
+/**
+ * Τα αντικείμενα που **υπάρχουν** αλλά η εγγραφή τους διαφέρει από του παραγωγού — μία ενημέρωση ανά κλειδί (η πρώτη
+ * εγγραφή κερδίζει, όπως και στο ανέβασμα: δύο πηγές με ίδια bytes γράφουν το ίδιο αντικείμενο).
+ */
+function staleRecords(
+  writes: readonly AnyShelfWrite[],
+  existing: ReadonlyMap<string, File>,
+): { readonly file: File; readonly metadata: Readonly<Record<string, string>> }[] {
+  const seen = new Set<string>();
+  const stale: { file: File; metadata: Readonly<Record<string, string>> }[] = [];
+  for (const write of writes) {
+    const file = existing.get(write.key);
+    if (file === undefined || seen.has(write.key)) continue;
+    seen.add(write.key);
+    const current = file.metadata.metadata;
+    const differs = Object.entries(write.metadata).some(([key, value]) => current?.[key] !== value);
+    if (differs) stale.push({ file, metadata: write.metadata });
+  }
+  return stale;
 }
 
 function saveOne(bucket: Bucket, write: ShelfWrite): Promise<void> {

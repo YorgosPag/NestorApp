@@ -154,7 +154,7 @@ export async function reconcileOnePerSource<S, A extends AddressedShelfObject>(
     .map((object) => object.upload)
     .filter((upload): upload is AnyShelfWrite => upload !== null);
 
-  await uploadMissing(scan.bucket, uploads, scan.keys);
+  await uploadMissing(scan.bucket, uploads, scan.files);
   const removed = await deleteExtra(kind, scan.files, new Set(desired.map((object) => object.key)));
 
   return { desired, removed, rejected: addressed.length - desired.length };

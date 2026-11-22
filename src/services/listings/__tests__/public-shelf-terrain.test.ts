@@ -15,6 +15,7 @@ import {
 } from '@/lib/terrain/publication/terrain-survey-declaration';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import { LISTING_MODEL_SHELF, LISTING_TERRAIN_SHELF, shelfRecipe } from '@/services/upload/utils/public-shelf-kinds';
+import { META_RECIPE, META_SOURCE_REF } from '../public-shelf-plan';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
 interface StoredObject {
@@ -34,6 +35,8 @@ interface SaveOptions {
 class FakeBucket {
   readonly objects = new Map<string, StoredObject>();
   downloads = 0;
+  saves = 0;
+  metadataUpdates = 0;
   private nextGeneration = 100;
 
   put(name: string, bytes: Buffer, extra: Partial<StoredObject> = {}): void {
@@ -62,11 +65,18 @@ class FakeBucket {
         return [need().bytes];
       },
       save: async (bytes: Buffer, options: SaveOptions) => {
+        bucket.saves += 1;
         bucket.put(name, bytes, {
           contentType: options.contentType,
           contentEncoding: options.metadata?.contentEncoding,
           custom: options.metadata?.metadata,
         });
+      },
+      // Β6.9 Β — όπως το GCS: τα προσαρμοσμένα κλειδιά ΣΥΓΧΩΝΕΥΟΝΤΑΙ, τα bytes και η γενιά μένουν.
+      setMetadata: async ({ metadata }: { metadata: Record<string, string> }) => {
+        const found = need();
+        bucket.metadataUpdates += 1;
+        bucket.objects.set(name, { ...found, custom: { ...found.custom, ...metadata } });
       },
       delete: async () => {
         bucket.objects.delete(name);
@@ -123,6 +133,8 @@ const jsonKeys = (): string[] => [...shelf.objects.keys()].filter((key) => key.e
 
 beforeEach(() => {
   shelf.objects.clear();
+  shelf.saves = 0;
+  shelf.metadataUpdates = 0;
   privateBucket.objects.clear();
   privateBucket.downloads = 0;
 });
@@ -221,6 +233,47 @@ describe('reconcilePublicTerrainShelf — η συμφιλίωση', () => {
     const recipe = shelfRecipe(encoding);
     expect(shelfRecipe({ ...encoding, snapshotVersion: encoding.snapshotVersion + 1 })).not.toBe(recipe);
     expect(shelfRecipe({ ...encoding, sourceVersion: encoding.sourceVersion + 1 })).not.toBe(recipe);
+    expect(shelfRecipe({ ...encoding, builderRevision: encoding.builderRevision + 1 })).not.toBe(recipe);
+  });
+
+  it('Β6.9 Β — η αναθεώρηση του builder είναι στη συνταγή, χωριστά από την έκδοση ΣΧΗΜΑΤΟΣ', () => {
+    expect(shelfRecipe(LISTING_TERRAIN_SHELF.encoding)).toBe(
+      `json:terrain-s1-w1-b${LISTING_TERRAIN_SHELF.encoding.builderRevision}`,
+    );
+    expect(LISTING_TERRAIN_SHELF.encoding.snapshotVersion).toBe(1);
+  });
+
+  it('🏆 Β6.9 Β — ΙΔΙΑ bytes με ΠΑΛΙΑ συνταγή: ανανεώνεται η εγγραφή, όχι τα bytes · μετά, cache hit', async () => {
+    putSource();
+    await reconcilePublicTerrainShelf(LISTING_TERRAIN_SHELF, LISTING, [SOURCE]);
+    const [key] = jsonKeys();
+    const stored = shelf.objects.get(key)!;
+    shelf.objects.set(key, { ...stored, custom: { ...stored.custom, [META_RECIPE]: 'json:terrain-s1-w1' } });
+    shelf.saves = 0;
+    privateBucket.downloads = 0;
+
+    await reconcilePublicTerrainShelf(LISTING_TERRAIN_SHELF, LISTING, [SOURCE]);
+    expect(privateBucket.downloads).toBe(1);
+    expect(shelf.saves).toBe(0);
+    expect(shelf.metadataUpdates).toBe(1);
+    expect(shelf.objects.get(key)!.custom![META_RECIPE]).toBe(shelfRecipe(LISTING_TERRAIN_SHELF.encoding));
+    expect(shelf.objects.get(key)!.generation).toBe(stored.generation);
+
+    privateBucket.downloads = 0;
+    await reconcilePublicTerrainShelf(LISTING_TERRAIN_SHELF, LISTING, [SOURCE]);
+    expect(privateBucket.downloads).toBe(0);
+    expect(shelf.metadataUpdates).toBe(1);
+  });
+
+  it('🔴 Β6.9 Β — ΑΛΛΑ bytes από παλιά συνταγή: ψήνεται το νέο και το παλιό .json ΣΒΗΝΕΤΑΙ', async () => {
+    putSource();
+    const stale = `${PREFIX}${'b'.repeat(64)}.json`;
+    shelf.put(stale, Buffer.from('{}'), { custom: { [META_SOURCE_REF]: 'x', [META_RECIPE]: 'json:terrain-s1-w1' } });
+
+    const report = await reconcilePublicTerrainShelf(LISTING_TERRAIN_SHELF, LISTING, [SOURCE]);
+
+    expect(report).toMatchObject({ outcome: 'reconciled', removed: 1, rejected: 0 });
+    expect(jsonKeys()).toEqual([report.published[0].key]);
   });
 
   it('η λάθος γραμμή αρνείται ονομαστικά, χωρίς να πετάξει', async () => {
