@@ -34,8 +34,11 @@ export type LegalSubjectVerdict =
   | { readonly kind: 'entity'; readonly entry: GemiLegalFormEntry }
   | { readonly kind: 'refused'; readonly reason: LegalFormRefusal; readonly gemiId: string | null };
 
-/** Ίδια περιγραφή = ίδιο κείμενο μετά από NFC και σύμπτυξη κενών. Τίποτα πιο χαλαρό. */
-function sameDescription(live: string, snapshot: string): boolean {
+/**
+ * Ίδια περιγραφή = ίδιο κείμενο μετά από NFC και σύμπτυξη κενών. Τίποτα πιο χαλαρό.
+ * Η **μία** κρίση ολίσθησης καταλόγου — τη ρωτά και η σύγκριση κατάστασης (`contact-registry-comparison`).
+ */
+export function sameDescription(live: string, snapshot: string): boolean {
   const normalize = (value: string): string => value.normalize('NFC').replace(/\s+/g, ' ').trim();
   return normalize(live) === normalize(snapshot);
 }

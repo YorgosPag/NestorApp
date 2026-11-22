@@ -224,3 +224,10 @@ Data Integration Rules **δεν** ερευνήθηκαν.
   καθαρή συνάρτηση, πέντε λόγοι άρνησης). Η ολίσθηση ελέγχεται πάνω στο `legalType.descr` της **ίδιας** της
   απάντησης εταιρείας ⇒ **καμία** δεύτερη κλήση στον κατάλογο `/metadata/legalTypes` (όριο 8/λεπτό ανά κλειδί).
   Άγκυρες: `src/lib/company/__tests__/registry-legal-person.test.ts` (γραμμένες, δεν έτρεξαν — θέλουν έγκριση).
+- **2026-11-22** — §8 Βήμα 2β: σύγκριση `src/lib/company/contact-registry-comparison.ts`
+  (`compareContactWithRegistry`, καθαρή). Ανά πεδίο `match | missing | differs | not-comparable`· η τιμή του μητρώου
+  δίνεται **ήδη στη γλώσσα της επαφής** (αυτό γράφει το «Δέξου»). Δέχεται **μόνο** ετυμηγορία `entity` του φράχτη
+  (ο τύπος αποκλείει σύγκριση πριν από το §8.3). Καμία νέα κρίση: `sameLegalName` · `canonicalGemiNumber` ·
+  `sameAddressFieldValue` (έδρα ανά μέρος, ίδια κρίση με τον γεωκωδικοποιητή) · `sameDescription` (έγινε εξαγώγιμο —
+  ολίσθηση κατάστασης ⇒ `not-comparable`). Έδρα επαφής = **θέση 0** της `companyAddresses` (`contact-hq-state.ts`),
+  όχι «`type:'headquarters'` ή θέση 0». Άγκυρες: `src/lib/company/__tests__/contact-registry-comparison.test.ts`.
