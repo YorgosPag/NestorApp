@@ -48,6 +48,19 @@ export interface TerrainMapScaleBar {
   readonly heightM: number;
 }
 
+/** The margin around content of this plan size (fraction of its longer side), metres. */
+function mapMarginOf(widthM: number, heightM: number): number {
+  return roundPublished(Math.max(widthM, heightM) * LISTING_TERRAIN_MAP_PADDING_FRACTION);
+}
+
+/**
+ * Width of the map's view box (content + both margins), metres — what one map width on screen spans. ADR-920 Β6.8: the
+ * builder asks it to know the screen scale of a map it never draws, so both see the SAME css px per metre.
+ */
+export function terrainMapWidthM(contentWidthM: number, contentHeightM: number): number {
+  return roundPublished(contentWidthM + 2 * mapMarginOf(contentWidthM, contentHeightM));
+}
+
 /** The content bounds plus the margin the furniture lives in. */
 export function viewBoxOf(points: readonly SvgPoint[]): TerrainMapViewBox {
   // A loop, not Math.min(...xs): tens of thousands of vertices would exceed the engine's argument limit.
@@ -58,7 +71,7 @@ export function viewBoxOf(points: readonly SvgPoint[]): TerrainMapViewBox {
   }
   const width = maxX - minX;
   const height = maxY - minY;
-  const margin = roundPublished(Math.max(width, height) * LISTING_TERRAIN_MAP_PADDING_FRACTION);
+  const margin = mapMarginOf(width, height);
   return {
     minX: roundPublished(minX - margin),
     minY: roundPublished(minY - margin),

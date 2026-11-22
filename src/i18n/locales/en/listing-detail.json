@@ -312,6 +312,7 @@
       "legend": {
         "caption": "Legend",
         "minor": "Contour every {interval}",
+        "minorThinned": "Contour every {interval} · only index contours on steep ground",
         "major": "Index contour every {major}, labelled",
         "extent": "Survey extent",
         "boundary": "Plot boundary",

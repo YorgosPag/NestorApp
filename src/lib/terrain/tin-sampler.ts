@@ -13,23 +13,18 @@
  * «I have no ground here» and «the ground is at zero» are different facts, and silently
  * conflating them is precisely how a volume report ends up wrong by a whole excavation.
  *
- * Index: a uniform grid of triangle buckets (~1 triangle per cell). A linear scan would be
- * O(triangles) per query and the engine issues one query per vertex — quadratic on a real
- * survey (10⁴ points → 10⁸ tests). The grid makes each query O(1) amortised.
+ * Index: the shared triangle locator (`triangle-locator.ts` — extracted from here by ADR-920 Β6.8
+ * so the listing map locates points with the SAME index). One query per vertex stays O(1)
+ * amortised instead of quadratic on a real survey (10⁴ points → 10⁸ tests).
  */
 
 import type { TinSurface } from './terrain-types';
+import { createTriangleLocator } from './triangle-locator';
 
 /** Answers the elevation question in WORLD canonical mm; `null` outside the surface. */
 export interface TinSampler {
   readonly zAtMm: (worldXMm: number, worldYMm: number) => number | null;
 }
-
-/** Barycentric tolerance — a point exactly on a shared edge must belong to SOME triangle. */
-const EPSILON = 1e-9;
-
-/** Cap the grid so a pathological survey cannot allocate a huge index. */
-const MAX_CELLS_PER_AXIS = 512;
 
 /**
  * Identity-keyed memo of the built index. ADR-713 added per-ELEMENT sampling (one query per
@@ -54,70 +49,13 @@ export function getTinSampler(tin: TinSurface): TinSampler {
 }
 
 export function createTinSampler(tin: TinSurface): TinSampler {
-  if (tin.triangles.length === 0) return { zAtMm: () => null };
-
-  const { bounds, origin } = tin;
-  const minX = bounds.minX;
-  const minY = bounds.minY;
-  const width = Math.max(bounds.maxX - minX, EPSILON);
-  const height = Math.max(bounds.maxY - minY, EPSILON);
-
-  const axis = Math.min(
-    MAX_CELLS_PER_AXIS,
-    Math.max(1, Math.ceil(Math.sqrt(tin.triangles.length))),
-  );
-  const cellW = width / axis;
-  const cellH = height / axis;
-
-  const buckets: number[][] = Array.from({ length: axis * axis }, () => []);
-  const clampCol = (v: number): number => Math.min(axis - 1, Math.max(0, v));
-
-  for (let t = 0; t < tin.triangles.length; t++) {
-    const [i, j, k] = tin.triangles[t]!;
-    const xs = [tin.positions[i]![0], tin.positions[j]![0], tin.positions[k]![0]];
-    const ys = [tin.positions[i]![1], tin.positions[j]![1], tin.positions[k]![1]];
-    const c0 = clampCol(Math.floor((Math.min(...xs) - minX) / cellW));
-    const c1 = clampCol(Math.floor((Math.max(...xs) - minX) / cellW));
-    const r0 = clampCol(Math.floor((Math.min(...ys) - minY) / cellH));
-    const r1 = clampCol(Math.floor((Math.max(...ys) - minY) / cellH));
-    for (let r = r0; r <= r1; r++) {
-      for (let c = c0; c <= c1; c++) buckets[r * axis + c]!.push(t);
-    }
-  }
-
+  const locator = createTriangleLocator(tin.positions, tin.triangles);
   const zAtMm = (worldXMm: number, worldYMm: number): number | null => {
     // LOCAL frame — `positions` are world − origin (the CDT runs near 0,0 for ΕΓΣΑ'87).
-    const x = worldXMm - origin.x;
-    const y = worldYMm - origin.y;
-    if (x < minX - EPSILON || x > bounds.maxX + EPSILON) return null;
-    if (y < minY - EPSILON || y > bounds.maxY + EPSILON) return null;
-
-    const col = clampCol(Math.floor((x - minX) / cellW));
-    const row = clampCol(Math.floor((y - minY) / cellH));
-    for (const t of buckets[row * axis + col]!) {
-      const z = sampleTriangle(tin, t, x, y);
-      if (z !== null) return z;
-    }
-    return null;
+    const hit = locator.locate(worldXMm - tin.origin.x, worldYMm - tin.origin.y);
+    if (hit === null) return null;
+    const [i, j, k] = tin.triangles[hit.triangle]!;
+    return hit.wa * tin.elevations[i]! + hit.wb * tin.elevations[j]! + hit.wc * tin.elevations[k]!;
   };
-
   return { zAtMm };
-}
-
-/** Barycentric elevation inside triangle `t` at LOCAL (x, y), or `null` when outside it. */
-function sampleTriangle(tin: TinSurface, t: number, x: number, y: number): number | null {
-  const [i, j, k] = tin.triangles[t]!;
-  const [ax, ay] = tin.positions[i]!;
-  const [bx, by] = tin.positions[j]!;
-  const [cx, cy] = tin.positions[k]!;
-
-  const denominator = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
-  if (Math.abs(denominator) < EPSILON) return null; // degenerate sliver — let a neighbour answer
-
-  const wa = ((by - cy) * (x - cx) + (cx - bx) * (y - cy)) / denominator;
-  const wb = ((cy - ay) * (x - cx) + (ax - cx) * (y - cy)) / denominator;
-  const wc = 1 - wa - wb;
-  if (wa < -EPSILON || wb < -EPSILON || wc < -EPSILON) return null;
-
-  return wa * tin.elevations[i]! + wb * tin.elevations[j]! + wc * tin.elevations[k]!;
 }

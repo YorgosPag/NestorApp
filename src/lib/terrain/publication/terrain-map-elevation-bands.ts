@@ -1,9 +1,10 @@
 /**
  * ADR-920 Β6.2 — the ELEVATION BANDS of the 2D terrain map (hypsometric tints, the plan twin of the 3D ramp).
  *
- * 🔑 **Exact bands, bounded by the contours that are drawn.** Each band is the ground between two consecutive contour
- * levels of the snapshot (`contours[].levelM`, the levels the map ALREADY draws), so a colour changes exactly on a
- * line. Colouring whole triangles by their mean height would give a staircase that crosses the contours.
+ * 🔑 **Exact bands, bounded by the contours that are drawn.** Each band is the ground between two consecutive band
+ * levels — a subset of the snapshot's `contours[].levelM` (`bandLevelsOf`, Β6.8: at most a handful of bands, never one
+ * per line), so a colour changes exactly on a drawn line. Colouring whole triangles by their mean height would give a
+ * staircase that crosses the contours.
  *
  * 🔑 **How**: the elevation is linear over a triangle, so the level lines inside it are parallel and every band piece
  * is convex. Each triangle is clipped (Sutherland–Hodgman) against the two levels of each band it spans. A crossing
@@ -19,6 +20,7 @@
 
 import { terrainElevationHex } from '../elevation-ramp';
 import type { TriangleIndices } from '../tin-boundary-loops';
+import { LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS } from './listing-terrain-config';
 import type { ListingTerrainContour, ListingTerrainMesh } from './listing-terrain-types';
 import { regionPathData, triangleArea as areaOf } from './terrain-map-regions';
 
@@ -120,9 +122,39 @@ function splitTriangle(
   }
 }
 
-/** The distinct contour levels of the snapshot, ascending — the band edges. */
+/** The distinct contour levels of the snapshot, ascending. */
 export function contourLevelsOf(contours: readonly ListingTerrainContour[]): number[] {
   return [...new Set(contours.map((c) => c.levelM))].sort((a, b) => a - b);
+}
+
+/** Multiples of the index spacing tried, in order, once even the index levels make too many bands. */
+const INDEX_MULTIPLES = [2, 5, 10, 20, 50, 100] as const;
+
+/** How the band edges are chosen: the plot's contour spacing and whether the map thinned its intermediates. */
+export interface BandLevelRule {
+  readonly majorContourIntervalM: number;
+  readonly minorContoursThinned: boolean;
+}
+
+/**
+ * ADR-920 Β6.8 — the band EDGES: the finest set of DRAWN contour levels that makes at most
+ * {@link LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS} bands — every level, then the index levels, then multiples of the
+ * index spacing (hypsometric tints are coarser than contours: swisstopo, Civil 3D «number of ranges»). A colour change
+ * stays ON a drawn line; where intermediates were thinned, they are never an edge (the line may be missing there).
+ */
+export function bandLevelsOf(contours: readonly ListingTerrainContour[], rule: BandLevelRule): number[] {
+  const fits = (levels: readonly number[]) => levels.length + 1 <= LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS;
+  const all = contourLevelsOf(contours);
+  if (!rule.minorContoursThinned && fits(all)) return all;
+  const index = contourLevelsOf(contours.filter((c) => c.major));
+  if (fits(index) || !(rule.majorContourIntervalM > 0)) return index;
+  const step = (levelM: number) => Math.round(levelM / rule.majorContourIntervalM);
+  let chosen = index;
+  for (const k of INDEX_MULTIPLES) {
+    chosen = index.filter((levelM) => step(levelM) % k === 0);
+    if (fits(chosen)) return chosen;
+  }
+  return chosen;
 }
 
 /**

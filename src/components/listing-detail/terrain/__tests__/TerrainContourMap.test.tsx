@@ -205,4 +205,13 @@ describe('TerrainContourMap — πίνακας και υπόμνημα', () => {
     const swatches = [...container.querySelectorAll('figcaption li [data-terrain-swatch]')].map((node) => node.getAttribute('data-terrain-swatch'));
     expect(swatches).toEqual(['contourMinor', 'contourMajor', 'extent', ...(PLANE.sparsePathData === null ? [] : ['sparse'])]);
   });
+
+  it('Β6.8 — όταν αραιώθηκαν ενδιάμεσες, το υπόμνημα το ΛΕΕΙ· αλλιώς σιωπά', () => {
+    const note = lookup('listing-detail:terrain.map.legend.minorThinned').split('·')[1]?.trim() ?? '';
+    expect(note.length).toBeGreaterThan(0);
+    expect(PLANE.minorContoursThinned).toBe(false);
+    expect(renderMap(PLANE).container.querySelector('figcaption')?.textContent).not.toContain(note);
+    const thinned = renderMap({ ...PLANE, minorContoursThinned: true });
+    expect(thinned.container.querySelector('figcaption')?.textContent).toContain(note);
+  });
 });

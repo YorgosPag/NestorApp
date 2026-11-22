@@ -2,7 +2,7 @@
  * ADR-920 Β2 — build the terrain a plot listing publishes, from the survey. Pure, deterministic.
  *
  *   survey points + breaklines ─buildTin─▶ TIN ─clipTinToBoundary─▶ plot surface
- *        ├─ chooseContourConfig + generateContoursFromSurface ─▶ contours
+ *        ├─ chooseContourConfig (relief + on-screen density, Β6.8) + generateContoursFromSurface ─▶ contours
  *        ├─ slopeClasses / summariseSlope ─▶ slope map + stats
  *        └─ placeEnvelope ─▶ indicative building envelope
  *   everything ─frameOf─▶ metres from the surface centre (no world coordinates leave)
@@ -17,7 +17,7 @@ import { buildTin } from '@/lib/terrain/tin-builder';
 import { clipTinToBoundary } from '@/lib/terrain/tin-clip-to-boundary';
 import { generateContoursFromSurface } from '@/lib/terrain/contour-generator';
 import type { ContourLine, TinSurface } from '@/lib/terrain/terrain-types';
-import { chooseContourConfig } from './contour-interval';
+import { chooseContourConfig, contourDensityInputOf } from './contour-interval';
 import { slopeClasses, summariseSlope } from './terrain-slope';
 import { LISTING_TERRAIN_MAX_TRIANGLES, LISTING_TERRAIN_SLOPE_BANDS_PCT } from './listing-terrain-config';
 import {
@@ -57,7 +57,7 @@ export function buildListingTerrainSnapshot(
   }
 
   const frame = frameOf(tin);
-  const contourConfig = chooseContourConfig(tin.bounds.maxZ - tin.bounds.minZ);
+  const contourConfig = chooseContourConfig(contourDensityInputOf(tin));
   const { contours } = generateContoursFromSurface(tin, contourConfig);
   const placed = input.envelope
     ? placeEnvelope(tin, frame, input.envelope.footprintWorldMm, input.envelope.maxHeightM)

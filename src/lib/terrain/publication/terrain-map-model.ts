@@ -2,7 +2,9 @@
  * ADR-920 Β4.8 (Α5) — **published terrain snapshot → the 2D map, ready to draw**. Pure: no React, no I/O, no i18n.
  *
  *   snapshot ─┬─ terrain-map-regions  ─▶ survey extent · one region per slope class (+ % of area) · sparse area
- *             ├─ terrain-map-contours ─▶ minor / index contour paths · upright, collision-free index labels
+ *             ├─ terrain-map-contours ─▶ index contour paths · upright, collision-free index labels
+ *             ├─ terrain-map-contour-thinning ─▶ intermediate contours, thinned where crowded at THIS size (Β6.8)
+ *             ├─ terrain-map-elevation-bands ─▶ hypsometric bands on drawn levels, never one per line (Β6.2 · Β6.8)
  *             └─ terrain-map-furniture ─▶ view box + margin · north arrow · 1-2-5 scale bar
  *   (+ the owner's preview only) survey marks ─▶ the same SVG space
  *
@@ -22,7 +24,9 @@ import { roundPublished } from './listing-terrain-frame';
 import type { SurveyPointMark } from '../survey-import/survey-upload-preparation';
 import type { ListingTerrainSnapshot } from './listing-terrain-types';
 import { contourLabelsOf, contourPathData, type TerrainMapContourLabel } from './terrain-map-contours';
-import { contourLevelsOf, elevationBandsOf, type TerrainMapElevationBand } from './terrain-map-elevation-bands';
+import { mapPxPerM } from './terrain-contour-density';
+import { thinMinorContours, type ThinnedMinorContours } from './terrain-map-contour-thinning';
+import { bandLevelsOf, elevationBandsOf, type TerrainMapElevationBand } from './terrain-map-elevation-bands';
 import {
   northArrowOf,
   scaleBarOf,
@@ -38,7 +42,7 @@ import {
   sparseAreaPathData,
   type TerrainMapSlopeRegion,
 } from './terrain-map-regions';
-import { flatSvgPoints, meshSvgPoint, polylinePathData, svgPointOf, type SvgPoint } from './terrain-map-svg';
+import { flatSvgPoints, joinPathData, meshSvgPoint, polylinePathData, svgPointOf, type SvgPoint } from './terrain-map-svg';
 
 /** A survey mark of the owner's preview (`SurveyPointMark`, the ONE definition), in SVG user space. */
 export interface TerrainMapMark extends SvgPoint {
@@ -59,7 +63,10 @@ export interface TerrainMapModel {
   readonly elevationRangeM: { readonly min: number; readonly max: number };
   /** Triangles spanning unmeasured ground (interpolation, not survey); `null` when there are none. */
   readonly sparsePathData: string | null;
+  /** The intermediate contours as drawn at THIS map's size — thinned locally where crowded (Β6.8). */
   readonly minorContoursPathData: string;
+  /** ADR-920 Β6.8 — some intermediate stretches were dropped on steep ground; the legend says so. */
+  readonly minorContoursThinned: boolean;
   readonly majorContoursPathData: string;
   readonly contourLabels: readonly TerrainMapContourLabel[];
   readonly contourIntervalM: number;
@@ -105,6 +112,19 @@ function labelHeightOf(viewBox: TerrainMapViewBox, display: TerrainMapDisplay | 
 }
 
 /**
+ * ADR-920 Β6.8 — the intermediate contours at the size this map is shown (the reference width on paper / PDF / before
+ * measuring), thinned where the ground is too steep for the plot's interval. Index contours are never thinned.
+ */
+function minorContoursOf(
+  snapshot: ListingTerrainSnapshot,
+  viewBox: TerrainMapViewBox,
+  display: TerrainMapDisplay | null,
+): ThinnedMinorContours {
+  const pxPerM = mapPxPerM(viewBox.width, display?.widthPx ?? null);
+  return thinMinorContours(snapshot.contours, snapshot.mesh, { intervalM: snapshot.contourIntervalM, pxPerM });
+}
+
+/**
  * The 2D map of a published terrain snapshot. `marks` = the owner's preview only (never on the public listing);
  * `display` = an on-screen map of known width (§13.8 decision 4) — without it, the drawing's own proportions.
  */
@@ -117,19 +137,23 @@ export function terrainMapModelOf(
   const viewBox = viewBoxOf(contentPoints(snapshot));
   const labelHeightM = labelHeightOf(viewBox, display);
   const { minElevationM: min, maxElevationM: max } = snapshot.stats;
+  const minor = minorContoursOf(snapshot, viewBox, display);
+  const majorContourIntervalM = roundPublished(snapshot.contourIntervalM * snapshot.contourMajorEvery);
+  const bandLevels = bandLevelsOf(snapshot.contours, { majorContourIntervalM, minorContoursThinned: minor.thinned });
   return {
     viewBox,
     extentPathData: regionPathData(snapshot.mesh, triangles),
     boundaryPathData: snapshot.boundary ? polylinePathData(flatSvgPoints(snapshot.boundary), true) : null,
     slopeRegions: slopeRegionsOf(snapshot.mesh, triangles, snapshot.slopeBandsPct),
-    elevationBands: elevationBandsOf(snapshot.mesh, triangles, contourLevelsOf(snapshot.contours), min, max),
+    elevationBands: elevationBandsOf(snapshot.mesh, triangles, bandLevels, min, max),
     elevationRangeM: { min, max },
     sparsePathData: sparseAreaPathData(snapshot.mesh, triangles),
-    minorContoursPathData: contourPathData(snapshot.contours, false),
+    minorContoursPathData: joinPathData(minor.pieces.map((piece) => polylinePathData(piece.points, piece.closed))),
+    minorContoursThinned: minor.thinned,
     majorContoursPathData: contourPathData(snapshot.contours, true),
     contourLabels: contourLabelsOf(snapshot.contours, labelHeightM),
     contourIntervalM: snapshot.contourIntervalM,
-    majorContourIntervalM: roundPublished(snapshot.contourIntervalM * snapshot.contourMajorEvery),
+    majorContourIntervalM,
     labelHeightM,
     northArrow: northArrowOf(viewBox),
     scaleBar: scaleBarOf(viewBox),

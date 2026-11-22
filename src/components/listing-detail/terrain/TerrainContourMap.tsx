@@ -57,7 +57,9 @@ function legendItemsOf(t: T, model: TerrainMapModel, sparsePatternId: string): M
   const add = (key: string, node: ReactNode, label: string) =>
     items.push({ key, swatch: { kind: 'symbol', node }, label });
   if (model.minorContoursPathData.length > 0) {
-    add('contourMinor', <TerrainLineSwatch kind="contourMinor" />, t(`${NS}.legend.minor`, { interval: lengthLabel(t, model.contourIntervalM) }));
+    // Β6.8 — the reader is told when intermediates were dropped on steep ground (OS / USGS practice), never left to guess.
+    const minorKey = model.minorContoursThinned ? `${NS}.legend.minorThinned` : `${NS}.legend.minor`;
+    add('contourMinor', <TerrainLineSwatch kind="contourMinor" />, t(minorKey, { interval: lengthLabel(t, model.contourIntervalM) }));
   }
   if (model.majorContoursPathData.length > 0) {
     add('contourMajor', <TerrainLineSwatch kind="contourMajor" />, t(`${NS}.legend.major`, { major: lengthLabel(t, model.majorContourIntervalM) }));

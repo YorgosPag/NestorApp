@@ -111,11 +111,12 @@ describe('ADR-920 Β2 — statistics and contours', () => {
     expect(s.contours.some((c) => c.major)).toBe(true);
   });
 
-  it('follows the cartographic ladder as the relief grows', () => {
-    expect(chooseContourConfig(2_000).intervalMm).toBe(100);
-    expect(chooseContourConfig(12_000)).toMatchObject({ intervalMm: 500, majorEvery: 5, labelDecimals: 1 });
-    expect(chooseContourConfig(7_000)).toMatchObject({ intervalMm: 250, majorEvery: 4, labelDecimals: 2 });
-    expect(chooseContourConfig(300_000)).toMatchObject({ intervalMm: 10_000, labelDecimals: 0 });
+  it('follows the cartographic ladder as the relief grows (flat-on-screen: only the relief decides)', () => {
+    const byRelief = (reliefMm: number) => chooseContourConfig({ reliefMm, steepGradient: 0, pxPerM: 1 });
+    expect(byRelief(2_000).intervalMm).toBe(100);
+    expect(byRelief(12_000)).toMatchObject({ intervalMm: 500, majorEvery: 5, labelDecimals: 1 });
+    expect(byRelief(7_000)).toMatchObject({ intervalMm: 250, majorEvery: 4, labelDecimals: 2 });
+    expect(byRelief(300_000)).toMatchObject({ intervalMm: 10_000, labelDecimals: 0 });
   });
 });
 

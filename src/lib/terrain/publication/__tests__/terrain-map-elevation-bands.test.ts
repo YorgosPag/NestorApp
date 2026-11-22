@@ -10,8 +10,9 @@ import { terrainElevationHex } from '@/lib/terrain/elevation-ramp';
 import type { TopoPoint } from '@/lib/terrain/terrain-types';
 
 import { buildListingTerrainSnapshot } from '../listing-terrain-snapshot';
-import type { ListingTerrainSnapshot } from '../listing-terrain-types';
-import { contourLevelsOf, elevationBandsOf } from '../terrain-map-elevation-bands';
+import { LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS } from '../listing-terrain-config';
+import type { ListingTerrainContour, ListingTerrainSnapshot } from '../listing-terrain-types';
+import { bandLevelsOf, contourLevelsOf, elevationBandsOf } from '../terrain-map-elevation-bands';
 import { meshTriangles } from '../terrain-map-regions';
 
 const E0 = 400_000_000;
@@ -105,5 +106,39 @@ describe('elevationBandsOf — άκρα', () => {
     expect(bands).toHaveLength(1);
     expect(bands[0].areaShare).toBe(1);
     expect(bands[0].color).toBe(terrainElevationHex(0));
+  });
+});
+
+describe('bandLevelsOf — όρια ζωνών σε ΖΩΓΡΑΦΙΣΜΕΝΑ επίπεδα, ποτέ ζώνη ανά γραμμή (Β6.8)', () => {
+  /** Μία γραμμή ανά επίπεδο· κύρια όταν το επίπεδο είναι πολλαπλάσιο του `majorM`. */
+  const contoursAt = (levels: readonly number[], majorM: number): ListingTerrainContour[] =>
+    levels.map((levelM) => ({
+      levelM,
+      major: Math.abs(levelM / majorM - Math.round(levelM / majorM)) < 1e-9,
+      closed: false,
+      points: [0, 0, 1, 1],
+    }));
+  const tenths = (from: number, count: number) => Array.from({ length: count }, (_, i) => Math.round((from + i / 10) * 10) / 10);
+
+  it('λίγα επίπεδα ⇒ όλα (καμία αλλαγή από το Β6.2)', () => {
+    const levels = tenths(120.1, 8);
+    expect(bandLevelsOf(contoursAt(levels, 0.5), { majorContourIntervalM: 0.5, minorContoursThinned: false })).toEqual(levels);
+  });
+
+  it('πολλά επίπεδα ⇒ μόνο οι κύριες, ≤ όριο ζωνών', () => {
+    const out = bandLevelsOf(contoursAt(tenths(120.1, 19), 0.5), { majorContourIntervalM: 0.5, minorContoursThinned: false });
+    expect(out).toEqual([120.5, 121, 121.5]);
+    expect(out.length + 1).toBeLessThanOrEqual(LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS);
+  });
+
+  it('όταν αραιώθηκαν ενδιάμεσες, καμία ενδιάμεση δεν γίνεται όριο (εκεί μπορεί να λείπει η γραμμή)', () => {
+    const levels = tenths(120.1, 8);
+    expect(bandLevelsOf(contoursAt(levels, 0.5), { majorContourIntervalM: 0.5, minorContoursThinned: true })).toEqual([120.5]);
+  });
+
+  it('ακόμη και οι κύριες πολλές ⇒ πολλαπλάσια της κύριας (2, 5, 10 …)', () => {
+    const metres = Array.from({ length: 30 }, (_, i) => i + 1);
+    const out = bandLevelsOf(contoursAt(metres, 1), { majorContourIntervalM: 1, minorContoursThinned: false });
+    expect(out).toEqual([5, 10, 15, 20, 25, 30]);
   });
 });

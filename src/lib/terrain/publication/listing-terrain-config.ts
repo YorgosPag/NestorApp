@@ -25,6 +25,27 @@ export const LISTING_TERRAIN_CONTOUR_LADDER_M: readonly number[] = [
 /** At most this many minor contour levels across the whole relief. */
 export const LISTING_TERRAIN_MAX_MINOR_LEVELS = 30;
 
+// ── Β6.8: contour density ON SCREEN (`terrain-contour-density.ts`) ─────────
+// Cartographic rule (Ordnance Survey, Mackaness & Steven 2006 · USGS · swisstopo): ONE interval per map, chosen so the
+// lines stay apart; where the ground is locally too steep for it, the INTERMEDIATE contours are dropped and the index
+// contours stay. OS states 0.4 mm on paper; the screen values below are OURS (no published screen figure was found)
+// and are calibrated on real surveys (ADR-920 §14.8).
+
+/**
+ * Width (css px) of the on-screen map the INTERVAL is chosen for — one number per plot, the same on every device, in
+ * the stats, the legend, the 3D view and the PDF. Narrower screens are served by local thinning, not by another interval.
+ */
+export const LISTING_TERRAIN_CONTOUR_REFERENCE_WIDTH_PX = 480;
+
+/** Minimum on-screen gap (css px) between two adjacent contours, below which intermediates are «crowded». */
+export const LISTING_TERRAIN_CONTOUR_MIN_SPACING_PX = 6;
+
+/**
+ * Share of the plot (by plan AREA) the chosen interval must keep un-crowded at the reference width. The steepest rest
+ * (a retaining wall, an embankment) does not coarsen the whole plot — local thinning handles it.
+ */
+export const LISTING_TERRAIN_CONTOUR_SLOPE_QUANTILE = 0.9;
+
 /** Every N-th contour is an index contour; intervals of the 2.5 family index every 4th (whole metres). */
 export const LISTING_TERRAIN_MAJOR_EVERY_DEFAULT = 5;
 export const LISTING_TERRAIN_MAJOR_EVERY_QUARTER = 4;
@@ -97,6 +118,19 @@ export const LISTING_TERRAIN_MAP_DIGIT_EM = 0.6;
  * definition's «maximum triangle length»; we flag such triangles (hatched on the map) instead of deleting them.
  */
 export const LISTING_TERRAIN_MAP_SPARSE_EDGE_FACTOR = 3;
+
+/**
+ * ADR-920 Β6.8 — local thinning works in RUNS, not segments: a kept or dropped stretch of an intermediate contour shorter
+ * than this (css px) is absorbed by its neighbours, so the map never shows dashes or pinholes (cleaner than OS CSR).
+ */
+export const LISTING_TERRAIN_MAP_THINNING_MIN_RUN_PX = 16;
+
+/**
+ * ADR-920 Β6.8 — at most this many hypsometric bands. Their edges are always DRAWN contour levels (intermediate, then
+ * index, then multiples of index — the finest set that fits), so colour never strobes line by line. Civil 3D exposes the
+ * same idea as the analysis «number of ranges» (a style setting, no published default); 10 is our choice.
+ */
+export const LISTING_TERRAIN_MAP_MAX_ELEVATION_BANDS = 10;
 
 /**
  * ADR-920 Β6.4 — the vertical exaggerations the 3D viewer offers. `1` (true scale) is the default and the first
