@@ -121,6 +121,7 @@ const RELATIONSHIP_FIELD_DEFAULTS: Readonly<Record<string, unknown>> = { isWorkp
  * (Salesforce Field History compares values, not spellings). Same codec as the edit form:
  * - `phones` / `emails` → the structured channels, legacy display strings included;
  * - `contactInfo` → the projection of those channels (it is derived, so it is compared derived);
+ * - `startDate` / `endDate` → the calendar day (`relationshipCalendarDay`), never the spelling;
  * - a field with a declared default → that default when absent.
  */
 export function relationshipFieldMeaning(record: Partial<ContactRelationship>, field: string): unknown {
@@ -129,6 +130,9 @@ export function relationshipFieldMeaning(record: Partial<ContactRelationship>, f
   if (field === 'contactInfo') {
     return projectContactInfo(record.contactInfo, relationshipPhonesOf(record), relationshipEmailsOf(record));
   }
+  // A day is a day: a stored instant (`2026-11-21T11:36:52.119Z`) means the same calendar day
+  // the form shows (`2026-11-21`) — measured live 2026-11-22 on rel_2d0d7053 (ADR-372 §8.6).
+  if (field === 'startDate' || field === 'endDate') return relationshipCalendarDay(record[field]);
   const value: unknown = (record as Readonly<Record<string, unknown>>)[field];
   return value ?? RELATIONSHIP_FIELD_DEFAULTS[field];
 }

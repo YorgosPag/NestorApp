@@ -21,11 +21,7 @@ export const SORT_KEY_MAX_LENGTH = 120;
 /** Το κλειδί ενός κειμένου. Κενό/απόν ⇒ `''` (πρώτο, ορατό — ποτέ δεν χάνεται από το `orderBy`). */
 export function catalogSortKey(text: string | null | undefined): string {
   if (!text) return '';
-  // ⚠️ Πεζά ΠΡΙΝ από το SSoT: το `normalizeSearchText` κάνει `ς→σ` και μετά `toLowerCase()`, και η JS γράφει το
-  // κεφαλαίο τελικό «Σ» ως «ς» ⇒ «ΣΩΛΗΝΑΣ» → `σωληνας` ενώ «σωλήνας» → `σωληνασ`. Το σφάλμα του SSoT καταγράφηκε
-  // (`.claude-rules/pending-ratchet-work.md`): η διόρθωσή του αλλάζει τα προθέματα του ευρετηρίου αναζήτησης που
-  // γράφουν οι Functions (CHECK 3.93) ⇒ θέλει ανάπτυξη + επανευρετηρίαση, απόφαση Giorgio.
-  return normalizeSearchText(text.toLowerCase())
+  return normalizeSearchText(text)
     .replace(/\d+/g, (run) => run.replace(/^0+(?=\d)/, '').padStart(SORT_KEY_DIGITS, '0'))
     .slice(0, SORT_KEY_MAX_LENGTH);
 }

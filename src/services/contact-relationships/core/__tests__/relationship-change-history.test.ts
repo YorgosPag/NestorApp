@@ -63,6 +63,18 @@ describe('diffChangedFields — compares MEANING, not spelling', () => {
     expect(diffChangedFields(legacy, untouchedFormPayload(legacy))).toEqual([]);
   });
 
+  it('a stored instant ≡ the form\'s calendar day (measured live: rel_2d0d7053)', () => {
+    const stored = { ...structured, startDate: '2026-11-21T11:36:52.119Z' };
+    const payload = { ...untouchedFormPayload(stored), startDate: '2026-11-21' };
+    expect(diffChangedFields(stored, payload)).toEqual([]);
+  });
+
+  it('a different day is still a change', () => {
+    const stored = { ...structured, startDate: '2026-11-21T11:36:52.119Z' };
+    const payload = { ...untouchedFormPayload(stored), startDate: '2026-11-20' };
+    expect(diffChangedFields(stored, payload)).toEqual(['startDate']);
+  });
+
   it('a real change is still a change — including `isWorkplace` turned on', () => {
     const payload = { ...untouchedFormPayload(structured), isWorkplace: true, position: 'manager' };
     expect(diffChangedFields(structured, payload).sort()).toEqual(['isWorkplace', 'position']);
