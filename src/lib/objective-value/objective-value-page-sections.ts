@@ -9,7 +9,7 @@
  */
 
 /** Κλειδιά κάτω από `objective-value:faq.<id>.{q,a}`, με τη σειρά εμφάνισης. */
-export const OBJECTIVE_VALUE_FAQ = ['whatIs', 'zonePrice', 'commerciality', 'age', 'binding'] as const;
+export const OBJECTIVE_VALUE_FAQ = ['whatIs', 'scope', 'zonePrice', 'commerciality', 'age', 'binding'] as const;
 
 /** Κλειδιά κάτω από `objective-value:howTo.<id>` — τα βήματα του `HowTo`, ίδια σειρά με τις ενότητες της οθόνης. */
 export const OBJECTIVE_VALUE_STEPS = ['location', 'property', 'questions', 'result'] as const;

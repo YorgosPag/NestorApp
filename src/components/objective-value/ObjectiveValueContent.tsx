@@ -74,13 +74,16 @@ function BackLink({ back }: { readonly back: ObjectiveValueReturn | null }) {
   );
 }
 
+/**
+ * Τίτλος + μία πρόταση — ο χάρτης πρέπει να χωρά στην πρώτη οθόνη ενός laptop (ADR-947, διάταξη 2026-11-22). Το «τι
+ * καλύπτει» ζει στις συχνές ερωτήσεις (`faq.scope`)· στη φόρμα το λένε ήδη οι επιλογές του τύπου ακινήτου.
+ */
 function PageHeader() {
   const { t } = useTranslation([NS]);
   return (
     <header className="flex flex-col gap-2">
       <h1 className="m-0 text-2xl font-semibold text-foreground">{t(`${NS}:page.title`)}</h1>
       <p className="m-0 text-base text-foreground">{t(`${NS}:page.intro`)}</p>
-      <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:page.scope`)}</p>
     </header>
   );
 }
@@ -145,11 +148,12 @@ function useCalculatorProvenance({ draft, prefill, location, result, update, sou
 
 /**
  * **Η διάταξη του εργαλείου** (ADR-947) — μία στήλη στο κινητό · `lg`: φόρμα | αποτέλεσμα · `xl`: θέση + χάρτης |
- * φόρμα | αποτέλεσμα. Η σειρά DOM μένει η σειρά των βημάτων (θέση → ακίνητο → … → αποτέλεσμα) σε κάθε πλάτος· μόνο οι
- * θέσεις στο πλέγμα αλλάζουν.
+ * φόρμα | αποτέλεσμα · `2xl`: η φόρμα σταματά στα 32rem και ό,τι περισσεύει πάει στον χάρτη — ένα πεδίο «90 τ.μ.» δεν
+ * θέλει 900px, ο χάρτης θέλει. Η σειρά DOM μένει η σειρά των βημάτων (θέση → ακίνητο → … → αποτέλεσμα) σε κάθε
+ * πλάτος· μόνο οι θέσεις στο πλέγμα αλλάζουν.
  */
 const WORKSPACE_GRID =
-  'grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,24rem)]';
+  'grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,24rem)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,32rem)_minmax(0,24rem)]';
 const LOCATION_CELL = 'min-w-0 lg:col-start-1 lg:row-start-1';
 const FORM_CELL = 'flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2 xl:col-start-2 xl:row-start-1';
 // Στο `lg` το αποτέλεσμα πιάνει και τις δύο σειρές της φόρμας, ώστε το `sticky` να έχει όλο το ύψος της για διαδρομή.

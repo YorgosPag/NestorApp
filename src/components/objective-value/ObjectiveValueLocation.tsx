@@ -42,8 +42,13 @@ const NS = 'objective-value';
 const NO_FRONT = 'none';
 /** Επίπεδο πόλης: ο άνθρωπος βλέπει δρόμους και μπορεί να πατήσει, πριν ψάξει διεύθυνση. */
 const CITY_ZOOM = 12;
-/** Στο `xl` ο χάρτης έχει δική του στήλη (ADR-947, διάταξη) ⇒ ψηλότερος, για να φαίνεται το οικοδομικό τετράγωνο. */
-const MAP_HEIGHT_CLASS = 'h-72 md:h-96 xl:h-[32rem]';
+/**
+ * Στο `xl` ο χάρτης έχει δική του στήλη (ADR-947, διάταξη) ⇒ το ύψος του ακολουθεί την **οθόνη**: ό,τι μένει κάτω από
+ * το κέλυφος, την κεφαλίδα και την αναζήτηση (~26rem), μέσα σε [20rem, 44rem]. Από τη μέτρηση της 2026-11-22: laptop
+ * 1366×768 (ορατό ύψος ~711px) ⇒ 20rem, ολόκληρος στην πρώτη οθόνη (πριν: 32rem σταθερά, κομμένος περίπου στη μέση) ·
+ * ορατό ύψος ~950px ⇒ ~33rem · ψηλή οθόνη ⇒ έως 44rem. `dvh` = ορατό ύψος χωρίς τις μπάρες του browser.
+ */
+const MAP_HEIGHT_CLASS = 'h-72 md:h-96 xl:h-[clamp(20rem,calc(100dvh_-_26rem),44rem)]';
 const MAP_CENTER = { lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE };
 
 type LocationProps = { readonly location: ObjectiveValueLocationState };
