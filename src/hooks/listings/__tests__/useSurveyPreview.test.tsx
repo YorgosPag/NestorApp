@@ -5,6 +5,7 @@
  *   Σ2  αποτυχία της τρέχουσας ερώτησης ⇒ `failed`, ποτέ «ενημερώνεται» για πάντα · `disposed` ΔΕΝ είναι αποτυχία
  *   Σ3  ίδια σημεία (ίδιος πίνακας) ⇒ ίδιο κλειδί · χωρίς σημεία ⇒ καμία ερώτηση, τίποτα στην οθόνη
  *   Σ4  unmount ⇒ ο Worker τερματίζεται
+ *   Σ5  (Β6.7) το στιγμιότυπο του 3Δ έρχεται με τον χάρτη, και κρατά την ταυτότητά του όσο μένουν τα ίδια σημεία
  */
 
 import { act, renderHook } from '@testing-library/react';
@@ -96,6 +97,27 @@ describe('useSurveyPreview', () => {
     const empty = renderHook(() => useSurveyPreview([], 320));
     expect(mockAsked).toHaveLength(2);
     expect(empty.result.current).toMatchObject({ preparation: null, model: null, updating: false, failed: false });
+  });
+
+  it('Σ5 (Β6.7) στιγμιότυπο ΜΑΖΙ με τον χάρτη · ίδια σημεία, άλλο πλάτος ⇒ ΙΔΙΟ στιγμιότυπο (το 3Δ δεν ξαναχτίζεται)', async () => {
+    const hook = renderHook(({ points, width }) => useSurveyPreview(points, width), { initialProps: { points: A, width: 320 } });
+    expect(hook.result.current.snapshot).toBeNull();
+    const first = replyTo(mockAsked[0]!.question);
+    await answer(0, { kind: 'ok', value: first });
+    const snapshot = hook.result.current.snapshot;
+    expect(snapshot).toBe(first.preparation.ok ? first.preparation.snapshot : 'no-surface');
+
+    hook.rerender({ points: A, width: 640 });
+    const wider = replyTo(mockAsked[1]!.question);
+    await answer(1, { kind: 'ok', value: wider });
+    expect(hook.result.current.model).toBe(wider.model);
+    expect(hook.result.current.snapshot).toBe(snapshot);
+
+    hook.rerender({ points: B, width: 640 });
+    const next = replyTo(mockAsked[2]!.question);
+    await answer(2, { kind: 'ok', value: next });
+    expect(hook.result.current.snapshot).toBe(next.preparation.ok ? next.preparation.snapshot : 'no-surface');
+    expect(hook.result.current.snapshot).not.toBe(snapshot);
   });
 
   it('Σ4 unmount ⇒ ο Worker τερματίζεται', () => {

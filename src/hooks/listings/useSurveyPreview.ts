@@ -13,10 +13,14 @@
  *     διαβάζει αυτήν ⇒ **δομικά αδύνατο** να σταλούν bytes παλιών σημείων.
  * 🔑 **Ταυτότητα σημείων = ταυτότητα πίνακα** (`WeakMap`): ίδια σημεία ⇒ ίδιο κλειδί ⇒ ο Worker ξαναζωγραφίζει μόνο τον χάρτη
  *   (αλλαγή πλάτους) χωρίς νέο τριγωνισμό. Καθαρό στο StrictMode — κανένας μετρητής μέσα σε render.
+ * 🔑 **Το στιγμιότυπο του 3Δ ζευγαρώνει με τον χάρτη** (ADR-920 Β6.7): βγαίνει από την ΙΔΙΑ απάντηση ⇒ κάτοψη και 3Δ
+ *   δείχνουν πάντα τα ίδια σημεία. Και **κρατά την ταυτότητά του ανά κλειδί**: κάθε απάντηση του Worker φτάνει ως νέο
+ *   αντικείμενο (structured clone), άρα χωρίς αυτό μια αλλαγή πλάτους θα ξανάχτιζε τη γεωμετρία 3Δ για τα ίδια σημεία.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
 import type { TerrainMapModel } from '@/lib/terrain/publication/terrain-map-model';
 import type { TopoPoint } from '@/lib/terrain/terrain-types';
 import { createSurveyPreviewer, type SurveyPreviewer } from '@/lib/terrain/survey-import/survey-preview-client';
@@ -29,6 +33,11 @@ export interface SurveyPreviewState {
   readonly preparation: SurveyUploadPreparation | null;
   /** Ο τελευταίος χάρτης που ήρθε — ίσως για προηγούμενη ερώτηση (δες `updating`)· `null` χωρίς επιφάνεια. */
   readonly model: TerrainMapModel | null;
+  /**
+   * Το στιγμιότυπο του **ίδιου** χάρτη (για το 3Δ) — `null` όταν και ο χάρτης είναι `null`. Ίδια ταυτότητα όσο μένουν τα
+   * ίδια σημεία, όποιο κι αν είναι το πλάτος.
+   */
+  readonly snapshot: ListingTerrainSnapshot | null;
   /** Νεότερη απάντηση είναι καθ' οδόν — ό,τι φαίνεται μπορεί να είναι παλιό. */
   readonly updating: boolean;
   /** Η τρέχουσα ερώτηση απέτυχε (Worker **και** δίχτυ) — ποτέ σιωπηλά «ενημερώνεται» για πάντα. */
@@ -55,12 +64,21 @@ function keyOf(points: readonly TopoPoint[]): number {
 
 interface Answer {
   readonly reply: SurveyPreviewReply | null;
+  /** Το στιγμιότυπο του `reply` — το ΠΡΩΤΟ που ήρθε για το κλειδί του (σταθερή ταυτότητα). */
+  readonly snapshot: ListingTerrainSnapshot | null;
   /** Η ερώτηση που απέτυχε τελευταία, `key:width`. */
   readonly failedFor: string | null;
 }
 
-const NO_ANSWER: Answer = { reply: null, failedFor: null };
+const NO_ANSWER: Answer = { reply: null, snapshot: null, failedFor: null };
 const questionId = (key: number, widthPx: number | null): string => `${key}:${widthPx ?? '-'}`;
+
+/** Νέα απάντηση: ίδιο κλειδί ⇒ τα ίδια σημεία ⇒ κρατά το στιγμιότυπο που ήδη έχει (το 3Δ δεν ξαναχτίζεται). */
+function answerOf(previous: Answer, reply: SurveyPreviewReply): Answer {
+  const sameSurvey = previous.reply !== null && previous.reply.key === reply.key;
+  const snapshot = sameSurvey ? previous.snapshot : reply.preparation.ok ? reply.preparation.snapshot : null;
+  return { reply, snapshot, failedFor: null };
+}
 
 /** Ένας previewer ανά οθόνη — ο Worker τερματίζεται στο unmount (ξαναγεννιέται αν το StrictMode ξαναπροσαρτήσει). */
 function usePreviewer(): SurveyPreviewer {
@@ -87,7 +105,7 @@ export function useSurveyPreview(points: readonly TopoPoint[], widthPx: number |
     if (empty) return;
     void previewer.preview({ key, points, widthPx }).then((result) => {
       if (!mounted.current) return;
-      if (result.kind === 'ok') setAnswer({ reply: result.value, failedFor: null });
+      if (result.kind === 'ok') setAnswer((previous) => answerOf(previous, result.value));
       // `disposed` = η οθόνη έφυγε (ή το StrictMode ξαναπροσάρτησε) — όχι αποτυχία της ερώτησης.
       else if (result.kind === 'failed' && result.error !== WORKER_RPC_DISPOSED) {
         setAnswer((previous) => ({ ...previous, failedFor: questionId(key, widthPx) }));
@@ -102,6 +120,7 @@ export function useSurveyPreview(points: readonly TopoPoint[], widthPx: number |
   return {
     preparation: current ? reply.preparation : null,
     model: empty ? null : reply?.model ?? null,
+    snapshot: empty ? null : answer.snapshot,
     updating: !empty && !failed && !(current && reply.widthPx === widthPx),
     failed,
     warm,
