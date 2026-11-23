@@ -349,7 +349,7 @@
         "position": "Θέση",
         "local": "{east} · {north} από το κέντρο",
         "egsa": "ΕΓΣΑ'87 E {e} · N {n}",
-        "wgs84": "WGS84 {lat} · {lng}",
+        "wgs84": "WGS84 {lat} · {lon}",
         "file": "Αρχείο X {x} · Y {y}",
         "copy": "Αντιγραφή συντεταγμένων",
         "copied": "Αντιγράφηκαν",

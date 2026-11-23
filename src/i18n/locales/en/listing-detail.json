@@ -349,7 +349,7 @@
         "position": "Position",
         "local": "{east} · {north} from the centre",
         "egsa": "GGRS87 E {e} · N {n}",
-        "wgs84": "WGS84 {lat} · {lng}",
+        "wgs84": "WGS84 {lat} · {lon}",
         "file": "File X {x} · Y {y}",
         "copy": "Copy coordinates",
         "copied": "Copied",

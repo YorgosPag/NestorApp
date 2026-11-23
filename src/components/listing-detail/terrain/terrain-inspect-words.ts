@@ -77,7 +77,7 @@ export function worldPositionWords(t: T, centreWorldMm: PlanarPoint, x: number, 
   if (!isWithinGreekGridAreaOfUse(e, n)) return { lines: [t(`${NS}.file`, { x: grid(e), y: grid(n) })], copyText };
   const wgs = greekGridToGeoPoint(e, n);
   return {
-    lines: [t(`${NS}.egsa`, { e: grid(e), n: grid(n) }), t(`${NS}.wgs84`, { lat: geo(wgs.lat), lng: geo(wgs.lng) })],
+    lines: [t(`${NS}.egsa`, { e: grid(e), n: grid(n) }), t(`${NS}.wgs84`, { lat: geo(wgs.lat), lon: geo(wgs.lng) })],
     copyText,
   };
 }
