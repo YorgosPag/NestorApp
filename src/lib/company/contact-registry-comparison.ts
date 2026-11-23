@@ -27,22 +27,18 @@ import {
   type ContactGemiStatus,
   type ContactLegalForm,
 } from '@/config/company-registry/gemi-legal-forms';
+import {
+  judge,
+  present,
+  type FieldComparison,
+  type FieldComparisonState,
+  type SameValue,
+} from '@/lib/comparison/field-judgment';
 import { sameAddressFieldValue } from '@/lib/geocoding/field-match';
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { sameLegalName } from '@/lib/company/legal-name-match';
 import { sameDescription, type LegalSubjectVerdict } from '@/lib/company/registry-legal-person';
 import type { RegistryCompanyRecord, RegistrySeat, RegistryStatus } from '@/types/company-registry';
-
-export type FieldComparisonState = 'match' | 'missing' | 'differs' | 'not-comparable';
-
-/** `R` = η τιμή του μητρώου στη γλώσσα της επαφής · `C` = η τιμή της επαφής όπως είναι αποθηκευμένη. */
-export interface FieldComparison<R, C = string> {
-  readonly state: FieldComparisonState;
-  /** `null` = κενή. */
-  readonly contact: C | null;
-  /** `null` = τίποτα συγκρίσιμο. */
-  readonly registry: R | null;
-}
 
 export const SEAT_PARTS = ['street', 'number', 'postalCode', 'city'] as const;
 export type SeatPart = (typeof SEAT_PARTS)[number];
@@ -75,20 +71,8 @@ export interface ContactRegistryComparison {
 
 export type EntityVerdict = Extract<LegalSubjectVerdict, { kind: 'entity' }>;
 
-type Same = (contact: string, registry: string) => boolean;
-
-/** Κενό κείμενο = απουσία. */
-function present(value: string | null | undefined): string | null {
-  const trimmed = (value ?? '').trim();
-  return trimmed === '' ? null : trimmed;
-}
-
-/** Ο ένας κανόνας των τεσσάρων κρίσεων — το μητρώο πρώτα: χωρίς δική του τιμή, τίποτα δεν συγκρίνεται. */
-function judge(contact: string | null, registry: string | null, same: Same): FieldComparisonState {
-  if (registry === null) return 'not-comparable';
-  if (contact === null) return 'missing';
-  return same(contact, registry) ? 'match' : 'differs';
-}
+/** Ο κανόνας των τεσσάρων κρίσεων ζει στο `lib/comparison/field-judgment` (κοινός με το ADR-950). */
+type Same = SameValue;
 
 function compareValue<R extends string>(contactValue: string | null, registry: R | null, same: Same): FieldComparison<R> {
   const contact = present(contactValue);
@@ -157,8 +141,8 @@ function registrySeatFields(seat: RegistrySeat): SeatFields {
   return seatOf({ street: seat.street, number: registryStreetNumber(seat.streetNumber), postalCode: seat.postalCode, city: seat.city });
 }
 
-/** Συνολική κρίση έδρας: μία διαφορά αρκεί· αλλιώς ένα κενό· αλλιώς ταύτιση. */
-function seatState(parts: Readonly<Record<SeatPart, FieldComparisonState>>): FieldComparisonState {
+/** Συνολική κρίση έδρας: μία διαφορά αρκεί· αλλιώς ένα κενό· αλλιώς ταύτιση. Κοινή με το έγγραφο (ADR-950). */
+export function seatState(parts: Readonly<Record<SeatPart, FieldComparisonState>>): FieldComparisonState {
   const states = SEAT_PARTS.map((part) => parts[part]);
   if (states.every((state) => state === 'not-comparable')) return 'not-comparable';
   if (states.includes('differs')) return 'differs';

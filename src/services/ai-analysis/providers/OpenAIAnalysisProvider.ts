@@ -22,8 +22,9 @@ import {
 import {
   AI_ANALYSIS_DEFAULTS,
   AI_MULTI_INTENT_SCHEMA,
-  AI_DOCUMENT_CLASSIFY_SCHEMA,
   AI_ANALYSIS_PROMPTS,
+  buildDocumentClassifySchema,
+  buildDocumentEvidenceInstructions,
 } from '@/config/ai-analysis-config';
 import {
   ADMIN_TOOL_DEFINITIONS,
@@ -153,8 +154,12 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
 
     // ADR-145: Use admin-specific prompt when sender is a verified super admin
     const isAdminCommand = input.kind === 'message_intent' && input.context?.isAdminCommand === true;
+    // ADR-950 §4.2: η ανάγνωση πεδίων μπαίνει στην ΙΔΙΑ κλήση — οδηγίες + schema μόνο των πεδίων του `purpose`.
+    const evidenceFields = input.kind === 'document_classify' ? input.evidence?.fields ?? [] : [];
     const systemPrompt = input.kind === 'document_classify'
-      ? AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM
+      ? evidenceFields.length > 0
+        ? `${AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM}\n\n${buildDocumentEvidenceInstructions(evidenceFields)}`
+        : AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM
       : AI_ANALYSIS_PROMPTS.MULTI_INTENT_SYSTEM;
 
     const content: ResponsesContent[] = [
@@ -248,7 +253,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
 
     // ── Non-admin: structured output with JSON schema ──
     const jsonSchema = input.kind === 'document_classify'
-      ? AI_DOCUMENT_CLASSIFY_SCHEMA
+      ? buildDocumentClassifySchema(evidenceFields)
       : AI_MULTI_INTENT_SCHEMA;
 
     // Responses API: name/strict/schema go directly in format (NOT nested in json_schema)

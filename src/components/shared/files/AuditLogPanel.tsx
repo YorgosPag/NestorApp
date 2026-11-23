@@ -17,6 +17,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ScrollText,
   Eye,
+  EyeOff,
   Download,
   Upload,
   Trash2,
@@ -120,6 +121,9 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   version_supersede: Archive,
   // ADR-915 Φ3 — τα γεγονότα του εγγράφου (έκδοση · τυπωμένη λήξη).
   document_facts_record: CalendarCheck,
+  // ADR-950 §4.5 — «Αγνόηση» διαφοράς εγγράφου ↔ επαφής, και η αναίρεσή της.
+  evidence_dismiss: EyeOff,
+  evidence_restore: RotateCcw,
 };
 
 const ACTION_COLOR_MAP: Record<string, string> = {
@@ -164,6 +168,8 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   cde_supersede: 'text-[hsl(var(--text-warning))]',
   version_supersede: 'text-[hsl(var(--text-warning))]',
   document_facts_record: 'text-[hsl(var(--text-info))]',
+  evidence_dismiss: 'text-muted-foreground',
+  evidence_restore: 'text-[hsl(var(--text-info))]',
 };
 
 // ============================================================================

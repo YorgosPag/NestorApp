@@ -100,7 +100,7 @@ export function FileThumbnail({
           loading="lazy"
           decoding="async"
           onError={candidate ? handleImageError : undefined}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover bg-transparency-grid"
         />
       </figure>
     );

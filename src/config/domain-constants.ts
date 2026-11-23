@@ -1212,6 +1212,8 @@ export const API_ROUTES = {
     BATCH_DOWNLOAD: '/api/files/batch-download',
     ARCHIVE: '/api/files/archive',
     PROPAGATE_ENTITY_RENAME: '/api/files/propagate-entity-rename',
+    /** ADR-950 §4.5 — μόνιμη «Αγνόηση» / αναίρεση διαφοράς εγγράφου ↔ επαφής (ο ΕΝΑΣ γραφέας είναι ο διακομιστής). */
+    EVIDENCE_DISMISSALS: (fileId: string) => `/api/files/${encodeURIComponent(fileId)}/evidence-dismissals` as const,
   },
   DOWNLOAD: '/api/download',
   /**

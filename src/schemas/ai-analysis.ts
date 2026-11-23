@@ -17,6 +17,8 @@
 
 import { z } from 'zod';
 
+import { EVIDENCE_FIELD_KEYS } from '@/config/contact-document-evidence';
+
 // ============================================================================
 // INTENT TYPES (Message Analysis)
 // ============================================================================
@@ -201,6 +203,19 @@ export type MultiIntentAnalysis = z.infer<typeof MultiIntentAnalysisSchema>;
 // ============================================================================
 
 /**
+ * ADR-950 §4.2 — ένα πεδίο που **διαβάστηκε** στο έγγραφο, όπως τυπώνεται.
+ * `printed: null` = δεν φαίνεται / δεν διαβάζεται. Η κανονικοποίηση και η γείωση γίνονται **εκτός AI**
+ * (`lib/contacts/contact-evidence-grounding.ts`). Το `field` είναι κλειδί του `config/contact-document-evidence.ts`.
+ */
+export const DocumentEvidenceFieldSchema = z.object({
+  field: z.enum(EVIDENCE_FIELD_KEYS),
+  printed: z.string().nullable(),
+  confidence: z.number().min(0).max(1),
+});
+
+export type DocumentEvidenceField = z.infer<typeof DocumentEvidenceFieldSchema>;
+
+/**
  * Document classification result
  * @enterprise For analyzing uploaded files/attachments
  */
@@ -216,6 +231,12 @@ export const DocumentClassifyAnalysisSchema = AnalysisBaseSchema.extend({
 
   /** AI-generated description in Greek (1-2 sentences) about the document content */
   description: z.string().optional(),
+
+  /** ADR-950: τα πεδία του εγγράφου — μόνο όταν το `purpose` έχει χάρτη πεδίων. */
+  fields: z.array(DocumentEvidenceFieldSchema).optional(),
+
+  /** ADR-950: το `purpose` για το οποίο ζητήθηκαν τα `fields` (η ανάγνωση ανήκει σε αυτό, όχι σε μεταγενέστερο). */
+  evidencePurpose: z.string().optional(),
 });
 
 export type DocumentClassifyAnalysis = z.infer<typeof DocumentClassifyAnalysisSchema>;

@@ -7,6 +7,9 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { evidenceFieldKeysFor } from '@/config/contact-document-evidence';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import type { DocumentEvidenceRequest } from '@/services/ai-analysis/providers/IAIAnalysisProvider';
 import { createAIAnalysisProvider } from '@/services/ai-analysis/providers/ai-provider-factory';
 import { isDocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -68,15 +71,32 @@ async function runExtractor(
 
 const logger = createModuleLogger('FileClassifyBackground');
 
-export async function classifyInBackground(
-  fileId: string,
-  downloadUrl: string,
-  contentType: string,
-  originalFilename: string | undefined,
-  sizeBytes: number | undefined,
-  userId: string,
-  fileExt?: string,
-): Promise<void> {
+export interface ClassifyInBackgroundInput {
+  readonly fileId: string;
+  readonly downloadUrl: string;
+  readonly contentType: string;
+  readonly originalFilename: string | undefined;
+  readonly sizeBytes: number | undefined;
+  readonly userId: string;
+  readonly fileExt?: string;
+  /** ADR-950: για ποιο έγγραφο ανέβηκε (`entries-contact.ts`). */
+  readonly purpose: string | null;
+  readonly entityType: string | null;
+}
+
+/**
+ * ADR-950 §4.2 — ζητάμε πεδία **μόνο** για αρχεία επαφής με `purpose` που έχει χάρτη. Αλλιώς `undefined` ⇒ η κλήση
+ * AI είναι ακριβώς η σημερινή.
+ */
+function evidenceRequestFor(input: ClassifyInBackgroundInput): DocumentEvidenceRequest | undefined {
+  if (input.entityType !== ENTITY_TYPES.CONTACT || input.purpose === null) return undefined;
+  const fields = evidenceFieldKeysFor(input.purpose);
+  return fields.length > 0 ? { purpose: input.purpose, fields } : undefined;
+}
+
+export async function classifyInBackground(input: ClassifyInBackgroundInput): Promise<void> {
+  const { fileId, downloadUrl, contentType, originalFilename, sizeBytes, userId, fileExt } = input;
+  const evidence = evidenceRequestFor(input);
   const db = getAdminFirestore();
   const fileRef = db.collection(COLLECTIONS.FILES).doc(fileId);
 
@@ -110,6 +130,7 @@ export async function classifyInBackground(
       filename: originalFilename ?? (fileExt ? `drawing.${fileExt}` : 'document'),
       mimeType: analyzeMimeType,
       sizeBytes: sizeBytes ?? fileBuffer.length,
+      evidence,
     });
 
     if (!isDocumentClassifyAnalysis(result)) {
@@ -130,6 +151,10 @@ export async function classifyInBackground(
         aiModel: result.aiModel ?? null,
         analysisTimestamp: result.analysisTimestamp ?? nowISO(),
         description: aiDescription,
+        // ADR-950: τα πεδία γράφονται ΜΟΝΟ στο αρχείο — ποτέ στην επαφή. Ανήκουν στο `purpose` για το οποίο ζητήθηκαν.
+        ...(evidence !== undefined
+          ? { fields: (result.fields ?? []).filter((f) => evidence.fields.includes(f.field)), evidencePurpose: evidence.purpose }
+          : {}),
       },
       'ingestion.state': 'classified',
       'ingestion.stateChangedAt': nowISO(),

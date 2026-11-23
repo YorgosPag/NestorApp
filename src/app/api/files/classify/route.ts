@@ -225,15 +225,18 @@ async function handlePost(
     });
 
     // 7. Background classification via after()
-    after(() => classifyInBackground(
+    // ADR-950 §4.2: το `purpose` + ο κάτοχος λένε στην ανάγνωση **για ποιο έγγραφο** ανέβηκε το αρχείο.
+    after(() => classifyInBackground({
       fileId,
       downloadUrl,
-      contentType ?? '',
+      contentType: contentType ?? '',
       originalFilename,
       sizeBytes,
-      ctx.uid,
+      userId: ctx.uid,
       fileExt,
-    ));
+      purpose: typeof fileData.purpose === 'string' ? fileData.purpose : null,
+      entityType: typeof fileData.entityType === 'string' ? fileData.entityType : null,
+    }));
 
     return response;
   } catch (err) {

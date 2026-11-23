@@ -57,6 +57,12 @@
     --secondary: 213 88% 96%; /* ✅ ENTERPRISE: Refined blue secondary (was grey) */
     --secondary-foreground: 222.2 47.4% 11.2%;
 
+    /* 🏁 Σκακιέρα διαφάνειας (ADR-191) — φόντο πίσω από τα διάφανα pixel μιας εικόνας (Figma · Photoshop ·
+       macOS Preview). ΙΔΙΑ και στα δύο θέματα επίτηδες: σφραγίδες/υπογραφές είναι σκούρο μελάνι σε διάφανο
+       φόντο — πάνω σε σκοτεινή επιφάνεια χάνονται. Η σκακιέρα είναι «χαρτί», όχι επιφάνεια του θέματος. */
+    --transparency-grid-light: 0 0% 100%;
+    --transparency-grid-dark: 0 0% 85%;
+
     --muted: 212 85% 94%; /* ✅ ENTERPRISE: Harmonious blue muted (was grey) */
     --muted-foreground: 215.4 16.3% 38%;  /* ADR-770 §18 — ήταν 46,9% (shadcn default, βαθμονομημένο σε ΛΕΥΚΟ) = 3,89:1 επί --accent ❌ · τώρα ≥5,38:1 σε 10 επιφάνειες */
 
@@ -450,6 +456,10 @@
     --secondary: 217 27% 11%;
     --secondary-foreground: 210 40% 98%;
 
+    /* 🏁 Σκακιέρα διαφάνειας — ΙΔΙΕΣ τιμές με το :root, επίτηδες (βλ. σχόλιο εκεί). */
+    --transparency-grid-light: 0 0% 100%;
+    --transparency-grid-dark: 0 0% 85%;
+
     --muted: 217 27% 11%; /* Same as secondary */
     --muted-foreground: 215 20.2% 65.1%;
 
@@ -679,6 +689,19 @@
     clip: rect(0, 0, 0, 0) !important;
     white-space: nowrap !important;
     border: 0 !important;
+  }
+
+  /* 🏁 Σκακιέρα διαφάνειας (ADR-191) — μπαίνει ΠΑΝΩ στο <img>, όχι στο κουτί γύρω του: φαίνεται μόνο
+     μέσα από τα διάφανα pixel· μια αδιαφανής JPG την καλύπτει ολόκληρη και δεν αλλάζει τίποτα. */
+  .bg-transparency-grid {
+    background-color: hsl(var(--transparency-grid-light));
+    background-image:
+      linear-gradient(45deg, hsl(var(--transparency-grid-dark)) 25%, transparent 25%),
+      linear-gradient(-45deg, hsl(var(--transparency-grid-dark)) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, hsl(var(--transparency-grid-dark)) 75%),
+      linear-gradient(-45deg, transparent 75%, hsl(var(--transparency-grid-dark)) 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
   }
 
   /* Hide scrollbars while maintaining scroll functionality */

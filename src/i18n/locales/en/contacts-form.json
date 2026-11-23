@@ -299,8 +299,74 @@
     },
     "registryProposal": {
       "notice": "The registered office was filled in from GEMI (checked {date}). Confirm the map position before saving.",
+      "noticeDocument": "The address was filled in from the document “{fileName}” (read {date}). Confirm the map position before saving.",
       "undo": "Undo",
       "keep": "Keep it"
+    }
+  },
+  "documentEvidence": {
+    "badge": "{count, plural, one {# difference with the contact} other {# differences with the contact}}",
+    "badgeMatched": "Matches the contact",
+    "title": "The document and the contact",
+    "subtitle": "The details read from the document, next to what the contact holds. Nothing changes without you.",
+    "empty": "No details were read from this document.",
+    "columns": {
+      "field": "Field",
+      "document": "The document says",
+      "contact": "The contact says",
+      "state": "Verdict",
+      "action": "Action"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "organisationName": "Legal name",
+      "lastName": "Surname",
+      "firstName": "First name",
+      "fatherName": "Father's name",
+      "birthDate": "Date of birth",
+      "documentNumber": "Document number",
+      "documentIssuer": "Issuing authority",
+      "vatNumber": "Tax ID (AFM)",
+      "taxOffice": "Tax office (DOY)",
+      "address": "Address",
+      "phone": "Phone",
+      "teeRegistryNumber": "TEE registry number"
+    },
+    "state": {
+      "match": "Matches",
+      "partial": "Partly matches",
+      "missing": "Missing from contact",
+      "differs": "Differs",
+      "notComparable": "Not comparable"
+    },
+    "ungrounded": {
+      "absent": "Not found on the document",
+      "lowConfidence": "Illegible",
+      "failedCheck": "Illegible — fails the validity check"
+    },
+    "decision": {
+      "dismissed": "Ignored: {reason}",
+      "reopened": "Needs review again — the document now says something else"
+    },
+    "reasons": {
+      "outdatedDocument": "Outdated document",
+      "misread": "Misread",
+      "other": "Other reason"
+    },
+    "actions": {
+      "accept": "Accept",
+      "add": "Add",
+      "proposeAddress": "Propose address",
+      "dismiss": "Ignore",
+      "dismissReason": "Why ignore it?",
+      "restore": "Undo ignore",
+      "editToAccept": "Edit to accept",
+      "personaRequired": "To accept, enable the “Engineer” role",
+      "compareOnly": "Corrected from the form"
+    },
+    "errors": {
+      "dismissFailed": "The ignore was not saved. Please try again.",
+      "restoreFailed": "The undo was not saved. Please try again."
     }
   },
   "licences": {

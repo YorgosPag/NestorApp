@@ -7,7 +7,8 @@
  *    κατάστασης → `VOCAB_LEGAL_FORMS` / `VOCAB_GEMI_STATUSES` (`forms`) · μέρη διεύθυνσης → `contacts-form:address.fields`.
  */
 
-import type { FieldComparisonState, SeatPart } from '@/lib/company/contact-registry-comparison';
+import type { FieldComparisonState } from '@/lib/comparison/field-judgment';
+import type { SeatPart } from '@/lib/company/contact-registry-comparison';
 import type { LegalFormRefusal } from '@/lib/company/registry-legal-person';
 import type { RegistryUnavailableReason } from '@/types/company-registry';
 
@@ -89,6 +90,8 @@ export const CONTACT_COMPANY_REGISTRY_UNAVAILABLE_KEYS: Readonly<Record<Registry
 /** Η λωρίδα πρότασης έδρας μέσα στον editor διευθύνσεων. */
 export const HQ_ADDRESS_PROPOSAL_KEYS = {
   notice: 'contacts-form:addressesSection.registryProposal.notice',
+  /** ADR-950: η ίδια λωρίδα όταν η πρόταση ήρθε από **έγγραφο** της επαφής. */
+  noticeDocument: 'contacts-form:addressesSection.registryProposal.noticeDocument',
   undo: 'contacts-form:addressesSection.registryProposal.undo',
   keep: 'contacts-form:addressesSection.registryProposal.keep',
 } as const;

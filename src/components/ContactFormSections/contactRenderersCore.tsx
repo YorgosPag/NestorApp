@@ -24,6 +24,8 @@ import { ProcurementContactTab } from '@/components/contacts/tabs/procurement/Pr
 import { getPhotoUploadHandlers, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { COMPANY_ADDRESSES_SECTION_ID } from '@/config/company-gemi/core/section-registry';
+import { ContactEvidenceProvider } from '@/components/contacts/document-evidence/ContactEvidenceContext';
 
 const logger = createModuleLogger('ContactRenderers');
 
@@ -199,6 +201,16 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
               <span>{ctx.t('contacts-lifecycle:trash.filesInTrashWithContact')}</span>
             </div>
           )}
+          {/* ADR-950 — η φόρμα γίνεται ορατή στη λίστα αρχείων (σήμα + πίνακας «Το έγγραφο λέει / Η επαφή λέει»).
+              Το `addresses` είναι το id του ΕΝΟΣ renderer διευθύνσεων, για κάθε είδος επαφής. */}
+          <ContactEvidenceProvider
+            contactId={contactId}
+            contactType={contactType}
+            formData={formData}
+            setFormData={ctx.setFormData}
+            canEdit={!ctx.disabled && ctx.setFormData !== undefined}
+            onOpenAddresses={ctx.onActiveTabChange ? () => ctx.onActiveTabChange?.(COMPANY_ADDRESSES_SECTION_ID) : undefined}
+          >
           <EntityFilesManager
             entityType={ENTITY_TYPES.CONTACT}
             entityId={contactId}
@@ -215,6 +227,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
             listGroupingMode="domainCategory"
             defaultActiveTab={ctx.isContactTrashed ? 'trash' : undefined}
           />
+          </ContactEvidenceProvider>
         </>
       );
     },

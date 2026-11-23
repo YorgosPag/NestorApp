@@ -14,7 +14,7 @@
 
 import React from 'react';
 import { getStatusColor, getStatusSurfaceClass } from '@/lib/design-system';
-import { FileText, Calendar, HardDrive, Link2, Check, X, RotateCcw } from 'lucide-react';
+import { FileText, Calendar, HardDrive, Link2, Check, X } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import type { FileRecordWithLinkStatus } from './hooks/useEntityFiles';
 import { FileThumbnail } from './FileThumbnail';
@@ -41,6 +41,9 @@ import { useUserDisplayNames, seedUserNameCache } from '@/hooks/useUserDisplayNa
 import { useAuth } from '@/auth/hooks/useAuth';
 import { FileHandoverBadge } from './FileHandoverBadge';
 import { FileRecordBadge } from './FileRecordBadge';
+import { ClassifyAgainButton } from './ClassifyAgainButton';
+import { ContactEvidenceBadge } from '@/components/contacts/document-evidence/ContactEvidenceBadge';
+import { needsEvidenceReading } from '@/lib/contacts/contact-evidence-comparison';
 
 // ============================================================================
 // TYPES
@@ -297,27 +300,13 @@ export function FilesList({
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${getStatusSurfaceClass('error')}`}>
                       {t('list.classificationFailed')}
                     </span>
-                    {canRetryClassify && <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => handleRetryClassify(file.id)}
-                          disabled={classifyingIds.has(file.id)}
-                          aria-label={t('list.retryClassification')}
-                          className={cn(
-                            'inline-flex items-center justify-center rounded p-0.5',
-                            'text-primary',
-                            'hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity',
-                          )}
-                        >
-                          <RotateCcw
-                            className={cn(iconSizes.xs, classifyingIds.has(file.id) && 'animate-spin')}
-                            aria-hidden="true"
-                          />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t('list.retryClassification')}</TooltipContent>
-                    </Tooltip>}
+                    {canRetryClassify && (
+                      <ClassifyAgainButton
+                        label={t('list.retryClassification')}
+                        busy={classifyingIds.has(file.id)}
+                        onClick={() => handleRetryClassify(file.id)}
+                      />
+                    )}
                   </span>
                 )}
                 {file.ingestion?.analysis?.documentType && (
@@ -325,6 +314,15 @@ export function FilesList({
                     {t(`documentType.${file.ingestion.analysis.documentType}`, file.ingestion.analysis.documentType)}
                   </span>
                 )}
+                {/* ADR-950 §4.6 — ίδια πράξη με την επανάληψη: ανάγνωση στοιχείων για ήδη ταξινομημένο έγγραφο επαφής */}
+                {canRetryClassify && needsEvidenceReading(file) && (
+                  <ClassifyAgainButton
+                    label={t('list.readEvidence')}
+                    busy={classifyingIds.has(file.id)}
+                    onClick={() => handleRetryClassify(file.id)}
+                  />
+                )}
+                <ContactEvidenceBadge file={file} />
 
                 {/* Linked file indicator */}
                 {file.isLinkedFile && (

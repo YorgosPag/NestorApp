@@ -15,6 +15,7 @@
  * - Provider-agnostic (OpenAI, Anthropic, Mock, etc.)
  */
 
+import type { EvidenceFieldKey } from '@/config/contact-document-evidence';
 import type { AIAnalysisResult } from '@/schemas/ai-analysis';
 
 // ============================================================================
@@ -67,6 +68,17 @@ export interface DocumentClassifyInput {
 
   /** File size in bytes (for context) */
   sizeBytes?: number;
+
+  /**
+   * ADR-950 §4.2 — ζήτα **και** τα πεδία του εγγράφου (στην ίδια κλήση). Απόν ⇒ σκέτη ταξινόμηση, όπως πάντα.
+   * Τα `fields` είναι **μόνο** του `purpose` (`evidenceFieldKeysFor`, `config/contact-document-evidence`).
+   */
+  evidence?: DocumentEvidenceRequest;
+}
+
+export interface DocumentEvidenceRequest {
+  readonly purpose: string;
+  readonly fields: readonly EvidenceFieldKey[];
 }
 
 /**

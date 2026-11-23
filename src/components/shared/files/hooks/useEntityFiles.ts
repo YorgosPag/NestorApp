@@ -21,12 +21,16 @@ import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRe
 import { buildFileReadFilter, internFileScopes, readQueryNarrowing, type FileScope } from '@/lib/files/upload-scope';
 import { useEntityFilesRealtime } from './useEntityFilesRealtime';
 import { useStableFileCustody } from './useStableFileCustody';
+import { useKeyedState } from '@/hooks/useKeyedState';
 
 // ============================================================================
 // MODULE LOGGER
 // ============================================================================
 
 const logger = createModuleLogger('USE_ENTITY_FILES');
+
+/** Σταθερή ταυτότητα της κενής λίστας — η αρχική τιμή κάθε νέας οντότητας. */
+const NO_FILES: FileRecordWithLinkStatus[] = [];
 
 // ============================================================================
 // TYPES
@@ -139,10 +143,13 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   const unclaimedBy = internFileScopes(params.unclaimedBy);
   const { domain, category } = readQueryNarrowing(params, scopes);
 
-  // State
-  const [files, setFiles] = useState<FileRecordWithLinkStatus[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
+  // State — **δεμένη στην οντότητα** (`useKeyedState`): αλλαγή επαφής ⇒ ποτέ τα αρχεία της προηγούμενης, ούτε για
+  // ένα frame· καθυστερημένη ανάγνωση της προηγούμενης αγνοείται. Νέα οντότητα που θα διαβαστεί ⇒ ξεκινά «φορτώνει».
+  const owner = `${entityType}:${entityId}`;
+  const willRead = autoFetch && entityId !== '' && (!realtime || custody !== undefined);
+  const [files, setFiles] = useKeyedState<FileRecordWithLinkStatus[]>(owner, NO_FILES);
+  const [loading, setLoading] = useKeyedState<boolean>(owner, willRead);
+  const [error, setError] = useKeyedState<Error | null>(owner, null);
   const filesRef = useRef(files);
   useEffect(() => { filesRef.current = files; }, [files]);
 

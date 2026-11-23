@@ -49,7 +49,7 @@ export function ImagePreview({ url, preview, title }: ImagePreviewProps) {
           srcSet={source.srcSet}
           sizes={source.sizes}
           alt={title}
-          className="max-w-full max-h-full object-contain origin-center select-none"
+          className="max-w-full max-h-full object-contain origin-center select-none bg-transparency-grid"
           draggable={false}
           loading="lazy"
         />

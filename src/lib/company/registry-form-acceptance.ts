@@ -43,8 +43,11 @@ function textOrNull(value: string | undefined | null): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-/** Η έδρα της φόρμας = **θέση 0** της λίστας — ίδια σύμβαση με τον server (`contactRegistryFieldsOf`). */
-function formHeadquarters(formData: ContactFormData): SeatFields | null {
+/**
+ * Η έδρα της φόρμας = **θέση 0** της λίστας — ίδια σύμβαση με τον server (`contactRegistryFieldsOf`).
+ * Κοινή με τη σύγκριση εγγράφου (ADR-950 `contact-evidence-comparison`).
+ */
+export function formHeadquarters(formData: ContactFormData): SeatFields | null {
   const hq = formData.companyAddresses?.[0];
   if (hq === undefined) return null;
   return {

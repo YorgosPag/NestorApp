@@ -7,6 +7,7 @@ import { FileApprovalService, type CreateApprovalInput } from '@/services/file-a
 import { FileRecordService } from '@/services/file-record.service';
 import type { Iso19650MetadataUpdate } from '@/services/file-record.service';
 import { API_ROUTES, type EntityType } from '@/config/domain-constants';
+import type { EvidenceDismissReason, EvidenceRowKey } from '@/config/contact-document-evidence';
 import type { AuditEntityType } from '@/types/audit-trail';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { auth } from '@/lib/firebase';
@@ -301,6 +302,28 @@ export async function restoreFileFromTrashWithPolicy(
   restoredBy: string,
 ): Promise<void> {
   return FileRecordService.restoreFromTrash(fileId, custody, restoredBy);
+}
+
+/** ADR-950 §4.5 — «Αγνόηση» διαφοράς εγγράφου ↔ επαφής. Την τιμή που αγνοείται την ορίζει ο **διακομιστής**. */
+export async function dismissEvidenceWithPolicy(
+  fileId: string,
+  row: EvidenceRowKey,
+  reason: EvidenceDismissReason,
+): Promise<void> {
+  await mutateJson<unknown>(API_ROUTES.FILES.EVIDENCE_DISMISSALS(fileId), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ act: 'dismiss', row, reason }),
+  });
+}
+
+/** ADR-950 §4.5 — αναίρεση «Αγνόησης»: η διαφορά ξαναζητά κρίση. */
+export async function restoreEvidenceWithPolicy(fileId: string, row: EvidenceRowKey): Promise<void> {
+  await mutateJson<unknown>(API_ROUTES.FILES.EVIDENCE_DISMISSALS(fileId), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ act: 'restore', row }),
+  });
 }
 
 export async function classifyFileWithPolicy(

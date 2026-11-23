@@ -20,11 +20,10 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { fieldLabels } from '@/config/company-gemi/labels/field-labels';
 import { VOCAB_GEMI_STATUSES, VOCAB_LEGAL_FORMS } from '@/config/vocabulary/options/company';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { FieldComparison, FieldComparisonState } from '@/lib/comparison/field-judgment';
 import {
   SEAT_PARTS,
   type ContactRegistryComparison,
-  type FieldComparison,
-  type FieldComparisonState,
   type SeatFields,
 } from '@/lib/company/contact-registry-comparison';
 import {

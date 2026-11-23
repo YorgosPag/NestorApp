@@ -221,7 +221,7 @@ export class MockAIAnalysisProvider implements IAIAnalysisProvider {
     if (input.kind === 'message_intent') {
       return this.analyzeMessageIntent(input.messageText);
     } else {
-      return this.analyzeDocument(input);
+      return withMockEvidence(this.analyzeDocument(input), input);
     }
   }
 
@@ -370,6 +370,19 @@ export class MockAIAnalysisProvider implements IAIAnalysisProvider {
     // Default: other (triage needed)
     return DOCUMENT_CLASSIFY_FIXTURES.other;
   }
+}
+
+/**
+ * ADR-950: όταν ζητούνται πεδία, ο mock απαντά **«δεν διαβάστηκε»** για όλα (`printed: null`) — ποτέ επινοημένη
+ * τιμή, ώστε καμία οθόνη σε περιβάλλον χωρίς AI να μη δείξει «διαφορά» που δεν υπάρχει.
+ */
+function withMockEvidence(
+  result: DocumentClassifyAnalysis,
+  input: Extract<AnalysisInput, { kind: 'document_classify' }>,
+): DocumentClassifyAnalysis {
+  const fields = input.evidence?.fields ?? [];
+  if (fields.length === 0) return result;
+  return { ...result, fields: fields.map((field) => ({ field, printed: null, confidence: 0 })) };
 }
 
 // ============================================================================

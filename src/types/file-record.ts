@@ -35,6 +35,22 @@ import type {
   HoldType,
 } from '@/config/domain-constants';
 import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
+import type { EvidenceDismissReason, EvidenceRowKey } from '@/config/contact-document-evidence';
+
+/**
+ * ADR-950 §4.5 — μία «Αγνόηση» διαφοράς «έγγραφο ↔ επαφή» (σχήμα ADR-759 `FieldReconciliation` + αιτία).
+ * Ισχύει **μόνο** όσο η κανονικοποιημένη τιμή του εγγράφου είναι ίδια με το `documentValueAtDecision`.
+ */
+export interface EvidenceDismissal {
+  readonly row: EvidenceRowKey;
+  /** Η κανονικοποιημένη τιμή του εγγράφου τη στιγμή της απόφασης (`evidenceValueKey`). */
+  readonly documentValueAtDecision: string;
+  readonly reason: EvidenceDismissReason;
+  /** uid εκείνου που αποφάσισε. */
+  readonly decidedBy: string;
+  /** ISO. */
+  readonly decidedAt: string;
+}
 import type {
   DisciplineCode,
   DocumentSeries,
@@ -682,6 +698,13 @@ export interface FileRecord {
     /** AI document classification (if available) */
     analysis?: DocumentClassifyAnalysis;
   };
+
+  /**
+   * ADR-950 §4.5 — οι **μόνιμες** «Αγνοήσεις» διαφορών «έγγραφο ↔ επαφή». Τις γράφει **μόνο** ο διακομιστής
+   * (`/api/files/[fileId]/evidence-dismissals`). Μία ανά γραμμή· δεμένη στην **τιμή του εγγράφου** τη στιγμή
+   * της απόφασης (σχήμα ADR-759 `FieldReconciliation`): νέα ανάγνωση με άλλη τιμή ⇒ η απόφαση **ξανανοίγει**.
+   */
+  evidenceDismissals?: readonly EvidenceDismissal[];
 
   // =========================================================================
   // 🏢 ENTERPRISE: CLASSIFICATION AUDIT (ADR-055)

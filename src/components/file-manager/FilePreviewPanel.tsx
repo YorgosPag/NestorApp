@@ -48,6 +48,7 @@ import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
 import { CommentsPanel } from '@/components/shared/files/CommentsPanel';
 import { ApprovalPanel } from '@/components/shared/files/ApprovalPanel';
 import { Iso19650MetadataSection } from './Iso19650MetadataSection';
+import { ContactEvidencePanel } from '@/components/contacts/document-evidence/ContactEvidencePanel';
 import { FilePreviewRenderer } from '@/components/shared/files/preview/FilePreviewRenderer';
 import { getPreviewType, type PreviewType } from '@/lib/file-types/preview-registry';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
@@ -350,6 +351,9 @@ export function FilePreviewPanel({ file, onClose, companyId, currentUserId, curr
           </Tooltip>
         )}
       </div>
+
+      {/* ADR-950 — «Το έγγραφο λέει / Η επαφή λέει»: μόνο μέσα σε φόρμα επαφής (προαιρετικό context), αλλού τίποτα */}
+      <ContactEvidencePanel file={file} />
 
       {/* Version history panel (collapsible) */}
       {showVersions && (

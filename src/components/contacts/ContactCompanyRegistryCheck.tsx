@@ -148,7 +148,7 @@ function useRegistryActions(props: ContactCompanyRegistryCheckProps, check: Regi
     if (check === null || comparison === null || seat === null) return;
     proposeHqAddress({
       contactId,
-      source: check.record.source,
+      origin: { kind: 'registry', source: check.record.source },
       observedAt: check.checkedAt,
       seat,
       application: registrySeatApplicationOf(comparison),

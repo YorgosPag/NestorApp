@@ -20,11 +20,18 @@ import type { RegistrySeatApplication } from '@/lib/company/registry-form-accept
 import { createExternalStore } from '@/lib/state/createExternalStore';
 import type { RegistrySource } from '@/types/company-registry';
 
+/**
+ * **Από πού** έρχεται η πρόταση — φαίνεται στη λωρίδα του editor. Διακριτή ένωση (ADR-950 §4.5): το μητρώο (ADR-948)
+ * ή ένα ανεβασμένο **έγγραφο** της επαφής· η λωρίδα λέει ποιο, ώστε ο άνθρωπος να ξέρει τι επιβεβαιώνει.
+ */
+export type HqAddressProposalOrigin =
+  | { readonly kind: 'registry'; readonly source: RegistrySource }
+  | { readonly kind: 'document'; readonly fileId: string; readonly fileName: string };
+
 export interface HqAddressProposal {
   readonly contactId: string;
-  /** Από πού έρχεται — φαίνεται στη λωρίδα του editor. */
-  readonly source: RegistrySource;
-  /** Πότε το είπε η πηγή (`RegistryCheck.checkedAt`) — φαίνεται δίπλα της. */
+  readonly origin: HqAddressProposalOrigin;
+  /** Πότε το είπε η πηγή (`RegistryCheck.checkedAt` · ώρα ανάγνωσης του εγγράφου) — φαίνεται δίπλα της. */
   readonly observedAt: string;
   readonly seat: SeatFields;
   /**

@@ -8,6 +8,7 @@
  */
 
 import { IntentType, DocumentType } from '@/schemas/ai-analysis';
+import type { EvidenceFieldKey } from '@/config/contact-document-evidence';
 
 export const AI_PROVIDER_IDS = {
   MOCK: 'mock',
@@ -421,3 +422,70 @@ export const AI_DOCUMENT_CLASSIFY_SCHEMA = {
     },
   },
 } as const satisfies Record<string, unknown>;
+
+// ============================================================================
+// ADR-950 §4.2 — ΑΝΑΓΝΩΣΗ ΣΤΟΙΧΕΙΩΝ ΕΓΓΡΑΦΟΥ (στην ΙΔΙΑ κλήση με την ταξινόμηση)
+// ============================================================================
+
+/** Τι σημαίνει κάθε πεδίο — για το μοντέλο, όχι για τον άνθρωπο (καμία οθόνη δεν το δείχνει). */
+const EVIDENCE_FIELD_HINTS: Readonly<Record<EvidenceFieldKey, string>> = {
+  fullName: 'full name of the person, or legal name of the company/organisation, as printed (stamp, header)',
+  lastName: 'surname (ΕΠΩΝΥΜΟ), in the NOMINATIVE case',
+  firstName: 'given name (ΟΝΟΜΑ), in the NOMINATIVE case',
+  fatherName: "father's name (ΟΝΟΜΑ ΠΑΤΡΟΣ / ΠΑΤΡΩΝΥΜΟ), in the NOMINATIVE case",
+  birthDate: 'date of birth exactly as printed',
+  documentNumber: 'identity document number (ΑΡ. ΔΕΛΤΙΟΥ), letters and digits as printed',
+  documentIssuer: 'issuing authority (ΕΚΔΟΥΣΑ ΑΡΧΗ), as printed',
+  vatNumber: 'Greek tax number (ΑΦΜ), digits as printed',
+  taxOffice: 'tax office (ΔΟΥ), as printed',
+  addressStreet: 'street name of the address, without the number',
+  addressNumber: 'street number of the address',
+  addressPostalCode: 'postal code (Τ.Κ.) of the address',
+  addressCity: 'city / town of the address',
+  phone: 'one telephone number, as printed (the first one if several)',
+  teeRegistryNumber: 'Technical Chamber of Greece registry number (ΑΡ. ΜΗΤΡΩΟΥ ΤΕΕ / Α.Μ. ΤΕΕ)',
+};
+
+/** Οι οδηγίες ανάγνωσης που προστίθενται στο `DOCUMENT_CLASSIFY_SYSTEM` όταν ζητούνται πεδία. */
+export function buildDocumentEvidenceInstructions(fields: readonly EvidenceFieldKey[]): string {
+  const lines = fields.map((field) => `- ${field}: ${EVIDENCE_FIELD_HINTS[field]}`);
+  return [
+    'FIELD READING (return one entry in "fields" for EVERY field listed below):',
+    ...lines,
+    'Rules: "printed" = the value EXACTLY as it appears on the document (keep Greek letters, spacing and punctuation).',
+    'If a field is not visible, not present, or you cannot read it with certainty, return printed: null. NEVER guess or infer a value that is not printed.',
+    'Names: Greek names on stamps are often in the genitive (e.g. "ΤΟΥ ΓΕΩΡΓΙΟΥ"); return them in the NOMINATIVE ("ΓΕΩΡΓΙΟΣ").',
+    '"confidence" (0-1) = how legible the printed value is, not how plausible it looks.',
+  ].join('\n');
+}
+
+/** Το schema της ταξινόμησης **με** `fields` — `enum` μόνο των πεδίων του `purpose`. Χωρίς πεδία ⇒ το σημερινό schema. */
+export function buildDocumentClassifySchema(fields: readonly EvidenceFieldKey[]) {
+  if (fields.length === 0) return AI_DOCUMENT_CLASSIFY_SCHEMA;
+  const base = AI_DOCUMENT_CLASSIFY_SCHEMA.schema;
+  return {
+    ...AI_DOCUMENT_CLASSIFY_SCHEMA,
+    name: 'document_classify_evidence_result',
+    description: 'AI analysis: classify document type and read the requested fields as printed.',
+    schema: {
+      ...base,
+      required: [...base.required, 'fields'],
+      properties: {
+        ...base.properties,
+        fields: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['field', 'printed', 'confidence'],
+            additionalProperties: false,
+            properties: {
+              field: { type: 'string', enum: [...fields] },
+              printed: { type: ['string', 'null'] },
+              confidence: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  };
+}
