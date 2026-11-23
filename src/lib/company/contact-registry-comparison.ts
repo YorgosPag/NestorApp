@@ -139,8 +139,22 @@ function seatOf(source: Readonly<Record<SeatPart, string | null>> | null): SeatF
   };
 }
 
+/**
+ * **Ο αριθμός «0» του ΓΕΜΗ σημαίνει «χωρίς αριθμό»** (ADR-948 §8.7.1 — ζωντανή μέτρηση 2026-11-23, ARIES Α.Ε.:
+ * «ΚΑΛΒΟΥ ΚΑΙ ΙΠΠΟΔΡΟΜΙΟΥ · Αριθμός 0»). Ελληνική διεύθυνση δεν έχει αριθμό μηδέν· αν περνούσε, θα γινόταν
+ * «Λείπει από την επαφή» + πρόταση έδρας με αριθμό που κανείς δεν είπε, και ο geocoder θα έψαχνε κτίριο «0».
+ * 🔑 Εδώ, όχι στον parser: η εγγραφή κρατά **ό,τι είπε** το μητρώο· η **ερμηνεία** ζει στη σύγκριση — και
+ *    καλύπτει έτσι και τους ήδη αποθηκευμένους ελέγχους (μοναδικός καταναλωτής του `RegistrySeat.streetNumber`).
+ */
+const REGISTRY_NO_STREET_NUMBER = /^0+$/;
+
+function registryStreetNumber(value: string | null): string | null {
+  const number = present(value);
+  return number !== null && REGISTRY_NO_STREET_NUMBER.test(number) ? null : number;
+}
+
 function registrySeatFields(seat: RegistrySeat): SeatFields {
-  return seatOf({ street: seat.street, number: seat.streetNumber, postalCode: seat.postalCode, city: seat.city });
+  return seatOf({ street: seat.street, number: registryStreetNumber(seat.streetNumber), postalCode: seat.postalCode, city: seat.city });
 }
 
 /** Συνολική κρίση έδρας: μία διαφορά αρκεί· αλλιώς ένα κενό· αλλιώς ταύτιση. */

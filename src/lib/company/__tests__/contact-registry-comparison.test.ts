@@ -124,6 +124,14 @@ describe('Δ — δεν συγκρίνεται ⇒ not-comparable, ποτέ «δ
     expect(result.distinctiveTitle.state).toBe('not-comparable');
     expect(result.seat).toMatchObject({ state: 'not-comparable', registry: null });
   });
+
+  it('Δ5 — αριθμός «0» του ΓΕΜΗ = χωρίς αριθμό: ούτε πρόταση, ούτε «λείπει» (ADR-948 §8.7.1)', () => {
+    const seat = { street: 'ΣΑΜΟΘΡΑΚΗΣ', streetNumber: '0', postalCode: '54248', city: 'ΘΕΣΣΑΛΟΝΙΚΗ', municipality: null };
+    const result = compareContactWithRegistry(contact({ headquarters: null }), record({ seat }), AE);
+    expect(result.seat.registry?.number).toBeNull();
+    expect(result.seat.parts.number).toBe('not-comparable');
+    expect(result.seat.parts.street).toBe('missing');
+  });
 });
 
 describe('Ε — διακριτικός τίτλος: πίνακας στο μητρώο', () => {

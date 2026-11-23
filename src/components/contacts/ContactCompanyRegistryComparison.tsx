@@ -88,6 +88,20 @@ interface FieldRowProps {
   readonly tForms: Translate;
 }
 
+/**
+ * Η στήλη της πράξης **κρατά πάντα το ύψος του κουμπιού** (`h-9` = `Button size="sm"`) — ADR-948 §8.7.2.
+ * Χωρίς αυτό, η «Αποδοχή» έσβηνε το κουμπί, η γραμμή κόνταινε, και σε κυλισμένο περιέκτη όλη η φόρμα «πηδούσε»
+ * (μετρημένο 2026-11-23 στην ARIES Α.Ε.): το επόμενο κλικ μπορούσε να πέσει σε **άλλη** γραμμή. Καμία μετατόπιση
+ * διάταξης μετά από πράξη χρήστη (Core Web Vitals · CLS).
+ */
+function ActionCell({ children }: { readonly children: React.ReactNode }) {
+  return (
+    <TableCell className="text-right">
+      <div className="inline-flex h-9 items-center justify-end">{children}</div>
+    </TableCell>
+  );
+}
+
 function FieldRow({ field, row, props, t, tForms }: FieldRowProps) {
   const label = tForms(ROW_LABEL[field]);
   const acceptable = props.canEdit && canAcceptRegistryField(props.comparison, field);
@@ -97,13 +111,13 @@ function FieldRow({ field, row, props, t, tForms }: FieldRowProps) {
       <TableCell className="text-xs">{valueText(field, row.contact, tForms, t)}</TableCell>
       <TableCell className="text-xs">{valueText(field, row.registry, tForms, t)}</TableCell>
       <TableCell><StateText state={row.state} checkedAt={props.checkedAt} t={t} /></TableCell>
-      <TableCell className="text-right">
+      <ActionCell>
         {acceptable && (
           <Button type="button" variant="outline" size="sm" aria-label={t(KEYS.acceptAria, { field: label })} onClick={() => props.onAccept(field)}>
             {t(KEYS.accept)}
           </Button>
         )}
-      </TableCell>
+      </ActionCell>
     </TableRow>
   );
 }
@@ -141,14 +155,14 @@ function SeatRow({ props, t }: { readonly props: ContactCompanyRegistryCompariso
       <TableCell className="text-xs">{seatText(comparison.seat.contact, t)}</TableCell>
       <TableCell className="text-xs">{seatText(comparison.seat.registry, t)}</TableCell>
       <TableCell><SeatPartStates comparison={comparison} checkedAt={checkedAt} t={t} /></TableCell>
-      <TableCell className="text-right">
+      <ActionCell>
         {proposable && (
           <Button type="button" variant="outline" size="sm" aria-describedby={hintId} onClick={props.onProposeSeat}>
             {t(KEYS.seatPropose)}
           </Button>
         )}
         {proposable && <p id={hintId} className="sr-only">{t(KEYS.seatProposeHint)}</p>}
-      </TableCell>
+      </ActionCell>
     </TableRow>
   );
 }
