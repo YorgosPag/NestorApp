@@ -53,7 +53,7 @@
       "xls-legacy": "This is an old Excel file (.xls), which cannot be read safely. Open it in Excel and save it as “Excel Workbook (.xlsx)” or as CSV.",
       "dxf-binary": "This DXF is saved in binary form. Save it again from your CAD program as a text (ASCII) DXF.",
       "dwg": "This is an AutoCAD drawing (.dwg), which we cannot read yet. Open it in your CAD program and save it as DXF (“Save As” → DXF), or ask the surveyor for the DXF.",
-      "pdf": "This PDF is the surveyor’s printed drawing, not a file of points with elevations. Ask the surveyor for the survey points as CSV, TXT, Excel or DXF.",
+      "pdf": "This PDF is the surveyor’s printed drawing, not a file of points with elevations. For the plot outline, upload it in the \"Topographic plan\" tab; for the relief, ask the surveyor for the survey points as CSV, TXT, Excel or DXF.",
       "unsupported": "This file format is not a survey we can read. Upload CSV, TXT, XYZ, Excel (.xlsx) or DXF.",
       "unreadable": "The file could not be read — it may be damaged or locked by another program. Close it there and try again.",
       "empty": "The file has no points. Check that you chose the survey file and not another drawing or sheet."
@@ -130,5 +130,127 @@
     "heading": "Published now",
     "none": "The listing has no terrain relief yet. Upload the plot's survey — buyers will see the elevation difference, slopes and a contour map.",
     "replaceHint": "A new survey replaces the published one."
+  },
+  "tabs": {
+    "label": "Terrain source",
+    "contours": "Contours and points",
+    "plan": "Topographic plan"
+  },
+  "plotOutline": {
+    "intro": "Upload the topographic plan (DXF or PDF). Only the plot outline passes from the plan into the relief; the plan itself stays private in your dossier and is never published.",
+    "file": {
+      "typesHint": "Topographic plan as DXF or PDF",
+      "reading": "Reading the plan…",
+      "chosen": "Plan: {name}",
+      "reset": "Another plan"
+    },
+    "refusals": {
+      "dwg": "This is an AutoCAD drawing (.dwg), which we cannot read yet. Open it in your CAD program and save it as DXF (\"Save as\" → DXF), or ask the surveyor for the DXF.",
+      "unsupported": "This is not a topographic plan we can read. Upload the plan as DXF or PDF.",
+      "empty": "The file is empty.",
+      "too-large": "The plan is larger than we accept (DXF up to {dxfMaxMegabytes} MB, PDF up to {pdfMaxMegabytes} MB).",
+      "unreadable": "The plan could not be read — it may be damaged or password-protected. Ask the surveyor for a fresh copy."
+    },
+    "unit": {
+      "needed": "The DXF does not declare its units. Choose the units it was drawn in, so areas are measured correctly."
+    },
+    "pdf": {
+      "noTable": "No corner coordinate table in EGSA '87 was found in the PDF. The plan is shown, but it gives no outline: we do not guess a position from a picture. Ask the surveyor for the DXF or the coordinate table.",
+      "unreadable": "The PDF has no readable text (it is probably scanned). Ask the surveyor for the DXF or a PDF with a coordinate table.",
+      "tableBand": "The coordinate table was read here",
+      "noOverlay": "The PDF is not georeferenced, so the outline is not placed on the page; it is shown alongside, drawn from the table's coordinates."
+    },
+    "candidates": {
+      "heading": "Which one is the plot outline?",
+      "count": "{count, plural, one {Found # closed line that may be the plot.} other {Found # closed lines that may be the plot.}}",
+      "none": "No closed line was found that could be the plot outline.",
+      "proposed": "Suggested",
+      "noProposal": {
+        "tie": "Two or more candidates have the same evidence — choose the right one yourself.",
+        "no-evidence": "No candidate has evidence in its favour — choose the right one yourself.",
+        "no-candidates": "There is no candidate to choose."
+      },
+      "area": "{area} m²",
+      "corners": "{count, plural, one {# corner} other {# corners}}",
+      "dxfOrigin": "Layer \"{layer}\"",
+      "pdfOrigin": "Coordinate table, page {page}",
+      "rejected": "{count, plural, one {# closed line was ignored} other {# closed lines were ignored}} (self-intersecting, zero area or too many corners)."
+    },
+    "evidence": {
+      "verdict": {
+        "for": "for",
+        "against": "against",
+        "unknown": "no opinion"
+      },
+      "layer-name": "Layer \"{layer}\"",
+      "layerMatched": "looks like a plot boundary",
+      "layerUnmatched": "says nothing about a boundary",
+      "declared-area": "Area",
+      "areaVs": {
+        "listing": "{declared} m² in the listing · {difference}% difference",
+        "drawing": "{declared} m² written on the plan · {difference}% difference",
+        "none": "no declared area to compare with"
+      },
+      "relief-overlap": "Overlap with the relief",
+      "reliefPending": "judged on confirmation, against the relief you have published",
+      "corner-labels": "Corner labels",
+      "cornersLabelled": "{labelled} of {corners} corners are labelled (A, B, C…)"
+    },
+    "view": {
+      "label": "The plan with the candidate outlines",
+      "ringLabel": "The outline from the coordinate table",
+      "candidate": "Candidate {area} m²"
+    },
+    "corroboration": {
+      "agrees": "The area written on the plan ({area} m²) agrees with the coordinates.",
+      "disagrees": "The area written on the plan ({area} m²) does NOT agree with the coordinates — check the table.",
+      "absent": "The plan writes no area to cross-check.",
+      "sides": "{agreeing} of the {printed} side lengths the table prints agree with the coordinates."
+    },
+    "showInListing": {
+      "label": "Show the outline in the public listing",
+      "hint": "The plot's shape locates the property on the Land Registry map. If you leave this unticked, only you see the outline."
+    },
+    "confirm": {
+      "action": "Confirm outline",
+      "sending": "Sending…",
+      "needSelection": "First choose which one is the plot outline."
+    },
+    "confirmed": {
+      "withRelief": "The outline ({area} m²) was confirmed and added to the relief.",
+      "partial": "The relief covers {percent}% of the outline; the rest is not drawn, because we do not invent elevations.",
+      "waiting": "The outline ({area} m²) was saved and will be added to the relief as soon as you publish contours or points."
+    },
+    "status": {
+      "heading": "Plot outline",
+      "loading": "Reading the outline…",
+      "none": "No plot outline has been set.",
+      "area": "Area {area} m²",
+      "waiting": "Waiting for the first relief: it will be added as soon as you publish contours or points.",
+      "source": {
+        "drawing": "From the plan \"{name}\"",
+        "trash": "From the plan \"{name}\", which is in the trash. The outline stays until you remove it.",
+        "orphan": "From a plan that is no longer in the dossier. The outline stays until you remove it."
+      },
+      "origin": {
+        "dxf": "layer \"{layer}\"",
+        "dxfHandle": "layer \"{layer}\", entity {handle}",
+        "pdf": "coordinate table, page {page}"
+      },
+      "unit": {
+        "declared": "units from the file itself",
+        "human": "units \"{unit}\" (your choice)"
+      },
+      "fingerprint": "File fingerprint {sha}",
+      "remove": "Remove outline",
+      "removeTitle": "Remove the outline?",
+      "removeBody": "The outline leaves the relief and the listing. The plan stays in your dossier and you can confirm it again.",
+      "restore": "Restore plan",
+      "restoreFailed": "The plan could not be restored. Try again.",
+      "done": {
+        "changed": "Done.",
+        "unchanged": "It already was — nothing changed."
+      }
+    }
   }
 }

@@ -200,6 +200,15 @@ export function plotOutlineChoiceIn(source: ListingTerrainSource): PlotOutlineCh
 }
 
 /**
+ * ADR-920 §14.11 Ζ4 — **is this the same ring?** Compared in the canonical millimetre `withPlotOutline` stores, so a drawing's
+ * ring (raw WORLD mm) and the ring a source carries (already rounded) are judged on the same spelling — never a float tolerance.
+ */
+export function samePlotOutlineRing(a: readonly PlanarPoint[], b: readonly PlanarPoint[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((p, i) => mm(p.x) === mm(b[i].x) && mm(p.y) === mm(b[i].y));
+}
+
+/**
  * The ONE serialisation of a source — what the door stores. Keys are written in a fixed order by
  * construction, so equal sources give equal bytes.
  */

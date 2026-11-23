@@ -857,7 +857,14 @@
     "removeVideo": "Remove video",
     "removeFile": "Remove file",
     "removeFiles": "Remove files",
-    "unlinkFile": "Unlink file"
+    "unlinkFile": "Unlink file",
+    "plotDrawing": {
+      "title": "Topographic plan to the trash — the outline stays",
+      "description": "The plot outline was confirmed from \"{displayName}\" ({area} m², {origin}). After moving it to the trash the outline STAYS in the relief and the listing, just as a terrain stays when the drawing it was traced from is removed. To remove it: \"Improve your listing\" → \"Survey and relief\" → \"Topographic plan\" → \"Remove outline\". There you can also restore the plan from the trash.",
+      "originDxf": "layer \"{layer}\"",
+      "originPdf": "coordinate table, page {page}",
+      "confirm": "Move to trash"
+    }
   },
   "copy": {
     "copyError": "Copy error"

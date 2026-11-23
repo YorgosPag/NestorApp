@@ -52,7 +52,8 @@ export function TerrainImproveSection({ subject, lookup }: {
   return (
     <>
       <p className="m-0 text-sm text-muted-foreground">{t(`${NS}:improve.sections.terrain.lead`)}</p>
-      <TerrainSurveyImportPanel target={subject.target} published={published} pending={<TerrainPanelPending />} />
+      <TerrainSurveyImportPanel target={subject.target} published={published} pending={<TerrainPanelPending />}
+        listingAreaM2={lookup.state === 'found' ? lookup.listing.areaSqm : null} />
     </>
   );
 }

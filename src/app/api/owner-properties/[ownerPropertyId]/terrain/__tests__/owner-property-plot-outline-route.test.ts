@@ -40,7 +40,10 @@ jest.mock('next/server', () => {
   return { NextResponse: MockNextResponse, NextRequest: class {} };
 });
 
-jest.mock('@/lib/middleware/with-rate-limit', () => ({ withHeavyRateLimit: <T>(h: T) => h }));
+jest.mock('@/lib/middleware/with-rate-limit', () => ({
+  withHeavyRateLimit: <T>(h: T) => h,
+  withStandardRateLimit: <T>(h: T) => h,
+}));
 
 const OWNER = 'user_9';
 let callerUid = OWNER;
@@ -144,7 +147,7 @@ import type { PdfPositionedPage, PdfTextItem } from '@/lib/pdf/pdf-page-text';
 import { encodeTerrainSurveyDeclaration } from '@/lib/terrain/publication/terrain-survey-declaration';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PUT, PATCH } = require('../route') as typeof import('../route');
+const { GET, PUT, PATCH } = require('../route') as typeof import('../route');
 
 const LISTING = 'oprop_a0000009-7777-4aaa-8aaa-000000000031';
 const DOSSIER = 'pdos_a0000009-7777-4aaa-8aaa-000000000032';
@@ -438,5 +441,101 @@ describe('ADR-920 §14.11 Ζ3c — αλλαγή περιγράμματος χω�
     callerUid = 'user_stranger';
     await expect(patch()).rejects.toMatchObject({ statusCode: 404 });
     expect(json).not.toHaveBeenCalled();
+  });
+});
+
+describe('ADR-920 §14.11 Ζ4 — κατάσταση περιγράμματος (GET)', () => {
+  const RING_MM = square(5, 5).map(([e, n]) => [e * 1000, n * 1000]);
+  const OTHER_RING_MM = square(2, 2).map(([e, n]) => [e * 1000, n * 1000]);
+  /** Το σχέδιο του φακέλου με επιβεβαιωμένο το τετράγωνο (5,5) — `createdAt` και κάδος ανά σενάριο. */
+  const drawingFile = (createdAt: string, trashed = false): Record<string, unknown> => ({
+    id: 'file_drawing', publicationIdentity: 'terrain/plot-drawing', entityType: 'property_dossier', status: 'ready',
+    storagePath: 'people/x/drawing.dxf', contentType: 'image/vnd.dxf', createdAt,
+    displayName: 'Τοπογραφικό Σούνιο', originalFilename: 'diagramma.dxf',
+    ...(trashed ? { isDeleted: true, lifecycleState: 'trashed' } : {}),
+    plotOutline: {
+      version: 1, ring: square(5, 5).map(([e, n]) => ({ x: e * 1000, y: n * 1000 })), showInListing: true, areaM2: 100,
+      candidateId: 'dxf:P', origin: { source: 'dxf', handle: 'P', layer: 'ΟΡΙΟ', closure: 'flag' }, drawingUnit: 'm',
+      drawingSha256: 'a'.repeat(64),
+    },
+  });
+  const publishedWith = (plotOutline: unknown): void => {
+    storedSourceBytes = JSON.stringify({ ...RELIEF_SOURCE, plotOutline });
+  };
+  interface Status {
+    hasRelief: boolean;
+    outline: { showInListing: boolean; areaM2: number; authority: string } | null;
+    drawing: { fileId: string; fileName: string; place: string; isOutlineSource: boolean; origin: unknown } | null;
+  }
+  const status = async (): Promise<Status> => {
+    const response = await GET(
+      { url: `https://x/api/owner-properties/${LISTING}/terrain`, nextUrl: { pathname: '/x' } } as never,
+      { params: Promise.resolve({ ownerPropertyId: LISTING }) } as never,
+    );
+    return (await (response as unknown as Response).json() as { data: Status }).data;
+  };
+
+  beforeEach(() => {
+    trace.length = 0;
+    siblings = [];
+    callerUid = OWNER;
+    ownerProperty = { authorUserId: OWNER, authorCompanyId: null, dossierId: DOSSIER, type: 'plot', title: 'Οικόπεδο Σούνιο' };
+    dossier = { userId: OWNER, label: 'Οικόπεδο', type: 'plot' };
+    publishedWith(null);
+    storedDeclaration = encodeTerrainSurveyDeclaration({ surveyorName: 'Α. Τοπογράφος', surveyedOn: '2026-03-14', rightsAffirmed: true });
+    jest.clearAllMocks();
+  });
+
+  it('Κ1 — άδειος φάκελος ⇒ τίποτα, και καμία εγγραφή', async () => {
+    expect(await status()).toEqual({ hasRelief: false, outline: null, drawing: null });
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it('Κ2 — μόνο σχέδιο (Π2): το περίγραμμα περιμένει το πρώτο ανάγλυφο, αρχή = σχέδιο', async () => {
+    siblings = [drawingFile('2026-11-20T10:00:00.000Z')];
+    const data = await status();
+    expect(data.hasRelief).toBe(false);
+    expect(data.outline).toMatchObject({ showInListing: true, authority: 'drawing' });
+    expect(data.outline?.areaM2).toBeCloseTo(100, 6);
+    expect(data.drawing).toMatchObject({
+      fileId: 'file_drawing', fileName: 'Τοπογραφικό Σούνιο', place: 'active', isOutlineSource: true,
+      origin: { source: 'dxf', handle: 'P', layer: 'ΟΡΙΟ', closure: 'flag' },
+    });
+  });
+
+  it('Κ3 — πηγή νεότερη από το σχέδιο: νικά η πηγή (το Π9 ΤΗΣ), και το σχέδιο μένει η προέλευση', async () => {
+    siblings = [RELIEF_FILE, drawingFile('2026-10-01T10:00:00.000Z')];
+    publishedWith({ ring: RING_MM, showInListing: false });
+    const data = await status();
+    expect(data.hasRelief).toBe(true);
+    expect(data.outline).toMatchObject({ showInListing: false, authority: 'relief' });
+    expect(data.drawing).toMatchObject({ place: 'active', isOutlineSource: true });
+  });
+
+  it('Κ4 — 🏆 σχέδιο ΣΤΟΝ ΚΑΔΟ: το περίγραμμα μένει (copy semantics) και το σχέδιο αναφέρεται ως «στον κάδο»', async () => {
+    siblings = [RELIEF_FILE, drawingFile('2026-11-20T10:00:00.000Z', true)];
+    publishedWith({ ring: RING_MM, showInListing: true });
+    const data = await status();
+    expect(data.outline).toMatchObject({ authority: 'relief', showInListing: true });
+    expect(data.drawing).toMatchObject({ fileId: 'file_drawing', place: 'trash', isOutlineSource: true });
+  });
+
+  it('Κ5 — 🔴 η πηγή κουβαλά ΑΛΛΟ περίγραμμα από του σχεδίου ⇒ isOutlineSource:false (ποτέ ψεύτικη προέλευση)', async () => {
+    siblings = [RELIEF_FILE, drawingFile('2026-10-01T10:00:00.000Z')];
+    publishedWith({ ring: OTHER_RING_MM, showInListing: true });
+    expect((await status()).drawing).toMatchObject({ isOutlineSource: false });
+  });
+
+  it('Κ6 — ρητή αφαίρεση στην πηγή (νεότερη): κανένα περίγραμμα, το σχέδιο δεν είναι πηγή κανενός', async () => {
+    siblings = [RELIEF_FILE, drawingFile('2026-10-01T10:00:00.000Z')];
+    const data = await status();
+    expect(data.outline).toBeNull();
+    expect(data.drawing).toMatchObject({ place: 'active', isOutlineSource: false });
+  });
+
+  it('Κ7 — 🔒 ξένη αγγελία ⇒ 404', async () => {
+    callerUid = 'user_stranger';
+    await expect(status()).rejects.toMatchObject({ statusCode: 404 });
   });
 });

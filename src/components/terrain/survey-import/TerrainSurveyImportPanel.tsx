@@ -21,6 +21,8 @@ import React, { useId, type ReactNode } from 'react';
 
 import { TerrainPreview } from '@/components/listing-detail/terrain/TerrainPreview';
 import { TerrainStatsList } from '@/components/listing-detail/terrain/TerrainStatsList';
+import { PlotOutlineTab } from '@/components/terrain/plot-outline/PlotOutlineTab';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTerrainSurveyImport, type TerrainSurveyImportApi } from '@/hooks/listings/useTerrainSurveyImport';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ListingTerrainCard } from '@/lib/terrain/publication/listing-terrain-card';
@@ -45,6 +47,8 @@ export interface TerrainSurveyImportPanelProps {
   readonly published: ListingTerrainCard | null;
   /** Ό,τι δείχνεται όσο φορτώνουν οι χώροι ονομάτων — ήδη μεταφρασμένο από τον φιλοξενούντα. */
   readonly pending: ReactNode;
+  /** Το εμβαδόν οικοπέδου που δηλώνει η αγγελία, m² — τεκμήριο για το περίγραμμα (Ζ4 · Π4). `null` = δεν δηλώνεται. */
+  readonly listingAreaM2: number | null;
 }
 
 /** «Αυτό θα δει ο αγοραστής» — ο χάρτης της προεπισκόπησης και οι αριθμοί του ίδιου στιγμιοτύπου. */
@@ -64,7 +68,31 @@ function BuyerView({ survey }: { readonly survey: TerrainSurveyImportApi }) {
   );
 }
 
-function TerrainSurveyImportBody({ target, published }: Omit<TerrainSurveyImportPanelProps, 'pending'>) {
+/**
+ * ADR-920 §14.11 Ζ4 — **δύο πηγές, δύο καρτέλες, ΜΙΑ ενότητα**: «Ισοϋψείς και σημεία» (το ανάγλυφο) | «Τοπογραφικό σχέδιο»
+ * (μόνο το περίγραμμα). Η δεύτερη υπάρχει μόνο για την πόρτα του ιδιοκτήτη (μόνο εκείνη έχει φάκελο, Ζ3). `forceMount` +
+ * `hidden`: η αλλαγή καρτέλας ΔΕΝ σβήνει ό,τι έχει ετοιμάσει ο άνθρωπος στην άλλη (αρχείο, στήλες, επιλογή υποψηφίου).
+ */
+function TerrainSourceTabs({ target, published, listingAreaM2 }: Omit<TerrainSurveyImportPanelProps, 'pending'>) {
+  const { t } = useTranslation([NS]);
+  if (target?.kind !== 'owner-property') return <TerrainSurveyImportBody target={target} published={published} />;
+  return (
+    <Tabs defaultValue="contours" className="flex flex-col gap-3">
+      <TabsList aria-label={t(`${NS}:tabs.label`)}>
+        <TabsTrigger value="contours">{t(`${NS}:tabs.contours`)}</TabsTrigger>
+        <TabsTrigger value="plan">{t(`${NS}:tabs.plan`)}</TabsTrigger>
+      </TabsList>
+      <TabsContent value="contours" forceMount className="data-[state=inactive]:hidden">
+        <TerrainSurveyImportBody target={target} published={published} />
+      </TabsContent>
+      <TabsContent value="plan" forceMount className="data-[state=inactive]:hidden">
+        <PlotOutlineTab target={target} listingAreaM2={listingAreaM2} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function TerrainSurveyImportBody({ target, published }: Pick<TerrainSurveyImportPanelProps, 'target' | 'published'>) {
   const { t } = useTranslation([NS]);
   const survey = useTerrainSurveyImport(target);
   const publishing = survey.publication.kind === 'publishing';
@@ -87,5 +115,5 @@ function TerrainSurveyImportBody({ target, published }: Omit<TerrainSurveyImport
 /** Το πάνελ, μόλις φορτώσουν οι χώροι ονομάτων του — ποτέ ωμά κλειδιά στο πρώτο καρέ. */
 export function TerrainSurveyImportPanel({ pending, ...props }: TerrainSurveyImportPanelProps) {
   const { isNamespaceReady } = useTranslation(TERRAIN_SURVEY_IMPORT_NAMESPACES);
-  return isNamespaceReady ? <TerrainSurveyImportBody {...props} /> : <>{pending}</>;
+  return isNamespaceReady ? <TerrainSourceTabs {...props} /> : <>{pending}</>;
 }

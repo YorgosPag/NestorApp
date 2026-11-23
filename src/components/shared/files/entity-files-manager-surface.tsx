@@ -52,6 +52,7 @@ import {
   buildPropertyFileDeletePreview,
   buildPropertyFileUnlinkPreview,
 } from '@/services/property/property-file-mutation-preview';
+import { buildPlotDrawingTrashPreview } from '@/services/property-dossier/plot-drawing-trash-preview';
 import { unlinkFileFromEntityWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { fileCustodyKindOf, type FileCustody } from '@/lib/files/file-custody';
@@ -238,18 +239,15 @@ export function EntityFilesManagerSurface({
     }
     const name = getFileName(fileId);
     const remainingFiles = files.filter((file) => file.id !== fileId);
-    if (entityType === 'property') {
-      const preview = buildPropertyFileDeletePreview({
-        category,
-        file,
-        remainingFiles,
-        t,
-      });
-      if (preview) {
-        const confirmed = await confirm(preview);
-        if (!confirmed) {
-          return;
-        }
+    // ADR-920 §14.11 Ζ4 — τοπογραφικό σχέδιο με επιβεβαιωμένο περίγραμμα: ο διάλογος ΛΕΕΙ ότι το περίγραμμα μένει
+    // (copy semantics, Revit/Civil 3D/Figma), από πού ήρθε και πού αφαιρείται.
+    const preview = entityType === 'property'
+      ? buildPropertyFileDeletePreview({ category, file, remainingFiles, t })
+      : buildPlotDrawingTrashPreview(file, t);
+    if (preview) {
+      const confirmed = await confirm(preview);
+      if (!confirmed) {
+        return;
       }
     }
     await deleteFile(fileId, currentUserId);

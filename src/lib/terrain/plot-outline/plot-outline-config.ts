@@ -89,3 +89,11 @@ export const PLOT_DRAWING_MAX_BYTES = {
   dxf: UPLOAD_LIMITS.MAX_FILE_SIZE,
   pdf: DOCUMENT_TEXT_MAX_BYTES,
 } as const;
+
+/**
+ * Ζ4 — how many PDF pages are searched for a coordinate table, by the server (`PUT`) AND by the device (the owner's
+ * preview). ONE number: if the device read more pages than the server, it would offer a candidate the door then refuses
+ * (`TERRAIN_PLOT_OUTLINE_NOT_IN_DRAWING`). 10 = the server's long-standing text ceiling (`pdf-rasterize.service`); a
+ * topographic diagram is one or two sheets.
+ */
+export const PLOT_DRAWING_MAX_PDF_PAGES = 10;

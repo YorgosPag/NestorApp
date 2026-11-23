@@ -12,18 +12,10 @@
  * 🔒 Το κείμενο δεν γράφεται σε log ούτε σε κατάσταση πέρα από τις γραμμές του αναγνώστη (που δεν έχουν ΑΦΜ/ονόματα).
  */
 
-import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
-
-import { loadPdfJs, type PdfDocProxy, type PdfPageProxy } from '@/components/file-manager/pdf-canvas-config';
+import { readPdfPagesOnDevice, type DevicePdfPage } from '@/components/file-manager/pdf-device-pages';
 import type { ObjectiveValueEvidenceDocument } from '@/config/objective-value/objective-value-evidence';
 import { deviceReaderOf, type ObjectiveValueDocumentRow } from '@/lib/objective-value/objective-value-device-readers';
-import {
-  DOCUMENT_TEXT_MAX_BYTES,
-  hasReadableText,
-  pageTextOf,
-  positionedPageOf,
-  type PdfPositionedPage,
-} from '@/lib/pdf/pdf-page-text';
+import { DOCUMENT_TEXT_MAX_BYTES, hasReadableText } from '@/lib/pdf/pdf-page-text';
 
 /** Η έκβαση μιας ανάγνωσης — το λεξιλόγιο της οθόνης. */
 export type DeviceReadingOutcome =
@@ -38,52 +30,9 @@ export type DeviceReadingOutcome =
 const PDF_TYPE = 'application/pdf';
 const PDF_EXTENSION = /\.pdf$/i;
 
-interface ReadPage {
-  readonly positioned: PdfPositionedPage;
-  readonly text: string;
-}
-
-function isTextItem(item: TextContent['items'][number]): item is TextItem {
-  return 'str' in item;
-}
-
-async function readPage(page: PdfPageProxy, pageNumber: number): Promise<ReadPage> {
-  const viewport = page.getViewport({ scale: 1 });
-  const { items } = await page.getTextContent();
-  const textItems = items.filter(isTextItem);
-  // Η ΜΙΑ μετατροπή σε συντεταγμένες οθόνης — η ίδια που τρέχει ο server (ADR-920 §14.11 Ζ3).
-  return { positioned: positionedPageOf(pageNumber, viewport, textItems), text: pageTextOf(textItems) };
-}
-
-async function readPages(doc: PdfDocProxy, maxPages: number): Promise<readonly ReadPage[]> {
-  const pages: ReadPage[] = [];
-  for (let pageNumber = 1; pageNumber <= Math.min(doc.numPages, maxPages); pageNumber += 1) {
-    const page = await doc.getPage(pageNumber);
-    try {
-      pages.push(await readPage(page, pageNumber));
-    } finally {
-      page.cleanup();
-    }
-  }
-  return pages;
-}
-
-/** Οι σελίδες του PDF — ή `null` όταν το pdf.js δεν το ανοίγει (χαλασμένο · κρυπτογραφημένο · όχι PDF). */
-async function pagesOf(file: File, maxPages: number): Promise<readonly ReadPage[] | null> {
-  const pdfjs = await loadPdfJs();
-  let doc: PdfDocProxy;
-  try {
-    doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
-  } catch {
-    return null;
-  }
-  try {
-    return await readPages(doc, maxPages);
-  } catch {
-    return null;
-  } finally {
-    await doc.destroy();
-  }
+/** Οι σελίδες του PDF — η ΜΙΑ συνταγή της συσκευής (`pdf-device-pages`, κοινή με το τοπογραφικό, ADR-920 §14.11 Ζ4). */
+async function pagesOf(file: File, maxPages: number): Promise<readonly DevicePdfPage[] | null> {
+  return readPdfPagesOnDevice(new Uint8Array(await file.arrayBuffer()), maxPages);
 }
 
 function isPdf(file: File): boolean {

@@ -18,7 +18,9 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { normalizeToISO } from '@/lib/date-local';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isInTrash } from '@/lib/files/file-trash-state';
 import { isDeliverableListingFile } from '@/lib/listings/listing-file-deliverability';
 import { TOPOGRAPHIC_DRAWING_IDENTITY } from '@/lib/listings/topographic-drawing-file-record';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -27,9 +29,12 @@ import {
   readConfirmedPlotOutline,
   type ConfirmedPlotOutline,
 } from '@/lib/terrain/plot-outline/plot-outline-confirmation';
+import { ringAreaM2 } from '@/lib/terrain/plot-outline/plot-outline-area';
+import type { PlotDrawingPlace, PlotDrawingSummary, PlotOutlineStatus } from '@/lib/terrain/plot-outline/plot-outline-status';
 import {
   parseListingTerrainSource,
   plotOutlineChoiceIn,
+  samePlotOutlineRing,
   type ListingTerrainSource,
   type PlotOutlineChoice,
 } from '@/lib/terrain/publication/listing-terrain-source';
@@ -142,19 +147,28 @@ async function downloadDossierTerrainSource(
   }
 }
 
+/** Οι δύο διεκδικητές του φακέλου. */
+interface DossierTerrainRecords {
+  readonly drawing: DossierTerrainFile | null;
+  readonly relief: DossierTerrainFile | null;
+}
+
+function terrainRecordsIn(files: readonly DossierTerrainFile[]): DossierTerrainRecords {
+  return { drawing: newestDrawing(files), relief: currentTerrainSourceRecord(files, ENTITY_TYPES.PROPERTY_DOSSIER) };
+}
+
 /** Οι δύο διεκδικητές του φακέλου, από **ένα** ερώτημα. */
 async function dossierTerrainRecords(
   adminDb: AdminFirestore,
   dossier: Pick<PropertyDossier, 'id' | 'userId'>,
   code: string,
-): Promise<{ readonly drawing: DossierTerrainFile | null; readonly relief: DossierTerrainFile | null }> {
-  const files = await readFilesOr(adminDb, dossier, code);
-  return { drawing: newestDrawing(files), relief: currentTerrainSourceRecord(files, ENTITY_TYPES.PROPERTY_DOSSIER) };
+): Promise<DossierTerrainRecords> {
+  return terrainRecordsIn(await readFilesOr(adminDb, dossier, code));
 }
 
 /** Το περίγραμμα του νικητή — η πηγή διαβάζεται μόνο όταν νικά η ίδια. */
 async function effectivePlotOutline(
-  records: Awaited<ReturnType<typeof dossierTerrainRecords>>,
+  records: DossierTerrainRecords,
   dossierId: string,
   sourceOf: (relief: DossierTerrainFile) => Promise<CurrentDossierTerrainSource>,
 ): Promise<PlotOutlineChoice | null> {
@@ -206,4 +220,65 @@ export async function loadCurrentDossierTerrainSource(
 ): Promise<CurrentDossierTerrainSource | null> {
   const { relief } = await dossierTerrainRecords(adminDb, dossier, UNREADABLE_SOURCE);
   return relief === null ? null : downloadDossierTerrainSource(relief, dossier.id);
+}
+
+// ─── ADR-920 §14.11 Ζ4 — η κατάσταση που βλέπει ο ιδιοκτήτης (`GET …/terrain`) ─────────────────────────────────────────
+
+/** Πού είναι ένα σχέδιο: ενεργό, στον κάδο (επαναφέρεται) — ή τίποτα από τα δύο (αρχειοθετημένο από διάδοχο · εκκαθαρισμένο). */
+function drawingPlaceOf(file: DossierTerrainFile): PlotDrawingPlace | null {
+  if (isDeliverableListingFile(file, ENTITY_TYPES.PROPERTY_DOSSIER)) return 'active';
+  return isInTrash({ lifecycleState: file.lifecycleState, isDeleted: file.isDeleted }) ? 'trash' : null;
+}
+
+/** Το σχέδιο που αναφέρεται: το νεότερο **ενεργό** (αυτό διεκδικεί)· αλλιώς το νεότερο **στον κάδο** (το Figma «Restore»). */
+function reportedDrawing(files: readonly DossierTerrainFile[], active: DossierTerrainFile | null): DossierTerrainFile | null {
+  if (active !== null) return active;
+  let winner: DossierTerrainFile | null = null;
+  for (const file of files) {
+    if (file.publicationIdentity !== TOPOGRAPHIC_DRAWING_IDENTITY || drawingPlaceOf(file) !== 'trash') continue;
+    if (winner === null || compareAgencyMediaForPublication(winner, file) < 0) winner = file;
+  }
+  return winner;
+}
+
+function drawingSummaryOf(file: DossierTerrainFile, dossierId: string, inForce: PlotOutlineChoice | null): PlotDrawingSummary {
+  const confirmed = confirmedOutlineOfDrawing(file, dossierId);
+  return {
+    fileId: file.id,
+    fileName: file.displayName?.trim() || file.originalFilename,
+    createdAt: normalizeToISO(file.createdAt),
+    place: drawingPlaceOf(file) ?? 'trash',
+    candidateId: confirmed.candidateId,
+    origin: confirmed.origin,
+    drawingUnit: confirmed.drawingUnit,
+    drawingSha256: confirmed.drawingSha256,
+    areaM2: confirmed.areaM2,
+    isOutlineSource: inForce !== null && samePlotOutlineRing(confirmed.ring, inForce.ringWorldMm),
+  };
+}
+
+/**
+ * **Τι ξέρει ο φάκελος για το περίγραμμα, όπως το δείχνει η καρτέλα «Τοπογραφικό»** (Ζ4). Ένα ερώτημα, ο **ίδιος** κανόνας
+ * «νικά η νεότερη απόφαση» με τη δημοσίευση (η πηγή κατεβαίνει μόνο αν νικά) — ο browser δεν τον ξαναϋπολογίζει ποτέ.
+ * Fail-closed όπως όλος ο αναγνώστης: ό,τι δεν διαβάζεται ⇒ 503 με όνομα, ποτέ «κανένα περίγραμμα».
+ */
+export async function loadDossierPlotOutlineStatus(
+  adminDb: AdminFirestore,
+  dossier: Pick<PropertyDossier, 'id' | 'userId'>,
+): Promise<PlotOutlineStatus> {
+  const files = await readFilesOr(adminDb, dossier, UNREADABLE_OUTLINE);
+  const records = terrainRecordsIn(files);
+  const authority = plotOutlineAuthorityOf(records.drawing, records.relief);
+  const inForce = await effectivePlotOutline(records, dossier.id, (relief) => downloadDossierTerrainSource(relief, dossier.id));
+  const drawing = reportedDrawing(files, records.drawing);
+
+  return {
+    hasRelief: records.relief !== null,
+    outline: inForce === null || authority === null ? null : {
+      showInListing: inForce.showInListing,
+      areaM2: ringAreaM2(inForce.ringWorldMm),
+      authority: authority.kind,
+    },
+    drawing: drawing === null ? null : drawingSummaryOf(drawing, dossier.id, inForce),
+  };
 }

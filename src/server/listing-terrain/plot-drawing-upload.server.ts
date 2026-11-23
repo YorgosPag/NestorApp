@@ -24,17 +24,21 @@ import type { TopographicDrawingKind } from '@/lib/listings/topographic-drawing-
 import type { PdfPositionedPage } from '@/lib/pdf/pdf-page-text';
 import { dxfPlotOutlineCandidates, scanDxfPlotDrawing } from '@/lib/terrain/plot-outline/dxf-plot-outline-candidates';
 import { readPdfPlotOutline } from '@/lib/terrain/plot-outline/pdf-coordinate-table';
-import { PLOT_DRAWING_MAX_BYTES } from '@/lib/terrain/plot-outline/plot-outline-config';
+import {
+  dxfDeclaresUnit,
+  dxfDrawingScaleToMm,
+  plotDrawingKindOf,
+  type PlotDrawingRefusal,
+} from '@/lib/terrain/plot-outline/plot-drawing-read';
+import { PLOT_DRAWING_MAX_BYTES, PLOT_DRAWING_MAX_PDF_PAGES } from '@/lib/terrain/plot-outline/plot-outline-config';
 import {
   parsePlotOutlineConfirmationRequest,
   type PlotOutlineConfirmationRequest,
 } from '@/lib/terrain/plot-outline/plot-outline-confirmation';
 import type { PlotOutlineCandidate } from '@/lib/terrain/plot-outline/plot-outline-types';
 import { PLOT_OUTLINE_CONFIRM_FIELDS } from '@/lib/terrain/publication/terrain-publication-contract';
-import { surveyFileKindOf, SURVEY_FILE_SNIFF_BYTES } from '@/lib/terrain/survey-import/survey-file-kind';
 import { decodeSurveyText } from '@/lib/terrain/survey-import/survey-file-read';
-import { declaredDxfScaleToMm } from '@/lib/terrain/survey-import/survey-points';
-import { TOPO_UNIT_SCALE_TO_MM, isTopoUnit, type TopoUnit } from '@/lib/terrain/survey-import/topo-import-types';
+import { isTopoUnit, type TopoUnit } from '@/lib/terrain/survey-import/topo-import-types';
 import { readPdfPositionedPages } from '@/services/pdf/pdf-positioned-text.service';
 
 /** Το σχέδιο όπως το κράτησε ο server — bytes, είδος και αποτύπωμα, όλα μετρημένα εδώ. */
@@ -55,12 +59,20 @@ export interface PlotDrawingChoice {
   readonly drawingUnit: TopoUnit | null;
 }
 
-/** Το είδος από τα πρώτα bytes — DXF ή PDF, αλλιώς ονομασμένη άρνηση (το DWG με τη δική του οδηγία). */
+/** Η άρνηση του ΚΟΙΝΟΥ κριτή είδους → ο κωδικός της πόρτας (ίδιο λεξιλόγιο με τη συσκευή, Ζ4). */
+const KIND_REFUSAL_ERRORS: Readonly<Record<PlotDrawingRefusal, readonly [number, string]>> = {
+  empty: [400, 'TERRAIN_DRAWING_EMPTY'],
+  'too-large': [413, 'TERRAIN_DRAWING_TOO_LARGE'],
+  dwg: [415, 'TERRAIN_DRAWING_DWG'],
+  unsupported: [415, 'TERRAIN_DRAWING_TYPE_UNSUPPORTED'],
+};
+
+/** Το είδος από τα πρώτα bytes, με τον ΙΔΙΟ κριτή της συσκευής — DXF ή PDF, αλλιώς ονομασμένη άρνηση. */
 function drawingKindOf(fileName: string, bytes: Uint8Array): TopographicDrawingKind {
-  const kind = surveyFileKindOf(fileName, bytes.subarray(0, SURVEY_FILE_SNIFF_BYTES));
-  if (kind === 'dxf' || kind === 'pdf') return kind;
-  if (kind === 'dwg') throw new ApiError(415, 'TERRAIN_DRAWING_DWG');
-  throw new ApiError(415, 'TERRAIN_DRAWING_TYPE_UNSUPPORTED');
+  const verdict = plotDrawingKindOf(fileName, bytes);
+  if (verdict.ok) return verdict.kind;
+  const [status, code] = KIND_REFUSAL_ERRORS[verdict.refusal];
+  throw new ApiError(status, code);
 }
 
 /** Το αρχείο του σχεδίου: παρόν, μη κενό, γνωστό είδος, κάτω από το ταβάνι **του είδους του**. */
@@ -72,7 +84,6 @@ async function readDrawing(formData: FormData): Promise<PlotDrawingUpload> {
   if (file.size > Math.max(PLOT_DRAWING_MAX_BYTES.dxf, PLOT_DRAWING_MAX_BYTES.pdf)) throw new ApiError(413, 'TERRAIN_DRAWING_TOO_LARGE');
   const bytes = new Uint8Array(await file.arrayBuffer());
   const kind = drawingKindOf(file.name, bytes);
-  if (bytes.byteLength > PLOT_DRAWING_MAX_BYTES[kind]) throw new ApiError(413, 'TERRAIN_DRAWING_TOO_LARGE');
   return { bytes, kind, fileName: file.name, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
 
@@ -90,17 +101,16 @@ interface DrawingCandidates {
 /** DXF → υποψήφια, WORLD mm. Η μονάδα: του αρχείου (`$INSUNITS`) αν τη δηλώνει, αλλιώς του ανθρώπου — ποτέ μαντεψιά. */
 function dxfCandidates(drawing: PlotDrawingUpload, unit: TopoUnit | null): DrawingCandidates {
   const scanned = scanDxfPlotDrawing(decodeSurveyText(drawing.bytes));
-  const declared = declaredDxfScaleToMm(scanned.declaredInsunits);
-  const scaleToMm = declared ?? (unit === null ? null : TOPO_UNIT_SCALE_TO_MM[unit]);
+  const scaleToMm = dxfDrawingScaleToMm(scanned.declaredInsunits, unit);
   if (scaleToMm === null) throw new ApiError(422, 'TERRAIN_DRAWING_UNIT_REQUIRED');
-  return { candidates: dxfPlotOutlineCandidates(scanned, scaleToMm).candidates, drawingUnit: declared === null ? unit : null };
+  return { candidates: dxfPlotOutlineCandidates(scanned, scaleToMm).candidates, drawingUnit: dxfDeclaresUnit(scanned) ? null : unit };
 }
 
 /** PDF → υποψήφια από τον πίνακα συντεταγμένων (Π5). PDF που δεν ανοίγει ⇒ ίδια άρνηση με «χωρίς πίνακα». */
 async function pdfCandidates(drawing: PlotDrawingUpload): Promise<DrawingCandidates> {
   let pages: PdfPositionedPage[];
   try {
-    pages = await readPdfPositionedPages(drawing.bytes);
+    pages = await readPdfPositionedPages(drawing.bytes, { maxPages: PLOT_DRAWING_MAX_PDF_PAGES });
   } catch {
     throw new ApiError(422, 'TERRAIN_DRAWING_UNREADABLE');
   }

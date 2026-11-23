@@ -61,7 +61,8 @@ const requestSchema = z.object({
 
 const coordinate = z.number().finite().min(-LISTING_TERRAIN_SOURCE_MAX_ABS_MM).max(LISTING_TERRAIN_SOURCE_MAX_ABS_MM);
 
-const originSchema = z.discriminatedUnion('source', [
+/** Where a confirmed outline was found — the ONE schema (the record, and the status the door reports, Ζ4). */
+export const plotOutlineOriginSchema = z.discriminatedUnion('source', [
   z.object({
     source: z.literal('dxf'),
     handle: z.string().nullable(),
@@ -71,15 +72,20 @@ const originSchema = z.discriminatedUnion('source', [
   z.object({ source: z.literal('pdf-table'), page: z.number().int().positive() }),
 ]);
 
+/** The confirmed facts of a drawing that are NOT its ring — shared with the status the door reports (Ζ4). */
+export const confirmedDrawingFactsShape = {
+  areaM2: z.number().finite().positive(),
+  candidateId: z.string().min(1).max(MAX_CANDIDATE_ID_LENGTH),
+  origin: plotOutlineOriginSchema,
+  drawingUnit: z.custom<TopoUnit>(isTopoUnit).nullable(),
+  drawingSha256: z.string().regex(/^[0-9a-f]{64}$/),
+} as const;
+
 const confirmedSchema = z.object({
   version: z.literal(CONFIRMED_PLOT_OUTLINE_VERSION),
   ring: z.array(z.object({ x: coordinate, y: coordinate })).min(3).max(LISTING_TERRAIN_SOURCE_MAX_RING_VERTICES),
   showInListing: z.boolean(),
-  areaM2: z.number().finite().positive(),
-  candidateId: z.string().min(1).max(MAX_CANDIDATE_ID_LENGTH),
-  origin: originSchema,
-  drawingUnit: z.custom<TopoUnit>(isTopoUnit).nullable(),
-  drawingSha256: z.string().regex(/^[0-9a-f]{64}$/),
+  ...confirmedDrawingFactsShape,
 });
 
 /** The browser's JSON (a multipart string field) → the request, or `null` for anything that is not exactly one. */

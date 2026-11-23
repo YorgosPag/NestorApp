@@ -40,7 +40,10 @@ jest.mock('next/server', () => {
   return { NextResponse: MockNextResponse, NextRequest: class {} };
 });
 
-jest.mock('@/lib/middleware/with-rate-limit', () => ({ withHeavyRateLimit: <T>(h: T) => h }));
+jest.mock('@/lib/middleware/with-rate-limit', () => ({
+  withHeavyRateLimit: <T>(h: T) => h,
+  withStandardRateLimit: <T>(h: T) => h,
+}));
 
 const OWNER = 'user_9';
 let callerUid = OWNER;

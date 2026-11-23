@@ -1,11 +1,12 @@
 /**
- * @fileoverview **POST · PUT · PATCH /api/owner-properties/[ownerPropertyId]/terrain** — το τοπογραφικό της αγγελίας οικοπέδου ιδιοκτήτη.
+ * @fileoverview **GET · POST · PUT · PATCH /api/owner-properties/[ownerPropertyId]/terrain** — το τοπογραφικό της αγγελίας οικοπέδου ιδιοκτήτη.
  * @related ADR-920 Β4.3 · §14.11 Ζ3 · app/api/properties/[id]/terrain/route (η αδελφή του γραφείου) ·
  *   server/listing-material/publish-owner-property-material (το υποκείμενο) · server/listing-terrain/terrain-upload.server ·
  *   server/listing-terrain/plot-outline-confirmation.server (το σκέλος επιβεβαίωσης περιγράμματος)
  * @module app/api/owner-properties/[ownerPropertyId]/terrain/route
  *
  * ```
+ * GET  — κατάσταση περιγράμματος (§14.11 Ζ4): ισχύον · ποιος κρατά την απόφαση · νεότερο σχέδιο + προέλευση (και στον κάδο)
  * POST — φόρμα ιδιοκτήτη (Β4.7): σημεία + όριο + αποτύπωμα (JSON) + δήλωση Δ2
  *   → υποκείμενο: κηδεμονία (ξένη ⇒ 404) · φάκελος του ίδιου ανθρώπου (αλλιώς TERRAIN_NO_DOSSIER)
  *   → κοινός κώδικας εδάφους: σχήμα · δήλωση · «είναι γη;» · ΤΟ ΠΕΡΙΓΡΑΜΜΑ ΠΟΥ ΙΣΧΥΕΙ ΣΤΟΝ ΦΑΚΕΛΟ (Ζ3c) · ο ΕΝΑΣ κριτής
@@ -31,7 +32,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { withPersonalOrOrgAuth, type ApiActor } from '@/lib/auth/personal-scope-middleware';
 import { auditLedgerScopeOf } from '@/lib/audit/audit-ledger';
 import { buildPublishedTerrainFileRecord } from '@/lib/listings/terrain-file-record';
-import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
+import { withHeavyRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { custodyOf, custodyWorkspace } from '@/lib/owner-property/listing-custody';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -43,7 +44,8 @@ import {
   type OwnerMaterialDoorEnv,
   type OwnerMaterialPublicationDoor,
 } from '@/server/listing-material/publish-owner-property-material';
-import { loadDossierPlotOutline } from '@/server/listing-terrain/dossier-terrain.reader';
+import type { PlotOutlineStatus } from '@/lib/terrain/plot-outline/plot-outline-status';
+import { loadDossierPlotOutline, loadDossierPlotOutlineStatus } from '@/server/listing-terrain/dossier-terrain.reader';
 import {
   amendOwnerPlotOutline,
   confirmOwnerPlotOutline,
@@ -187,6 +189,23 @@ async function amendHandler(
 
   return apiSuccess<PlotOutlineAmendmentResponse>(amended);
 }
+
+/**
+ * **GET — τι ξέρει ο φάκελος για το περίγραμμα** (ADR-920 §14.11 Ζ4): ισχύον περίγραμμα, ποιος κρατά την απόφαση, το
+ * νεότερο σχέδιο (και στον κάδο) με την προέλευσή του. Μόνο ανάγνωση· ίδιος φρουρός κηδεμονίας/φακέλου με τις πράξεις.
+ */
+async function statusHandler(
+  _request: NextRequest,
+  actor: ApiActor,
+  context?: RouteContext,
+): Promise<NextResponse<ApiSuccessResponse<PlotOutlineStatus>>> {
+  const env = await enterOwnerDoor(await ownerPropertyIdOf(context), actor, TERRAIN_DOOR);
+  return apiSuccess<PlotOutlineStatus>(await loadDossierPlotOutlineStatus(env.adminDb, env.dossier));
+}
+
+export const GET = withStandardRateLimit(
+  withPersonalOrOrgAuth<ApiSuccessResponse<PlotOutlineStatus>, RouteContext>(statusHandler),
+);
 
 export const POST = withHeavyRateLimit(
   withPersonalOrOrgAuth<ApiSuccessResponse<TerrainPublicationResponse>, RouteContext>(handler),

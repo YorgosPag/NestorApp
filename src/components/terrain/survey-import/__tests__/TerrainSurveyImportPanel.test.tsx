@@ -31,6 +31,11 @@ jest.mock('@/i18n/hooks/useTranslation', () => {
   return { useTranslation: () => ({ t, isNamespaceReady: ready.current, i18n: { language: 'el' } }) };
 });
 jest.mock('@/lib/api/enterprise-api-client', () => ({ apiClient: { post: jest.fn() } }));
+// ADR-920 §14.11 Ζ4 — η καρτέλα «Τοπογραφικό σχέδιο» έχει δικές της σουίτες· εδώ κρίνεται η ροή των ισοϋψών (η καρτέλα
+// μένει στο DOM με `forceMount`, άρα χωρίς stub θα έφερνε δεύτερη ζώνη αρχείων και αιτήματα `GET`).
+jest.mock('@/components/terrain/plot-outline/PlotOutlineTab', () => ({
+  PlotOutlineTab: () => <p>plot-outline-tab</p>,
+}));
 
 /** Η ζώνη μεταφοράς: ένα κουμπί που «αφήνει» το επόμενο αρχείο. */
 const dropped: { file: SurveyFileInput | null } = { file: null };
@@ -59,7 +64,9 @@ beforeEach(() => {
 });
 
 function renderPanel(target: TerrainPublishTarget | null = TARGET, published: ListingTerrainCard | null = null) {
-  return render(<TerrainSurveyImportPanel target={target} published={published} pending={<p>pending</p>} />);
+  return render(
+    <TerrainSurveyImportPanel target={target} published={published} pending={<p>pending</p>} listingAreaM2={null} />,
+  );
 }
 
 async function drop(file: SurveyFileInput) {

@@ -314,6 +314,11 @@
        drop; the card names both in text. Consumers: terrain-map-palette.ts (2D) · 3d/terrain-3d-palette.ts (3D). */
     --terrain-inspect-contour: 294.7 72.4% 39.8%; /* #a21caf — 6.3:1 vs paper */
     --terrain-water: 201.3 96.4% 32.2%;           /* #0369a1 — 5.9:1 vs paper */
+    /* PLOT OUTLINE (ADR-920 §14.11 Ζ4 · Ζ5) — the property line, on the same white paper (identical in the dark block):
+       RED in the convention of every cadastral and topographic plan. Never by colour alone (CHECK 3.41): it is drawn
+       DASH-DOT, the property-line linetype of CAD, and named in text. Consumers: terrain-map-palette.ts (the drawing view
+       and the 2D map) · 3d/terrain-3d-palette.ts (3D). */
+    --terrain-plot-outline: 0 73.7% 41.8%;        /* #b91c1c — 6.5:1 vs paper */
 
     /* ENERGY CLASS SCALE (ADR-777 §8.94) — the nine steps of the Greek EPC (ΠΕΑ, KENAK): A+ best … G worst
        (shown as Α+ … Η). ORDINAL, not categorical: this is NOT --chart-N (identity palette) and must not
@@ -576,6 +581,7 @@
     /* TERRAIN INSPECTOR — identical to light on purpose (white paper in both themes, see the light block). */
     --terrain-inspect-contour: 294.7 72.4% 39.8%; /* #a21caf — 6.3:1 vs paper */
     --terrain-water: 201.3 96.4% 32.2%;           /* #0369a1 — 5.9:1 vs paper */
+    --terrain-plot-outline: 0 73.7% 41.8%;        /* #b91c1c — 6.5:1 vs paper (see the light block) */
 
     /* ENERGY CLASS SCALE — identical to light on purpose: one luminance band clears 3:1 against --card
        in both themes (measured; see the light block). */
