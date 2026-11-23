@@ -22,6 +22,7 @@ import {
   LISTING_TERRAIN_SOURCE_MAX_BYTES,
   LISTING_TERRAIN_SOURCE_MAX_POINTS,
 } from './listing-terrain-config';
+import { PLOT_DRAWING_MAX_BYTES } from '../plot-outline/plot-outline-config';
 import type { ListingTerrainRejection } from './listing-terrain-types';
 
 /** Multipart field names. The browser sends nothing else. */
@@ -35,6 +36,20 @@ export const TERRAIN_UPLOAD_FIELDS = {
 } as const;
 
 /**
+ * ADR-920 §14.11 Ζ3 — the multipart fields of «Confirm the plot outline» (`PUT` on the owner's terrain door).
+ * 🔑 The browser names a CANDIDATE, never a ring: the server re-reads the drawing with the SAME Ζ1 core and takes the ring
+ * from its own reading. A ring sent by a browser is a claim; a candidate the server found in the bytes is evidence.
+ */
+export const PLOT_OUTLINE_CONFIRM_FIELDS = {
+  /** The surveyor's drawing (DXF or PDF) as uploaded — kept in the dossier as the human's document (Π3). */
+  drawing: 'drawing',
+  /** JSON `{ candidateId, showInListing }` — the candidate the human confirmed (Π4) and the public choice (Π9). */
+  choice: 'plotOutline',
+  /** Only for a DXF that declares no `$INSUNITS`: the unit the human confirmed (`m` | `mm` | `ft`), as for the points. */
+  drawingUnit: 'drawingUnit',
+} as const;
+
+/**
  * The values the refusal messages interpolate (`terrain-survey:publish.refusals`) — DERIVED from the config, so the copy
  * never restates a number that could drift. Every screen that names a refusal passes exactly these (ADR-920 Β4.9).
  */
@@ -42,6 +57,8 @@ export const TERRAIN_REFUSAL_MESSAGE_LIMITS = {
   maxMegabytes: LISTING_TERRAIN_SOURCE_MAX_BYTES / (1024 * 1024),
   maxPoints: LISTING_TERRAIN_SOURCE_MAX_POINTS,
   maxTriangles: LISTING_TERRAIN_MAX_TRIANGLES,
+  dxfMaxMegabytes: PLOT_DRAWING_MAX_BYTES.dxf / (1024 * 1024),
+  pdfMaxMegabytes: PLOT_DRAWING_MAX_BYTES.pdf / (1024 * 1024),
 } as const;
 
 /** The only content type the door accepts for the source. */
@@ -67,6 +84,23 @@ export const TERRAIN_REFUSAL_CODES = [
   'TERRAIN_PUBLICATION_NOT_CAPABLE',
   'TERRAIN_NO_DOSSIER',
   'TERRAIN_UPLOAD_FAILED',
+  // The plot outline (ADR-920 §14.11 Ζ3): the drawing, the choice, and the confirmed outline of the dossier.
+  'TERRAIN_DRAWING_REQUIRED',
+  'TERRAIN_DRAWING_EMPTY',
+  'TERRAIN_DRAWING_TYPE_UNSUPPORTED',
+  'TERRAIN_DRAWING_DWG',
+  'TERRAIN_DRAWING_TOO_LARGE',
+  'TERRAIN_DRAWING_UNIT_REQUIRED',
+  'TERRAIN_DRAWING_UNREADABLE',
+  'TERRAIN_PLOT_OUTLINE_INVALID',
+  'TERRAIN_PLOT_OUTLINE_NOT_IN_DRAWING',
+  'TERRAIN_PLOT_OUTLINE_DISJOINT',
+  'TERRAIN_PLOT_OUTLINE_UNREADABLE',
+  'TERRAIN_CURRENT_SOURCE_UNREADABLE',
+  // Changing the outline WITHOUT a new drawing (ADR-920 §14.11 Ζ3c — Π9 visibility · explicit removal).
+  'TERRAIN_PLOT_OUTLINE_AMENDMENT_INVALID',
+  'TERRAIN_PLOT_OUTLINE_NO_RELIEF',
+  'TERRAIN_PLOT_OUTLINE_NONE',
 ] as const;
 
 export type TerrainRefusalCode = (typeof TERRAIN_REFUSAL_CODES)[number];

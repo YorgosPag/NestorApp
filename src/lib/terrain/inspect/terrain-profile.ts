@@ -17,7 +17,7 @@ import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import { elevationAt, type TerrainInspectIndex } from './terrain-inspect-index';
 
 /** A station of the profile: distance along the line, plan position, elevation (`null` off the surface). */
-interface ProfileStation {
+export interface ProfileStation {
   readonly s: number;
   readonly x: number;
   readonly y: number;
@@ -25,7 +25,7 @@ interface ProfileStation {
 }
 
 /** The ground between two consecutive stations — planar, so ONE grade describes it. */
-interface ProfilePiece {
+export interface ProfilePiece {
   readonly fromS: number;
   readonly toS: number;
   readonly onSurface: boolean;
@@ -113,16 +113,33 @@ function totalsOf(stations: readonly ProfileStation[], pieces: readonly ProfileP
   return totals;
 }
 
-/** The profile of the line A → B (snapshot frame), or `null` when the line is shorter than {@link PROFILE_MIN_LENGTH_M}. */
-export function terrainProfileOf(index: TerrainInspectIndex, a: PlanarPoint, b: PlanarPoint): TerrainProfile | null {
+/** The exact trace of a segment on the surface: its stations and the planar pieces between them. */
+export interface ProfileTrace {
+  readonly stations: readonly ProfileStation[];
+  readonly pieces: readonly ProfilePiece[];
+}
+
+/**
+ * **The ONE «segment on the TIN»** (ADR-920 §14.11 Π7 extracted it from {@link terrainProfileOf}): a station at both
+ * ends and at every mesh-edge crossing, each piece on or off the surface. No minimum length — the profile tool's
+ * «too short to be a profile» is a UI rule; the plot outline drapes every edge, however short (a tessellated arc).
+ */
+export function profileTraceOf(index: TerrainInspectIndex, a: PlanarPoint, b: PlanarPoint): ProfileTrace {
   const lengthM = Math.hypot(b.x - a.x, b.y - a.y);
-  if (lengthM < PROFILE_MIN_LENGTH_M) return null;
   const stations = crossingsOf(index, a, b).map((t): ProfileStation => {
     const x = a.x + t * (b.x - a.x);
     const y = a.y + t * (b.y - a.y);
     return { s: t * lengthM, x, y, z: elevationAt(index, x, y)?.z ?? null };
   });
   const pieces = stations.slice(1).map((to, i) => pieceOf(index, stations[i], to));
+  return { stations, pieces };
+}
+
+/** The profile of the line A → B (snapshot frame), or `null` when the line is shorter than {@link PROFILE_MIN_LENGTH_M}. */
+export function terrainProfileOf(index: TerrainInspectIndex, a: PlanarPoint, b: PlanarPoint): TerrainProfile | null {
+  const lengthM = Math.hypot(b.x - a.x, b.y - a.y);
+  if (lengthM < PROFILE_MIN_LENGTH_M) return null;
+  const { stations, pieces } = profileTraceOf(index, a, b);
   return { a, b, lengthM, stations, pieces, ...totalsOf(stations, pieces) };
 }
 

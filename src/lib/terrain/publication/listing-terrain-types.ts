@@ -29,7 +29,13 @@ import type { SnapshotFrame } from './listing-terrain-frame';
  * ⛔ Never bump it for a change of CONTENT — every published snapshot would read `unknown-version`. That is
  * {@link LISTING_TERRAIN_BUILDER_REVISION}.
  */
-export const LISTING_TERRAIN_SNAPSHOT_VERSION = 1 as const;
+export const LISTING_TERRAIN_SNAPSHOT_VERSION = 2 as const;
+
+/**
+ * The previous shape, still READ (ADR-920 §14.11 Ζ2): a v1 snapshot is a v2 snapshot without a plot outline. Published
+ * v1 files stay drawable until the shelf re-bakes them (the version is part of its recipe).
+ */
+export const LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION = 1 as const;
 
 /**
  * ADR-920 Β6.9 Β — the revision of the builder (`buildListingTerrainSnapshot`): bumped on ANY change to the bytes it
@@ -38,9 +44,10 @@ export const LISTING_TERRAIN_SNAPSHOT_VERSION = 1 as const;
  * (ADR-845) finds them. Producer version in the cache key, apart from the schema version (Mapbox MTS recipes ·
  * Cloudinary named transformations · Bazel action keys).
  *
- * History: 1 = up to Β6.7 · 2 = Β6.8 (interval from on-screen density, 8 px minimum spacing).
+ * History: 1 = up to Β6.7 · 2 = Β6.8 (interval from on-screen density, 8 px minimum spacing) · 3 = Β6.11 Ζ2 (the plot
+ * outline, its area and the share of it the relief covers).
  */
-export const LISTING_TERRAIN_BUILDER_REVISION = 2 as const;
+export const LISTING_TERRAIN_BUILDER_REVISION = 3 as const;
 
 /** The terrain mesh, in the snapshot frame (see module doc). */
 export interface ListingTerrainMesh {
@@ -98,6 +105,32 @@ export interface ListingTerrainEnvelope {
 /** Why no envelope is published even though one was requested. */
 export type ListingTerrainEnvelopeOmission = 'outside-surface' | 'degenerate-footprint';
 
+/**
+ * ADR-920 §14.11 Π1 — the plot outline DRAWN on the relief. A different idea from {@link ListingTerrainSnapshot.boundary}
+ * (= «the surface was CUT to this», Civil 3D outer/data clip): the outline cuts nothing — mesh, contours, slopes and
+ * stats are exactly what they would be without it (Civil 3D show/hide).
+ */
+export interface ListingTerrainPlotOutline {
+  /** Flat `[x, y, …]` ring in the snapshot frame (implicitly closed). */
+  readonly ring: readonly number[];
+  /** Plan area of the outline, m². */
+  readonly areaM2: number;
+  /** Π6 — the relief covers all of it, or only part (a disjoint outline is never published: see the omission). */
+  readonly coverage: 'covered' | 'partial';
+  /** Share of the outline's area the published relief covers, in `[0, 1]`, rounded to the hundredth. */
+  readonly coveredFraction: number;
+}
+
+/**
+ * Why no outline is published even though the source has one. Never «hidden by the owner» (Π9): an outline the owner
+ * keeps private is simply not part of the PUBLIC input, so the public snapshot has nothing to omit.
+ */
+export type ListingTerrainPlotOutlineOmission =
+  /** Π6 — not one square millimetre in common with the relief: a different system or a different area. */
+  | 'outside-surface'
+  /** Fewer than three corners, zero area or a self-intersecting ring. */
+  | 'degenerate-outline';
+
 export interface ListingTerrainSnapshot {
   readonly version: typeof LISTING_TERRAIN_SNAPSHOT_VERSION;
   readonly mesh: ListingTerrainMesh;
@@ -111,6 +144,9 @@ export interface ListingTerrainSnapshot {
   readonly stats: ListingTerrainStats;
   readonly envelope: ListingTerrainEnvelope | null;
   readonly envelopeOmission: ListingTerrainEnvelopeOmission | null;
+  /** ADR-920 §14.11 — the plot outline drawn on the relief, or `null` (none, kept private, or omitted — see below). */
+  readonly plotOutline: ListingTerrainPlotOutline | null;
+  readonly plotOutlineOmission: ListingTerrainPlotOutlineOmission | null;
 }
 
 /** Why a snapshot cannot be built — surfaced to the person publishing, never swallowed. */
@@ -146,4 +182,9 @@ export interface ListingTerrainInput {
     readonly footprintWorldMm: readonly PlanarPoint[];
     readonly maxHeightM: number | null;
   } | null;
+  /**
+   * ADR-920 §14.11 — the plot outline to DRAW on the relief (it clips nothing); absent or `null` ⇒ none. Who may see it
+   * (Π9) is decided before the builder, by `toListingTerrainInput(source, audience)`.
+   */
+  readonly plotOutlineWorldMm?: readonly PlanarPoint[] | null;
 }

@@ -21,8 +21,8 @@ import {
   DOCUMENT_TEXT_MAX_BYTES,
   hasReadableText,
   pageTextOf,
+  positionedPageOf,
   type PdfPositionedPage,
-  type PdfTextItem,
 } from '@/lib/pdf/pdf-page-text';
 
 /** Η έκβαση μιας ανάγνωσης — το λεξιλόγιο της οθόνης. */
@@ -51,17 +51,8 @@ async function readPage(page: PdfPageProxy, pageNumber: number): Promise<ReadPag
   const viewport = page.getViewport({ scale: 1 });
   const { items } = await page.getTextContent();
   const textItems = items.filter(isTextItem);
-  const positioned: PdfTextItem[] = textItems
-    .filter((item) => item.str.trim() !== '')
-    .map((item) => {
-      // Ο τύπος της βιβλιοθήκης δίνει `any[]` — δένεται εδώ σε αριθμούς, ώστε τίποτα αδήλωτο να μη φτάσει στον αναγνώστη.
-      const point: readonly number[] = viewport.convertToViewportPoint(Number(item.transform[4]), Number(item.transform[5]));
-      return { s: item.str, x: Number(point[0]), y: Number(point[1]), w: item.width, h: item.height };
-    });
-  return {
-    positioned: { page: pageNumber, width: viewport.width, height: viewport.height, items: positioned },
-    text: pageTextOf(textItems),
-  };
+  // Η ΜΙΑ μετατροπή σε συντεταγμένες οθόνης — η ίδια που τρέχει ο server (ADR-920 §14.11 Ζ3).
+  return { positioned: positionedPageOf(pageNumber, viewport, textItems), text: pageTextOf(textItems) };
 }
 
 async function readPages(doc: PdfDocProxy, maxPages: number): Promise<readonly ReadPage[]> {

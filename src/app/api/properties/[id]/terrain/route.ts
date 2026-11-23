@@ -83,6 +83,8 @@ function recordTerrainPublished(fileId: string, supersedes: readonly string[], e
 const TERRAIN_DOOR: MaterialPublicationDoor<TerrainUpload> = {
   ...terrainMaterialDoor<MaterialDoorEnv, MaterialBirth>({
     propertyTypeOf: (env) => env.property.type,
+    // ADR-920 §14.11 Ζ3 — το γραφείο δεν έχει φάκελο, άρα ούτε επιβεβαιωμένο περίγραμμα: ό,τι στείλει ο browser αφαιρείται.
+    confirmedOutlineOf: async () => null,
     recordOf: ({ companyId, propertyId, createdBy, sourceRevisions }) =>
       buildPublishedTerrainFileRecord({ home: { companyId, propertyId }, createdBy, sourceRevisions }),
     recordPublished: (verdict, env) => recordTerrainPublished(verdict.fileId, verdict.supersedes, env),

@@ -39,6 +39,22 @@ function isPublishableTerrainSource(file: AgencyMediaCandidate, entityType: File
 }
 
 /**
+ * **Η εγγραφή της τρέχουσας πηγής εδάφους** — ή `null`. Ο ίδιος κριτής με το {@link currentTerrainSource}· εξάγεται για
+ * όποιον χρειάζεται την ίδια την εγγραφή (ADR-920 §14.11 Ζ3c: η χρονική σειρά «πηγή ⇄ σχέδιο περιγράμματος»).
+ */
+export function currentTerrainSourceRecord<T extends AgencyMediaCandidate>(
+  files: readonly T[],
+  entityType: FileRecord['entityType'],
+): T | null {
+  let winner: T | null = null;
+  for (const file of files) {
+    if (!isPublishableTerrainSource(file, entityType)) continue;
+    if (winner === null || compareAgencyMediaForPublication(winner, file) < 0) winner = file;
+  }
+  return winner;
+}
+
+/**
  * **Η τρέχουσα πηγή εδάφους** ανάμεσα στα αρχεία ενός υποκειμένου — ή `null`.
  *
  * @param entityType — ο τύπος που οφείλει να έχει το αρχείο (`property` | `property_dossier`). Ο **κάτοχος** (εταιρεία
@@ -48,11 +64,7 @@ export function currentTerrainSource(
   files: readonly AgencyMediaCandidate[],
   entityType: FileRecord['entityType'],
 ): PublicShelfSource<ListingMaterial> | null {
-  let winner: AgencyMediaCandidate | null = null;
-  for (const file of files) {
-    if (!isPublishableTerrainSource(file, entityType)) continue;
-    if (winner === null || compareAgencyMediaForPublication(winner, file) < 0) winner = file;
-  }
+  const winner = currentTerrainSourceRecord(files, entityType);
   if (winner === null) return null;
 
   return {

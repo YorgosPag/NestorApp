@@ -50,7 +50,8 @@ export function bakeListingTerrain(raw: Buffer, declaration: TerrainSurveyDeclar
   const source = parseListingTerrainSource(parseJson(raw));
   if (source === null) return { ok: false, failure: 'malformed-source' };
 
-  const built = buildListingTerrainSnapshot(toListingTerrainInput(source));
+  // Ό,τι ψήνεται εδώ είναι ΔΗΜΟΣΙΟ: το περίγραμμα μπαίνει μόνο με το κουτάκι του ιδιοκτήτη (ADR-920 §14.11 Π9).
+  const built = buildListingTerrainSnapshot(toListingTerrainInput(source, 'public'));
   if (!built.ok) return { ok: false, failure: built.reason };
 
   const json = Buffer.from(JSON.stringify(built.snapshot), 'utf8');

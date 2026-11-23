@@ -41,7 +41,7 @@ describe('readListingTerrainSnapshot', () => {
   });
 
   it('άγνωστη έκδοση ⇒ unknown-version (όχι «malformed»: ο αναγνώστης είναι παλιός, όχι το αρχείο χαλασμένο)', () => {
-    expect(readListingTerrainSnapshot(corrupted((c) => { c.version = 2; }))).toEqual({ ok: false, reason: 'unknown-version' });
+    expect(readListingTerrainSnapshot(corrupted((c) => { c.version = 3; }))).toEqual({ ok: false, reason: 'unknown-version' });
   });
 
   it('positions όχι σε τριάδες ⇒ positions-not-triples', () => {
@@ -101,5 +101,40 @@ describe('readListingTerrainSnapshot', () => {
 
   it('control: η ίδια διαδρομή αλλοίωσης χωρίς αλλοίωση ⇒ ok', () => {
     expect(readListingTerrainSnapshot(corrupted(() => undefined)).ok).toBe(true);
+  });
+});
+
+describe('readListingTerrainSnapshot — ADR-920 §14.11 Ζ2 (περίγραμμα οικοπέδου, v1 → v2)', () => {
+  const OUTLINE = { ring: [-8, -8, 8, -8, 8, 8, -8, 8], areaM2: 256, coverage: 'covered', coveredFraction: 1 } as const;
+
+  it('ένα δημοσιευμένο v1 (χωρίς τα πεδία) διαβάζεται ως v2 ΧΩΡΙΣ περίγραμμα — μιλά η έκδοση, όχι προεπιλογή', () => {
+    const v1 = corrupted((c) => { c.version = 1; delete c.plotOutline; delete c.plotOutlineOmission; });
+    expect(readListingTerrainSnapshot(v1)).toEqual({ ok: true, snapshot: REAL_PLANE() });
+  });
+
+  it('v2 χωρίς τα πεδία του περιγράμματος ⇒ malformed (το κενό ΔΕΝ γεμίζει)', () => {
+    const raw = corrupted((c) => { delete c.plotOutline; });
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'malformed' });
+  });
+
+  it('v2 με περίγραμμα διαβάζεται αυτούσιο μετά από JSON', () => {
+    const snapshot: ListingTerrainSnapshot = { ...REAL_PLANE(), plotOutline: OUTLINE, plotOutlineOmission: null };
+    expect(readListingTerrainSnapshot(overTheWire(snapshot))).toEqual({ ok: true, snapshot });
+  });
+
+  it.each<[string, (c: Record<string, unknown>) => void]>([
+    ['δακτύλιος δύο κορυφών', (c) => { c.plotOutline = { ...OUTLINE, ring: [0, 0, 1, 1] }; }],
+    ['ποσοστό κάλυψης > 1', (c) => { c.plotOutline = { ...OUTLINE, coveredFraction: 1.2 }; }],
+    ['άγνωστη κάλυψη', (c) => { c.plotOutline = { ...OUTLINE, coverage: 'disjoint' }; }],
+    ['άγνωστη αιτία παράλειψης', (c) => { c.plotOutlineOmission = 'hidden'; }],
+  ])('malformed: %s', (_label, mutate) => {
+    expect(readListingTerrainSnapshot(corrupted(mutate))).toEqual({ ok: false, reason: 'malformed' });
+  });
+
+  it('άπειρη συντεταγμένη στο περίγραμμα ⇒ non-finite', () => {
+    const ring = [...OUTLINE.ring];
+    ring[0] = Infinity;
+    const raw: ListingTerrainSnapshot = { ...REAL_PLANE(), plotOutline: { ...OUTLINE, ring }, plotOutlineOmission: null };
+    expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'non-finite' });
   });
 });

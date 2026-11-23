@@ -25,10 +25,10 @@ function ramp(): ListingTerrainSnapshot {
     }
   }
   return {
-    version: 1, mesh: { positions, triangles, slopeClass: new Array(triangles.length / 3).fill(1) }, contours: [],
+    version: 2, mesh: { positions, triangles, slopeClass: new Array(triangles.length / 3).fill(1) }, contours: [],
     contourIntervalM: 0.5, contourMajorEvery: 5, slopeBandsPct: [5, 15, 25], boundary: null,
     stats: { planAreaM2: 400, minElevationM: 99, maxElevationM: 101, reliefM: 2, meanSlopePct: 10, maxSlopePct: 10, downslopeAzimuthDeg: 270 },
-    envelope: null, envelopeOmission: null,
+    envelope: null, envelopeOmission: null, plotOutline: null, plotOutlineOmission: null,
   };
 }
 

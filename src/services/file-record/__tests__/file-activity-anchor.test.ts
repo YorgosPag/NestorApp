@@ -8,10 +8,10 @@
  * | #     | ερώτημα | μετάλλαξη που πιάνει |
  * |---|---|---|
  * | Α35.1 | οι πράξεις του κλειστού συνόλου = οι κλάδοι του κανόνα; | πράξη εδώ χωρίς κλάδο εκεί (ή αντίστροφα) |
- * | Α35.2 | τα κλειδιά κάδου/μετονομασίας είναι ΟΛΑ ζευγαρωμένα στον κανόνα; | αφαίρεση του `isDeleted` ⇒ κάδος χωρίς γραμμή |
+ * | Α35.2 | η μετονομασία ζευγαρωμένη · ο κάδος ΚΛΕΙΣΤΟΣ στον πελάτη, με ΟΛΑ τα πεδία του γραφέα (ADR-920 §14.11 Ζ3b) | πεδίο κάδου που λείπει από το `personalTrashKeys` ⇒ «κάδος» πελάτη χωρίς επαναπροβολή |
  * | Α35.3 | προσωπικό ⇒ ΜΙΑ δέσμη: γραμμή στο ΠΡΟΣΩΠΙΚΟ βιβλίο + δείκτης στην ΙΔΙΑ γραμμή | `updateDoc` αντί δέσμης · λάθος βιβλίο · δείκτης σε άλλο id |
  * | Α35.4 | εταιρικό ⇒ ό,τι ίσχυε: ενημέρωση + προβολή με `companyId` | δέσμη και για εταιρεία (ο κανόνας του δεν ζευγαρώνει) |
- * | Α35.5 | ο κάδος είναι ιδεμπότητος | δεύτερος κάδος ⇒ νέα γραμμή + μετάθεση `purgeAt` |
+ * | Α35.5 | ο προσωπικός κάδος ΖΗΤΙΕΤΑΙ από τον διακομιστή — καμία γραφή του browser (Ζ3b) | επιστροφή στη δέσμη του πελάτη |
  * | Α35.6 | το βιβλίο: ούτε super admin, αμετάβλητο | `isSuperAdminOnly()` στην ανάγνωση · `update: if true` |
  * | Α35.7 | το κουμπί «Δραστηριότητα» ΔΕΝ κρύβεται πίσω από το `officeActions` (σιωπή #4) | επαναφορά του φρουρού |
  *
@@ -29,6 +29,10 @@ let storedFile: Record<string, unknown> | null = null;
 jest.mock('@/lib/firebase', () => ({ db: {} }));
 jest.mock('@/services/realtime', () => ({ RealtimeService: { dispatch: jest.fn() } }));
 jest.mock('@/services/enterprise-id.service', () => ({ generateAuditId: () => 'audit_pair_1' }));
+const requestFileTrash = jest.fn();
+jest.mock('@/services/filesystem/file-trash.client', () => ({
+  requestFileTrash: (...args: unknown[]) => requestFileTrash(...args),
+}));
 jest.mock('firebase/firestore', () => {
   const actual = jest.requireActual('firebase/firestore');
   const ref = (_db: unknown, collection: string, id: string) => ({ path: `${collection}/${id}`, id });
@@ -55,6 +59,7 @@ const { FILE_ACTIVITY_PAIRED_ACTIONS, FILE_LAST_ACTIVITY_FIELD } = require('@/ty
 const { FileAuditService } = require('@/services/file-audit.service') as typeof import('@/services/file-audit.service');
 const { commitFileActivity } = require('../file-activity-commit') as typeof import('../file-activity-commit');
 const { moveToTrash } = require('@/services/file-record-lifecycle') as typeof import('@/services/file-record-lifecycle');
+const { fileTrashFields, fileRestoreFields } = require('@/lib/files/file-trash-fields') as typeof import('@/lib/files/file-trash-fields');
 const { rulesKeyListOf, parseFirestoreRules } = require('../../../../scripts/_shared/firestore-rules-parser.js') as {
   rulesKeyListOf: (rulesText: string, functionName: string) => string[];
   parseFirestoreRules: (rulesText: string) => { collection: string; lineStart: number; lineEnd: number }[];
@@ -85,12 +90,20 @@ describe('Α35 — κανόνας και κώδικας λένε το ΙΔΙΟ',
     expect([...new Set(branches)].sort()).toEqual([...FILE_ACTIVITY_PAIRED_ACTIONS].sort());
   });
 
-  it('Α35.2 — κάδος (`lifecycleState` ΚΑΙ `isDeleted`) και μετονομασία είναι ζευγαρωμένα στο `files_personal`', () => {
-    expect(rulesKeyListOf(RULES, 'personalActivityKeys').sort()).toEqual(['displayName', 'isDeleted', 'lifecycleState']);
+  it('Α35.2 — η μετονομασία ζευγαρωμένη· ο κάδος ΚΛΕΙΣΤΟΣ στον πελάτη, με ΟΛΑ τα πεδία του γραφέα (ADR-920 §14.11 Ζ3b)', () => {
+    expect(rulesKeyListOf(RULES, 'personalActivityKeys')).toEqual(['displayName']);
+    // Ο φράχτης = ΑΚΡΙΒΩΣ ό,τι γράφει ο κάδος ∪ η επαναφορά (χωρίς `updatedAt`, που αλλάζει σε κάθε πράξη).
+    const writes = new Set([
+      ...Object.keys(fileTrashFields({ trashedState: 't', by: 'u', purgeAt: 'p', now: 0 })),
+      ...Object.keys(fileRestoreFields({ activeState: 'a', by: 'u', now: 0 })),
+    ]);
+    writes.delete('updatedAt');
+    expect(rulesKeyListOf(RULES, 'personalTrashKeys').sort()).toEqual([...writes].sort());
     const block = parseFirestoreRules(RULES).find((b) => b.collection === 'files_personal');
     expect(block).toBeDefined();
     const body = RULES.split('\n').slice(block!.lineStart - 1, block!.lineEnd).join('\n');
     expect(body).toContain('personalActivityPaired()');
+    expect(body).toContain('personalTrashUnchanged()');
   });
 
   it('Α35.6 — το βιβλίο: ανάγνωση ΜΟΝΟ του κατόχου (ούτε super admin) · αμετάβλητο', () => {
@@ -144,19 +157,15 @@ describe('Α35 — ο ΕΝΑΣ γραφέας (`commitFileActivity`)', () => {
   });
 });
 
-describe('Α35.5 — ο κάδος είναι ιδεμπότητος (§2.6.11 Β3)', () => {
-  it('αρχείο ήδη στον κάδο ⇒ ΚΑΜΙΑ γραφή, καμία γραμμή', async () => {
-    storedFile = { userId: 'u_person', lifecycleState: 'trashed', isDeleted: true, category: 'contracts' };
-    await moveToTrash('file_1', 'personal', 'u_person');
-    expect(ops).toEqual([]);
-  });
-
-  it('ενεργό αρχείο ⇒ ζευγαρωμένη δέσμη `delete`', async () => {
+describe('Α35.5 — ο προσωπικός κάδος ΖΗΤΙΕΤΑΙ από τον διακομιστή (ADR-920 §14.11 Ζ3b)', () => {
+  it('ΚΑΜΙΑ γραφή του browser — ένα αίτημα `?custody=personal`· ιδεμποτία και ζεύξη κρίνονται στον διακομιστή', async () => {
     storedFile = { userId: 'u_person', lifecycleState: 'active', category: 'contracts' };
+    requestFileTrash.mockResolvedValue({ success: true, processedCount: 1, errors: [], listings: [], files: [] });
+
     await moveToTrash('file_1', 'personal', 'u_person');
-    expect(ops.map((o) => o.kind)).toEqual(['set', 'update', 'commit']);
-    expect(ops[0].data).toMatchObject({ action: 'delete', userId: 'u_person' });
-    expect(ops[1].data).toMatchObject({ lifecycleState: 'trashed', isDeleted: true, lastActivityId: 'audit_pair_1' });
+
+    expect(ops).toEqual([]);
+    expect(requestFileTrash).toHaveBeenCalledWith(['file_1'], 'trash', 'personal');
   });
 });
 

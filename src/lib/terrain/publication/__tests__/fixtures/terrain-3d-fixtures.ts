@@ -46,7 +46,7 @@ export function syntheticSnapshot(
   const min = Math.min(...zs);
   const max = Math.max(...zs);
   return {
-    version: 1,
+    version: 2,
     mesh: { positions, triangles, slopeClass: triangles.filter((_, i) => i % 3 === 0).map(() => 0) },
     contours,
     contourIntervalM: 1,
@@ -59,6 +59,8 @@ export function syntheticSnapshot(
     },
     envelope: null,
     envelopeOmission: null,
+    plotOutline: null,
+    plotOutlineOmission: null,
   };
 }
 

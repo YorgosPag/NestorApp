@@ -839,7 +839,8 @@ service cloud.firestore {
       //    ισχύει ακέραια· την κρίνει πλέον ο διακομιστής, όχι αυτό το αρχείο.
       // ⛔ ΜΗΝ ξαναφέρεις σκέλος κάδου εδώ. Το φυλά η άγκυρα
       //    `listing-file-publication-rules.test.ts` (Κ5) και η σουίτα emulator.
-      // ℹ️ `files_personal`: εκεί ο κάδος ΜΕΝΕΙ πράξη πελάτη (προσωπικά αρχεία, εκτός αγγελίας).
+      // ℹ️ `files_personal`: από το ADR-920 §14.11 Ζ3b ΚΑΙ εκεί ο κάδος είναι πράξη διακομιστή (`personalTrashUnchanged`) —
+      //    ο φάκελος ακινήτου ΕΙΝΑΙ υλικό αγγελίας (αγγελία ιδιοκτήτη).
 
       // 🔗 LINK/UNLINK: Company members can update linkedTo on ready files
       // 🏢 ENTERPRISE: Entity linking — one file in storage, multiple display points
@@ -940,7 +941,7 @@ service cloud.firestore {
                     && resource == null;
 
       // 📝 UPDATE — ο κάτοχος: οριστικοποίηση (pending → ready|failed) ή αλλαγές σε έτοιμο αρχείο
-      //    (κάδος · επαναφορά · σύνδεση · μετονομασία). Ίδια σκέλη με το `match /files`, χωρίς
+      //    (σύνδεση · μετονομασία — ο κάδος/η επαναφορά είναι πλέον του διακομιστή). Ίδια σκέλη με το `match /files`, χωρίς
       //    διαχειριστή: εδώ δεν υπάρχει οργανισμός να διαχειριστεί.
       allow update: if isAuthenticated()
                     && resource.data.userId == request.auth.uid
@@ -967,7 +968,11 @@ service cloud.firestore {
                     //    ΜΟΝΟ πράξη διακομιστή που ξαναπροβάλλει). Όχι όλο το κατηγόρημα: εδώ ΠΡΕΠΕΙ να αλλάζουν
                     //    `status`/`isDeleted` (οριστικοποίηση · κάδος · επαναφορά).
                     && publicationCustodyUnchanged()
-                    // 📒 ADR-866 §2.6.11 — κάδος · επαναφορά · μετονομασία ΜΟΝΟ μαζί με τη γραμμή τους.
+                    // 🗑️ ADR-920 §14.11 Ζ3b — κάδος · επαναφορά = ΠΡΑΞΗ ΔΙΑΚΟΜΙΣΤΗ (`POST /api/files/trash?custody=personal`),
+                    //    όπως στο `match /files` (ADR-845 §7.17 Α4β): ο φάκελος ακινήτου τροφοδοτεί την αγγελία ιδιοκτήτη, και
+                    //    ο browser δεν έχει πώς να την ξαναπροβάλει — ό,τι πεταγόταν από εδώ έμενε δημόσιο.
+                    && personalTrashUnchanged()
+                    // 📒 ADR-866 §2.6.11 — η μετονομασία ΜΟΝΟ μαζί με τη γραμμή της.
                     && personalActivityPaired();
 
       // 🗑️ HARD DELETE — μόνο ο κάτοχος, και ΠΟΤΕ σε δεσμευμένο (ADR-864 §21 Δ21.1).
@@ -6759,8 +6764,11 @@ service cloud.firestore {
     //    Ένα «CMYK» γραμμένο από πελάτη θα έστελνε την έκδοση σε λάθος μετατροπή χρώματος.
     //    `catalogRenditions`: η κατάσταση των αποδόσεων web/εκτύπωσης ενός μέσου καταλόγου. Ένα `ready` από πελάτη θα
     //    επέτρεπε σύνδεση αρχείου χωρίς αποδόσεις ⇒ ΜΟΝΟ `catalog-asset-renditions.server` (Admin SDK).
+    // 🗺️ ADR-920 §14.11 Ζ3 — `plotOutline`: το περίγραμμα οικοπέδου που ο server ΒΡΗΚΕ στα bytes του τοπογραφικού σχεδίου.
+    //    Η δημοσίευση ισοϋψών το βάζει στο ανάγλυφο χωρίς να ξαναρωτήσει· ένα περίγραμμα γραμμένο από πελάτη θα περνούσε
+    //    χωρίς επαλήθευση προέλευσης και χωρίς τον έλεγχο Π6 ⇒ ΜΟΝΟ η πόρτα εδάφους του ιδιοκτήτη (Admin SDK).
     function measuredKeys() {
-      return ['imageDimensions', 'publishRaster', 'imageColour', 'catalogRenditions'];
+      return ['imageDimensions', 'publishRaster', 'imageColour', 'catalogRenditions', 'plotOutline'];
     }
 
     function measuredUnchanged() {
@@ -6912,12 +6920,23 @@ service cloud.firestore {
     //   · η γραμμή αρνείται αν δεν περιγράφει την αλλαγή που συμβαίνει (`get` πριν / `getAfter` μετά).
     // Γραφέας: `services/file-record/file-activity-commit.ts`.
 
-    // Τα κλειδιά που κάνουν μια αλλαγή «δραστηριότητα»: κάδος/επαναφορά (`lifecycleState` ΚΑΙ το
-    // legacy `isDeleted` — τα ερωτήματα φιλτράρουν και με τα δύο, άρα «κάδος μόνο με `isDeleted`»
-    // θα ήταν κάδος χωρίς γραμμή) · μετονομασία (`displayName`).
+    // Τα κλειδιά που κάνουν μια αλλαγή «δραστηριότητα» του ΠΕΛΑΤΗ: μετονομασία (`displayName`).
+    // 🗑️ ADR-920 §14.11 Ζ3b — ο κάδος/η επαναφορά ΒΓΗΚΑΝ από εδώ: είναι πράξη διακομιστή, που γράφει αλλαγή ΚΑΙ γραμμή
+    //    στην ΙΔΙΑ δέσμη Admin (`writePersonalFileTrashState`)· ο πελάτης δεν τα αγγίζει καθόλου (`personalTrashUnchanged`).
     // ⚠️ Κάτοπτρο του `FILE_ACTIVITY_PAIRED_ACTIONS` (`types/file-audit.ts`) — άγκυρα Α35.
     function personalActivityKeys() {
-      return ['lifecycleState', 'isDeleted', 'displayName'];
+      return ['displayName'];
+    }
+
+    // 🗑️ ADR-920 §14.11 Ζ3b — τα πεδία κάδου/επαναφοράς: ΑΚΡΙΒΩΣ η ένωση `fileTrashFields` ∪ `fileRestoreFields`
+    //    (`lib/files/file-trash-fields.ts`) χωρίς το `updatedAt`. `affectedKeys()` ⇒ ούτε προσθήκη, ούτε αλλαγή, ούτε αφαίρεση.
+    function personalTrashKeys() {
+      return ['lifecycleState', 'isDeleted', 'trashedAt', 'trashedBy', 'purgeAt',
+              'deletedAt', 'deletedBy', 'restoredAt', 'restoredBy'];
+    }
+
+    function personalTrashUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(personalTrashKeys());
     }
 
     function personalActivityPath(activityId) {
@@ -6944,18 +6963,10 @@ service cloud.firestore {
       let path = /databases/$(database)/documents/files_personal/$(fileId);
       let before = get(path).data;
       let after = getAfter(path).data;
-      let wasTrashed = before.get('lifecycleState', 'active') == 'trashed'
-                       || before.get('isDeleted', false) == true;
       return before.userId == request.auth.uid
              && after.get('lastActivityId', '') == logId
-             && (
-                  (action == 'delete' && !wasTrashed
-                      && after.get('lifecycleState', '') == 'trashed' && after.get('isDeleted', false) == true)
-                  || (action == 'restore' && wasTrashed
-                      && after.get('lifecycleState', '') == 'active' && after.get('isDeleted', true) == false)
-                  || (action == 'rename'
-                      && after.get('displayName', '') != before.get('displayName', ''))
-                );
+             && action == 'rename'
+             && after.get('displayName', '') != before.get('displayName', '');
     }
 
     // =========================================================================

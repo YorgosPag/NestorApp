@@ -17,7 +17,7 @@ const logger = createModuleLogger('catalog-import-attach');
 async function releaseOrphan(batchId: string, fileId: string): Promise<boolean> {
   const { batch } = await fetchImportBatch(batchId);
   if (batch.fileId === fileId) return false;
-  await requestFileTrash([fileId], 'trash');
+  await requestFileTrash([fileId], 'trash', 'company');
   return true;
 }
 

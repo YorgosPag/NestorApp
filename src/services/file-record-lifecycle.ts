@@ -10,37 +10,23 @@
  */
 
 import {
-  doc,
-  getDoc,
   where,
-  serverTimestamp,
   type DocumentData,
-  type DocumentReference,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { fieldToISO } from '@/lib/date-local';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   type EntityType,
-  type FileCategory,
   FILE_LIFECYCLE_STATES,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { isFileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_COLLECTION, type FileCustody } from '@/lib/files/file-custody';
-import { calculatePurgeDate, isInTrash, trashRetentionDays } from '@/lib/files/file-trash-state';
-import {
-  custodyKindOfScope,
-  custodyScopeFromData,
-  type CustodyKind,
-  type CustodyScope,
-} from '@/lib/workspace/custody-scope';
+import { custodyKindOfScope, type CustodyKind } from '@/lib/workspace/custody-scope';
 import { fileOwnerConstraints } from '@/services/file-record-queries';
 import { RealtimeService } from '@/services/realtime';
-import { commitFileActivity } from '@/services/file-record/file-activity-commit';
 import {
   requestSupersession,
   type SupersedeOutcome,
@@ -55,35 +41,6 @@ const logger = createModuleLogger('FILE_RECORD_LIFECYCLE');
 
 /** Lifecycle timestamp that accompanies `createdAt` when normalizing a raw doc */
 type LifecycleTimestampField = 'trashedAt' | 'archivedAt' | 'updatedAt';
-
-/**
- * Load a file document and fail loudly when it does not exist.
- * Single source for the read-then-assert prologue of every mutation below.
- *
- * @param custody Σε ποιο διαμέρισμα ζει (ADR-866 §2.6.8 Β4) — ποτέ «δοκίμασε και τις δύο».
- */
-async function loadFileDocOrThrow(fileId: string, custody: CustodyKind): Promise<{
-  docRef: DocumentReference;
-  data: DocumentData;
-  owner: CustodyScope;
-}> {
-  const docRef = doc(db, COLLECTIONS[FILE_COLLECTION[custody]], fileId);
-
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) {
-    throw new Error(`FileRecord not found: ${fileId}`);
-  }
-
-  // 📒 ADR-866 §2.6.11 — ο κάτοχος από τα ΔΙΚΑ του πεδία: σε αυτόν πάει η γραμμή δραστηριότητας.
-  //    Χωρίς ακριβώς έναν, η πράξη ΑΡΝΕΙΤΑΙ — δεν ξέρουμε σε ποιο βιβλίο θα την έβλεπε κανείς.
-  const data = docSnap.data();
-  const owner = custodyScopeFromData(data);
-  if (owner === null) {
-    throw new Error(`FileRecord ${fileId} has no single owner`);
-  }
-
-  return { docRef, data, owner };
-}
 
 /**
  * Normalize a raw Firestore doc into a FileRecord (ISO timestamps), or null
@@ -161,16 +118,16 @@ function throwIfRefused(code: string, errors: readonly string[]): void {
 }
 
 /**
- * 🗑️ **Κάδος ΕΤΑΙΡΙΚΩΝ αρχείων — ένα αίτημα για όλη τη δέσμη** (ADR-845 §7.17 Α2).
+ * 🗑️ **Κάδος αρχείων ΕΝΟΣ διαμερίσματος — ένα αίτημα για όλη τη δέσμη** (ADR-845 §7.17 Α2 · ADR-920 §14.11 Ζ3b).
  *
  * 🔑 **Το γεγονός ΜΕΤΑ την επιβεβαίωση, και μόνο για ό,τι άλλαξε πραγματικά**: οι συνδρομητές
  * (`useLevelFloorplanSync` · `useEntityFiles` · `GlobalFileUploadToast` · `useFloorsTabState`)
  * αδειάζουν καμβά και λίστες — ένα `FILE_TRASHED` για αρχείο που ο διακομιστής **αρνήθηκε** θα
  * έσβηνε από την οθόνη κάτι που υπάρχει. Γι' αυτό πρώτα τα γεγονότα, μετά η ρίψη της άρνησης.
  */
-async function trashCompanyFiles(fileIds: readonly string[], trashedBy: string): Promise<void> {
+async function trashFiles(fileIds: readonly string[], custody: CustodyKind, trashedBy: string): Promise<void> {
   if (fileIds.length === 0) return;
-  const result = await requestFileTrash(fileIds, 'trash');
+  const result = await requestFileTrash(fileIds, 'trash', custody);
 
   for (const file of result.files) {
     RealtimeService.dispatch('FILE_TRASHED', {
@@ -187,9 +144,9 @@ async function trashCompanyFiles(fileIds: readonly string[], trashedBy: string):
   throwIfRefused('FILE_TRASH_REFUSED', result.errors);
 }
 
-/** ♻️ Επαναφορά ΕΤΑΙΡΙΚΟΥ αρχείου — ο διακομιστής κρίνει· το γεγονός μετά την επιβεβαίωση. */
-async function restoreCompanyFile(fileId: string, restoredBy: string): Promise<void> {
-  const result = await requestFileTrash([fileId], 'restore');
+/** ♻️ Επαναφορά αρχείου — ο διακομιστής κρίνει· το γεγονός μετά την επιβεβαίωση. */
+async function restoreFile(fileId: string, custody: CustodyKind, restoredBy: string): Promise<void> {
+  const result = await requestFileTrash([fileId], 'restore', custody);
 
   for (const file of result.files) {
     RealtimeService.dispatch('FILE_RESTORED', { fileId: file.fileId, restoredBy, timestamp: Date.now() });
@@ -204,19 +161,22 @@ export interface TrashTarget {
   readonly custody: CustodyKind;
 }
 
+/** Τα ids ενός διαμερίσματος από μια μεικτή επιλογή. */
+function idsOf(targets: readonly TrashTarget[], custody: CustodyKind): string[] {
+  return targets.filter((target) => target.custody === custody).map((target) => target.id);
+}
+
 /**
- * 🗑️ **Μαζικός κάδος** — τα εταιρικά σε **ένα** αίτημα, τα προσωπικά ένα-ένα όπως πάντα.
+ * 🗑️ **Μαζικός κάδος** — **ένα** αίτημα ανά διαμέρισμα.
  *
  * 🔴 Ως την Α2 ήταν `Promise.all` ένα-ένα: 30 φωτογραφίες του ίδιου ακινήτου = 30 αιτήματα, και
- * με τον κάδο στον διακομιστή θα ήταν **30 επαναπροβολές της ίδιας αγγελίας**.
+ * με τον κάδο στον διακομιστή θα ήταν **30 επαναπροβολές της ίδιας αγγελίας**. Από το Ζ3b το ίδιο
+ * ισχύει και για τα προσωπικά: 30 φωτογραφίες του φακέλου = **μία** επαναπροβολή της αγγελίας ιδιοκτήτη.
  */
 export async function moveManyToTrash(targets: readonly TrashTarget[], trashedBy: string): Promise<void> {
-  const personal = targets.filter((target) => target.custody === 'personal');
-  const company = targets.filter((target) => target.custody === 'company').map((target) => target.id);
-
   await Promise.all([
-    trashCompanyFiles(company, trashedBy),
-    ...personal.map((target) => moveToTrash(target.id, 'personal', trashedBy)),
+    trashFiles(idsOf(targets, 'company'), 'company', trashedBy),
+    trashFiles(idsOf(targets, 'personal'), 'personal', trashedBy),
   ]);
 }
 
@@ -224,64 +184,17 @@ export async function moveManyToTrash(targets: readonly TrashTarget[], trashedBy
  * 🗑️ Move file to Trash (soft delete)
  * @enterprise Replaces hard delete with 3-tier lifecycle
  *
+ * 🔴 **ΠΡΑΞΗ ΔΙΑΚΟΜΙΣΤΗ ΚΑΙ ΣΤΑ ΔΥΟ ΔΙΑΜΕΡΙΣΜΑΤΑ** (ADR-845 §7.17 Α2 · ADR-920 §14.11 Ζ3b): κρίση, γραφή,
+ * γραμμή Δραστηριότητας και επαναπροβολή αγγελίας στο ίδιο αίτημα. Ο δεύτερος κάδος είναι ιδεμπότητος
+ * (ADR-866 §2.6.11 Β3) — τον κρίνει πλέον ο διακομιστής, όχι μια ανάγνωση του browser.
+ *
  * ⚠️ **Ο κάδος σημαίνει ΑΠΩΛΕΙΑ, και μόνο αυτό** (ADR-862 Φ0 Β10). Όταν το αρχείο φεύγει
  * επειδή **ήρθε νέα έκδοση**, κάλεσε το {@link supersedeFileRecord}: αρχειοθετεί (ποτέ
  * οριστική διαγραφή) μέσω του ΕΝΟΣ γραφέα του διακομιστή.
  */
 export async function moveToTrash(fileId: string, custody: CustodyKind, trashedBy: string): Promise<void> {
-  logger.info('Moving FileRecord to trash', { fileId, trashedBy });
-
-  // 🔴 ADR-845 §7.17 Α2 — το ΕΤΑΙΡΙΚΟ αρχείο το πετά ο ΔΙΑΚΟΜΙΣΤΗΣ (κρίση · γραφή · ίχνος ·
-  //    επαναπροβολή αγγελίας). Ό,τι ακολουθεί είναι πλέον ο δρόμος του ΠΡΟΣΩΠΙΚΟΥ αρχείου.
-  if (custody === 'company') return trashCompanyFiles([fileId], trashedBy);
-
-  const { docRef, data, owner } = await loadFileDocOrThrow(fileId, custody);
-  // 🔴 ADR-866 §2.6.11 Β3 — ΙΔΕΜΠΟΤΗΤΑ: μετρημένα, 10 από τις 15 γραμμές `delete` ήταν ζεύγη σε
-  //    0,4 s. Δεύτερος κάδος ξανάγραφε `trashedAt`/`purgeAt` (**μετέθετε το ρολόι εκκαθάρισης**) και
-  //    δεύτερη γραμμή ιστορικού. Ήδη στον κάδο ⇒ καμία πράξη.
-  if (isInTrash(data)) {
-    logger.info('FileRecord already in trash — no-op', { fileId });
-    return;
-  }
-  const category = data.category as FileCategory;
-  const purgeDate = calculatePurgeDate(category);
-
-  // 🔑 ADR-864 §21 — ΣΙΩΠΗΛΗ ΔΕΣΜΕΥΣΗ (Google Vault · Box · Purview): ο κάδος ΕΠΙΤΡΕΠΕΤΑΙ και σε
-  //    αρχείο σε δέσμευση. Αυτό που δεν γίνεται ποτέ είναι η ΟΡΙΣΤΙΚΗ διαγραφή — την αρνούνται ο
-  //    κριτής (`isFileHeld` σε κάθε purge), οι κανόνες και η πλατφόρμα (GCS `temporaryHold`).
-
-  await commitFileActivity({
-    docRef,
-    owner,
-    updates: {
-      lifecycleState: FILE_LIFECYCLE_STATES.TRASHED,
-      trashedAt: serverTimestamp(),
-      trashedBy,
-      purgeAt: purgeDate.toISOString(),
-      isDeleted: true,
-      deletedAt: serverTimestamp(),
-      deletedBy: trashedBy,
-      updatedAt: serverTimestamp(),
-    },
-    act: { fileId, action: 'delete', performedBy: trashedBy },
-    context: 'FileRecord.trashFile',
-  });
-
-  logger.info('FileRecord moved to trash', {
-    fileId,
-    purgeAt: purgeDate.toISOString(),
-    retentionDays: trashRetentionDays(category),
-  });
-
-  RealtimeService.dispatch('FILE_TRASHED', {
-    fileId,
-    trashedBy,
-    purgeAt: purgeDate.toISOString(),
-    displayName: (data.displayName as string | undefined) ?? undefined,
-    entityId: (data.entityId as string | undefined) ?? undefined,
-    entityType: (data.entityType as string | undefined) ?? undefined,
-    timestamp: Date.now(),
-  });
+  logger.info('Moving FileRecord to trash', { fileId, custody, trashedBy });
+  await trashFiles([fileId], custody, trashedBy);
 }
 
 /**
@@ -335,42 +248,9 @@ export async function supersedeFileRecord(
  * @enterprise Returns file to active state
  */
 export async function restoreFromTrash(fileId: string, custody: CustodyKind, restoredBy: string): Promise<void> {
-  logger.info('Restoring FileRecord from trash', { fileId, restoredBy });
-
-  // 🔴 ADR-845 §7.17 Α2 — εταιρικό ⇒ ο διακομιστής (η επαναφορά `public` αρχείου το ξαναβγάζει στο κοινό).
-  if (custody === 'company') return restoreCompanyFile(fileId, restoredBy);
-
-  const { docRef, data, owner } = await loadFileDocOrThrow(fileId, custody);
-  if (!isInTrash(data)) {
-    throw new Error(`FileRecord ${fileId} is not in trash`);
-  }
-
-  await commitFileActivity({
-    docRef,
-    owner,
-    updates: {
-      lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
-      isDeleted: false,
-      trashedAt: null,
-      trashedBy: null,
-      purgeAt: null,
-      deletedAt: null,
-      deletedBy: null,
-      restoredAt: serverTimestamp(),
-      restoredBy,
-      updatedAt: serverTimestamp(),
-    },
-    act: { fileId, action: 'restore', performedBy: restoredBy },
-    context: 'FileRecord.restoreFile',
-  });
-
-  logger.info('FileRecord restored from trash', { fileId, restoredBy });
-
-  RealtimeService.dispatch('FILE_RESTORED', {
-    fileId,
-    restoredBy,
-    timestamp: Date.now(),
-  });
+  logger.info('Restoring FileRecord from trash', { fileId, custody, restoredBy });
+  // 🔴 ADR-845 §7.17 Α2 · ADR-920 §14.11 Ζ3b — ο διακομιστής (η επαναφορά υλικού αγγελίας το ξαναβγάζει στο κοινό).
+  await restoreFile(fileId, custody, restoredBy);
 }
 
 /**

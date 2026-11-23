@@ -48,7 +48,7 @@ describe('ADR-845 §7.17 Α2 — ο πελάτης ΖΗΤΑ, δεν γράφει
 
     await moveToTrash('f1', 'company', 'u_alpha');
 
-    expect(requestFileTrash).toHaveBeenCalledWith(['f1'], 'trash');
+    expect(requestFileTrash).toHaveBeenCalledWith(['f1'], 'trash', 'company');
     expect(clientWrites).toEqual([]);
   });
 
@@ -86,7 +86,7 @@ describe('ADR-845 §7.17 Α2 — ο πελάτης ΖΗΤΑ, δεν γράφει
     requestFileTrash.mockResolvedValueOnce(answer([{ fileId: 'f1', purgeAt: null }]));
     await restoreFromTrash('f1', 'company', 'u_alpha');
 
-    expect(requestFileTrash).toHaveBeenCalledWith(['f1'], 'restore');
+    expect(requestFileTrash).toHaveBeenCalledWith(['f1'], 'restore', 'company');
     expect(dispatch).toHaveBeenCalledWith('FILE_RESTORED', expect.objectContaining({ fileId: 'f1', restoredBy: 'u_alpha' }));
     expect(clientWrites).toEqual([]);
 
@@ -107,7 +107,7 @@ describe('ADR-845 §7.17 Α2 — η μαζική πράξη είναι ΕΝΑ α
     );
 
     expect(requestFileTrash).toHaveBeenCalledTimes(1);
-    expect(requestFileTrash).toHaveBeenCalledWith(['f1', 'f2', 'f3'], 'trash');
+    expect(requestFileTrash).toHaveBeenCalledWith(['f1', 'f2', 'f3'], 'trash', 'company');
     expect(dispatch).toHaveBeenCalledTimes(3);
   });
 
@@ -125,5 +125,30 @@ describe('ADR-845 §7.17 Α2 — η μαζική πράξη είναι ΕΝΑ α
     await moveManyToTrash([], 'u_alpha');
 
     expect(requestFileTrash).not.toHaveBeenCalled();
+  });
+});
+
+describe('ADR-920 §14.11 Ζ3b — και ο ΠΡΟΣΩΠΙΚΟΣ κάδος είναι αίτημα', () => {
+  it('🔑 Π9 — μεικτή δέσμη ⇒ ΕΝΑ αίτημα ανά διαμέρισμα, με το είδος του', async () => {
+    requestFileTrash.mockResolvedValue(answer([]));
+
+    await moveManyToTrash(
+      [{ id: 'f1', custody: 'company' }, { id: 'p1', custody: 'personal' }, { id: 'p2', custody: 'personal' }],
+      'u_alpha',
+    );
+
+    expect(requestFileTrash).toHaveBeenCalledTimes(2);
+    expect(requestFileTrash).toHaveBeenCalledWith(['f1'], 'trash', 'company');
+    expect(requestFileTrash).toHaveBeenCalledWith(['p1', 'p2'], 'trash', 'personal');
+    expect(clientWrites).toEqual([]);
+  });
+
+  it('♻️ Π10 — επαναφορά προσωπικού: αίτημα `restore` με `personal`, `FILE_RESTORED` μετά την απάντηση', async () => {
+    requestFileTrash.mockResolvedValueOnce(answer([{ fileId: 'p1', purgeAt: null }]));
+
+    await restoreFromTrash('p1', 'personal', 'u_alpha');
+
+    expect(requestFileTrash).toHaveBeenCalledWith(['p1'], 'restore', 'personal');
+    expect(dispatch).toHaveBeenCalledWith('FILE_RESTORED', expect.objectContaining({ fileId: 'p1', restoredBy: 'u_alpha' }));
   });
 });

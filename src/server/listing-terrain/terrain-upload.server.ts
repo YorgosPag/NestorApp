@@ -29,7 +29,13 @@ import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { isLandProperty } from '@/constants/property-classification';
 import { judgeListingTerrainSource } from '@/lib/terrain/publication/listing-terrain-judge';
-import { encodeListingTerrainSource } from '@/lib/terrain/publication/listing-terrain-source';
+import {
+  encodeListingTerrainSource,
+  parseListingTerrainSource,
+  withPlotOutline,
+  type ListingTerrainSource,
+  type PlotOutlineChoice,
+} from '@/lib/terrain/publication/listing-terrain-source';
 import { LISTING_TERRAIN_SOURCE_MAX_BYTES } from '@/lib/terrain/publication/listing-terrain-config';
 import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
 import {
@@ -80,6 +86,9 @@ export interface TerrainPublicationResponse {
     readonly stats: ListingTerrainSnapshot['stats'];
     readonly contourIntervalM: number;
     readonly envelopeOmission: ListingTerrainSnapshot['envelopeOmission'];
+    /** ADR-920 §14.11 — το περίγραμμα όπως το βλέπει ο ιδιοκτήτης (κάλυψη Π6), ή γιατί λείπει· `null` + `null` = κανένα. */
+    readonly plotOutline: Omit<NonNullable<ListingTerrainSnapshot['plotOutline']>, 'ring'> | null;
+    readonly plotOutlineOmission: ListingTerrainSnapshot['plotOutlineOmission'];
   };
 }
 
@@ -109,13 +118,48 @@ function readDeclaration(formData: FormData): TerrainSurveyDeclaration {
   return verdict.declaration;
 }
 
-/** Τα bytes → JSON, ή `TERRAIN_SOURCE_MALFORMED`. Το σχήμα το κρίνει ο κοινός κριτής. */
-async function readSourceJson(file: File): Promise<unknown> {
+/** Τα bytes → κανονική πηγή, ή `TERRAIN_SOURCE_MALFORMED` (το ίδιο σχήμα με τον κοινό κριτή). */
+async function readSource(file: File): Promise<ListingTerrainSource> {
+  let raw: unknown;
   try {
-    return JSON.parse(await file.text());
+    raw = JSON.parse(await file.text());
   } catch {
     throw new ApiError(400, 'TERRAIN_SOURCE_MALFORMED');
   }
+  const source = parseListingTerrainSource(raw);
+  if (source === null) throw new ApiError(400, 'TERRAIN_SOURCE_MALFORMED');
+  return source;
+}
+
+/**
+ * 🔴 **ADR-920 §14.11 Π2 — ΤΟ ΠΕΡΙΓΡΑΜΜΑ ΤΟ ΒΑΖΕΙ Ο SERVER, ΠΑΝΤΑ.** Ό,τι περίγραμμα έστειλε ο browser μέσα στην πηγή
+ * **αντικαθίσταται** από το περίγραμμα που **ισχύει** στον φάκελο (ή αφαιρείται, `null`): περίγραμμα που φτάνει μαζί με
+ * ισοϋψείς δεν είναι επιβεβαίωση. Ζ3c: «ισχύει» = η νεότερη απόφαση (πηγή ή σχέδιο) — νέο ανάγλυφο **μεταφέρει** το
+ * περίγραμμα του προηγούμενου, ακόμη κι αν το σχέδιο πήγε στον κάδο. Ο ΕΝΑΣ γραφέας (`withPlotOutline`)· επιβεβαιωμένο που δεν χωρά πια στο συμβόλαιο ⇒ 503, ποτέ σιωπή.
+ */
+function withConfirmedOutline(source: ListingTerrainSource, confirmed: PlotOutlineChoice | null): ListingTerrainSource {
+  const composed = withPlotOutline(source, confirmed);
+  if (composed === null) throw new ApiError(503, 'TERRAIN_PLOT_OUTLINE_UNREADABLE');
+  return composed;
+}
+
+/**
+ * **Η πηγή → ό,τι ανεβαίνει**: ο ΕΝΑΣ κριτής (ίδιος με την προεπισκόπηση) και η κανονική σειριοποίηση. Τον καλούν η
+ * δημοσίευση ισοϋψών **και** η επαναδημοσίευση μετά από επιβεβαίωση περιγράμματος (Ζ3) — μία κρίση, όχι δύο.
+ */
+export function terrainUploadOfSource(params: {
+  readonly source: ListingTerrainSource;
+  readonly declaration: TerrainSurveyDeclaration;
+  readonly fileName: string;
+  readonly sceneFileIds: readonly string[];
+}): TerrainUpload {
+  // ADR-920 §13.3 — σχήμα ⇒ 400, επιφάνεια ⇒ 422 με το δικό της όνομα.
+  const verdict = judgeListingTerrainSource(params.source);
+  if (!verdict.ok) throw new ApiError(verdict.code === 'TERRAIN_SOURCE_MALFORMED' ? 400 : 422, verdict.code);
+  const file = new File([encodeListingTerrainSource(verdict.source)], params.fileName || 'terrain-source.json', {
+    type: TERRAIN_SOURCE_CONTENT_TYPE,
+  });
+  return { file, declaration: params.declaration, sceneFileIds: params.sceneFileIds, snapshot: verdict.snapshot };
 }
 
 /**
@@ -123,33 +167,36 @@ async function readSourceJson(file: File): Promise<unknown> {
  * megabytes, το στιγμιότυπο τελευταίο.
  *
  * @param propertyType το είδος του ακινήτου **όπως το διάβασε ο φρουρός κηδεμονίας** — ποτέ από τον πελάτη.
+ * @param confirmedOutline το επιβεβαιωμένο περίγραμμα **της πόρτας** (φάκελος ή `null`) — ρωτιέται αφού περάσουν τα φθηνά.
  */
-export async function readTerrainUpload(formData: FormData, propertyType: unknown): Promise<TerrainUpload> {
+export async function readTerrainUpload(
+  formData: FormData,
+  propertyType: unknown,
+  confirmedOutline: () => Promise<PlotOutlineChoice | null>,
+): Promise<TerrainUpload> {
   const file = readSourceFile(formData);
   const declaration = readDeclaration(formData);
   // Δ1: μόνο οικόπεδο / αγροτεμάχιο — ο ισχυρός κριτής, που λύνει και τις ελληνικές ετικέτες.
   if (!isLandProperty(propertyType)) throw new ApiError(422, 'TERRAIN_NOT_LAND');
 
-  // ADR-920 §13.3 — ο ΕΝΑΣ κριτής (ίδιος με την προεπισκόπηση): σχήμα ⇒ 400, επιφάνεια ⇒ 422 με το δικό της όνομα.
-  const verdict = judgeListingTerrainSource(await readSourceJson(file));
-  if (!verdict.ok) throw new ApiError(verdict.code === 'TERRAIN_SOURCE_MALFORMED' ? 400 : 422, verdict.code);
-  const { source, snapshot } = verdict;
-
-  const canonical = new File([encodeListingTerrainSource(source)], file.name || 'terrain-source.json', {
-    type: TERRAIN_SOURCE_CONTENT_TYPE,
-  });
-  return {
-    file: canonical,
+  const source = withConfirmedOutline(await readSource(file), await confirmedOutline());
+  return terrainUploadOfSource({
+    source,
     declaration,
+    fileName: file.name,
     sceneFileIds: readSceneFileIds(formData.get(TERRAIN_UPLOAD_FIELDS.sceneFileIds)),
-    snapshot,
-  };
+  });
 }
 
 /** Ό,τι λέει **η πόρτα** — κηδεμονία, γέννηση, ιστορικό. Όλα τα υπόλοιπα του εδάφους τα δίνει το {@link terrainMaterialDoor}. */
 interface TerrainDoorParts<TEnv, TBirth> {
   /** Το είδος του ακινήτου από το έγγραφο που ήδη διάβασε ο φρουρός κηδεμονίας. */
   readonly propertyTypeOf: (env: TEnv) => unknown;
+  /**
+   * 🗺️ Το περίγραμμα που ισχύει σε αυτή την κηδεμονία (ADR-920 §14.11 Ζ3 · Ζ3c): ο φάκελος του ιδιοκτήτη το διαβάζει, το
+   * γραφείο (χωρίς φάκελο) απαντά `null`. ⚠️ Χωρίς προεπιλογή: κάθε πόρτα δηλώνει τι ισχύει γι' αυτήν.
+   */
+  readonly confirmedOutlineOf: (env: TEnv) => Promise<PlotOutlineChoice | null>;
   /** 🔒 Η γέννηση: `buildPublishedTerrainFileRecord`, γραμμένο **στην πόρτα** (CHECK 3.105 Κ2). */
   readonly recordOf: (birth: TBirth) => BuildPendingFileRecordResult;
   /** Το ίχνος στο ιστορικό του ακινήτου. ⚠️ Δεν επιτρέπεται να ρίξει τη δημοσίευση. */
@@ -163,7 +210,7 @@ export function terrainMaterialDoor<TEnv, TBirth>(
   return {
     category: FILE_CATEGORIES.DRAWINGS,
     codes: { uploadFailed: TERRAIN_DOOR_CODES.uploadFailed },
-    read: (formData, env) => readTerrainUpload(formData, parts.propertyTypeOf(env)),
+    read: (formData, env) => readTerrainUpload(formData, parts.propertyTypeOf(env), () => parts.confirmedOutlineOf(env)),
     fileOf: (upload) => upload.file,
     sceneFileIdsOf: (upload) => upload.sceneFileIds,
     recordOf: (_upload, birth) => parts.recordOf(birth),
@@ -187,8 +234,22 @@ export function terrainResponseOf(published: PublishedTerrain): TerrainPublicati
     supersedes,
     archived,
     listing,
-    terrain: { stats: snapshot.stats, contourIntervalM: snapshot.contourIntervalM, envelopeOmission: snapshot.envelopeOmission },
+    terrain: {
+      stats: snapshot.stats,
+      contourIntervalM: snapshot.contourIntervalM,
+      envelopeOmission: snapshot.envelopeOmission,
+      plotOutline: plotOutlineFactsOf(snapshot.plotOutline),
+      plotOutlineOmission: snapshot.plotOutlineOmission,
+    },
   };
+}
+
+/** Το περίγραμμα χωρίς τον δακτύλιο — ο πελάτης έχει ήδη το σχήμα· χρειάζεται μόνο ό,τι μέτρησε ο server. */
+function plotOutlineFactsOf(
+  outline: ListingTerrainSnapshot['plotOutline'],
+): TerrainPublicationResponse['terrain']['plotOutline'] {
+  if (outline === null) return null;
+  return { areaM2: outline.areaM2, coverage: outline.coverage, coveredFraction: outline.coveredFraction };
 }
 
 /** Τα γεγονότα της δημοσίευσης για το ημερολόγιο — η πόρτα προσθέτει μόνο τα δικά της ταυτοποιητικά. */

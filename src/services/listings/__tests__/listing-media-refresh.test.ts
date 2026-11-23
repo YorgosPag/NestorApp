@@ -336,3 +336,78 @@ describe('ADR-920 Β4.3 — άλλαξε υλικό στον ΦΑΚΕΛΟ ⇒ ξ
     expect(reportProjectionFailure).toHaveBeenCalledWith(OWNER_LISTING, expect.any(Error));
   });
 });
+
+describe('ADR-920 §14.11 Ζ3b — άλλαξε ΑΡΧΕΙΟ του φακέλου (κάδος · επαναφορά) ⇒ οι αγγελίες ιδιοκτήτη του φακέλου', () => {
+  const OWNER = 'user_9';
+  const DOSSIER = 'pdos_1';
+  beforeEach(() => jest.clearAllMocks());
+
+  /** Η βάση όσο τη χρειάζεται ο δρόμος του φακέλου: αγγελίες ιδιοκτήτη ανά `dossierId`, και το έγγραφο καθεμιάς. */
+  function dossierDb(listings: Record<string, Record<string, unknown>>, failQuery = false) {
+    const queries: string[] = [];
+    const db = {
+      queries,
+      collection: (name: string) => ({
+        where: (field: string, op: string, value: unknown) => {
+          const filters: [string, unknown][] = [[field, value]];
+          const query = {
+            where: (f: string, _o: string, v: unknown) => { filters.push([f, v]); return query; },
+            get: async () => {
+              queries.push(`${name}:${filters.map(([f, v]) => `${f}${op}${String(v)}`).join('&')}`);
+              if (failQuery) throw new Error('UNAVAILABLE');
+              const docs = Object.entries(listings)
+                .filter(([, data]) => filters.every(([f, v]) => data[f] === v))
+                .map(([id]) => ({ id }));
+              return { docs };
+            },
+          };
+          return query;
+        },
+        doc: (id: string) => ({ get: async () => ({ data: () => listings[id] }) }),
+      }),
+    };
+    return db;
+  }
+
+  it('🏆 ΙΔ-4 — ΕΝΑ ερώτημα ανά φάκελο (όχι ανά αρχείο), και κάθε αγγελία του φακέλου στον ΥΠΑΡΧΟΝΤΑ γραφέα', async () => {
+    const db = dossierDb({
+      oprop_a: { dossierId: DOSSIER, authorUserId: OWNER, authorCompanyId: null },
+      oprop_other: { dossierId: 'pdos_other', authorUserId: OWNER, authorCompanyId: null },
+    });
+    const files = [
+      { entityType: 'property_dossier', entityId: DOSSIER, userId: OWNER },
+      { entityType: 'property_dossier', entityId: DOSSIER, userId: OWNER },
+    ];
+
+    const reports = await refresh.refreshListingsAfterFileChanges(db as never, files);
+
+    expect(db.queries).toEqual([`owner_properties:authorUserId==${OWNER}&dossierId==${DOSSIER}`]);
+    expect(reports).toEqual([{ propertyId: 'oprop_a', outcome: 'published' }]);
+    expect(republishOwnerProperty).toHaveBeenCalledTimes(1);
+    expect(republishListing).not.toHaveBeenCalled();
+  });
+
+  it('🔐 ΙΔ-5 — αγγελία του φακέλου που πέρασε σε ΑΛΛΟΝ δεν βρίσκεται καν (φίλτρο κατόχου) — καμία επαναπροβολή', async () => {
+    const db = dossierDb({ oprop_a: { dossierId: DOSSIER, authorUserId: 'user_other', authorCompanyId: null } });
+
+    const reports = await refresh.refreshListingsAfterFileChanges(db as never, [
+      { entityType: 'property_dossier', entityId: DOSSIER, userId: OWNER },
+    ]);
+
+    expect(reports).toEqual([]);
+    expect(republishOwnerProperty).not.toHaveBeenCalled();
+  });
+
+  it('ΙΔ-6 — αρχείο φακέλου ΧΩΡΙΣ κάτοχο δεν ρωτά τίποτα· βλάβη ερωτήματος ⇒ `failed`, ποτέ ρίψη', async () => {
+    const silent = dossierDb({});
+    await expect(refresh.refreshListingsAfterFileChanges(silent as never, [
+      { entityType: 'property_dossier', entityId: DOSSIER },
+    ])).resolves.toEqual([]);
+    expect(silent.queries).toEqual([]);
+
+    const broken = dossierDb({}, true);
+    await expect(refresh.refreshListingsAfterFileChanges(broken as never, [
+      { entityType: 'property_dossier', entityId: DOSSIER, userId: OWNER },
+    ])).resolves.toEqual([{ propertyId: DOSSIER, outcome: 'failed' }]);
+  });
+});

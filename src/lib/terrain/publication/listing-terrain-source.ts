@@ -14,6 +14,10 @@
  *      — integer millimetres, fixed key order — and THAT is what is stored. The raw client string is
  *      never kept: it could carry fields nobody validated.
  *
+ * v2 (ADR-920 §14.11 Ζ2) adds the plot outline from the surveyor's drawing. Its ONE writer is {@link withPlotOutline};
+ * the server door fills it in from the owner's confirmed outline (Ζ3) — an outline a browser sends with the survey is
+ * not a confirmation.
+ *
  * A point without elevation is `[x, y]` and stays WITHOUT `z` — never `0` (ADR-720): the TIN builder
  * keeps such points out of the surface through `surfacePointsOf`.
  *
@@ -34,8 +38,20 @@ import {
 } from './listing-terrain-config';
 import type { ListingTerrainInput } from './listing-terrain-types';
 
-/** Bumped on any breaking change of the source shape; the door refuses versions it does not know. */
-export const LISTING_TERRAIN_SOURCE_VERSION = 1 as const;
+/**
+ * Bumped on any breaking change of the source shape; the door refuses versions it does not know.
+ * History: 1 = Β3 · 2 = Β6.11 Ζ2 (`plotOutline`).
+ */
+export const LISTING_TERRAIN_SOURCE_VERSION = 2 as const;
+
+/** The previous shape, still READ: a v1 source is a v2 source without a plot outline (ADR-920 §14.11 Ζ2). */
+export const LISTING_TERRAIN_SOURCE_LEGACY_VERSION = 1 as const;
+
+/**
+ * Who a derivative is built for (ADR-920 §14.11 Π9). The owner's preview always shows the plot outline; the PUBLIC
+ * listing shows it only when the owner said so — the shape of a plot finds it on the public cadastre map (Δ3).
+ */
+export type ListingTerrainAudience = 'owner' | 'public';
 
 /** `[x, y]` (no elevation) or `[x, y, z]` — WORLD canonical mm. */
 export type TerrainSourcePoint = readonly [number, number] | readonly [number, number, number];
@@ -45,6 +61,23 @@ export type TerrainSourcePlanar = readonly [number, number];
 export interface TerrainSourceBreakline {
   readonly closed: boolean;
   readonly vertices: readonly TerrainSourceVertex[];
+}
+
+/**
+ * ADR-920 §14.11 Π1 — the plot outline taken from the surveyor's DRAWING (DXF / PDF coordinate table). It is drawn on
+ * the relief and clips nothing — the clip is {@link ListingTerrainSource.boundary}, a different idea (Civil 3D).
+ */
+export interface TerrainSourcePlotOutline {
+  /** Implicitly closed ring, arcs already tessellated — WORLD canonical mm. */
+  readonly ring: readonly TerrainSourcePlanar[];
+  /** Π9 — in the PUBLIC listing only when the owner ticked it. The owner's own preview shows it regardless. */
+  readonly showInListing: boolean;
+}
+
+/** What {@link withPlotOutline} receives — the Ζ1 candidate's ring as it comes, plus the owner's choice (Π9). */
+export interface PlotOutlineChoice {
+  readonly ringWorldMm: readonly PlanarPoint[];
+  readonly showInListing: boolean;
 }
 
 export interface ListingTerrainSource {
@@ -58,6 +91,8 @@ export interface ListingTerrainSource {
     readonly footprint: readonly TerrainSourcePlanar[];
     readonly maxHeightM: number | null;
   } | null;
+  /** The plot outline drawn on the relief, or `null`. Written ONLY through {@link withPlotOutline}. */
+  readonly plotOutline: TerrainSourcePlotOutline | null;
 }
 
 const coordinate = z.number().finite().min(-LISTING_TERRAIN_SOURCE_MAX_ABS_MM).max(LISTING_TERRAIN_SOURCE_MAX_ABS_MM);
@@ -65,8 +100,8 @@ const planar = z.tuple([coordinate, coordinate]);
 const vertex = z.tuple([coordinate, coordinate, coordinate]);
 const ring = z.array(planar).min(3).max(LISTING_TERRAIN_SOURCE_MAX_RING_VERTICES);
 
-const sourceSchema = z.object({
-  version: z.literal(LISTING_TERRAIN_SOURCE_VERSION),
+/** The fields both versions share. */
+const sharedShape = {
   points: z.array(z.union([vertex, planar])).min(1).max(LISTING_TERRAIN_SOURCE_MAX_POINTS),
   breaklines: z
     .array(z.object({ closed: z.boolean(), vertices: z.array(vertex).min(2).max(LISTING_TERRAIN_SOURCE_MAX_RING_VERTICES) }))
@@ -75,7 +110,16 @@ const sourceSchema = z.object({
   envelope: z
     .object({ footprint: ring, maxHeightM: z.number().finite().positive().max(1000).nullable() })
     .nullable(),
-});
+};
+
+const sourceSchema = z.discriminatedUnion('version', [
+  z.object({ version: z.literal(LISTING_TERRAIN_SOURCE_LEGACY_VERSION), ...sharedShape }),
+  z.object({
+    version: z.literal(LISTING_TERRAIN_SOURCE_VERSION),
+    ...sharedShape,
+    plotOutline: z.object({ ring, showInListing: z.boolean() }).nullable(),
+  }),
+]);
 
 /** Integer millimetres, `-0` folded — the survey's own precision, and one spelling per value. */
 function mm(value: number): number {
@@ -102,12 +146,13 @@ function canonicalVertex([x, y, z]: readonly [number, number, number]): TerrainS
 /**
  * The accepted source in canonical form, or `null` for anything else — wrong version, non-finite or
  * out-of-range numbers, rings under three vertices, unknown shapes. Never a default: a source that does
- * not parse is not a survey.
+ * not parse is not a survey. A v1 source is read as v2 with `plotOutline: null` — the version says so, nothing is guessed.
  */
 export function parseListingTerrainSource(raw: unknown): ListingTerrainSource | null {
   const parsed = sourceSchema.safeParse(raw);
   if (!parsed.success) return null;
   const { points, breaklines, boundary, envelope } = parsed.data;
+  const plotOutline = parsed.data.version === LISTING_TERRAIN_SOURCE_LEGACY_VERSION ? null : parsed.data.plotOutline;
 
   return {
     version: LISTING_TERRAIN_SOURCE_VERSION,
@@ -118,7 +163,40 @@ export function parseListingTerrainSource(raw: unknown): ListingTerrainSource | 
       footprint: envelope.footprint.map(canonicalPlanar),
       maxHeightM: envelope.maxHeightM === null ? null : cm(envelope.maxHeightM),
     },
+    plotOutline: plotOutline === null ? null : {
+      ring: plotOutline.ring.map(canonicalPlanar),
+      showInListing: plotOutline.showInListing,
+    },
   };
+}
+
+/**
+ * ADR-920 §14.11 Π2 — **the ONE writer of the plot outline**: the source with `outline` in it (or removed, with `null`).
+ * It goes through the SAME schema and canonical form as anything the door accepts, so the outline is bounded, rounded to
+ * the millimetre and stored in v2 like the rest — `null` when the ring is not one the contract accepts (fewer than three
+ * vertices, non-finite or out-of-range numbers, too many vertices). Pure: the door decides when it is called (Ζ3).
+ */
+export function withPlotOutline(source: ListingTerrainSource, outline: PlotOutlineChoice | null): ListingTerrainSource | null {
+  return parseListingTerrainSource({
+    ...source,
+    version: LISTING_TERRAIN_SOURCE_VERSION,
+    plotOutline: outline === null ? null : {
+      ring: outline.ringWorldMm.map((p) => [p.x, p.y]),
+      showInListing: outline.showInListing,
+    },
+  });
+}
+
+/**
+ * ADR-920 §14.11 Ζ3c — **the outline a source already carries, as `withPlotOutline` takes it** (or `null`). The inverse
+ * road, so an outline is CARRIED from one relief to the next (copy semantics) instead of being re-derived from a drawing
+ * that may since have gone to the trash. `withPlotOutline(s, plotOutlineChoiceIn(s))` gives `s` back: the ring is already
+ * canonical, and canonicalising it again changes nothing.
+ */
+export function plotOutlineChoiceIn(source: ListingTerrainSource): PlotOutlineChoice | null {
+  const outline = source.plotOutline;
+  if (outline === null) return null;
+  return { ringWorldMm: outline.ring.map(toPlanar), showInListing: outline.showInListing };
 }
 
 /**
@@ -132,6 +210,10 @@ export function encodeListingTerrainSource(source: ListingTerrainSource): string
     breaklines: source.breaklines.map((line) => ({ closed: line.closed, vertices: line.vertices })),
     boundary: source.boundary,
     envelope: source.envelope === null ? null : { footprint: source.envelope.footprint, maxHeightM: source.envelope.maxHeightM },
+    plotOutline: source.plotOutline === null ? null : {
+      ring: source.plotOutline.ring,
+      showInListing: source.plotOutline.showInListing,
+    },
   });
 }
 
@@ -149,9 +231,20 @@ function toBreakline(line: TerrainSourceBreakline, index: number): Breakline {
   return { id: `breakline-${index}`, vertices, closed: line.closed };
 }
 
-/** The source → the snapshot builder's input (ADR-920 Β2). Same frame: WORLD canonical mm. */
-export function toListingTerrainInput(source: ListingTerrainSource): ListingTerrainInput {
+/** Π9 — the outline the given audience may see: the owner always, the public only when the owner ticked it. */
+function plotOutlineFor(source: ListingTerrainSource, audience: ListingTerrainAudience): PlanarPoint[] | null {
+  const outline = source.plotOutline;
+  if (outline === null || (audience === 'public' && !outline.showInListing)) return null;
+  return outline.ring.map(toPlanar);
+}
+
+/**
+ * The source → the snapshot builder's input (ADR-920 Β2). Same frame: WORLD canonical mm. `audience` has no default on
+ * purpose: every caller states who the derivative is for (the shelf's bake = `'public'`, the owner's verdict = `'owner'`).
+ */
+export function toListingTerrainInput(source: ListingTerrainSource, audience: ListingTerrainAudience): ListingTerrainInput {
   return {
+    plotOutlineWorldMm: plotOutlineFor(source, audience),
     points: source.points.map(toTopoPoint),
     breaklines: source.breaklines.map(toBreakline),
     boundaryWorldMm: source.boundary === null ? null : source.boundary.map(toPlanar),

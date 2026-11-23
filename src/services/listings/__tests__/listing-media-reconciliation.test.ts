@@ -37,6 +37,25 @@ jest.mock('@/services/company/company-public-name.reader', () => ({
   createAgencyIdentityResolver: () => async () => null,
 }));
 
+// 🏠 ADR-920 §14.11 Ζ3c — η οικογένεια του ιδιοκτήτη: ο γραφέας της και ο δρόμος «τι θα δημοσίευε τώρα» έχουν δικές τους
+//    άγκυρες· εδώ κρίνεται ΜΟΝΟ ότι η συμφιλίωση τους ρωτά και ξαναπροβάλλει με τον ΣΩΣΤΟ γραφέα.
+const ownerMedia = new Map<string, unknown[] | 'unreadable'>();
+const republishOwnerProperty = jest.fn(async (..._args: unknown[]) => ({ publish: 'published', property: {} }));
+jest.mock('@/services/owner-property/owner-property-publication.service', () => ({
+  currentOwnerListingProjection: async (_db: unknown, property: { id: string }) => {
+    const media = ownerMedia.get(property.id);
+    if (media === 'unreadable') throw new Error('dossier read failed');
+    return { publishedMedia: media ?? [] };
+  },
+  republishOwnerProperty: (...args: unknown[]) => republishOwnerProperty(...args),
+}));
+jest.mock('@/lib/owner-property/owner-property-from-document', () => ({
+  ownerPropertyFromDocument: (raw: unknown, id: string) => (raw === undefined ? null : { ...(raw as object), id }),
+}));
+jest.mock('@/lib/owner-property/owner-property-projection', () => ({
+  projectableFromOwnerProperty: (property: unknown) => property,
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { reconcileListingMedia, judgeListingMedia } = require('../listing-media-reconciliation.service') as
   typeof import('../listing-media-reconciliation.service');
@@ -75,9 +94,20 @@ function republishedIds(): unknown[] {
   return republishListing.mock.calls.map((args) => args[1]);
 }
 
+/** Αγγελία ΙΔΙΟΚΤΗΤΗ δημοσιευμένη, με αγγελία γραμμένη για `published` και τρέχον υλικό `now` (ή φάκελο που δεν διαβάζεται). */
+function seedOwnerListed(propertyId: string, published: unknown[] | 'no-listing', now: unknown[] | 'unreadable'): void {
+  fake.seed(COLLECTIONS.OWNER_PROPERTIES, propertyId, { listed: true });
+  ownerMedia.set(propertyId, now);
+  if (published === 'no-listing') return;
+  fake.seed(COLLECTIONS.PUBLIC_LISTINGS, propertyId, { id: propertyId, mediaFingerprint: mediaFingerprintOf(published as Sources) });
+}
+
+const ownerRepublishedIds = (): unknown[] => republishOwnerProperty.mock.calls.map((args) => (args[1] as { id: string }).id);
+
 beforeEach(() => {
   jest.clearAllMocks();
   currentMedia.clear();
+  ownerMedia.clear();
   fake = new FakeFirestore();
 });
 
@@ -254,5 +284,56 @@ describe('ADR-845 §7.17 Α5β — ο ΙΔΙΟΣ κριτής, για ΕΝΑ α�
     await judge('prop_drift');
 
     expect(republishListing).not.toHaveBeenCalled();
+  });
+});
+
+describe('ADR-920 §14.11 Ζ3c — και οι αγγελίες ΙΔΙΟΚΤΗΤΗ μπαίνουν στο δίχτυ', () => {
+  it('🏆 Ι1 — αγγελία ιδιοκτήτη που συμφωνεί ΔΕΝ ξαναπροβάλλεται — από κανέναν γραφέα', async () => {
+    seedOwnerListed('oprop_ok', [source('a')], [source('a')]);
+
+    const report = await run();
+
+    expect(report).toMatchObject({ scanned: 1, listed: 1, agreed: 1, drifted: 0, republished: 0 });
+    expect(republishOwnerProperty).not.toHaveBeenCalled();
+    expect(republishListing).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Ι2 — ΠΟΡΤΑ ΠΟΥ ΞΕΦΥΓΕ στον φάκελο (π.χ. φωτογραφία στον κάδο) ⇒ ξαναπροβάλλεται με τον γραφέα του ΙΔΙΟΚΤΗΤΗ', async () => {
+    seedOwnerListed('oprop_drift', [source('a'), source('b')], [source('a')]);
+    seedListed('prop_ok', [source('a')], [source('a')]);
+
+    const report = await run();
+
+    expect(report).toMatchObject({ scanned: 2, listed: 2, agreed: 1, drifted: 1, republished: 1 });
+    expect(ownerRepublishedIds()).toEqual(['oprop_drift']);
+    expect(republishListing).not.toHaveBeenCalled();
+  });
+
+  it('Ι3 — αγγελία ιδιοκτήτη που δεν δημοσιεύεται ΔΕΝ κρίνεται (και ο φάκελός της δεν διαβάζεται)', async () => {
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, 'oprop_draft', { listed: false });
+    ownerMedia.set('oprop_draft', 'unreadable');
+
+    const report = await run();
+
+    expect(report).toMatchObject({ scanned: 1, listed: 0, republished: 0, failed: 0 });
+  });
+
+  it('🔴 Ι4 — δημοσιεύσιμη αγγελία ιδιοκτήτη ΧΩΡΙΣ δημόσια αγγελία ⇒ `missing`, ξαναπροβάλλεται', async () => {
+    seedOwnerListed('oprop_lost', 'no-listing', [source('a')]);
+
+    const report = await run();
+
+    expect(report).toMatchObject({ missing: 1, republished: 1 });
+    expect(ownerRepublishedIds()).toEqual(['oprop_lost']);
+  });
+
+  it('🔒 Ι5 — φάκελος που δεν διαβάζεται ⇒ «δεν ξέρω» + επαναπροβολή, ΠΟΤΕ «συμφωνεί» — και το πέρασμα συνεχίζει', async () => {
+    seedOwnerListed('oprop_broken', [source('a')], 'unreadable');
+    seedOwnerListed('oprop_ok', [source('a')], [source('a')]);
+
+    const report = await run();
+
+    expect(report).toMatchObject({ listed: 2, unstamped: 1, agreed: 1, republished: 1 });
+    expect(ownerRepublishedIds()).toEqual(['oprop_broken']);
   });
 });

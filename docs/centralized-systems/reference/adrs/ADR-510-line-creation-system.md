@@ -451,6 +451,11 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
 
 ## 6. Changelog
 
+- **2026-11-23** — **Το bulge SSoT μετακόμισε στο `src/lib/geometry/polyline-bulge.ts`** ([ADR-920](./ADR-920-listing-plot-terrain.md)
+  §14.11 Ζ1): το περίγραμμα οικοπέδου από DXF (εκτός subapp, CHECK 3.62) έχει τόξα. Το
+  `rendering/entities/shared/geometry-bulge-utils.ts` **επανεξάγει** — καμία εισαγωγή του viewer δεν άλλαξε. Τα σημεία είναι
+  πλέον η ρίζα `PlanarPoint` (readonly· μετρημένο ότι κανένας καλών δεν αλλάζει επί τόπου σημείο που επιστρέφεται). Ο κανόνας
+  «καμία δεύτερη μαθηματική bulge↔arc» ισχύει πλέον για το νέο σπίτι.
 - **2026-07-17** — **Φ4j UPDATE — το leading panel δεν είναι πια close-only: `[ Κλείσιμο ] [ 💉 Αντιγραφή Ιδιοτήτων ]`.**
   Εντολή Giorgio: η σύριγγα (persistent tool `match-properties`, ADR-581) να εμφανίζεται σε ΚΑΘΕ contextual tab,
   κολλητά δεξιά από το «Κλείσιμο», ίδιο row, χωρίς διαχωριστικό. Έγινε πάνω στον SSoT normaliser αυτής της φάσης

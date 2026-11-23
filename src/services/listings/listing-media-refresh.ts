@@ -137,7 +137,12 @@ export interface ChangedListingFile {
   readonly entityType?: unknown;
   readonly entityId?: unknown;
   readonly companyId?: unknown;
+  /** Ο κάτοχος **προσωπικού** αρχείου (`files_personal`) — ADR-920 §14.11 Ζ3b. */
+  readonly userId?: unknown;
 }
+
+/** Το πεδίο κατόχου που ρωτιέται ανά είδος: μισθωτής για τα εταιρικά, άνθρωπος για τον φάκελο ακινήτου. */
+type OwnerField = 'companyId' | 'userId';
 
 /** Τι έγινε στην αγγελία **ενός** ακινήτου, μετά από αλλαγή αρχείων του. */
 export interface ListingRefreshReport {
@@ -154,14 +159,19 @@ export interface ListingRefreshReport {
  * που **έκοβε πρώτος** στο Ο-21 *(Α17.7.1)*. Το κόστος είναι φραγμένο: **μία** επαναπροβολή ανά
  * ακίνητο, και μόνο όταν **άλλαξε** αρχείο του.
  */
-function ownersOf(files: readonly ChangedListingFile[], entityType: string): ReadonlyMap<string, string> {
+function ownersOf(
+  files: readonly ChangedListingFile[],
+  entityType: string,
+  ownerField: OwnerField = 'companyId',
+): ReadonlyMap<string, string> {
   const owners = new Map<string, string>();
 
   for (const file of files) {
+    const owner = file[ownerField];
     if (file.entityType !== entityType) continue;
     if (typeof file.entityId !== 'string' || file.entityId.trim() === '') continue;
-    if (typeof file.companyId !== 'string' || file.companyId.trim() === '') continue;
-    if (!owners.has(file.entityId)) owners.set(file.entityId, file.companyId);
+    if (typeof owner !== 'string' || owner.trim() === '') continue;
+    if (!owners.has(file.entityId)) owners.set(file.entityId, owner);
   }
 
   return owners;
@@ -171,7 +181,7 @@ function ownersOf(files: readonly ChangedListingFile[], entityType: string): Rea
  * 🏆 **Η ΜΙΑ ΚΛΗΣΗ ΚΑΘΕ ΠΟΡΤΑΣ ΑΡΧΕΙΟΥ** *(ADR-845 §7.17 — κλείσιμο της κλάσης Ο-35)*.
  *
  * Η πόρτα δίνει τα αρχεία που **μόλις άλλαξε** *(ταξινόμηση · κάδος · αρχειοθέτηση · πράξη CDE ·
- * διαγραφή)* και παίρνει την έκβαση **ανά ακίνητο**. Αρχεία που δεν ανήκουν σε ακίνητο ή όροφο
+ * διαγραφή)* και παίρνει την έκβαση **ανά ακίνητο**. Αρχεία που δεν ανήκουν σε ακίνητο, όροφο ή φάκελο ακινήτου
  * *(επαφή, έργο, προσφορά)* **δεν** είναι υλικό αγγελίας και παραλείπονται σιωπηλά — κενή απάντηση
  * σημαίνει *«καμία αγγελία δεν αφορούσε»*, όχι αποτυχία.
  *
@@ -200,6 +210,44 @@ export async function refreshListingsAfterFileChanges(
 
   const floors = [...ownersOf(files, ENTITY_TYPES.FLOOR)].map(([floorId, companyId]) => ({ floorId, companyId }));
   reports.push(...(await refreshDeclaredFloors(adminDb, floors)));
+
+  reports.push(...(await refreshDossierListings(adminDb, ownersOf(files, ENTITY_TYPES.PROPERTY_DOSSIER, 'userId'))));
+
+  return reports;
+}
+
+/**
+ * 🗂️ **ΑΡΧΕΙΟ ΦΑΚΕΛΟΥ ΑΚΙΝΗΤΟΥ ⇒ ΟΙ ΑΓΓΕΛΙΕΣ ΙΔΙΟΚΤΗΤΗ ΤΟΥ ΦΑΚΕΛΟΥ** *(ADR-920 §14.11 Ζ3b)*.
+ *
+ * Ο φάκελος (`property_dossier`, `files_personal`) είναι η πηγή υλικού της αγγελίας ιδιοκτήτη — φωτογραφίες, ΠΕΑ,
+ * τοπογραφικό σχέδιο και το περίγραμμά του. Ως το Ζ3b παραλειπόταν εδώ σιωπηλά, όπως ο όροφος ως το ADR-907 §11.8.
+ * 🔑 Η αγγελία βρίσκεται από τον **κάτοχο** και το **δικό της** `dossierId` (δύο ισότητες ⇒ συγχώνευση αυτόματων δεικτών, CHECK 3.35)· η κηδεμονία
+ * (*«είναι ακόμη του ίδιου ανθρώπου;»*) ξαναρωτιέται μέσα στο {@link refreshOwnerListingAfterMediaChange}.
+ * ⚠️ **Δεν πετά ποτέ**: αποτυχημένη ανάγνωση φακέλου ονομάζεται `failed`, όπως κάθε άλλη προβολή.
+ */
+async function refreshDossierListings(
+  adminDb: AdminFirestore,
+  dossiers: ReadonlyMap<string, string>,
+): Promise<readonly ListingRefreshReport[]> {
+  const reports: ListingRefreshReport[] = [];
+
+  for (const [dossierId, userId] of dossiers) {
+    try {
+      const listings = await adminDb
+        .collection(COLLECTIONS.OWNER_PROPERTIES)
+        .where('authorUserId', '==', userId)
+        .where('dossierId', '==', dossierId)
+        .get();
+      for (const listing of listings.docs) {
+        reports.push({
+          propertyId: listing.id,
+          outcome: await refreshOwnerListingAfterMediaChange(adminDb, listing.id, userId),
+        });
+      }
+    } catch (error) {
+      reports.push({ propertyId: dossierId, outcome: reportProjectionFailure(dossierId, error) });
+    }
+  }
 
   return reports;
 }

@@ -86,6 +86,21 @@ export function isEmbeddedObjectCode(code: string): boolean {
 }
 
 /**
+ * Οι **δικές** βαθμωτές ετικέτες μιας εγγραφής, **πρώτη εμφάνιση νικά**, μέχρι το `101` (ό,τι ακολουθεί είναι άλλο
+ * namespace — βλ. το περιστατικό πάνω). Για εγγραφές όπου ο κωδικός επαναλαμβάνεται (κορυφές LWPOLYLINE), η πρώτη
+ * εμφάνιση είναι αυτή που ανήκει στην κεφαλίδα· οι επαναλήψεις τις διαβάζει ο καλών με τη σειρά τους
+ * (ADR-920 §14.11 Ζ1 — ένα σπίτι για τους σαρωτές πολυγραμμών και ετικετών).
+ */
+export function ownFirstTags(pairs: Iterable<DxfPair>): Record<string, string> {
+  const tags: Record<string, string> = {};
+  for (const [code, value] of pairs) {
+    if (isEmbeddedObjectCode(code)) break;
+    if (!(code in tags)) tags[code] = value;
+  }
+  return tags;
+}
+
+/**
  * Ανοίγει νέο bucket. Ο πίνακας **δημιουργείται τεμπέλικα** (πρώτο `101`) ώστε οι ~99% των
  * οντοτήτων χωρίς embedded object να μην πληρώνουν ούτε μία allocation — ίδια αρχή με το
  * `NOOP_COLLECTOR` του `dxf-mtext-chunks.ts` (ο parser τρέχει σε προϋπολογισμό 500k οντοτήτων).

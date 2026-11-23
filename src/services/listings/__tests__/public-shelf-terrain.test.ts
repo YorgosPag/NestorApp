@@ -8,7 +8,11 @@
 import { createHash } from 'crypto';
 import { gunzipSync } from 'node:zlib';
 
-import { encodeListingTerrainSource, parseListingTerrainSource } from '@/lib/terrain/publication/listing-terrain-source';
+import {
+  encodeListingTerrainSource,
+  parseListingTerrainSource,
+  withPlotOutline,
+} from '@/lib/terrain/publication/listing-terrain-source';
 import {
   TERRAIN_DECLARATION_METADATA_KEY,
   encodeTerrainSurveyDeclaration,
@@ -145,11 +149,27 @@ describe('bakeListingTerrain — ο ψήστης', () => {
     if (!baked.ok) throw new Error(baked.failure);
     const snapshot = JSON.parse(baked.json.toString('utf8')) as { version: number; points?: unknown; mesh: { positions: number[] } };
 
-    expect(snapshot.version).toBe(1);
+    expect(snapshot.version).toBe(2);
     expect(snapshot).not.toHaveProperty('points');
     expect(snapshot.mesh.positions.every((n) => Math.abs(n) < 100_000)).toBe(true);
     expect(gunzipSync(baked.gzipped).equals(baked.json)).toBe(true);
     expect(baked.card.survey).toEqual({ surveyorName: 'Τοπογράφος Α', surveyedOn: '2026-05-04' });
+  });
+
+  it('🔴 ADR-920 §14.11 Π9 — περίγραμμα στο ΔΗΜΟΣΙΟ στιγμιότυπο ΜΟΝΟ με το κουτάκι του ιδιοκτήτη', () => {
+    const ring = [
+      { x: E0 + 2_000, y: N0 + 2_000 }, { x: E0 + 18_000, y: N0 + 2_000 },
+      { x: E0 + 18_000, y: N0 + 18_000 }, { x: E0 + 2_000, y: N0 + 18_000 },
+    ];
+    const bakedWith = (showInListing: boolean) => {
+      const source = withPlotOutline(parseListingTerrainSource(JSON.parse(sourceBytes().toString('utf8')))!, { ringWorldMm: ring, showInListing });
+      const baked = bakeListingTerrain(Buffer.from(encodeListingTerrainSource(source!), 'utf8'), DECLARATION);
+      if (!baked.ok) throw new Error(baked.failure);
+      return JSON.parse(baked.json.toString('utf8')) as { plotOutline: unknown; plotOutlineOmission: unknown };
+    };
+
+    expect(bakedWith(false)).toMatchObject({ plotOutline: null, plotOutlineOmission: null });
+    expect(bakedWith(true)).toMatchObject({ plotOutline: { areaM2: 256, coverage: 'covered' }, plotOutlineOmission: null });
   });
 
   it('ντετερμινιστικό: ίδια πηγή ⇒ ίδια bytes (άρα ίδιο κλειδί)', () => {
@@ -238,9 +258,10 @@ describe('reconcilePublicTerrainShelf — η συμφιλίωση', () => {
 
   it('Β6.9 Β — η αναθεώρηση του builder είναι στη συνταγή, χωριστά από την έκδοση ΣΧΗΜΑΤΟΣ', () => {
     expect(shelfRecipe(LISTING_TERRAIN_SHELF.encoding)).toBe(
-      `json:terrain-s1-w1-b${LISTING_TERRAIN_SHELF.encoding.builderRevision}`,
+      `json:terrain-s2-w2-b${LISTING_TERRAIN_SHELF.encoding.builderRevision}`,
     );
-    expect(LISTING_TERRAIN_SHELF.encoding.snapshotVersion).toBe(1);
+    expect(LISTING_TERRAIN_SHELF.encoding.snapshotVersion).toBe(2);
+    expect(LISTING_TERRAIN_SHELF.encoding.builderRevision).toBe(3);
   });
 
   it('🏆 Β6.9 Β — ΙΔΙΑ bytes με ΠΑΛΙΑ συνταγή: ανανεώνεται η εγγραφή, όχι τα bytes · μετά, cache hit', async () => {

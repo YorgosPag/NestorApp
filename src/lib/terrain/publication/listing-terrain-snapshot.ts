@@ -4,7 +4,8 @@
  *   survey points + breaklines ─buildTin─▶ TIN ─clipTinToBoundary─▶ plot surface
  *        ├─ chooseContourConfig (relief + on-screen density, Β6.8) + generateContoursFromSurface ─▶ contours
  *        ├─ slopeClasses / summariseSlope ─▶ slope map + stats
- *        └─ placeEnvelope ─▶ indicative building envelope
+ *        ├─ placeEnvelope ─▶ indicative building envelope
+ *        └─ placePlotOutline ─▶ the plot outline DRAWN on the relief (clips nothing, ADR-920 §14.11 Π1)
  *   everything ─frameOf─▶ metres from the surface centre (no world coordinates leave)
  *
  * Every step is the SAME code the DXF Viewer runs (ADR-920 Α1): one TIN, one clip, one contour
@@ -17,6 +18,7 @@ import { buildTin } from '@/lib/terrain/tin-builder';
 import { clipTinToBoundary } from '@/lib/terrain/tin-clip-to-boundary';
 import { generateContoursFromSurface } from '@/lib/terrain/contour-generator';
 import type { ContourLine, TinSurface } from '@/lib/terrain/terrain-types';
+import { placePlotOutline } from '../plot-outline/plot-outline-placement';
 import { chooseContourConfig, contourDensityInputOf } from './contour-interval';
 import { slopeClasses, summariseSlope } from './terrain-slope';
 import { LISTING_TERRAIN_MAX_TRIANGLES, LISTING_TERRAIN_SLOPE_BANDS_PCT } from './listing-terrain-config';
@@ -34,6 +36,7 @@ import {
   type ListingTerrainContour,
   type ListingTerrainInput,
   type ListingTerrainMesh,
+  type ListingTerrainSnapshot,
   type ListingTerrainStats,
 } from './listing-terrain-types';
 
@@ -57,27 +60,33 @@ export function buildListingTerrainSnapshot(
   }
 
   const frame = frameOf(tin);
+  return { ok: true, snapshot: snapshotOf(tin, frame, input), frame };
+}
+
+/** Everything published about the surface `tin`, in `frame`. */
+function snapshotOf(tin: TinSurface, frame: SnapshotFrame, input: ListingTerrainInput): ListingTerrainSnapshot {
   const contourConfig = chooseContourConfig(contourDensityInputOf(tin));
   const { contours } = generateContoursFromSurface(tin, contourConfig);
   const placed = input.envelope
     ? placeEnvelope(tin, frame, input.envelope.footprintWorldMm, input.envelope.maxHeightM)
     : { envelope: null, omission: null };
+  const outline = input.plotOutlineWorldMm
+    ? placePlotOutline(tin, frame, input.plotOutlineWorldMm)
+    : { plotOutline: null, omission: null };
 
   return {
-    ok: true,
-    snapshot: {
-      version: LISTING_TERRAIN_SNAPSHOT_VERSION,
-      mesh: meshOf(tin, frame),
-      contours: contours.map((line) => contourToFrame(line, frame)),
-      contourIntervalM: contourConfig.intervalMm / 1000,
-      contourMajorEvery: contourConfig.majorEvery,
-      slopeBandsPct: LISTING_TERRAIN_SLOPE_BANDS_PCT,
-      boundary: input.boundaryWorldMm ? ringToFrame(frame, input.boundaryWorldMm) : null,
-      stats: statsOf(tin),
-      envelope: placed.envelope,
-      envelopeOmission: placed.omission,
-    },
-    frame,
+    version: LISTING_TERRAIN_SNAPSHOT_VERSION,
+    mesh: meshOf(tin, frame),
+    contours: contours.map((line) => contourToFrame(line, frame)),
+    contourIntervalM: contourConfig.intervalMm / 1000,
+    contourMajorEvery: contourConfig.majorEvery,
+    slopeBandsPct: LISTING_TERRAIN_SLOPE_BANDS_PCT,
+    boundary: input.boundaryWorldMm ? ringToFrame(frame, input.boundaryWorldMm) : null,
+    stats: statsOf(tin),
+    envelope: placed.envelope,
+    envelopeOmission: placed.omission,
+    plotOutline: outline.plotOutline,
+    plotOutlineOmission: outline.omission,
   };
 }
 

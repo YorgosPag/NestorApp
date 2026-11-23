@@ -36,7 +36,7 @@ export class RasterizeUnavailableError extends Error {
 }
 
 const DEFAULT_DPI = 200;
-const DEFAULT_MAX_PAGES = 10;
+export const DEFAULT_MAX_PAGES = 10;
 const DEFAULT_MAX_WIDTH_PX = 2000;
 
 type CanvasLike = {
@@ -446,19 +446,24 @@ export interface PdfPageTextLayout {
   readonly runs: readonly PdfTextRun[];
 }
 
-/** **Η γεωμετρία του κειμένου όλου του PDF** (ADR-923 §5.6.1), χωρίς ζωγραφική: ό,τι χρειάζεται ένας έλεγχος διάταξης. */
-export async function readPdfTextLayout(pdfBuffer: Uint8Array): Promise<PdfPageTextLayout[]> {
+/**
+ * **Ο ΕΝΑΣ βρόχος σελίδων** κάθε ανάγνωσης χωρίς ζωγραφική: άνοιγμα, μία σελίδα τη φορά (σειριακά: το pdf.js κρατά κατάσταση
+ * ανά έγγραφο), `cleanup` ανά σελίδα και `destroy` στο τέλος — ό,τι κι αν πετάξει ο αναγνώστης. Τρία αντίγραφα του βρόχου
+ * (διάταξη · κείμενο · κείμενο με θέσεις, ADR-920 §14.11 Ζ3) θα σήμαιναν τρεις υποσχέσεις καθαρισμού.
+ */
+export async function mapPdfPages<T>(
+  pdfBuffer: Uint8Array,
+  maxPages: number,
+  read: (page: PdfjsPage, pageNum: number) => Promise<T>,
+): Promise<T[]> {
   const pdfjs = await loadPdfjs();
   const doc = await pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), isEvalSupported: false }).promise;
-  const pages: PdfPageTextLayout[] = [];
+  const pages: T[] = [];
   try {
-    for (let pageNum = 1; pageNum <= doc.numPages; pageNum += 1) {
+    for (let pageNum = 1; pageNum <= Math.min(doc.numPages, maxPages); pageNum += 1) {
       const page = await doc.getPage(pageNum);
       try {
-        const { width: widthPt, height: heightPt } = page.getViewport({ scale: 1 });
-        const { items } = await page.getTextContent();
-        const runs = items.flatMap(({ str, transform, width }) => (str && str.trim() !== '' && transform ? [{ text: str, transform, width: width ?? 0 }] : []));
-        pages.push({ widthPt, heightPt, runs });
+        pages.push(await read(page, pageNum));
       } finally {
         page.cleanup();
       }
@@ -469,31 +474,24 @@ export async function readPdfTextLayout(pdfBuffer: Uint8Array): Promise<PdfPageT
   return pages;
 }
 
+/** **Η γεωμετρία του κειμένου όλου του PDF** (ADR-923 §5.6.1), χωρίς ζωγραφική: ό,τι χρειάζεται ένας έλεγχος διάταξης. */
+export function readPdfTextLayout(pdfBuffer: Uint8Array): Promise<PdfPageTextLayout[]> {
+  return mapPdfPages(pdfBuffer, Number.POSITIVE_INFINITY, async (page) => {
+    const { width: widthPt, height: heightPt } = page.getViewport({ scale: 1 });
+    const { items } = await page.getTextContent();
+    const runs = items.flatMap(({ str, transform, width }) => (str && str.trim() !== '' && transform ? [{ text: str, transform, width: width ?? 0 }] : []));
+    return { widthPt, heightPt, runs };
+  });
+}
+
 /**
  * **Το κείμενο του PDF, ανά σελίδα** (ADR-900 §3.8 — ανάγνωση ΠΚΑ). Γραμμές ενωμένες με αλλαγή γραμμής
  * όπου το pdf.js σημειώνει τέλος γραμμής· κανένα OCR (σαρωμένο PDF ⇒ κενό κείμενο, και ο
  * καλών το κρίνει ως «δεν διαβάστηκε», ποτέ ως «δεν υπάρχει»).
  */
-export async function extractPdfText(
+export function extractPdfText(
   pdfBuffer: Buffer,
   options: { readonly maxPages?: number } = {},
 ): Promise<string[]> {
-  const pdfjs = await loadPdfjs();
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(pdfBuffer), isEvalSupported: false }).promise;
-  const pageCount = Math.min(doc.numPages, options.maxPages ?? DEFAULT_MAX_PAGES);
-  const pages: string[] = [];
-  try {
-    for (let pageNum = 1; pageNum <= pageCount; pageNum += 1) {
-      const page = await doc.getPage(pageNum);
-      try {
-        const { items } = await page.getTextContent();
-        pages.push(pageTextOf(items));
-      } finally {
-        page.cleanup();
-      }
-    }
-  } finally {
-    await doc.destroy();
-  }
-  return pages;
+  return mapPdfPages(pdfBuffer, options.maxPages ?? DEFAULT_MAX_PAGES, async (page) => pageTextOf((await page.getTextContent()).items));
 }

@@ -83,6 +83,12 @@ const MEASURED_FIELD_CASES = [
     stored: { status: 'failed', recipe: 1, failure: 'undecodable', failedAt: '2026-10-26T00:00:00.000Z' },
     forged: { status: 'ready', recipe: 1, renderedAt: '2026-10-26T00:00:00.000Z' },
   },
+  {
+    // ADR-920 §14.11 Ζ3 — το επιβεβαιωμένο περίγραμμα: ο πελάτης δεν «μετακινεί» το οικόπεδο χωρίς τον έλεγχο της πόρτας.
+    key: 'plotOutline',
+    stored: { version: 1, ring: [{ x: 0, y: 0 }, { x: 10_000, y: 0 }, { x: 0, y: 10_000 }], showInListing: false },
+    forged: { version: 1, ring: [{ x: 5e9, y: 0 }, { x: 5e9, y: 1e6 }, { x: 0, y: 1e6 }], showInListing: true },
+  },
 ] as const;
 
 const UPDATE_LEGS = [

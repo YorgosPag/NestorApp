@@ -12,7 +12,8 @@
  * ────────────────────────────────────────────────────────────────────────────
  *
  *   **Δ1. Ο ΠΟΛΙΤΗΣ ΧΩΡΙΣ ΕΤΑΙΡΕΙΑ** γράφει τη δραστηριότητα του δικού του αρχείου — ζευγαρωμένα —
- *   και τη διαβάζει. Κανείς άλλος δεν τη διαβάζει.
+ *   και τη διαβάζει. Κανείς άλλος δεν τη διαβάζει. Από το ADR-920 §14.11 Ζ3b η μόνη τέτοια πράξη πελάτη είναι
+ *   η **μετονομασία**: κάδος/επαναφορά τα γράφει ο διακομιστής (Admin SDK), και ζευγαρωμένα από πελάτη αρνούνται.
  *   **Δ2. ΠΛΑΣΤΟΓΡΑΦΙΑ**: γραμμή που **δεν** περιγράφει την αλλαγή (λάθος πράξη · άλλο αρχείο · άλλος
  *   δράστης · χρόνος πελάτη · `companyId`) ⇒ άρνηση **ολόκληρης** της δέσμης.
  *   **Δ3. ΑΜΕΤΑΒΛΗΤΟ**: ούτε ο κάτοχος αλλάζει ή σβήνει γραμμή του.
@@ -89,10 +90,8 @@ describe('file_audit_log_personal.rules — η δραστηριότητα του
       await seedPersonalFile(env, FILE_ID, CITIZEN_UID);
     });
 
-    it('κάδος → επαναφορά → μετονομασία: τρεις δέσμες, τρεις γραμμές, όλες αναγνώσιμες από τον κάτοχο', async () => {
+    it('μετονομασία: μία δέσμη, μία γραμμή, αναγνώσιμη από τον κάτοχο', async () => {
       const db = citizen();
-      await assertSucceeds(commitPairedActivity(db, { uid: CITIZEN_UID, fileId: FILE_ID, action: 'delete', updates: TRASH_UPDATES }));
-      await assertSucceeds(commitPairedActivity(db, { uid: CITIZEN_UID, fileId: FILE_ID, action: 'restore', updates: RESTORE_UPDATES }));
       await assertSucceeds(commitPairedActivity(db, {
         uid: CITIZEN_UID, fileId: FILE_ID, action: 'rename', updates: { displayName: 'Συμβόλαιο 2026' },
       }));
@@ -100,7 +99,18 @@ describe('file_audit_log_personal.rules — η δραστηριότητα του
       const snap = await assertSucceeds(
         db.collection(PERSONAL_ACTIVITY).where('userId', '==', CITIZEN_UID).where('fileId', '==', FILE_ID).get(),
       );
-      expect(snap.docs.map((d) => d.data().action).sort()).toEqual(['delete', 'rename', 'restore']);
+      expect(snap.docs.map((d) => d.data().action)).toEqual(['rename']);
+    });
+
+    // 🗑️ ADR-920 §14.11 Ζ3b — κάδος/επαναφορά είναι πράξη ΔΙΑΚΟΜΙΣΤΗ: ούτε ζευγαρωμένα δεν γράφονται πια από πελάτη.
+    //    Τη γραμμή τους τη γράφει ο διακομιστής, στην ίδια δέσμη Admin με την αλλαγή (άγκυρα: `trash-route.test.ts` Π1).
+    it('🔴 κάδος · επαναφορά ΖΕΥΓΑΡΩΜΕΝΑ από πελάτη → deny (Ζ3b)', async () => {
+      const db = citizen();
+      await assertFails(commitPairedActivity(db, { uid: CITIZEN_UID, fileId: FILE_ID, action: 'delete', updates: TRASH_UPDATES }));
+      await seedPersonalFile(env, 'file-trashed', CITIZEN_UID, { lifecycleState: 'trashed', isDeleted: true });
+      await assertFails(commitPairedActivity(db, {
+        uid: CITIZEN_UID, fileId: 'file-trashed', action: 'restore', updates: RESTORE_UPDATES,
+      }));
     });
 
     it('🔴 ξένος πολίτης δεν διαβάζει τη δραστηριότητα — ούτε με φίλτρο που ονομάζει τον κάτοχο', async () => {
@@ -122,41 +132,40 @@ describe('file_audit_log_personal.rules — η δραστηριότητα του
       await seedPersonalFile(env, FILE_ID, CITIZEN_UID);
     });
 
-    const trash = { uid: CITIZEN_UID, fileId: FILE_ID, updates: TRASH_UPDATES } as const;
+    // ADR-920 §14.11 Ζ3b — η βάση κάθε πλαστογραφίας είναι η ΜΟΝΗ πράξη πελάτη που απέμεινε: η μετονομασία.
+    const rename = { uid: CITIZEN_UID, fileId: FILE_ID, updates: { displayName: 'άλλο όνομα' } } as const;
 
-    it('λάθος πράξη: «μετονόμασα» ενώ πήγε στον κάδο', async () => {
-      await assertFails(commitPairedActivity(citizen(), { ...trash, action: 'rename' }));
+    it('ελέγχου: η ίδια δέσμη ΧΩΡΙΣ πλαστογραφία περνά — αλλιώς κάθε «deny» παρακάτω δεν λέει τίποτα', async () => {
+      await assertSucceeds(commitPairedActivity(citizen(), { ...rename, action: 'rename' }));
     });
 
     it('«διέγραψα» ενώ έγινε μόνο μετονομασία — η γραμμή δεν επιτρέπεται να υπερβάλλει', async () => {
-      await assertFails(commitPairedActivity(citizen(), {
-        uid: CITIZEN_UID, fileId: FILE_ID, action: 'delete', updates: { displayName: 'άλλο όνομα' },
-      }));
+      await assertFails(commitPairedActivity(citizen(), { ...rename, action: 'delete' }));
     });
 
-    it('«επανέφερα» αρχείο που ΔΕΝ ήταν στον κάδο', async () => {
-      await assertFails(commitPairedActivity(citizen(), { ...trash, action: 'restore', updates: RESTORE_UPDATES }));
+    it('«επανέφερα» ενώ έγινε μόνο μετονομασία', async () => {
+      await assertFails(commitPairedActivity(citizen(), { ...rename, action: 'restore' }));
     });
 
     it('πράξη εκτός κλειστού συνόλου (`share`) — ακόμη και με πραγματική αλλαγή', async () => {
-      await assertFails(commitPairedActivity(citizen(), { ...trash, action: 'share' }));
+      await assertFails(commitPairedActivity(citizen(), { ...rename, action: 'share' }));
     });
 
     it('δράστης ΑΛΛΟΣ από τον αιτούντα', async () => {
-      await assertFails(commitPairedActivity(citizen(), { ...trash, action: 'delete', row: { performedBy: 'someone-else' } }));
+      await assertFails(commitPairedActivity(citizen(), { ...rename, action: 'rename', row: { performedBy: 'someone-else' } }));
     });
 
     it('χρόνος ΠΕΛΑΤΗ αντί διακομιστή', async () => {
-      await assertFails(commitPairedActivity(citizen(), { ...trash, action: 'delete', row: { timestamp: new Date() } }));
+      await assertFails(commitPairedActivity(citizen(), { ...rename, action: 'rename', row: { timestamp: new Date() } }));
     });
 
     it('ψευδο-εταιρεία στη γραμμή (`companyId`)', async () => {
-      await assertFails(commitPairedActivity(citizen(), { ...trash, action: 'delete', row: { companyId: 'comp_x' } }));
+      await assertFails(commitPairedActivity(citizen(), { ...rename, action: 'rename', row: { companyId: 'comp_x' } }));
     });
 
     it('γραμμή για αρχείο ΑΛΛΟΥ ανθρώπου — ακόμη κι αν εκείνο αλλάζει στην ίδια δέσμη', async () => {
       await seedPersonalFile(env, 'file-of-other', 'another-citizen');
-      await assertFails(commitPairedActivity(citizen(), { uid: CITIZEN_UID, fileId: 'file-of-other', action: 'delete', updates: TRASH_UPDATES }));
+      await assertFails(commitPairedActivity(citizen(), { ...rename, fileId: 'file-of-other', action: 'rename' }));
     });
   });
 

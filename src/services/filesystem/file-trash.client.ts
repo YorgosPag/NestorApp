@@ -1,5 +1,5 @@
 /**
- * @fileoverview **Ο ΠΕΛΑΤΗΣ ΤΟΥ ΚΑΔΟΥ ΤΩΝ ΕΤΑΙΡΙΚΩΝ ΑΡΧΕΙΩΝ** — ο καταναλωτής του `POST /api/files/trash`.
+ * @fileoverview **Ο ΠΕΛΑΤΗΣ ΤΟΥ ΚΑΔΟΥ ΑΡΧΕΙΩΝ** — ο καταναλωτής του `POST /api/files/trash`, και στα δύο διαμερίσματα.
  * @related app/api/files/trash/route.ts · services/file-record/file-trash.service.ts
  * @module services/filesystem/file-trash.client
  *
@@ -15,6 +15,8 @@
 
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+import { FILE_CUSTODY_PARAM } from '@/lib/files/file-custody';
+import type { CustodyKind } from '@/lib/workspace/custody-scope';
 import {
   MAX_FILES_PER_BATCH_ACT,
   type FileTrashResponse,
@@ -31,7 +33,10 @@ function chunksOf(fileIds: readonly string[]): string[][] {
 }
 
 /**
- * **Ζήτα κάδο ή επαναφορά για μια δέσμη εταιρικών αρχείων.**
+ * **Ζήτα κάδο ή επαναφορά για μια δέσμη αρχείων ΕΝΟΣ διαμερίσματος.**
+ *
+ * 🗂️ ADR-920 §14.11 Ζ3b — **μόνο το είδος** στο σύρμα (`?custody=`)· ο κάτοχος έρχεται από την ταυτότητα του
+ * διακομιστή. Υποχρεωτικό στον τύπο: προεπιλογή θα σήμαινε «μάντεψε εταιρεία».
  *
  * @returns Τι **έγινε πραγματικά**: `files` = όσα άλλαξαν · `errors` = ονομασμένη άρνηση ανά αρχείο.
  * Ο καλών αποφασίζει τι θα δει ο άνθρωπος — εδώ καμία ρίψη για άρνηση, μόνο για βλάβη δικτύου.
@@ -39,6 +44,7 @@ function chunksOf(fileIds: readonly string[]): string[][] {
 export async function requestFileTrash(
   fileIds: readonly string[],
   action: FileTrashAction,
+  custody: CustodyKind,
 ): Promise<FileTrashResponse> {
   const merged = {
     processedCount: 0,
@@ -48,7 +54,11 @@ export async function requestFileTrash(
   };
 
   for (const chunk of chunksOf(fileIds)) {
-    const part = await apiClient.post<FileTrashResponse>(API_ROUTES.FILES.TRASH, { fileIds: chunk, action });
+    const part = await apiClient.post<FileTrashResponse>(
+      API_ROUTES.FILES.TRASH,
+      { fileIds: chunk, action },
+      { params: { [FILE_CUSTODY_PARAM]: custody } },
+    );
     merged.processedCount += part.processedCount;
     merged.errors.push(...part.errors);
     merged.listings.push(...part.listings);

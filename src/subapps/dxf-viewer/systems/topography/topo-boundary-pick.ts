@@ -23,6 +23,7 @@
  * παράμετρος = ο μεταγλωττιστής το πιάνει· default τιμή = το πιάνει ο χρήστης, σε παραγωγή.
  */
 
+import { qualifiesAsClosedRing } from '@/lib/geometry/closed-polyline-ring';
 import type { Entity } from '../../types/entities';
 import { isPolylineEntity, isLWPolylineEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
@@ -41,7 +42,8 @@ import type { TopoBoundary } from './topo-types';
  */
 function closedRingVerticesOf(entity: Entity): readonly Point2D[] | null {
   if (!isPolylineEntity(entity) && !isLWPolylineEntity(entity)) return null;
-  if (entity.closed !== true || entity.vertices.length < 3) return null;
+  // ADR-920 Β6.11 Ζ1 — the ONE «encloses an area?» predicate, shared with the owner's plot-outline import.
+  if (!qualifiesAsClosedRing(entity.closed, entity.vertices.length)) return null;
   return projectVerticesTo2D(entity.vertices);
 }
 

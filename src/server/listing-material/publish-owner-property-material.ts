@@ -79,8 +79,9 @@ const NOT_FOUND = 'NOT_FOUND';
  *
  * 🔑 Αγγελία σε χώρο γραφείου, χωρίς φάκελο, ή με φάκελο **άλλου** ανθρώπου ⇒ η **ίδια** ονομασμένη άρνηση: σε
  * καμία από τις τρεις δεν υπάρχει δοχείο του ιδιοκτήτη όπου το υλικό θα μπορούσε να ζήσει.
+ * 🔑 Εξάγεται για το σκέλος επιβεβαίωσης περιγράμματος (ADR-920 §14.11 Ζ3): **ίδιος** φρουρός, όχι δεύτερος.
  */
-async function enterOwnerDoor(
+export async function enterOwnerDoor(
   ownerPropertyId: string,
   actor: ApiActor,
   door: Pick<OwnerMaterialPublicationDoor<unknown>, 'codes'>,
@@ -135,5 +136,30 @@ export async function publishOwnerPropertyMaterial<TParsed, TDeclared = undefine
   door: OwnerMaterialPublicationDoor<TParsed, TDeclared>,
 ): Promise<ListingMaterialPublication<TParsed, TDeclared>> {
   const env = await enterOwnerDoor(ownerPropertyId, actor, door);
-  return publishListingMaterial(await request.formData(), ownerPropertySubject(env), door);
+  return publishOwnerMaterialIn(env, await request.formData(), door);
+}
+
+/**
+ * **Η ίδια δημοσίευση, σε φάκελο που η πόρτα ΗΔΗ έκρινε** — ο κοινός κορμός της δημοσίευσης από σώμα και της
+ * {@link republishOwnerMaterial} (ADR-920 §14.11 Ζ3c): ίδια σειρά, ίδια επαναπροβολή.
+ */
+function publishOwnerMaterialIn<TParsed, TDeclared = undefined>(
+  env: OwnerMaterialDoorEnv,
+  formData: FormData,
+  door: OwnerMaterialPublicationDoor<TParsed, TDeclared>,
+): Promise<ListingMaterialPublication<TParsed, TDeclared>> {
+  return publishListingMaterial(formData, ownerPropertySubject(env), door);
+}
+
+/**
+ * **Επαναδημοσίευση υλικού που ο server ΗΔΗ έκρινε** (ADR-920 §14.11 Ζ3 · Ζ3c): επιβεβαίωση περιγράμματος (`PUT`) και
+ * αλλαγή του χωρίς νέο σχέδιο (`PATCH`). Δεν υπάρχει σώμα πελάτη να διαβαστεί — το `read` της πόρτας αντικαθίσταται από
+ * το κριμένο `parsed`, όλα τα υπόλοιπα (γέννηση · διαδοχή · ΕΠΑΝΑΠΡΟΒΟΛΗ) μένουν της πόρτας και του ΕΝΟΣ κινητήρα.
+ */
+export function republishOwnerMaterial<TParsed, TDeclared = undefined>(
+  env: OwnerMaterialDoorEnv,
+  door: OwnerMaterialPublicationDoor<TParsed, TDeclared>,
+  parsed: TParsed,
+): Promise<ListingMaterialPublication<TParsed, TDeclared>> {
+  return publishOwnerMaterialIn(env, new FormData(), { ...door, read: async () => parsed });
 }

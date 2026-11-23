@@ -101,11 +101,30 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   FieldValue: { serverTimestamp: () => 'ts' },
 }));
 
+/** Τα bytes κάθε ανεβάσματος — για να διαβαστεί η πηγή που ΠΡΑΓΜΑΤΙ φυλάχτηκε (ADR-920 §14.11 Ζ3). */
+const uploadedBuffers: Buffer[] = [];
 jest.mock('@/services/storage-admin/public-upload.service', () => ({
-  uploadPublicFile: async () => {
+  uploadPublicFile: async (params: { buffer: Buffer }) => {
+    uploadedBuffers.push(params.buffer);
     trace.push('upload');
     return { url: '/api/storage/file/x', storagePath: 'p', bucket: 'b', fileId: 'f' };
   },
+}));
+
+/** Η πηγή που είναι ΗΔΗ δημοσιευμένη στον φάκελο (Ζ3c) — ο κάδος της εγγραφής τη δίνει μαζί με τη δήλωση Δ2. */
+let storedSourceBytes = '';
+let storedDeclaration = '';
+const downloads = jest.fn();
+jest.mock('@/server/files/file-record-bucket', () => ({
+  fileRecordBucket: () => ({
+    file: () => ({
+      getMetadata: async () => [{ metadata: { nestorTerrainDeclaration: storedDeclaration } }],
+      download: async () => {
+        downloads();
+        return [Buffer.from(storedSourceBytes, 'utf8')];
+      },
+    }),
+  }),
 }));
 
 const refreshOwner = jest.fn(async (..._args: unknown[]): Promise<string> => {
@@ -123,6 +142,8 @@ const recordChange = jest.fn(async (_entry: Record<string, unknown>) => {
 jest.mock('@/services/entity-audit.service', () => ({
   EntityAuditService: { recordChange: (entry: Record<string, unknown>) => recordChange(entry) },
 }));
+
+import { encodeTerrainSurveyDeclaration } from '@/lib/terrain/publication/terrain-survey-declaration';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { POST } = require('../route') as typeof import('../route');
@@ -143,9 +164,60 @@ function surveyPoints(): number[][] {
 const SOURCE = { version: 1, points: surveyPoints(), breaklines: [], boundary: null, envelope: null };
 const DECLARATION = JSON.stringify({ surveyorName: 'Α. Τοπογράφος', surveyedOn: '2026-03-14', rightsAffirmed: true });
 
+/** Ό,τι στέλνει ο browser ως πηγή — κάθε δοκιμή μπορεί να βάλει μέσα και δικό της «περίγραμμα». */
+let sentSource: Record<string, unknown> = SOURCE;
+
+/** Ένα τετράγωνο 10 × 10 m μέσα στο ανάγλυφο, WORLD mm. */
+const INSIDE_RING = [
+  { x: E0 + 5_000, y: N0 + 5_000 }, { x: E0 + 15_000, y: N0 + 5_000 },
+  { x: E0 + 15_000, y: N0 + 15_000 }, { x: E0 + 5_000, y: N0 + 15_000 },
+];
+
+/** Το σχέδιο του φακέλου με επιβεβαιωμένο περίγραμμα, όπως το γράφει η πόρτα (Ζ3). */
+const confirmedDrawing = (plotOutline: unknown): Record<string, unknown> => ({
+  id: 'file_drawing',
+  publicationIdentity: 'terrain/plot-drawing',
+  entityType: 'property_dossier',
+  status: 'ready',
+  storagePath: 'people/x/drawing.dxf',
+  contentType: 'image/vnd.dxf',
+  createdAt: '2026-11-20T10:00:00.000Z',
+  plotOutline,
+});
+
+const CONFIRMED = {
+  version: 1, ring: INSIDE_RING, showInListing: true, areaM2: 100, candidateId: 'dxf:P',
+  origin: { source: 'dxf', handle: 'P', layer: 'ΟΡΙΟ', closure: 'flag' }, drawingUnit: 'm', drawingSha256: 'a'.repeat(64),
+};
+
+/** Η πηγή που είναι ήδη δημοσιευμένη στον φάκελο, με το περίγραμμα που κουβαλά (`null` = κανένα). */
+const publishedRelief = (createdAt: string, plotOutline: unknown): Record<string, unknown> => {
+  storedSourceBytes = JSON.stringify({ ...SOURCE, version: 2, plotOutline });
+  storedDeclaration = encodeTerrainSurveyDeclaration({ surveyorName: 'Α. Τοπογράφος', surveyedOn: '2026-03-14', rightsAffirmed: true });
+  return {
+    id: 'file_terrain_old',
+    publicationIdentity: 'terrain/measured',
+    contentType: 'application/json',
+    classification: 'public',
+    entityType: 'property_dossier',
+    status: 'ready',
+    storagePath: 'people/x/terrain.json',
+    category: 'drawings',
+    createdAt,
+  };
+};
+
+const RING_MM = INSIDE_RING.map(({ x, y }) => [x, y]);
+/** Το σχέδιο γράφτηκε 2026-11-20· «παλιότερη» / «νεότερη» πηγή = πριν / μετά από αυτό. */
+const BEFORE_DRAWING = '2026-11-10T10:00:00.000Z';
+const AFTER_DRAWING = '2026-11-21T10:00:00.000Z';
+
+/** Η πηγή που ΦΥΛΑΧΤΗΚΕ — το τελευταίο ανέβασμα. */
+const storedSource = (): { plotOutline: unknown } => JSON.parse(uploadedBuffers[uploadedBuffers.length - 1].toString('utf8'));
+
 const formData = jest.fn(async () => {
   const body = new FormData();
-  body.append('source', new File([JSON.stringify(SOURCE)], 'survey.json', { type: 'application/json' }));
+  body.append('source', new File([JSON.stringify(sentSource)], 'survey.json', { type: 'application/json' }));
   body.append('declaration', DECLARATION);
   return body;
 });
@@ -161,6 +233,11 @@ describe('ADR-920 Β4.3 — η πόρτα του τοπογραφικού του
     collections.length = 0;
     filters.length = 0;
     siblings = [];
+    uploadedBuffers.length = 0;
+    downloads.mockClear();
+    storedSourceBytes = '';
+    storedDeclaration = '';
+    sentSource = SOURCE;
     callerUid = OWNER;
     ownerProperty = { authorUserId: OWNER, authorCompanyId: null, dossierId: DOSSIER, type: 'plot', title: 'Οικόπεδο Σούνιο ' };
     dossier = { userId: OWNER, label: 'Οικόπεδο', type: 'plot' };
@@ -181,7 +258,8 @@ describe('ADR-920 Β4.3 — η πόρτα του τοπογραφικού του
     expect(setDoc.mock.calls[0][0]).not.toHaveProperty('companyId');
     expect(collections).toContain('files_personal');
     expect(collections).not.toContain('files');
-    expect(trace).toEqual(['query', 'set', 'upload', 'update', 'audit', 'refresh']);
+    // Πρώτο ερώτημα: το επιβεβαιωμένο περίγραμμα του φακέλου (Ζ3)· δεύτερο: οι προκάτοχοι.
+    expect(trace).toEqual(['query', 'query', 'set', 'upload', 'update', 'audit', 'refresh']);
   });
 
   it('Ι2 — 🔒 ξένη αγγελία ⇒ 404, και το σώμα ΔΕΝ διαβάζεται', async () => {
@@ -241,6 +319,67 @@ describe('ADR-920 Β4.3 — η πόρτα του τοπογραφικού του
   it('Ι7 — ο κοινός κώδικας εδάφους ισχύει κι εδώ: ό,τι δεν είναι γη ⇒ 422', async () => {
     ownerProperty = { ...ownerProperty, type: 'apartment' };
     await expect(post()).rejects.toMatchObject({ statusCode: 422, message: 'TERRAIN_NOT_LAND' });
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it('Ι8 — 🔴 περίγραμμα που στέλνει ο BROWSER δεν είναι επιβεβαίωση: χωρίς σχέδιο στον φάκελο ⇒ αφαιρείται', async () => {
+    sentSource = {
+      ...SOURCE,
+      version: 2,
+      plotOutline: { ring: INSIDE_RING.map(({ x, y }) => [x, y]), showInListing: true },
+    };
+    await post();
+    expect(storedSource().plotOutline).toBeNull();
+  });
+
+  it('Ι9 — 🏆 το ΕΠΙΒΕΒΑΙΩΜΕΝΟ περίγραμμα του φακέλου μπαίνει ΠΑΝΤΑ — και αντικαθιστά ό,τι έστειλε ο browser', async () => {
+    siblings = [confirmedDrawing(CONFIRMED)];
+    sentSource = { ...SOURCE, version: 2, plotOutline: { ring: [[E0, N0], [E0 + 1, N0], [E0, N0 + 1]], showInListing: false } };
+    await post();
+    expect(storedSource().plotOutline).toEqual({ ring: INSIDE_RING.map(({ x, y }) => [x, y]), showInListing: true });
+  });
+
+  it('Ι10 — 🔒 σχέδιο με ΑΝΑΓΝΩΣΙΜΗ κηδεμονία αλλά χαλασμένη επιβεβαίωση ⇒ 503, τίποτα δεν δημοσιεύεται', async () => {
+    siblings = [confirmedDrawing({ version: 1, ring: [] })];
+    await expect(post()).rejects.toMatchObject({ statusCode: 503, message: 'TERRAIN_PLOT_OUTLINE_UNREADABLE' });
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it('Ι11 — σχέδιο στον ΚΑΔΟ χωρίς ανάγλυφο: δεν υπάρχει περίγραμμα να μεταφερθεί', async () => {
+    siblings = [{ ...confirmedDrawing(CONFIRMED), isDeleted: true }];
+    await post();
+    expect(storedSource().plotOutline).toBeNull();
+  });
+
+  it('Ι12 — 🏆 Ζ3c copy semantics: σχέδιο στον ΚΑΔΟ, ανάγλυφο με περίγραμμα ⇒ το νέο ανάγλυφο το ΜΕΤΑΦΕΡΕΙ', async () => {
+    siblings = [{ ...confirmedDrawing(CONFIRMED), isDeleted: true }, publishedRelief(BEFORE_DRAWING, { ring: RING_MM, showInListing: false })];
+    await post();
+    expect(storedSource().plotOutline).toEqual({ ring: RING_MM, showInListing: false });
+  });
+
+  it('Ι13 — 🔴 «ΣΧΕΔΙΟ ΠΡΩΤΑ»: σχέδιο ΝΕΟΤΕΡΟ από την πηγή (έπεσε η επαναδημοσίευση) ⇒ νικά το σχέδιο, η πηγή δεν κατεβαίνει', async () => {
+    siblings = [confirmedDrawing(CONFIRMED), publishedRelief(BEFORE_DRAWING, null)];
+    await post();
+    expect(storedSource().plotOutline).toEqual({ ring: RING_MM, showInListing: true });
+    expect(downloads).not.toHaveBeenCalled();
+  });
+
+  it('Ι14 — 🔴 ρητή αφαίρεση (πηγή ΝΕΟΤΕΡΗ από το σχέδιο, χωρίς περίγραμμα) ⇒ το ενεργό σχέδιο ΔΕΝ το ξαναφέρνει', async () => {
+    siblings = [confirmedDrawing(CONFIRMED), publishedRelief(AFTER_DRAWING, null)];
+    await post();
+    expect(storedSource().plotOutline).toBeNull();
+  });
+
+  it('Ι15 — πηγή νεότερη από το σχέδιο: ισχύει η Π9 της ΠΗΓΗΣ (αλλαγή χωρίς σχέδιο), όχι της επιβεβαίωσης', async () => {
+    siblings = [confirmedDrawing(CONFIRMED), publishedRelief(AFTER_DRAWING, { ring: RING_MM, showInListing: false })];
+    await post();
+    expect(storedSource().plotOutline).toEqual({ ring: RING_MM, showInListing: false });
+  });
+
+  it('Ι16 — 🔒 πηγή που νικά αλλά δεν διαβάζεται ⇒ 503, τίποτα δεν δημοσιεύεται (ποτέ σιωπηλό «χωρίς περίγραμμα»)', async () => {
+    siblings = [publishedRelief(AFTER_DRAWING, null)];
+    storedSourceBytes = '{';
+    await expect(post()).rejects.toMatchObject({ statusCode: 503, message: 'TERRAIN_CURRENT_SOURCE_UNREADABLE' });
     expect(setDoc).not.toHaveBeenCalled();
   });
 });

@@ -43,6 +43,39 @@ describe('planar-polygon', () => {
   });
 });
 
+/**
+ * ADR-920 §14.11 (Α) — εμβαδόν σε ΕΓΣΑ'87 canonical mm (x ~4·10⁸, y ~4,5·10⁹). Τα γινόμενα του shoelace φτάνουν ~10¹⁸,
+ * όπου το float64 κρατά ανάλυση ~256 mm²: ΜΕΤΡΗΜΕΝΟ πριν από τη διόρθωση, 100 m² ⇒ 99.999.744 mm² και κολόνα 30×30 cm ⇒
+ * 89.856 mm² (−0,16%). Ακέραια mm, άρα η απάντηση είναι ΑΚΡΙΒΗΣ — `toBe`, όχι ανοχή.
+ */
+describe('εμβαδόν μακριά από την αρχή των αξόνων (ΕΓΣΑ mm)', () => {
+  const X0 = 412_345_679;
+  const Y0 = 4_498_765_432;
+  const rect = (w: number, h: number) => [
+    { x: X0, y: Y0 }, { x: X0 + w, y: Y0 }, { x: X0 + w, y: Y0 + h }, { x: X0, y: Y0 + h },
+  ];
+
+  it('ορθογώνια: ακριβές εμβαδόν, ίδιο με το ίδιο σχήμα στην αρχή των αξόνων', () => {
+    expect(polygonArea(rect(10_000, 10_000))).toBe(100_000_000);
+    expect(polygonArea(rect(300, 300))).toBe(90_000);
+    expect(polygonArea(rect(12_340, 5_670))).toBe(12_340 * 5_670);
+  });
+
+  it('το πρόσημο της φοράς μένει ίδιο', () => {
+    expect(shoelaceArea(rect(300, 300))).toBe(90_000);
+    expect(shoelaceArea([...rect(300, 300)].reverse())).toBe(-90_000);
+  });
+
+  it('πολύγωνο πολλών κορυφών: η μετατόπιση δεν αλλάζει το εμβαδόν (2000 κορυφές, r = 50 m)', () => {
+    const local = Array.from({ length: 2000 }, (_, i) => {
+      const t = (i / 2000) * 2 * Math.PI;
+      return { x: Math.round(50_000 * Math.cos(t)), y: Math.round(50_000 * Math.sin(t)) };
+    });
+    const world = local.map((p) => ({ x: p.x + X0, y: p.y + Y0 }));
+    expect(Math.abs(polygonArea(world) - polygonArea(local))).toBeLessThan(1);
+  });
+});
+
 describe('intersectLines — τομή ΕΥΘΕΙΩΝ (όχι τμημάτων)', () => {
   it('κάθετες · τομή ΕΞΩ από τα δοσμένα σημεία (ευθείες, όχι τμήματα) · παράλληλες ⇒ null', () => {
     expect(intersectLines({ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 3, y: 5 }, { x: 0, y: -1 })).toEqual({ x: 3, y: 1 });

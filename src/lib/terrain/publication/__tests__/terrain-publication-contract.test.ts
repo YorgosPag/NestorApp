@@ -40,6 +40,10 @@ const DOOR_SOURCE = [
   'app/api/owner-properties/[ownerPropertyId]/terrain/route.ts',
   'server/listing-terrain/terrain-upload.server.ts',
   'lib/terrain/publication/terrain-survey-declaration.ts',
+  // ADR-920 §14.11 Ζ3 — το σκέλος επιβεβαίωσης περιγράμματος της ΙΔΙΑΣ πόρτας: σχέδιο · φάκελος · ενορχήστρωση.
+  'server/listing-terrain/plot-drawing-upload.server.ts',
+  'server/listing-terrain/dossier-terrain.reader.ts',
+  'server/listing-terrain/plot-outline-confirmation.server.ts',
 ].map((file) => readFileSync(join(SRC, file), 'utf8')).join('\n');
 
 const REJECTIONS: readonly ListingTerrainRejection[] = ['insufficient-surface', 'empty-after-clip', 'too-dense'];

@@ -13,8 +13,11 @@
  * ίχνος μπορούσε να λείπει, και το δικαίωμα δημοσίευσης της διαβάθμισης παρακαμπτόταν με
  * βαρύτερη πράξη. Εδώ κρίση, γραφή, ίχνος και επαναπροβολή γίνονται **στο ίδιο αίτημα**.
  *
- * 🗂️ **Μόνο το εταιρικό διαμέρισμα** (`files`): ο κάδος των **προσωπικών** αρχείων μένει στον
- * πελάτη, ατομικά ζευγαρωμένος με τη γραμμή δραστηριότητάς του από τους κανόνες (ADR-866 §2.6.11).
+ * 🗂️ **Και τα δύο διαμερίσματα** (`withFileCustodyAuth`, ADR-866 §2.6.9 Β1): απουσία/`?custody=company` ⇒ ό,τι
+ * ίσχυε (`withAuth`, `files`)· `?custody=personal` ⇒ `withPersonalOrOrgAuth`, `files_personal`, ο ίδιος σκελετός.
+ * Ως το ADR-920 §14.11 Ζ3b ο προσωπικός κάδος γραφόταν από τον browser — και ένα αρχείο του **φακέλου ακινήτου**
+ * που πεταγόταν έμενε στην αγγελία ιδιοκτήτη. Η γραμμή Δραστηριότητας μένει ατομικά ζευγαρωμένη, πλέον σε δέσμη
+ * του διακομιστή (`writePersonalFileTrashState`).
  *
  * 🔑 **Η απάντηση φέρει τα αλλαγμένα αρχεία** (`files`): ο πελάτης εκπέμπει το `FILE_TRASHED` /
  * `FILE_RESTORED` **μετά** την επιβεβαίωση, με ό,τι έγραψε πραγματικά ο διακομιστής — ποτέ με
@@ -28,8 +31,6 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import type {
@@ -40,15 +41,18 @@ import {
   createLivePropertyProbe,
   isFileTrashAction,
   writeFileTrashState,
+  writePersonalFileTrashState,
 } from '@/services/file-record/file-trash.service';
 import {
   batchRefusal,
   readJsonBody,
   runFileBatch,
+  runPersonalFileBatch,
   verdictOf,
   type ChangedBatchFile,
   type OwnedBatchFile,
 } from '../_shared/file-batch-act';
+import { withFileCustodyAuth, type FileCustodyCaller } from '../_shared/file-custody-route';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,22 +79,31 @@ function filesOf(
   return { files: changed.map(({ file, detail }) => changeOf(file, detail)) };
 }
 
-async function handlePost(
-  request: NextRequest,
-  ctx: AuthContext,
-  _cache: PermissionCache,
-): Promise<NextResponse<FileTrashResponse>> {
+async function handlePost(request: NextRequest, caller: FileCustodyCaller): Promise<NextResponse<FileTrashResponse>> {
   const payload = await readJsonBody(request);
   const { action } = payload;
 
   if (!isFileTrashAction(action)) return batchRefusal(400, 'action is invalid', filesOf([]));
+
+  if (caller.custody === 'personal') {
+    return runPersonalFileBatch({
+      payload,
+      uid: caller.uid,
+      action: `trash:${action}`,
+      extra: filesOf,
+      act: async (file) => {
+        const outcome = await writePersonalFileTrashState({ ...file, action, uid: caller.uid });
+        return verdictOf(outcome, outcome.kind === 'changed' ? outcome.purgeAt : null);
+      },
+    });
+  }
 
   // Μία ανάγνωση ανά ακίνητο για όλη τη δέσμη — 30 φωτογραφίες του ίδιου ακινήτου, ένα ερώτημα.
   const propertyIsLive = createLivePropertyProbe(getAdminFirestore());
 
   return runFileBatch({
     payload,
-    ctx,
+    ctx: caller.ctx,
     action: `trash:${action}`,
     extra: filesOf,
     act: async (file, actor) => {
@@ -100,4 +113,4 @@ async function handlePost(
   });
 }
 
-export const POST = withSensitiveRateLimit(withAuth(handlePost));
+export const POST = withSensitiveRateLimit(withFileCustodyAuth(handlePost));

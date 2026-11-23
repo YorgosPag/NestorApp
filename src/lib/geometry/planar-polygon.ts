@@ -22,15 +22,23 @@ export interface PlanarPoint {
 /**
  * Προσημασμένο εμβαδόν (Gauss / shoelace): θετικό αριστερόστροφα, αρνητικό δεξιόστροφα.
  * `0` για λιγότερες από 3 κορυφές.
+ *
+ * Το άθροισμα γίνεται **γύρω από την πρώτη κορυφή** (ADR-920 §14.11 Α): η μετατόπιση δεν αλλάζει ούτε το εμβαδόν
+ * ούτε το πρόσημο, αλλά κρατά τα γινόμενα στην τάξη της **έκτασης** του σχήματος αντί για την απόστασή του από την
+ * αρχή των αξόνων. Σε ΕΓΣΑ'87 mm (x ~4·10⁸, y ~4,5·10⁹) τα ωμά γινόμενα φτάνουν ~10¹⁸, όπου το float64 κρατά
+ * ανάλυση ~256 mm² — μετρημένο: 100 m² ⇒ 99.999.744 mm², κολόνα 30×30 cm ⇒ −0,16%. Οι συντεταγμένες ενός σχήματος
+ * έχουν την ίδια τάξη μεγέθους, άρα η αφαίρεση είναι ακριβής (Sterbenz)· Kahan/`fma` δεν χρειάζονται.
  */
 export function shoelaceArea(vertices: readonly PlanarPoint[]): number {
   const n = vertices.length;
   if (n < 3) return 0;
+  const ox = vertices[0].x;
+  const oy = vertices[0].y;
   let sum = 0;
   for (let i = 0; i < n; i++) {
     const a = vertices[i];
     const b = vertices[(i + 1) % n];
-    sum += a.x * b.y - b.x * a.y;
+    sum += (a.x - ox) * (b.y - oy) - (b.x - ox) * (a.y - oy);
   }
   return sum / 2;
 }

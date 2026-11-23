@@ -101,3 +101,33 @@ export function hasReadableText(pageTexts: readonly string[]): boolean {
   const letters = visible.match(LETTER)?.length ?? 0;
   return letters >= MIN_LETTERS && letters / visible.length >= MIN_LETTER_RATIO;
 }
+
+/** Το viewport του pdf.js σε κλίμακα 1 — όσο χρειάζεται για να μπει ένα κομμάτι σε συντεταγμένες ΟΘΟΝΗΣ. */
+export interface PdfViewportLike {
+  readonly width: number;
+  readonly height: number;
+  convertToViewportPoint(x: number, y: number): readonly number[];
+}
+
+/** Ένα κομμάτι κειμένου όπως το δίνει το `getTextContent` — στη συσκευή (`TextItem`) και στον server (σχήμα του service). */
+export interface PdfRawTextItem {
+  readonly str?: string;
+  /** Ο πίνακας του pdf.js· ο τύπος της βιβλιοθήκης είναι `any[]`, εδώ δένεται σε αριθμούς. */
+  readonly transform?: readonly unknown[];
+  readonly width?: number;
+  readonly height?: number;
+}
+
+/**
+ * **Μια σελίδα με θέσεις** από τα κομμάτια του pdf.js — η ΜΙΑ μετατροπή, για τη συσκευή (`read-pdf-on-device`) **και** τον
+ * server (`readPdfPositionedPages`, ADR-920 §14.11 Ζ3). Δύο αντίγραφα θα σήμαιναν ότι ο server επαληθεύει πίνακα
+ * συντεταγμένων που η συσκευή διάβασε **αλλιώς**. Κενά κομμάτια και κομμάτια χωρίς πίνακα θέσης πετιούνται.
+ */
+export function positionedPageOf(page: number, viewport: PdfViewportLike, items: readonly PdfRawTextItem[]): PdfPositionedPage {
+  const positioned = items.flatMap((item): PdfTextItem[] => {
+    if (item.str === undefined || item.str.trim() === '' || item.transform === undefined) return [];
+    const point = viewport.convertToViewportPoint(Number(item.transform[4]), Number(item.transform[5]));
+    return [{ s: item.str, x: Number(point[0]), y: Number(point[1]), w: item.width ?? 0, h: item.height ?? 0 }];
+  });
+  return { page, width: viewport.width, height: viewport.height, items: positioned };
+}

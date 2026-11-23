@@ -4,7 +4,7 @@
 
 import { E9_A_PAGES, ENFIA_BROKEN_FONT_PAGES } from '@/lib/document-validity/__tests__/e9-text.fixture';
 
-import { hasReadableText, linesOf, pageTextOf, type PdfPositionedPage } from '../pdf-page-text';
+import { hasReadableText, linesOf, pageTextOf, positionedPageOf, type PdfPositionedPage } from '../pdf-page-text';
 
 const plain = (pages: readonly PdfPositionedPage[]) => pages.map((page) => page.items.map((item) => item.s).join(' '));
 
@@ -46,5 +46,20 @@ describe('hasReadableText', () => {
 
   it('σαρωμένο (κανένα κείμενο) ⇒ όχι', () => {
     expect(hasReadableText(['', '   '])).toBe(false);
+  });
+});
+
+describe('positionedPageOf (ADR-920 §14.11 Ζ3 — ίδια μετατροπή σε συσκευή και server)', () => {
+  /** Viewport σελίδας 100 × 200: αναστροφή y, όπως το pdf.js σε κλίμακα 1 χωρίς περιστροφή. */
+  const viewport = { width: 100, height: 200, convertToViewportPoint: (x: number, y: number) => [x, 200 - y] };
+
+  it('θέση ΟΘΟΝΗΣ από τον πίνακα του pdf.js· κενά κομμάτια και κομμάτια χωρίς θέση πετιούνται', () => {
+    const page = positionedPageOf(3, viewport, [
+      { str: 'Α', transform: [1, 0, 0, 1, 10, 150], width: 6, height: 8 },
+      { str: '   ', transform: [1, 0, 0, 1, 0, 0], width: 1, height: 1 },
+      { str: 'Β' },
+      { transform: [1, 0, 0, 1, 0, 0] },
+    ]);
+    expect(page).toEqual({ page: 3, width: 100, height: 200, items: [{ s: 'Α', x: 10, y: 50, w: 6, h: 8 }] });
   });
 });

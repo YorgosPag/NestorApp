@@ -9,7 +9,9 @@ import {
   LISTING_TERRAIN_SOURCE_VERSION,
   encodeListingTerrainSource,
   parseListingTerrainSource,
+  plotOutlineChoiceIn,
   toListingTerrainInput,
+  withPlotOutline,
 } from '../listing-terrain-source';
 import { buildListingTerrainSnapshot } from '../listing-terrain-snapshot';
 import { LISTING_TERRAIN_SOURCE_MAX_ABS_MM } from '../listing-terrain-config';
@@ -30,6 +32,7 @@ function rawSource(overrides: Record<string, unknown> = {}): Record<string, unkn
     breaklines: [],
     boundary: null,
     envelope: null,
+    plotOutline: null,
     ...overrides,
   };
 }
@@ -39,11 +42,14 @@ describe('ADR-920 Β3 — parseListingTerrainSource', () => {
     const source = parseListingTerrainSource(rawSource());
     expect(source).not.toBeNull();
     expect(source?.points[4]).toStrictEqual([E0 + 10_000, N0 + 10_000]);
-    expect(toListingTerrainInput(source!).points[4]).toStrictEqual({ x: E0 + 10_000, y: N0 + 10_000 });
+    expect(toListingTerrainInput(source!, 'owner').points[4]).toStrictEqual({ x: E0 + 10_000, y: N0 + 10_000 });
   });
 
   it.each([
-    ['unknown version', { version: 2 }],
+    ['unknown version', { version: 3 }],
+    ['a v2 source without the plotOutline field', { plotOutline: undefined }],
+    ['a plot outline of two vertices', { plotOutline: { ring: [[E0, N0], [E0 + 1, N0]], showInListing: true } }],
+    ['a plot outline without the public choice', { plotOutline: { ring: [[E0, N0], [E0 + 1, N0], [E0, N0 + 1]] } }],
     ['no points', { points: [] }],
     ['a point with four numbers', { points: [[1, 2, 3, 4]] }],
     ['a non-number coordinate', { points: [[E0, 'north', 1]] }],
@@ -74,7 +80,7 @@ describe('ADR-920 Β3 — one canonical form', () => {
     const b = encodeListingTerrainSource(parseListingTerrainSource(rawSource())!);
     expect(a).toBe(b);
     expect(a).not.toContain('smuggled');
-    expect(Object.keys(JSON.parse(a))).toStrictEqual(['version', 'points', 'breaklines', 'boundary', 'envelope']);
+    expect(Object.keys(JSON.parse(a))).toStrictEqual(['version', 'points', 'breaklines', 'boundary', 'envelope', 'plotOutline']);
   });
 
   it('re-parses its own encoding to the same value', () => {
@@ -87,7 +93,7 @@ describe('ADR-920 Β3 — feeds the snapshot builder in the same frame', () => {
   it('a valid source builds a snapshot; the envelope height arrives in centimetres', () => {
     const footprint = [[E0 + 5_000, N0 + 5_000], [E0 + 15_000, N0 + 5_000], [E0 + 15_000, N0 + 15_000], [E0 + 5_000, N0 + 15_000]];
     const source = parseListingTerrainSource(rawSource({ envelope: { footprint, maxHeightM: 7.504 } }))!;
-    const input = toListingTerrainInput(source);
+    const input = toListingTerrainInput(source, 'owner');
     expect(input.envelope?.maxHeightM).toBe(7.5);
 
     const built = buildListingTerrainSnapshot(input);
@@ -98,11 +104,77 @@ describe('ADR-920 Β3 — feeds the snapshot builder in the same frame', () => {
     const source = parseListingTerrainSource(rawSource({
       breaklines: [{ closed: false, vertices: [[E0, N0, 120_000], [E0 + 20_000, N0 + 20_000, 122_000]] }],
     }))!;
-    const [line] = toListingTerrainInput(source).breaklines ?? [];
+    const [line] = toListingTerrainInput(source, 'owner').breaklines ?? [];
     expect(line).toStrictEqual({
       id: 'breakline-0',
       closed: false,
       vertices: [{ x: E0, y: N0, z: 120_000 }, { x: E0 + 20_000, y: N0 + 20_000, z: 122_000 }],
     });
+  });
+});
+
+describe('ADR-920 §14.11 Ζ2 — the plot outline in the source', () => {
+  const RING = [
+    { x: E0 + 2_000.4, y: N0 + 2_000 },
+    { x: E0 + 18_000, y: N0 + 2_000 },
+    { x: E0 + 18_000, y: N0 + 18_000 },
+    { x: E0 + 2_000, y: N0 + 18_000 },
+  ];
+
+  it('a v1 source is read as v2 WITHOUT an outline, and is stored as v2', () => {
+    const v1 = rawSource({ version: 1 });
+    delete v1.plotOutline;
+    const source = parseListingTerrainSource(v1)!;
+    expect(source.version).toBe(LISTING_TERRAIN_SOURCE_VERSION);
+    expect(source.plotOutline).toBeNull();
+    expect(JSON.parse(encodeListingTerrainSource(source)).version).toBe(2);
+  });
+
+  it('withPlotOutline writes the ring in canonical mm and leaves everything else as it was', () => {
+    const source = parseListingTerrainSource(rawSource())!;
+    const outlined = withPlotOutline(source, { ringWorldMm: RING, showInListing: false })!;
+    expect(outlined.plotOutline).toStrictEqual({
+      ring: [[E0 + 2_000, N0 + 2_000], [E0 + 18_000, N0 + 2_000], [E0 + 18_000, N0 + 18_000], [E0 + 2_000, N0 + 18_000]],
+      showInListing: false,
+    });
+    expect({ ...outlined, plotOutline: null }).toStrictEqual(source);
+  });
+
+  it('withPlotOutline is idempotent, survives its own encoding, and `null` removes the outline', () => {
+    const source = parseListingTerrainSource(rawSource())!;
+    const once = withPlotOutline(source, { ringWorldMm: RING, showInListing: true })!;
+    expect(withPlotOutline(once, { ringWorldMm: RING, showInListing: true })).toStrictEqual(once);
+    expect(parseListingTerrainSource(JSON.parse(encodeListingTerrainSource(once)))).toStrictEqual(once);
+    expect(withPlotOutline(once, null)).toStrictEqual(source);
+  });
+
+  it('withPlotOutline refuses a ring the contract does not accept — never a half-written source', () => {
+    const source = parseListingTerrainSource(rawSource())!;
+    expect(withPlotOutline(source, { ringWorldMm: RING.slice(0, 2), showInListing: true })).toBeNull();
+    expect(withPlotOutline(source, { ringWorldMm: [...RING.slice(0, 3), { x: Number.NaN, y: N0 }], showInListing: true })).toBeNull();
+  });
+
+  it('Π9 — the owner always gets the outline; the public only when the owner ticked it', () => {
+    const source = parseListingTerrainSource(rawSource())!;
+    const hidden = withPlotOutline(source, { ringWorldMm: RING, showInListing: false })!;
+    const shown = withPlotOutline(source, { ringWorldMm: RING, showInListing: true })!;
+    expect(toListingTerrainInput(hidden, 'owner').plotOutlineWorldMm).toHaveLength(4);
+    expect(toListingTerrainInput(hidden, 'public').plotOutlineWorldMm).toBeNull();
+    expect(toListingTerrainInput(shown, 'public').plotOutlineWorldMm).toHaveLength(4);
+    expect(toListingTerrainInput(source, 'owner').plotOutlineWorldMm).toBeNull();
+  });
+
+  it('Ζ3c — plotOutlineChoiceIn is the inverse road: carrying an outline to the next relief changes nothing', () => {
+    const source = parseListingTerrainSource(rawSource())!;
+    const outlined = withPlotOutline(source, { ringWorldMm: RING, showInListing: false })!;
+    expect(plotOutlineChoiceIn(source)).toBeNull();
+    expect(plotOutlineChoiceIn(outlined)).toStrictEqual({
+      ringWorldMm: [
+        { x: E0 + 2_000, y: N0 + 2_000 }, { x: E0 + 18_000, y: N0 + 2_000 },
+        { x: E0 + 18_000, y: N0 + 18_000 }, { x: E0 + 2_000, y: N0 + 18_000 },
+      ],
+      showInListing: false,
+    });
+    expect(encodeListingTerrainSource(withPlotOutline(outlined, plotOutlineChoiceIn(outlined))!)).toBe(encodeListingTerrainSource(outlined));
   });
 });

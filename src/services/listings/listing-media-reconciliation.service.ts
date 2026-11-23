@@ -16,8 +16,11 @@
  * και σβήνει ορφανές· εδώ δεν γράφεται τίποτα που δεν **αποδείχθηκε** παλιό, και οι ορφανές δεν
  * αγγίζονται. Κοινό έχουν μόνο τον γραφέα.
  *
- * ⚠️ **Μόνο η οικογένεια του γραφείου** *(`properties`)*: ο ιδιώτης δημοσιεύει από τη **δήλωση**
- * της αγγελίας του, όχι από διαβάθμιση αρχείων — άλλη κλάση, άλλος γραφέας.
+ * 🔑 **ΔΥΟ ΟΙΚΟΓΕΝΕΙΕΣ, ΕΝΑΣ ΚΡΙΤΗΣ** (ADR-920 §14.11 Ζ3c): το γραφείο *(`properties`, `republishListing`)* **και** ο
+ * ιδιοκτήτης *(`owner_properties`, `republishOwnerProperty`)*. Από το Ζ3b ο κάδος του φακέλου ακινήτου είναι πράξη
+ * διακομιστή που ξαναπροβάλλει την αγγελία ιδιοκτήτη — άρα και εκεί υπάρχουν πόρτες που μπορούν να ξεφύγουν. Ο
+ * γραφέας του ιδιοκτήτη γράφει το **ίδιο** αποτύπωμα (περνά από το `writeWithShelf`)· τα τρέχοντα μέσα τα δίνει ο
+ * **ίδιος** δρόμος με τον γραφέα (`currentOwnerListingProjection`), ποτέ δεύτερος υπολογισμός.
  */
 
 import 'server-only';
@@ -25,6 +28,9 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { nowISO } from '@/lib/date-local';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
+import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
 import {
   MEDIA_FINGERPRINT_FIELD,
   mediaAgreement,
@@ -40,6 +46,11 @@ import {
 } from '@/lib/listings/listing-recipe-backfill';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createAgencyIdentityResolver } from '@/services/company/company-public-name.reader';
+import {
+  currentOwnerListingProjection,
+  republishOwnerProperty,
+} from '@/services/owner-property/owner-property-publication.service';
+import type { OwnerProperty } from '@/types/owner-property';
 
 import { mediaFingerprintOf } from './listing-media-fingerprint-stamp';
 import { createListingMediaResolver, type ListingMediaResolver } from './listing-media-sources';
@@ -123,15 +134,21 @@ async function judgeWithRecipe(
   stored: StoredListing,
   resolveMedia: ListingMediaResolver,
 ): Promise<Judgement> {
-  if (!stored.exists) return { finding: 'missing', recipe: 'current' };
+  if (!stored.exists) return judgementOf(stored, null);
 
   // 🔑 Ο **ίδιος** επιλυτής με τον γραφέα (ADR-907 §11.7): αρχεία του ακινήτου **και** κάτοψη ορόφου — αλλιώς το
   //    αποτύπωμα εδώ θα διέφερε **πάντα** από το γραμμένο, και η αγγελία θα ξαναψηνόταν κάθε βράδυ.
-  const current = mediaFingerprintOf(await resolveMedia(propertyId, property));
-  return {
-    finding: mediaAgreement(stored.fingerprint, current),
-    recipe: recipeAgreement(stored.fingerprint, current),
-  };
+  return judgementOf(stored, mediaFingerprintOf(await resolveMedia(propertyId, property)));
+}
+
+/**
+ * **Ο ΕΝΑΣ κριτής: γραμμένο ⇄ τρέχον αποτύπωμα** — για κάθε οικογένεια (ADR-920 §14.11 Ζ3c). `current === null` =
+ * τα τρέχοντα μέσα δεν διαβάστηκαν ⇒ `unknown` (ξαναπροβάλλεται), ποτέ `current`.
+ */
+function judgementOf(stored: StoredListing, current: string | null): Judgement {
+  if (!stored.exists) return { finding: 'missing', recipe: 'current' };
+  if (current === null) return { finding: 'unknown', recipe: 'current' };
+  return { finding: mediaAgreement(stored.fingerprint, current), recipe: recipeAgreement(stored.fingerprint, current) };
 }
 
 /**
@@ -211,14 +228,49 @@ const OUTCOME_TALLY = {
 
 type Tally = { -readonly [K in keyof MediaReconciliationReport]: MediaReconciliationReport[K] };
 
-/** Ένα ακίνητο που περιμένει επαναπροβολή — με ό,τι χρειάζεται ο γραφέας. */
+/** Ένα ακίνητο που περιμένει επαναπροβολή — με τον γραφέα **της οικογένειάς του** (γραφείο ή ιδιοκτήτης). */
 interface Republication {
   readonly propertyId: string;
-  readonly property: ListingSourceProperty;
+  readonly run: () => Promise<PublishOutcome>;
+}
+
+/** Ένα πέρασμα: η λογιστική, τα γραμμένα αποτυπώματα (**μία** ανάγνωση) και ο ΕΝΑΣ τρόπος να ξαναπροβληθεί κάτι. */
+interface ReconciliationPass {
+  readonly adminDb: AdminFirestore;
+  readonly stored: ReadonlyMap<string, unknown>;
+  readonly tally: Tally;
+  readonly republish: (pending: Republication) => Promise<void>;
+}
+
+function storedOf(pass: ReconciliationPass, listingId: string): StoredListing {
+  return { exists: pass.stored.has(listingId), fingerprint: pass.stored.get(listingId) };
 }
 
 /**
- * **Σύγκρινε κάθε δημοσιευμένη αγγελία γραφείου με το τρέχον υλικό της· ξαναπρόβαλε ό,τι διαφέρει.**
+ * **Η κρίση ενός δημοσιεύσιμου ακινήτου → λογιστική + ουρά** — κοινό των δύο οικογενειών: η απόκλιση υλικού
+ * ξαναπροβάλλεται **αμέσως**, η απόκλιση μόνο συνταγής μπαίνει στην ουρά του ρυθμού (`outdated`).
+ */
+async function settle(
+  pass: ReconciliationPass,
+  pending: Republication,
+  judgement: Judgement,
+  outdated: Republication[],
+): Promise<void> {
+  pass.tally.listed += 1;
+  pass.tally[FINDING_TALLY[judgement.finding]] += 1;
+  if (judgement.finding === 'current') {
+    if (judgement.recipe === 'outdated') {
+      pass.tally.recipeOutdated += 1;
+      outdated.push(pending);
+    }
+    return;
+  }
+  reportFinding(pending.propertyId, judgement.finding);
+  await pass.republish(pending);
+}
+
+/**
+ * **Σύγκρινε κάθε δημοσιευμένη αγγελία — γραφείου ΚΑΙ ιδιοκτήτη — με το τρέχον υλικό της· ξαναπρόβαλε ό,τι διαφέρει.**
  *
  * 🔑 **Ιδεμποτής**: δεύτερο πέρασμα αμέσως μετά βρίσκει τα πάντα `agreed` και δεν γράφει τίποτα.
  *
@@ -228,6 +280,7 @@ interface Republication {
  * 🔑 **Δύο ουρές, δύο πολιτικές** *(ADR-920 §14.9 Γ)*: η απόκλιση **υλικού** (πόρτα που ξέφυγε) διορθώνεται **πάντα,
  * όλη**, και καταγράφεται ως σφάλμα. Η απόκλιση **μόνο συνταγής** είναι αναμενόμενη μετά από αλλαγή συνταγής και
  * ξαναψήνεται **με ρυθμό** (`recipeBackfillWindow`), καταγεγραμμένη ως πληροφορία. `nowMs` = η στιγμή του περάσματος.
+ * Ο ρυθμός είναι **ένας** για τις δύο οικογένειες: η ουρά τους είναι μία.
  */
 export async function reconcileListingMedia(
   adminDb: AdminFirestore,
@@ -237,18 +290,21 @@ export async function reconcileListingMedia(
     scanned: 0, listed: 0, agreed: 0, drifted: 0, unstamped: 0, missing: 0,
     recipeOutdated: 0, recipeDeferred: 0, republished: 0, failed: 0,
   };
-  const resolveMedia = createListingMediaResolver(adminDb);
-  const resolveAgency = createAgencyIdentityResolver(adminDb);
-  const republish = async ({ propertyId, property }: Republication) => {
-    tally[OUTCOME_TALLY[await republishListing(adminDb, propertyId, property, resolveAgency, resolveMedia)]] += 1;
+  const pass: ReconciliationPass = {
+    adminDb,
+    stored: await readStoredFingerprints(adminDb),
+    tally,
+    republish: async ({ run }) => {
+      tally[OUTCOME_TALLY[await run()]] += 1;
+    },
   };
 
-  const outdated = await judgeAll(adminDb, resolveMedia, tally, republish);
+  const outdated = [...(await judgeOfficeListings(pass)), ...(await judgeOwnerListings(pass, nowISO()))];
   const batch = recipeBackfillWindow(outdated, LISTING_RECIPE_BACKFILL_PER_RUN, recipeBackfillRunIndex(nowMs));
   tally.recipeDeferred = outdated.length - batch.length;
   for (const pending of batch) {
     logger.info('Επαναπροβολή μετά από αλλαγή συνταγής ραφιού', { propertyId: pending.propertyId });
-    await republish(pending);
+    await pass.republish(pending);
   }
 
   logger.info('Συμφιλίωση μέσων αγγελιών', tally);
@@ -256,38 +312,64 @@ export async function reconcileListingMedia(
 }
 
 /**
- * Το πρώτο σκέλος: κρίνει **κάθε** δημοσιεύσιμο ακίνητο, ξαναπροβάλλει **αμέσως** κάθε απόκλιση υλικού, και επιστρέφει
- * τις αγγελίες που είναι σωστές στο υλικό αλλά ψημένες με παλιά συνταγή, με τη σειρά της σάρωσης.
+ * **Οι αγγελίες του γραφείου** (`properties`): κρίνει **κάθε** δημοσιεύσιμο ακίνητο, ξαναπροβάλλει **αμέσως** κάθε
+ * απόκλιση υλικού, και επιστρέφει όσες είναι σωστές στο υλικό αλλά ψημένες με παλιά συνταγή, με τη σειρά της σάρωσης.
  */
-async function judgeAll(
-  adminDb: AdminFirestore,
-  resolveMedia: ListingMediaResolver,
-  tally: Tally,
-  republish: (pending: Republication) => Promise<void>,
-): Promise<Republication[]> {
-  const stored = await readStoredFingerprints(adminDb);
+async function judgeOfficeListings(pass: ReconciliationPass): Promise<Republication[]> {
+  const { adminDb } = pass;
+  const resolveMedia = createListingMediaResolver(adminDb);
+  const resolveAgency = createAgencyIdentityResolver(adminDb);
   const properties = await adminDb.collection(COLLECTIONS.PROPERTIES).get();
   const outdated: Republication[] = [];
 
   for (const doc of properties.docs) {
-    tally.scanned += 1;
+    pass.tally.scanned += 1;
     const property = doc.data() as ListingSourceProperty;
     if (!isPubliclyListed({ ...property, id: doc.id })) continue;
-    tally.listed += 1;
 
-    const listing = { exists: stored.has(doc.id), fingerprint: stored.get(doc.id) };
-    const { finding, recipe } = await judgeWithRecipe(doc.id, property, listing, resolveMedia);
-    tally[FINDING_TALLY[finding]] += 1;
-    if (finding === 'current') {
-      if (recipe === 'outdated') {
-        tally.recipeOutdated += 1;
-        outdated.push({ propertyId: doc.id, property });
-      }
-      continue;
-    }
+    const judgement = await judgeWithRecipe(doc.id, property, storedOf(pass, doc.id), resolveMedia);
+    const run = () => republishListing(adminDb, doc.id, property, resolveAgency, resolveMedia);
+    await settle(pass, { propertyId: doc.id, run }, judgement, outdated);
+  }
 
-    reportFinding(doc.id, finding);
-    await republish({ propertyId: doc.id, property });
+  return outdated;
+}
+
+/**
+ * **Το τρέχον αποτύπωμα μιας αγγελίας ιδιοκτήτη** — από τον **ίδιο** δρόμο με τον γραφέα της. Βλάβη ανάγνωσης του
+ * φακέλου ⇒ `null` (καταγεγραμμένο): «δεν ξέρω», ποτέ «συμφωνεί».
+ */
+async function currentOwnerFingerprint(adminDb: AdminFirestore, property: OwnerProperty, at: string): Promise<string | null> {
+  try {
+    return mediaFingerprintOf((await currentOwnerListingProjection(adminDb, property, at)).publishedMedia ?? []);
+  } catch (error) {
+    logger.warn('Τα τρέχοντα μέσα αγγελίας ιδιοκτήτη δεν διαβάστηκαν — ξαναπροβάλλεται', {
+      propertyId: property.id, error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
+ * 🏠 **Οι αγγελίες ΙΔΙΟΚΤΗΤΗ** (`owner_properties`, ADR-920 §14.11 Ζ3c). Η πύλη «δημοσιεύεται;» κρίνεται **πρώτα**, από τα
+ * γεγονότα διάθεσης μόνο (καθαρή προβολή, χωρίς φάκελο)· ο φάκελος διαβάζεται **μόνο** για όσες δημοσιεύονται.
+ * Τρέχοντα μέσα που δεν διαβάζονται ⇒ `unknown` ⇒ επαναπροβολή: ο γραφέας κρίνει μόνος του, και η αποτυχία του αφήνει
+ * την προβολή άθικτη (`failed`) — μια σπασμένη αγγελία δεν ρίχνει το πέρασμα των υπολοίπων.
+ */
+async function judgeOwnerListings(pass: ReconciliationPass, at: string): Promise<Republication[]> {
+  const { adminDb } = pass;
+  const owners = await adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).get();
+  const outdated: Republication[] = [];
+
+  for (const doc of owners.docs) {
+    pass.tally.scanned += 1;
+    const property = ownerPropertyFromDocument(doc.data(), doc.id);
+    if (property === null || !isPubliclyListed(projectableFromOwnerProperty(property, at))) continue;
+
+    const stored = storedOf(pass, doc.id);
+    const judgement = judgementOf(stored, stored.exists ? await currentOwnerFingerprint(adminDb, property, at) : null);
+    const run = async () => (await republishOwnerProperty(adminDb, property)).publish;
+    await settle(pass, { propertyId: doc.id, run }, judgement, outdated);
   }
 
   return outdated;

@@ -1,5 +1,5 @@
 /**
- * @fileoverview **Ο ΚΑΔΟΣ ΤΩΝ ΕΤΑΙΡΙΚΩΝ ΑΡΧΕΙΩΝ ΕΙΝΑΙ ΠΡΑΞΗ ΔΙΑΚΟΜΙΣΤΗ** — ο ΕΝΑΣ γραφέας του.
+ * @fileoverview **Ο ΚΑΔΟΣ ΤΩΝ ΑΡΧΕΙΩΝ ΕΙΝΑΙ ΠΡΑΞΗ ΔΙΑΚΟΜΙΣΤΗ** — ο ΕΝΑΣ γραφέας του, και στα δύο διαμερίσματα.
  * @related ADR-845 §7.17 Α2 (κλάση Ο-35) · ADR-032 (κάδος) · ADR-801 (ο ΕΝΑΣ κριτής) · ADR-281
  * @module services/file-record/file-trash.service
  *
@@ -14,8 +14,10 @@
  * 2. το ίχνος ήταν fire-and-forget: μπορούσε να λείπει·
  * 3. το δικαίωμα δημοσίευσης της διαβάθμισης παρακαμπτόταν με **βαρύτερη** πράξη.
  *
- * ⇒ Ο πελάτης **ζητά**· εδώ **κρίνεται, γράφεται και καταγράφεται**. Τα **προσωπικά** αρχεία
- * μένουν στον πελάτη *(ατομική δέσμη ζευγαρωμένη από κανόνες, ADR-866 §2.6.11)* — άλλο διαμέρισμα.
+ * ⇒ Ο πελάτης **ζητά**· εδώ **κρίνεται, γράφεται και καταγράφεται**. Από το ADR-920 §14.11 Ζ3b το ίδιο ισχύει και
+ * για τα **προσωπικά** αρχεία ({@link writePersonalFileTrashState}): ο φάκελος ακινήτου τροφοδοτεί την αγγελία
+ * ιδιοκτήτη, άρα ο κάδος του έχει την ίδια διαρροή #1. Η ατομικότητα πράξης + γραμμής Δραστηριότητας που έδιναν
+ * οι κανόνες (ADR-866 §2.6.11) τη δίνει πλέον η **δέσμη** του διακομιστή.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔑 ΠΟΙΟΣ ΕΠΙΤΡΕΠΕΤΑΙ — Ο ADMIN SDK ΠΑΡΑΚΑΜΠΤΕΙ ΤΟΥΣ ΚΑΝΟΝΕΣ, ΑΡΑ Η ΚΡΙΣΗ ΤΟΥΣ ΖΕΙ ΕΔΩ
@@ -48,15 +50,16 @@ import { decideCapability } from '@/lib/auth/authority';
 import { fileTrashBlockOf } from '@/lib/files/file-hold';
 import { calculatePurgeDate, isInTrash } from '@/lib/files/file-trash-state';
 import { fileRestoreFields, fileTrashFields } from '@/lib/files/file-trash-fields';
-import { FieldValue } from '@/lib/firebaseAdmin';
+import { FieldValue, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { isRetired } from '@/lib/firestore/trashed-status';
-import { recordFileAudit } from '@/services/file-audit-admin.service';
+import { recordFileAudit, stagePairedFileActivity } from '@/services/file-audit-admin.service';
 import {
   mayChangePublication,
   type ClassificationActor,
 } from '@/services/file-record/file-classification.service';
 import { AGENCY_ENTITY_TYPE } from '@/services/listings/agency-media-publication';
 import { isGranted } from '@/types/capability-authority';
+import { FILE_LAST_ACTIVITY_FIELD } from '@/types/file-audit';
 
 /** Οι δύο πράξεις — το λεξιλόγιο του σύρματος. */
 export const FILE_TRASH_ACTIONS = ['trash', 'restore'] as const;
@@ -187,6 +190,32 @@ function restoreUpdates(uid: string): Record<string, unknown> {
   return fileRestoreFields({ activeState: FILE_LIFECYCLE_STATES.ACTIVE, by: uid, now: FieldValue.serverTimestamp() });
 }
 
+/**
+ * **Η μετάβαση που ΔΕΝ χρειάζεται κρίση** — κοινή στα δύο διαμερίσματα. Ήδη στον κάδο ⇒ `unchanged` (ο δεύτερος κάδος
+ * δεν μεταθέτει το ρολόι εκκαθάρισης, ADR-866 §2.6.11 Β3)· επαναφορά αρχείου εκτός κάδου ⇒ ονομασμένη άρνηση.
+ */
+function settledTransition(action: FileTrashAction, data: FileData): FileTrashOutcome | null {
+  const trashed = isInTrash(data);
+  if (action === 'trash' && trashed) return { kind: 'unchanged' };
+  if (action === 'restore' && !trashed) return { kind: 'refused', why: 'not-in-trash' };
+  return null;
+}
+
+/** Πότε εκκαθαρίζεται — μόνο για κάδο· η επαναφορά το μηδενίζει. */
+function purgeAtOf(action: FileTrashAction, data: FileData): string | null {
+  return action === 'trash' ? calculatePurgeDate(data.category as FileCategory).toISOString() : null;
+}
+
+/** Τα πεδία της πράξης — κάδος όταν υπάρχει `purgeAt`, αλλιώς επαναφορά. */
+function stateUpdates(uid: string, purgeAt: string | null): Record<string, unknown> {
+  return purgeAt === null ? restoreUpdates(uid) : trashUpdates(uid, purgeAt);
+}
+
+/** Το όνομα της πράξης στο βιβλίο — το λεξιλόγιο του ιστορικού, όχι του σύρματος. */
+function auditActionOf(action: FileTrashAction): 'delete' | 'restore' {
+  return action === 'trash' ? 'delete' : 'restore';
+}
+
 export interface WriteFileTrashParams {
   readonly fileId: string;
   /** Το έγγραφο, **ήδη φορτωμένο και κριμένο ως δικό του μισθωτή** από τον PEP της διαδρομής (ADR-742). */
@@ -208,26 +237,69 @@ export interface WriteFileTrashParams {
  */
 export async function writeFileTrashState(params: WriteFileTrashParams): Promise<FileTrashOutcome> {
   const { fileId, ref, data, action, actor } = params;
-  const trashed = isInTrash(data);
-
-  if (action === 'trash' && trashed) return { kind: 'unchanged' };
-  if (action === 'restore' && !trashed) return { kind: 'refused', why: 'not-in-trash' };
+  const settled = settledTransition(action, data);
+  if (settled !== null) return settled;
 
   const refusal = judgeFileTrash(action, data, actor);
   if (refusal !== null) return { kind: 'refused', why: refusal };
   if (!(await params.propertyIsLive(data))) return { kind: 'refused', why: 'retired-property' };
 
-  const purgeAt = action === 'trash'
-    ? calculatePurgeDate(data.category as FileCategory).toISOString()
-    : null;
-  await ref.update(purgeAt === null ? restoreUpdates(actor.uid) : trashUpdates(actor.uid, purgeAt));
+  const purgeAt = purgeAtOf(action, data);
+  await ref.update(stateUpdates(actor.uid, purgeAt));
 
   await recordFileAudit({
     fileId,
-    action: action === 'trash' ? 'delete' : 'restore',
+    action: auditActionOf(action),
     performedBy: actor.uid,
     companyId: actor.companyId,
   });
+
+  return { kind: 'changed', purgeAt };
+}
+
+// =============================================================================
+// ΤΟ ΠΡΟΣΩΠΙΚΟ ΔΙΑΜΕΡΙΣΜΑ — ΙΔΙΑ ΠΡΑΞΗ, ΑΛΛΟΣ ΚΑΤΟΧΟΣ (ADR-845 §7.17 · ADR-866 §2.6.11)
+// =============================================================================
+
+export interface WritePersonalFileTrashParams {
+  readonly fileId: string;
+  /** Το έγγραφο, **ήδη κριμένο ως δικό του** (`personalFileResource`: `userId == uid`, αλλιώς 404). */
+  readonly ref: DocumentReference;
+  readonly data: FileData;
+  readonly action: FileTrashAction;
+  /** Ο αιτών — **και** κάτοχος του αρχείου και του βιβλίου του (το απέδειξε ο PEP). */
+  readonly uid: string;
+}
+
+/**
+ * **Πέτα ή επανάφερε ένα ΠΡΟΣΩΠΙΚΟ αρχείο** — μετάβαση, γραφή και γραμμή Δραστηριότητας **σε μία δέσμη**.
+ *
+ * 🔴 **Γιατί ήρθε εδώ** (ADR-920 §14.11 Ζ3b): ως τότε ο κάδος του `files_personal` γραφόταν από τον browser. Τα
+ * αρχεία του **φακέλου ακινήτου** (φωτογραφίες · ΠΕΑ · τοπογραφικό σχέδιο) τροφοδοτούν την αγγελία ιδιοκτήτη, και
+ * ο browser δεν έχει πώς να την ξαναπροβάλει ⇒ ό,τι πεταγόταν **έμενε δημόσιο**. Ίδια κλάση Ο-35 με την εταιρική.
+ *
+ * 🔑 **Η κρίση είναι η ιδιοκτησία, και μόνο** (Google Drive «Ο Δίσκος μου»): κανένα δικαίωμα ρόλου, καμία διαβάθμιση.
+ * ⚠️ **Χωρίς κριτή record** — επίτηδες, ίδιο με τον κανόνα (`fileIsNotDeclaredRecord`, «ΜΟΝΟ στο `files`»): το
+ * αντίτυπο του αγοραστή κουβαλά το σημάδι αλλά μένει **δικό του**. ⚠️ Χωρίς ανιχνευτή αποσυρμένου ακινήτου: προσωπικό
+ * αρχείο δεν κρέμεται ποτέ από εταιρικό ακίνητο.
+ * ⛔ **ΔΕΝ ξαναπροβάλλει** — όπως ο εταιρικός αδελφός, το κάνει ο σκελετός μία φορά ανά αγγελία.
+ */
+export async function writePersonalFileTrashState(params: WritePersonalFileTrashParams): Promise<FileTrashOutcome> {
+  const { fileId, ref, data, action, uid } = params;
+  const settled = settledTransition(action, data);
+  if (settled !== null) return settled;
+  if (action === 'trash' && data.status !== READY_STATUS) return { kind: 'refused', why: 'not-ready' };
+
+  const purgeAt = purgeAtOf(action, data);
+  const batch = getAdminFirestore().batch();
+  const activityId = stagePairedFileActivity(batch, {
+    fileId,
+    action: auditActionOf(action),
+    performedBy: uid,
+    userId: uid,
+  });
+  batch.update(ref, { ...stateUpdates(uid, purgeAt), [FILE_LAST_ACTIVITY_FIELD]: activityId });
+  await batch.commit();
 
   return { kind: 'changed', purgeAt };
 }

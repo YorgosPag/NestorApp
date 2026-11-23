@@ -155,7 +155,13 @@ describe('surveyFileKindOf — the bytes decide, the name only breaks ties', () 
     ['points.csv', bytes('P,E,N,H\n1,384512.3,4201233.1,12.4\n'), 'delimited'],
     ['points', bytes('1 384512.3 4201233.1 12.4\n'), 'delimited'],
     ['broken.dxf', bytes('hello world'), 'unsupported'],
-    ['scan.pdf', bytes('%PDF-1.7'), 'unsupported'],
+    // ADR-920 §14.11 Ζ1 — the surveyor's DRAWING is named, so the screen can say what to do (it was `unsupported`).
+    ['scan.pdf', bytes('%PDF-1.7'), 'pdf'],
+    ['renamed.txt', bytes('\n%PDF-1.4\n'), 'pdf'],
+    ['plot.dwg', Uint8Array.from([...bytes('AC1032'), 0, 0, 0, 0, 0, 0x1b]), 'dwg'],
+    ['old.dwg', Uint8Array.from([...bytes('AC1.50'), 0, 0]), 'dwg'],
+    // A text file whose first cell merely LOOKS like a DWG version is not a DWG (no binary header).
+    ['codes.csv', bytes('AC1012,384512.3,4201233.1\n'), 'delimited'],
     ['blob.csv', Uint8Array.from([0x31, 0x00, 0x32]), 'unsupported'],
   ])('%s → %s', (name, head, expected) => {
     expect(surveyFileKindOf(name, head)).toBe(expected);

@@ -60,6 +60,8 @@
 
 import 'server-only';
 
+import type { WriteBatch } from 'firebase-admin/firestore';
+
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateAuditId } from '@/services/enterprise-id.service';
@@ -174,4 +176,30 @@ export async function recordFileAudit(
     });
     return null;
   }
+}
+
+// =============================================================================
+// Η ΖΕΥΓΑΡΩΜΕΝΗ ΓΡΑΜΜΗ — ΙΔΙΑ ΔΕΣΜΗ ΜΕ ΤΗΝ ΑΛΛΑΓΗ (ADR-866 §2.6.11 · ADR-845 §7.17)
+// =============================================================================
+
+/**
+ * **Βάλε τη γραμμή δραστηριότητας στην ΙΔΙΑ δέσμη με την αλλαγή που περιγράφει** — και δώσε το id της, για
+ * τον δείκτη `lastActivityId` του αρχείου.
+ *
+ * 🔑 **Γιατί ΕΔΩ δεν ισχύει το «ποτέ μπλοκάρον» του {@link recordFileAudit}**: για το **προσωπικό** αρχείο η γραμμή
+ * **είναι** η Δραστηριότητα που βλέπει ο άνθρωπος, και η εγγύηση που έδιναν οι κανόνες όσο ο κάδος γραφόταν από τον
+ * browser ήταν *«η αλλαγή και η γραμμή της ή γράφονται μαζί ή καθόλου»* (`personalActivityPaired`). Ο διακομιστής
+ * που την παίρνει **δεν** επιτρέπεται να τη χαλαρώσει. Δέσμη, **όχι** συναλλαγή: δεν ξαναεκτελείται ποτέ.
+ * ⛔ Ο κάτοχος ελέγχεται **πριν** μπει οτιδήποτε στη δέσμη — αόρατη γραμμή δεν γράφεται, και τότε ούτε η αλλαγή.
+ */
+export function stagePairedFileActivity(batch: WriteBatch, input: ServerFileAuditInput): string {
+  if (!isWritableCustodyScope(input)) {
+    throw new Error(`File activity row has no ledger owner: ${input.fileId}`);
+  }
+  const auditId = generateAuditId();
+  const ref = getAdminFirestore()
+    .collection(COLLECTIONS[FILE_AUDIT_COLLECTION[custodyKindOfScope(input)]])
+    .doc(auditId);
+  batch.set(ref, auditDocument(input));
+  return auditId;
 }

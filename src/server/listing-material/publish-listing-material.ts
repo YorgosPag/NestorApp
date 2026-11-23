@@ -43,6 +43,7 @@ import {
   type FileRecordBase,
 } from '@/services/file-record';
 import type { ContainerActor } from '@/services/iso19650/container-transitions';
+import type { FileRecord } from '@/types/file-record';
 import type { ModelSourceRevision } from '@/lib/listings/model-source-revisions';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import type { ListingMediaRefreshOutcome } from '@/services/listings/listing-media-refresh';
@@ -52,6 +53,9 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { archiveSuperseded } from './material-supersession';
 
 const logger = createModuleLogger('ListingMaterialPublication');
+
+/** Τα μετρημένα πεδία που ένας γραφέας υλικού δίνει στη γέννηση — ό,τι ο πελάτης δεν γράφει ποτέ (`measuredKeys()`). */
+export type ServerMeasuredFileFields = Pick<FileRecord, 'plotOutline'>;
 
 /**
  * **Το ακίνητο ΚΑΙ ο κάτοχός του, ήδη κριμένα** — ό,τι διαφέρει ανά κηδεμονία, και τίποτα άλλο.
@@ -134,20 +138,25 @@ export interface ListingMaterialPublication<TParsed, TDeclared> {
  * άρα ένα ημιτελές ανέβασμα είναι **αόρατο** αντί για επικίνδυνο.
  * ⚠️ **Η αποτυχία σημαδεύεται, δεν σιωπά**: ένα `FAILED` έγγραφο λέει *«κάτι ανέβηκε και δεν
  * ολοκληρώθηκε»*, ενώ η διαγραφή του θα άφηνε **μόνο** ορφανά bytes και καμία εξήγηση.
+ *
+ * 🔑 **Εξάγεται** (ADR-920 §14.11 Ζ3): το σχέδιο του τοπογράφου στον φάκελο γράφεται με τον **ίδιο** κύκλο ζωής — ένα δεύτερο
+ * αντίγραφο θα κληρονομούσε σήμερα το «σημαδεύω το FAILED» και θα το έχανε στην πρώτη διόρθωση του ενός.
  */
-async function writeMaterial(params: {
+export async function writeMaterial(params: {
   adminDb: AdminFirestore;
   actor: ContainerActor;
   fileId: string;
   storagePath: string;
   recordBase: FileRecordBase;
+  /** Πεδία που μετρά **μόνο** ο server (`measuredKeys()` στους κανόνες) — γράφονται στη γέννηση, μαζί με την εγγραφή. */
+  measured?: ServerMeasuredFileFields;
   file: File;
   customMetadata: Record<string, string> | undefined;
   uploadFailed: string;
 }): Promise<number> {
   const kind = custodyKindOfScope(params.actor.custody);
   const filesRef = params.adminDb.collection(COLLECTIONS[FILE_COLLECTION[kind]]).doc(params.fileId);
-  await filesRef.set({ ...params.recordBase, createdAt: FieldValue.serverTimestamp() });
+  await filesRef.set({ ...params.recordBase, ...params.measured, createdAt: FieldValue.serverTimestamp() });
 
   try {
     const buffer = Buffer.from(await params.file.arrayBuffer());

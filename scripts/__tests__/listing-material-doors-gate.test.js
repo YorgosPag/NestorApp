@@ -57,7 +57,8 @@ describe('Μ0 — ΒΑΘΜΟΝΟΜΗΣΗ: το πραγματικό δέντρο
   it('🔴 η ΠΡΑΓΜΑΤΙΚΗ πόρτα του κάδου χωρίς τον σκελετό της ⇒ door-without-refresh', () => {
     const real = fs.readFileSync(path.join(REPO_ROOT, TRASH_DOOR), 'utf8');
     expect(classifyDoor(TRASH_DOOR, real).state).toBe(DOOR_STATES.DOOR);
-    const mutated = real.split('runFileBatch(').join('runSomethingElse(');
+    // ADR-920 §14.11 Ζ3b — η πόρτα έχει ΔΥΟ σκελετούς (εταιρικό · προσωπικό)· η μετάλλαξη αφαιρεί και τους δύο.
+    const mutated = real.split('runFileBatch(').join('runSomethingElse(').split('runPersonalFileBatch(').join('runOtherThing(');
     expect(classifyDoor(TRASH_DOOR, mutated).state).toBe(DOOR_STATES.DOOR_WITHOUT_REFRESH);
   });
 

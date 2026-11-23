@@ -8,7 +8,8 @@
  *                       ├→ RawTable + πρόταση στηλών   (ο άνθρωπος επιβεβαιώνει ρόλους και μονάδα)
  *   XLSX               ─┘
  *   DXF (κειμένου)     ──→ σημεία σε ΜΟΝΑΔΕΣ ΣΧΕΔΙΟΥ + `$INSUNITS` (χωρίς αντιστοίχιση: το αρχείο λέει τι είναι X/Y/Z)
- *   XLS · DXF binary · ό,τι άλλο ──→ άρνηση με όνομα (η οθόνη λέει ΤΙ να κάνει ο άνθρωπος: «αποθήκευσε ως .xlsx»)
+ *   XLS · DXF binary · DWG · PDF · ό,τι άλλο ──→ άρνηση με όνομα (η οθόνη λέει ΤΙ να κάνει ο άνθρωπος: «αποθήκευσε ως .xlsx»)
+ *   (DWG · PDF = το ΣΧΕΔΙΟ του τοπογράφου, όχι αρχείο σημείων — ADR-920 §14.11)
  *
  * 🔑 **Ελληνικά αρχεία κειμένου**: το Excel σε ελληνικά Windows αποθηκεύει CSV σε **windows-1253**, όχι UTF-8. Διαβάζουμε
  * αυστηρό UTF-8 και, αν δεν είναι έγκυρο, windows-1253 — αλλιώς οι ελληνικές επικεφαλίδες («Χ», «Υψόμετρο») γίνονται
@@ -25,7 +26,7 @@ import { proposeColumnMapping, type MappingBasis } from './topo-mapping-edit';
 import type { ColumnMapping, RawTable } from './topo-import-types';
 
 /** Γιατί το αρχείο δεν διαβάστηκε — ένα όνομα ανά πράξη που οφείλει να προτείνει η οθόνη. */
-export type SurveyFileRefusal = 'xls-legacy' | 'dxf-binary' | 'unsupported' | 'unreadable' | 'empty';
+export type SurveyFileRefusal = 'xls-legacy' | 'dxf-binary' | 'dwg' | 'pdf' | 'unsupported' | 'unreadable' | 'empty';
 
 export type SurveyFileRead =
   | {

@@ -19,6 +19,7 @@ import { z } from 'zod';
 
 import { LISTING_TERRAIN_MAX_TRIANGLES } from './listing-terrain-config';
 import {
+  LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION,
   LISTING_TERRAIN_SNAPSHOT_VERSION,
   type ListingTerrainMesh,
   type ListingTerrainSnapshot,
@@ -67,18 +68,49 @@ const envelopeSchema = z
   .object({ footprint: flat, groundM: flat, maxHeightM: finite.positive().nullable() })
   .refine((e) => e.footprint.length >= 6 && e.footprint.length % 2 === 0 && e.groundM.length === e.footprint.length / 2);
 
-const snapshotSchema = z.object({
-  version: z.literal(LISTING_TERRAIN_SNAPSHOT_VERSION),
+const ringSchema = flat.refine((ring) => ring.length >= 6 && ring.length % 2 === 0);
+
+const plotOutlineSchema = z.object({
+  ring: ringSchema,
+  areaM2: finite.nonnegative(),
+  coverage: z.enum(['covered', 'partial']),
+  coveredFraction: finite.min(0).max(1),
+});
+
+/** The fields both versions share. */
+const sharedShape = {
   mesh: meshSchema,
   contours: z.array(contourSchema),
   contourIntervalM: finite.positive(),
   contourMajorEvery: z.number().int().positive(),
   slopeBandsPct: z.array(finite),
-  boundary: flat.refine((ring) => ring.length >= 6 && ring.length % 2 === 0).nullable(),
+  boundary: ringSchema.nullable(),
   stats: statsSchema,
   envelope: envelopeSchema.nullable(),
   envelopeOmission: z.enum(['outside-surface', 'degenerate-footprint']).nullable(),
-});
+};
+
+/**
+ * ADR-920 §14.11 Ζ2 — v2 adds the plot outline; v1 (published before it) is read as v2 WITHOUT one. That is the version
+ * speaking, not a default filling a hole: a v2 file missing the fields is still `malformed`.
+ */
+const snapshotSchema = z.discriminatedUnion('version', [
+  z.object({ version: z.literal(LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION), ...sharedShape }),
+  z.object({
+    version: z.literal(LISTING_TERRAIN_SNAPSHOT_VERSION),
+    ...sharedShape,
+    plotOutline: plotOutlineSchema.nullable(),
+    plotOutlineOmission: z.enum(['outside-surface', 'degenerate-outline']).nullable(),
+  }),
+]);
+
+type ParsedSnapshot = z.infer<typeof snapshotSchema>;
+
+/** One in-memory shape for both versions (the readers downstream know only the current one). */
+function currentShapeOf(parsed: ParsedSnapshot): ListingTerrainSnapshot {
+  if (parsed.version === LISTING_TERRAIN_SNAPSHOT_VERSION) return parsed;
+  return { ...parsed, version: LISTING_TERRAIN_SNAPSHOT_VERSION, plotOutline: null, plotOutlineOmission: null };
+}
 
 function allFinite(values: readonly number[]): boolean {
   for (let i = 0; i < values.length; i++) if (!Number.isFinite(values[i])) return false;
@@ -108,6 +140,7 @@ function meshRefusal(mesh: ListingTerrainMesh, slopeClassCount: number): Listing
 
 function hasNonFiniteOutsideMesh(snapshot: ListingTerrainSnapshot): boolean {
   if (snapshot.boundary && !allFinite(snapshot.boundary)) return true;
+  if (snapshot.plotOutline && !allFinite(snapshot.plotOutline.ring)) return true;
   if (snapshot.contours.some((contour) => !allFinite(contour.points))) return true;
   const envelope = snapshot.envelope;
   return envelope !== null && (!allFinite(envelope.footprint) || !allFinite(envelope.groundM));
@@ -115,7 +148,7 @@ function hasNonFiniteOutsideMesh(snapshot: ListingTerrainSnapshot): boolean {
 
 function isUnknownVersion(raw: unknown): boolean {
   return typeof raw === 'object' && raw !== null && 'version' in raw
-    && raw.version !== LISTING_TERRAIN_SNAPSHOT_VERSION;
+    && raw.version !== LISTING_TERRAIN_SNAPSHOT_VERSION && raw.version !== LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION;
 }
 
 /** Read a fetched (already JSON-parsed) snapshot. Never throws. */
@@ -123,7 +156,7 @@ export function readListingTerrainSnapshot(raw: unknown): ListingTerrainSnapshot
   if (isUnknownVersion(raw)) return { ok: false, reason: 'unknown-version' };
   const parsed = snapshotSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, reason: 'malformed' };
-  const snapshot: ListingTerrainSnapshot = parsed.data;
+  const snapshot = currentShapeOf(parsed.data);
   const meshProblem = meshRefusal(snapshot.mesh, snapshot.slopeBandsPct.length + 1);
   if (meshProblem) return { ok: false, reason: meshProblem };
   if (hasNonFiniteOutsideMesh(snapshot)) return { ok: false, reason: 'non-finite' };

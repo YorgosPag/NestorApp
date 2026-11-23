@@ -28,6 +28,7 @@ import { NextResponse } from 'next/server';
 import type { DocumentReference } from 'firebase-admin/firestore';
 
 import type { AuthContext } from '@/lib/auth';
+import type { OwnedDocOutcome } from '@/lib/auth/owned-doc-loader';
 import { getErrorMessage } from '@/lib/error-utils';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -40,7 +41,7 @@ import {
   refreshListingsAfterFileChanges,
   type ListingRefreshReport,
 } from '@/services/listings/listing-media-refresh';
-import { fileResource } from './file-ownership';
+import { fileResource, personalFileResource } from './file-ownership';
 
 const logger = createModuleLogger('FileBatchAct');
 
@@ -153,23 +154,38 @@ export interface FileBatchSpec<T, E extends object> {
  */
 export const noBatchExtra = (): object => ({});
 
+/**
+ * **Το ζευγάρι μιας πόρτας**: πώς φορτώνεται ένα αρχείο ως **δικό** του αιτούντος, και ποιος γραφέας το δέχεται.
+ *
+ * 🔑 Ό,τι διαφέρει ανά διαμέρισμα ζει **μόνο** εδώ (ADR-866 2β.3β — «το πρώτο βήμα διαφέρει ανά κάτοχο, η σειρά είναι
+ * μία»): εταιρεία ⇒ `fileResource` (μισθωτής) · άνθρωπος ⇒ `personalFileResource` (`userId == uid`). Η σειρά, οι
+ * αρνήσεις, η επαναπροβολή και ο φάκελος της απάντησης είναι **ένας** δρόμος.
+ */
+interface BatchCustody<T> {
+  readonly label: string;
+  /** Το έγγραφο ως δικό του αιτούντος — ή το κείμενο άρνησης («δεν βρέθηκε», ίδιο για ξένο και ανύπαρκτο). */
+  readonly load: (fileId: string) => Promise<OwnedBatchFile | string>;
+  readonly act: (file: OwnedBatchFile) => Promise<FileActVerdict<T>>;
+}
+
+/** Το κείμενο άρνησης φόρτωσης — ένα για τα δύο διαμερίσματα, ώστε να μη γίνει μαντείο διαμερίσματος. */
+const notFound = (fileId: string) => () => `${fileId}: not found`;
+
+/** Ό,τι φόρτωσε ο PEP, ως αρχείο της δέσμης — ή η άρνησή του. */
+function ownedOrRefusal(fileId: string, owned: OwnedDocOutcome<string>): OwnedBatchFile | string {
+  if (owned.refusal !== undefined) return owned.refusal;
+  return { fileId, ref: owned.doc.ref, data: owned.doc.data ?? {} };
+}
+
 /** **Ένα αρχείο**: φόρτωσε → δικό μου; → δώσ' το στον γραφέα. Ξένο = ανύπαρκτο (κανένα μαντείο ύπαρξης). */
 async function actOnOne<T>(
   fileId: string,
-  spec: FileBatchSpec<T, object>,
-  actor: ClassificationActor,
+  custody: BatchCustody<T>,
 ): Promise<{ readonly changed: ChangedBatchFile<T> } | { readonly error: string } | null> {
-  const owned = await fileResource.load({
-    docId: fileId,
-    caller: spec.ctx,
-    action: spec.action,
-    refusal: () => `${fileId}: not found`,
-    db: getAdminFirestore(),
-  });
-  if (owned.refusal !== undefined) return { error: owned.refusal };
+  const file = await custody.load(fileId);
+  if (typeof file === 'string') return { error: file };
 
-  const file: OwnedBatchFile = { fileId, ref: owned.doc.ref, data: owned.doc.data ?? {} };
-  const verdict = await spec.act(file, actor);
+  const verdict = await custody.act(file);
 
   if (verdict === null) return null;
   if ('refused' in verdict) return { error: `${fileId}: ${verdict.refused}` };
@@ -179,21 +195,20 @@ async function actOnOne<T>(
 /** Σειριακά, μία αποτυχία δεν σταματά τα υπόλοιπα — και η επαναπροβολή **τελευταία**. */
 async function actOnBatch<T>(
   fileIds: readonly string[],
-  spec: FileBatchSpec<T, object>,
+  custody: BatchCustody<T>,
 ): Promise<FileBatchResult<T>> {
-  const actor = fileActorOf(spec.ctx);
   const changed: ChangedBatchFile<T>[] = [];
   const errors: string[] = [];
 
   for (const fileId of fileIds) {
     try {
-      const result = await actOnOne(fileId, spec, actor);
+      const result = await actOnOne(fileId, custody);
       if (result === null) continue;
       if ('error' in result) errors.push(result.error);
       else changed.push(result.changed);
     } catch (error) {
       errors.push(`${fileId}: ${getErrorMessage(error)}`);
-      logger.error('Η πράξη αρχείου απέτυχε', { action: spec.action, fileId, error: getErrorMessage(error) });
+      logger.error('Η πράξη αρχείου απέτυχε', { action: custody.label, fileId, error: getErrorMessage(error) });
     }
   }
 
@@ -203,10 +218,30 @@ async function actOnBatch<T>(
   );
 
   logger.info('Μαζική πράξη αρχείων', {
-    action: spec.action, changed: changed.length, errors: errors.length, listings: listings.length,
+    action: custody.label, changed: changed.length, errors: errors.length, listings: listings.length,
   });
 
   return { changed, errors, listings };
+}
+
+/** Κρίνε τα `fileIds`, τρέξε, απάντησε — ο **ένας** φάκελος σύρματος για κάθε πόρτα και κάθε διαμέρισμα. */
+async function respondBatch<T, E extends object>(
+  payload: Readonly<Record<string, unknown>>,
+  custody: BatchCustody<T>,
+  extra: (changed: readonly ChangedBatchFile<T>[]) => E,
+): Promise<NextResponse<FileBatchActResponse & E>> {
+  const fileIds = readBatchFileIds(payload);
+  if (typeof fileIds === 'string') return batchRefusal(400, fileIds, extra([]));
+
+  const result = await actOnBatch(fileIds, custody);
+
+  return NextResponse.json({
+    success: true,
+    processedCount: result.changed.length,
+    errors: result.errors,
+    listings: result.listings,
+    ...extra(result.changed),
+  });
 }
 
 /**
@@ -218,19 +253,43 @@ async function actOnBatch<T>(
  * 🔴 **Η επαναπροβολή ΤΕΛΕΥΤΑΙΑ, ΜΙΑ ΦΟΡΑ ΑΝΑ ΑΚΙΝΗΤΟ** (ADR-845 §7.17): η αγγελία βλέπει τον
  * κόσμο όπως **έμεινε**, και όποιος είδε επιτυχία δικαιούται να έχει **ήδη** αλλάξει.
  */
-export async function runFileBatch<T, E extends object>(
+export function runFileBatch<T, E extends object>(
   spec: FileBatchSpec<T, E>,
 ): Promise<NextResponse<FileBatchActResponse & E>> {
-  const fileIds = readBatchFileIds(spec.payload);
-  if (typeof fileIds === 'string') return batchRefusal(400, fileIds, spec.extra([]));
+  const actor = fileActorOf(spec.ctx);
+  return respondBatch(spec.payload, {
+    label: spec.action,
+    load: async (fileId) => ownedOrRefusal(fileId, await fileResource.load({
+      docId: fileId, caller: spec.ctx, action: spec.action, refusal: notFound(fileId), db: getAdminFirestore(),
+    })),
+    act: (file) => spec.act(file, actor),
+  }, spec.extra);
+}
 
-  const result = await actOnBatch(fileIds, spec);
+/** Η ίδια πόρτα για **προσωπικά** αρχεία — ο αιτών είναι μόνο `uid`, ο κάτοχος που ελέγχεται είναι ο ίδιος. */
+export interface PersonalFileBatchSpec<T, E extends object> {
+  readonly payload: Readonly<Record<string, unknown>>;
+  readonly uid: string;
+  /** Το όνομα της πράξης στο ίχνος του PEP (`personalFileResource`). */
+  readonly action: string;
+  readonly act: (file: OwnedBatchFile) => Promise<FileActVerdict<T>>;
+  readonly extra: (changed: readonly ChangedBatchFile<T>[]) => E;
+}
 
-  return NextResponse.json({
-    success: true,
-    processedCount: result.changed.length,
-    errors: result.errors,
-    listings: result.listings,
-    ...spec.extra(result.changed),
-  });
+/**
+ * **Το ίδιο, στο ΠΡΟΣΩΠΙΚΟ διαμέρισμα** (ADR-920 §14.11 Ζ3b) — ίδιος σκελετός, ίδια επαναπροβολή.
+ *
+ * 🔑 Ο φρουρός είναι το `personalFileResource`: `userId == uid`, αλλιώς το **ίδιο** «δεν βρέθηκε». Καμία παράκαμψη
+ * super admin — ο κανόνας του `files_personal` τον αποκλείει, και ο διακομιστής δεν γίνεται χαλαρότερος από αυτόν.
+ */
+export function runPersonalFileBatch<T, E extends object>(
+  spec: PersonalFileBatchSpec<T, E>,
+): Promise<NextResponse<FileBatchActResponse & E>> {
+  return respondBatch(spec.payload, {
+    label: spec.action,
+    load: async (fileId) => ownedOrRefusal(fileId, await personalFileResource.load({
+      docId: fileId, uid: spec.uid, action: spec.action, refusal: notFound(fileId), db: getAdminFirestore(),
+    })),
+    act: spec.act,
+  }, spec.extra);
 }

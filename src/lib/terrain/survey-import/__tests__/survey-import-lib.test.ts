@@ -42,6 +42,8 @@ describe('src/lib/terrain + src/lib/dxf — never import from the DXF Viewer sub
     expect(names).toEqual(expect.arrayContaining([
       'topo-delimited-reader.ts', 'topo-excel-reader.ts', 'topo-column-mapping.ts', 'dxf-survey-points.ts',
       'dxf-section-scan.ts', 'dxf-line-stream.ts', 'dxf-embedded-object.ts', 'dxf-insunits.ts',
+      // ADR-920 §14.11 Ζ1 — the plot-outline core lives under the same boundary.
+      'dxf-polylines.ts', 'dxf-text-labels.ts', 'dxf-plot-outline-candidates.ts', 'pdf-coordinate-table.ts', 'plot-outline-drape.ts',
     ]));
   });
 

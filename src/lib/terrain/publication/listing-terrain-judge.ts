@@ -34,7 +34,8 @@ export function judgeListingTerrainSource(raw: unknown): ListingTerrainVerdict {
   const source = parseListingTerrainSource(raw);
   if (source === null) return { ok: false, code: 'TERRAIN_SOURCE_MALFORMED' };
 
-  const built = buildListingTerrainSnapshot(toListingTerrainInput(source));
+  // The owner's verdict and preview: the plot outline is shown whatever the public choice (ADR-920 §14.11 Π9).
+  const built = buildListingTerrainSnapshot(toListingTerrainInput(source, 'owner'));
   if (!built.ok) return { ok: false, code: refusalOfTerrainRejection(built.reason) };
   return { ok: true, source, snapshot: built.snapshot, frame: built.frame };
 }

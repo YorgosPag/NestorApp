@@ -40,7 +40,11 @@ import { readDossierMedia } from '@/services/property-dossier/dossier-media.read
 import { withDossierPublishRasters } from '@/services/property-dossier/dossier-publish-rasters.server';
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { DossierMediaRead } from '@/services/property-dossier/dossier-media-publication';
-import { isPubliclyListed, listingAvailabilityOf } from '@/services/listings/public-listing-projection';
+import {
+  isPubliclyListed,
+  listingAvailabilityOf,
+  type ProjectableProperty,
+} from '@/services/listings/public-listing-projection';
 import { resolveListedAt } from '@/services/listings/listed-at-stamp';
 import { resolvePriceHistory } from '@/services/listings/price-history-stamp';
 import { resolveAvailabilityHistory } from '@/services/listings/availability-history-stamp';
@@ -75,6 +79,21 @@ async function readPublicationInputs(
         ),
   ]);
   return { agency, dossierMedia };
+}
+
+/**
+ * **Ό,τι θα δημοσίευε ΤΩΡΑ ο γραφέας για αυτή την αγγελία** — οι ίδιες είσοδοι ({@link readPublicationInputs}), η ίδια
+ * προβολή. Τη ρωτούν ο γραφέας **και** η βραδινή συμφιλίωση μέσων (ADR-920 §14.11 Ζ3c · ADR-845 §7.17 Α5): δεύτερος
+ * υπολογισμός των μέσων κάπου αλλού θα διέφερε κάποτε από τον γραφέα, και η αγγελία θα ξαναψηνόταν κάθε βράδυ.
+ * ⚠️ **Πετά** σε βλάβη ανάγνωσης — τι σημαίνει αυτό το αποφασίζει ο καλών (ο γραφέας απαντά `failed`).
+ */
+export async function currentOwnerListingProjection(
+  adminDb: AdminFirestore,
+  property: OwnerProperty,
+  at: string,
+): Promise<ProjectableProperty> {
+  const inputs = await readPublicationInputs(adminDb, property);
+  return projectableFromOwnerProperty(property, at, inputs.agency, inputs.dossierMedia);
 }
 
 /**
@@ -119,13 +138,12 @@ async function republishOwnerListing(
   // 🔴 ADR-841 §7 Α22 — **Η ΑΝΑΓΝΩΣΗ ΜΠΟΡΕΙ ΠΛΕΟΝ ΝΑ ΠΕΤΑΞΕΙ**: όταν η βιτρίνα δεν διαβάζεται,
   //    δεν ξέρουμε **ποιο** όνομα ισχύει. Μετράει ως `failed` ⇒ η προηγούμενη προβολή μένει
   //    άθικτη — ίδιο συμβόλαιο με τον γραφέα του επαγγελματία, **μία** διατύπωση αποτυχίας.
-  let inputs: PublicationInputs;
+  let projectable: ProjectableProperty;
   try {
-    inputs = await readPublicationInputs(adminDb, property);
+    projectable = await currentOwnerListingProjection(adminDb, property, at);
   } catch (error) {
     return { outcome: reportProjectionFailure(property.id, error), lead: null, mapMark: null };
   }
-  const projectable = projectableFromOwnerProperty(property, at, inputs.agency, inputs.dossierMedia);
 
   // 🔴 **Η ΣΦΡΑΓΙΔΑ ΕΙΣΟΔΟΥ ΣΤΗΝ ΑΓΟΡΑ** (ADR-777 §8.61) — **ίδια** πολιτική με τον
   //    επαγγελματία, **άλλη** διεύθυνση. Η απόφαση ζει μία φορά στο `listed-at-stamp`·

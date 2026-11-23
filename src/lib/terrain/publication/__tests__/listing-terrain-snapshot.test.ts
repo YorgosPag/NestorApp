@@ -183,3 +183,42 @@ describe('ADR-920 Β2 — rejections and determinism', () => {
     expect(JSON.stringify(build())).toBe(JSON.stringify(build()));
   });
 });
+
+describe('ADR-920 §14.11 Ζ2 — the plot outline DRAWN on the relief', () => {
+  it('Π1 — it clips nothing: mesh, contours, slopes and stats are exactly those without it', () => {
+    const plain = build();
+    const outlined = build({ plotOutlineWorldMm: square(CENTRE.x, CENTRE.y, 8_000) });
+    const { plotOutline, plotOutlineOmission, ...rest } = outlined;
+    expect({ ...rest, plotOutline: null, plotOutlineOmission: null }).toStrictEqual(plain);
+    expect(plotOutlineOmission).toBeNull();
+    expect(plotOutline).toStrictEqual({
+      ring: [-8, -8, 8, -8, 8, 8, -8, 8],
+      areaM2: 256,
+      coverage: 'covered',
+      coveredFraction: 1,
+    });
+  });
+
+  it('Π6 — an outline reaching past the relief is published as partial, with the share it covers', () => {
+    // 30 m × 30 m centred on the 20 m × 20 m relief ⇒ 400 / 900 of it is covered.
+    const { plotOutline } = build({ plotOutlineWorldMm: square(CENTRE.x, CENTRE.y, 15_000) });
+    expect(plotOutline).toMatchObject({ areaM2: 900, coverage: 'partial', coveredFraction: 0.44 });
+  });
+
+  it('Π6 — an outline with nothing in common with the relief is omitted by name, never shifted', () => {
+    const far = build({ plotOutlineWorldMm: square(CENTRE.x + 1_000_000, CENTRE.y, 8_000) });
+    expect(far).toMatchObject({ plotOutline: null, plotOutlineOmission: 'outside-surface' });
+  });
+
+  it('a ring that cannot be an outline is omitted by name (no area · crossing itself)', () => {
+    const flat = build({ plotOutlineWorldMm: [CENTRE, CENTRE, CENTRE] });
+    expect(flat).toMatchObject({ plotOutline: null, plotOutlineOmission: 'degenerate-outline' });
+    const [a, b, c, d] = square(CENTRE.x, CENTRE.y, 8_000);
+    const bowtie = build({ plotOutlineWorldMm: [a, c, b, d] });
+    expect(bowtie).toMatchObject({ plotOutline: null, plotOutlineOmission: 'degenerate-outline' });
+  });
+
+  it('no outline asked ⇒ none published, and no omission to explain', () => {
+    expect(build()).toMatchObject({ plotOutline: null, plotOutlineOmission: null });
+  });
+});

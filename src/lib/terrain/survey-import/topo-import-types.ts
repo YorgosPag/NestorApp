@@ -41,6 +41,11 @@ export const TOPO_UNIT_SCALE_TO_MM: Readonly<Record<TopoUnit, number>> = {
   ft: 304.8,
 };
 
+/** «Είναι αυτή η τιμή μονάδα που ξέρουμε;» — δεμένο στη ρίζα ({@link TOPO_UNIT_SCALE_TO_MM}), ποτέ δεύτερη λίστα. */
+export function isTopoUnit(value: unknown): value is TopoUnit {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(TOPO_UNIT_SCALE_TO_MM, value);
+}
+
 // ADR-923 §5.5 — ο πίνακας άτυπων κελιών ζει στον γενικό πυρήνα, κοινός με τον κατάλογο.
 export type { RawTable } from '@/lib/tabular-import/tabular-types';
 

@@ -583,6 +583,10 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
 ## Changelog
 
+- **2026-11-23 (v44)** — **Το κατηγόρημα «κάνει για όριο;» του `topo-boundary-pick.ts` μετακόμισε στο `src/lib/geometry/closed-polyline-ring.ts`**
+  ([ADR-920](./ADR-920-listing-plot-terrain.md) §14.11 Ζ1): `qualifiesAsClosedRing(closed, vertexCount)` — ένα κατηγόρημα για
+  το όριο όγκων του viewer **και** το περίγραμμα οικοπέδου της αγγελίας. Η συμπεριφορά του viewer **δεν** άλλαξε (κλειστό + ≥ 3
+  κορυφές· τα τόξα εξακολουθούν να αγνοούνται εδώ — ανοιχτή πρόταση στο ADR-920 §14.11).
 - **2026-10-26 (v43)** — **Ο πίνακας στηλών/μονάδας του οδηγού εισαγωγής μετακόμισε** ([ADR-920](./ADR-920-listing-plot-terrain.md) §13.9):
   `TopoColumnMapTable` + `TopoUnitSelect` → `components/terrain/survey-import/SurveyColumnMapTable` + `SurveyUnitSelect`,
   κοινά με την εισαγωγή τοπογραφικού της αγγελίας (ίδια ερώτηση, ίδιο `ColumnMapping` — N.18). Ο viewer (`TopoColumnMapStep` ·

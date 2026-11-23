@@ -30,7 +30,7 @@ function gridSnapshot(z: (x: number, y: number) => number, extra: Partial<Listin
   }
   const zs = positions.filter((_, k) => k % 3 === 2);
   return {
-    version: 1,
+    version: 2,
     mesh: { positions, triangles, slopeClass: new Array(triangles.length / 3).fill(1) },
     contours: [],
     contourIntervalM: 0.5,
@@ -43,6 +43,8 @@ function gridSnapshot(z: (x: number, y: number) => number, extra: Partial<Listin
     },
     envelope: null,
     envelopeOmission: null,
+    plotOutline: null,
+    plotOutlineOmission: null,
     ...extra,
   };
 }

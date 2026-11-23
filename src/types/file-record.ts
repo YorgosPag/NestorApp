@@ -22,6 +22,7 @@ import type { ImageDimensions } from '@/lib/images/image-dimensions';
 import type { DxfPublishRaster } from '@/services/floorplans/dxf-publish-raster';
 import type { CatalogRenditions } from '@/subapps/catalog/renditions/catalog-renditions';
 import type { DocumentFacts } from '@/lib/document-validity/document-facts';
+import type { ConfirmedPlotOutline } from '@/lib/terrain/plot-outline/plot-outline-confirmation';
 import type { FileHandoverOrigin, FileHandoverProtocolOf } from '@/lib/property-handover/file-handover-origin';
 import type { FileHandoverDecision } from '@/lib/property-handover/file-handover-decision';
 import type {
@@ -453,6 +454,14 @@ export interface FileRecord {
    * `dxfPublishRasterPathOf` — η διαδρομή του PNG βγαίνει από το μητρώο συνοδευτικών, ποτέ από εδώ.
    */
   publishRaster?: DxfPublishRaster;
+
+  /**
+   * 🗺️ **Το επιβεβαιωμένο περίγραμμα οικοπέδου** (ADR-920 §14.11 Ζ3) — μόνο στο σχέδιο του τοπογράφου στον φάκελο
+   * (`publicationIdentity: 'terrain/plot-drawing'`): ο δακτύλιος που **βρήκε ο server σε αυτά τα bytes**, με την προέλευσή
+   * του, και που ο άνθρωπος επιβεβαίωσε. Ο ΕΝΑΣ γραφέας: η πόρτα εδάφους του ιδιοκτήτη (Admin SDK)· ο client **δεν** το
+   * γράφει (`firestore.rules` → `measuredKeys()`). Διαβάζεται **μόνο** μέσω `readConfirmedPlotOutline`.
+   */
+  plotOutline?: ConfirmedPlotOutline;
 
   /**
    * **Τα γεγονότα του εγγράφου** — είδος, έκδοση, τυπωμένη λήξη (ADR-915 Φ3 · Α3). Ακίνητο, μεταβίβαση και αγγελία

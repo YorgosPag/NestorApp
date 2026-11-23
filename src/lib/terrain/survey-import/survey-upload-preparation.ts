@@ -67,7 +67,7 @@ export function sourcePointOf(point: TopoPoint): TerrainSourcePoint {
   return point.z === undefined ? [point.x, point.y] : [point.x, point.y, point.z];
 }
 
-/** The survey as a source v1: points only — boundary and envelope arrive with later steps of the form. */
+/** The survey as a source: points only — boundary, envelope and plot outline (ADR-920 §14.11) arrive with later steps. */
 export function surveySourceOf(points: readonly TopoPoint[]): ListingTerrainSource {
   return {
     version: LISTING_TERRAIN_SOURCE_VERSION,
@@ -75,6 +75,7 @@ export function surveySourceOf(points: readonly TopoPoint[]): ListingTerrainSour
     breaklines: [],
     boundary: null,
     envelope: null,
+    plotOutline: null,
   };
 }
 

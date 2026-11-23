@@ -33,7 +33,7 @@ it('🔴 αποτυχημένη σύνδεση: το αρχείο πάει στ�
   attach.mockRejectedValue(conflict);
   fetchBatch.mockResolvedValue(detailWith(null));
   await expect(attachUploadedFile(batch, 'file_1')).rejects.toBe(conflict);
-  expect(trash).toHaveBeenCalledWith(['file_1'], 'trash');
+  expect(trash).toHaveBeenCalledWith(['file_1'], 'trash', 'company');
 });
 
 it('🔴 η σύνδεση έγινε αλλά χάθηκε η απάντηση: κανένας κάδος, και η ροή συνεχίζει', async () => {
@@ -47,7 +47,7 @@ it('άλλο αρχείο κέρδισε τη σύνδεση: το δικό μα
   attach.mockRejectedValue(conflict);
   fetchBatch.mockResolvedValue(detailWith('file_other'));
   await expect(attachUploadedFile(batch, 'file_1')).rejects.toBe(conflict);
-  expect(trash).toHaveBeenCalledWith(['file_1'], 'trash');
+  expect(trash).toHaveBeenCalledWith(['file_1'], 'trash', 'company');
 });
 
 it('αποτυχία της αντιστάθμισης δεν κρύβει την αρχική αιτία', async () => {

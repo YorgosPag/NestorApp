@@ -21,9 +21,11 @@
  *   **Π6. ΜΕΤΑ τη διαδοχή του γραφέα (Admin SDK, εκτός κανόνων)**: ο κάτοχος **εξακολουθεί να
  *   διαβάζει** προκάτοχο και διάδοχο, και το ερώτημα προκατόχων της στοίβας περνά — ενώ ο δεσμός
  *   διαδοχής **δεν ξηλώνεται** από τον πελάτη (ADR-866 βήμα 2β.3β · Ε-Φ0-1).
- *   **Π7. Κάδος · επαναφορά · μετονομασία ΜΟΝΟ μαζί με τη γραμμή δραστηριότητάς τους** — ίδια ατομική
- *   δέσμη, `lastActivityId` σε ΝΕΑ γραμμή (ADR-866 §2.6.11 Ε-Φ0-4). Γι' αυτό κάθε τέτοια πράξη σε
- *   αυτή τη σουίτα περνά από το `commitPairedActivity`, όπως στον πραγματικό γραφέα.
+ *   **Π7. Η μετονομασία ΜΟΝΟ μαζί με τη γραμμή δραστηριότητάς της** — ίδια ατομική δέσμη, `lastActivityId`
+ *   σε ΝΕΑ γραμμή (ADR-866 §2.6.11 Ε-Φ0-4)· περνά από το `commitPairedActivity`, όπως στον πραγματικό γραφέα.
+ *   🗑️ **Κάδος · επαναφορά: ΚΛΕΙΣΤΑ στον πελάτη** (ADR-920 §14.11 Ζ3b, `personalTrashUnchanged`) — ούτε μόνα ούτε
+ *   ζευγαρωμένα. Είναι πράξη διακομιστή (`POST /api/files/trash?custody=personal`), που ξαναπροβάλλει την αγγελία
+ *   ιδιοκτήτη του φακέλου· ο browser δεν μπορεί, και ό,τι πεταγόταν από εδώ έμενε δημόσιο.
  *   **Π8. Η ΠΡΟΕΛΕΥΣΗ ΠΑΡΑΔΟΣΗΣ** (ADR-916 Φ-Γ1): το `handoverOrigin` («Από την κατασκευάστρια») ο κάτοχος **ούτε**
  *   το γεννά **ούτε** το αλλάζει **ούτε** το αφαιρεί — αλλά το αντίγραφο που του παρέδωσε ο διακομιστής το **διαβάζει**,
  *   το σχολιάζει και το σβήνει: είναι **δικό** του (Δ2 · Δ8).
@@ -104,7 +106,7 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
   }
 
   describe('🔴 Π1 — ο ΠΟΛΙΤΗΣ χωρίς εταιρεία', () => {
-    it('ανεβάζει (pending), οριστικοποιεί, διαβάζει, στέλνει στον κάδο και σβήνει ΤΟ ΔΙΚΟ ΤΟΥ', async () => {
+    it('ανεβάζει (pending), οριστικοποιεί, διαβάζει και σβήνει ΤΟ ΔΙΚΟ ΤΟΥ — τον κάδο τον ζητά από τον διακομιστή', async () => {
       const db = env.authenticatedContext(CITIZEN_UID, {}).firestore();
       const ref = db.collection(COLLECTION).doc('citizen-file');
 
@@ -113,10 +115,11 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertSucceeds(ref.get());
       const snap = await assertSucceeds(db.collection(COLLECTION).where('userId', '==', CITIZEN_UID).get());
       expect(snap.size).toBe(1);
-      // 📒 ADR-866 §2.6.11 — ο κάδος ΜΑΖΙ με τη γραμμή του (Π7).
-      await assertSucceeds(commitPairedActivity(db, {
+      // 🗑️ ADR-920 §14.11 Ζ3b — ο κάδος ΔΕΝ γράφεται πια από πελάτη: ούτε ζευγαρωμένος, ούτε σκέτος (Π7).
+      await assertFails(commitPairedActivity(db, {
         uid: CITIZEN_UID, fileId: 'citizen-file', action: 'delete', updates: TRASH_UPDATES,
       }));
+      await assertFails(ref.update(TRASH_UPDATES));
       await assertSucceeds(ref.delete());
     });
 
@@ -245,6 +248,8 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
     it.each([
       ['imageColour', { model: 'cmyk', channels: 4, hasAlpha: false, bitsPerSample: 8, density: 300, profile: { name: 'Coated FOGRA39' } }],
       ['catalogRenditions', { status: 'ready', recipe: 1, renderedAt: '2026-10-26T00:00:00.000Z' }],
+      // 🗺️ ADR-920 §14.11 Ζ3 — το επιβεβαιωμένο περίγραμμα το γράφει μόνο η πόρτα εδάφους (Admin SDK).
+      ['plotOutline', { version: 1, ring: [{ x: 5e9, y: 0 }, { x: 5e9, y: 1e6 }, { x: 0, y: 1e6 }], showInListing: true }],
     ] as const)('🔑 ο κάτοχος δεν γράφει `%s`: γέννηση · οριστικοποίηση · αλλαγή → deny', async (key, value) => {
       const forged = { [key]: value };
       await assertFails(citizen().collection(COLLECTION).doc(`born-${key}`).set({ ...personalFilePayload(CITIZEN_UID, `born-${key}`), ...forged }));
@@ -265,14 +270,13 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertFails(citizen().collection(COLLECTION).doc(DOC_ID).update(forged));
     });
 
-    it('🔑 Δ21.1 δεσμευμένο από τον διακομιστή: κάδος ✅ · αποδέσμευση ✗ · οριστική διαγραφή ✗', async () => {
+    // ⚠️ Ο κάδος δεσμευμένου αρχείου (σιωπηλή δέσμευση Δ21.1) επιτρέπεται — αλλά τον κρίνει πλέον ο ΔΙΑΚΟΜΙΣΤΗΣ
+    //    (`writePersonalFileTrashState` δεν ρωτά δέσμευση, ADR-920 §14.11 Ζ3b)· εδώ μένουν όσα ο πελάτης ΔΕΝ κάνει.
+    it('🔑 Δ21.1 δεσμευμένο από τον διακομιστή: αποδέσμευση ✗ · οριστική διαγραφή ✗', async () => {
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID, { hold: 'legal', holdPlacedBy: 'uid_legal_manager' });
       const ref = citizen().collection(COLLECTION).doc(DOC_ID);
       await assertFails(ref.update({ hold: 'none' }));
       await assertFails(ref.delete());
-      await assertSucceeds(commitPairedActivity(citizen(), {
-        uid: CITIZEN_UID, fileId: DOC_ID, action: 'delete', updates: TRASH_UPDATES,
-      }));
     });
   });
 
@@ -299,7 +303,7 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       });
     }
 
-    it('γέννηση → οριστικοποίηση → κάδος → επαναφορά, με τα σχήματα του κώδικα', async () => {
+    it('γέννηση → οριστικοποίηση με τα σχήματα του κώδικα· κάδος/επαναφορά από πελάτη → deny (Ζ3b)', async () => {
       const { fileId, recordBase } = birth(CITIZEN_UID);
       const db = env.authenticatedContext(CITIZEN_UID, {}).firestore();
       const ref = db.collection(personalCollection).doc(fileId);
@@ -309,12 +313,12 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
         ...buildFinalizeFileRecordUpdate({ sizeBytes: 2048, downloadUrl: 'https://example.test/x.pdf' }),
         updatedAt: new Date(),
       }));
-      // 📒 ADR-866 §2.6.11 — κάδος/επαναφορά ΜΟΝΟ ζευγαρωμένα, με τα πεδία του `file-record-lifecycle`.
-      await assertSucceeds(commitPairedActivity(db, { uid: CITIZEN_UID, fileId, action: 'delete', updates: {
+      // 🗑️ ADR-920 §14.11 Ζ3b — ΑΚΡΙΒΩΣ τα πεδία του γραφέα του διακομιστή, ζευγαρωμένα: ο πελάτης ΔΕΝ τα γράφει πια.
+      await assertFails(commitPairedActivity(db, { uid: CITIZEN_UID, fileId, action: 'delete', updates: {
         lifecycleState: 'trashed', trashedAt: new Date(), trashedBy: CITIZEN_UID, purgeAt: new Date().toISOString(),
         isDeleted: true, deletedAt: new Date(), deletedBy: CITIZEN_UID, updatedAt: new Date(),
       } }));
-      await assertSucceeds(commitPairedActivity(db, { uid: CITIZEN_UID, fileId, action: 'restore', updates: {
+      await assertFails(commitPairedActivity(db, { uid: CITIZEN_UID, fileId, action: 'restore', updates: {
         ...RESTORE_UPDATES, trashedBy: null, purgeAt: null,
         deletedAt: null, deletedBy: null, restoredAt: new Date(), restoredBy: CITIZEN_UID, updatedAt: new Date(),
       } }));
@@ -495,12 +499,12 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       });
     }
 
-    it('✅ χωρίς τα πεδία γεννιέται · με τα πεδία του διακομιστή: σημείωση, κάδος με τη γραμμή του, διαγραφή', async () => {
+    it('✅ χωρίς τα πεδία γεννιέται · με τα πεδία του διακομιστή: σημείωση, διαγραφή (ο κάδος είναι του διακομιστή, Ζ3b)', async () => {
       await assertSucceeds(citizenDb().collection(COLLECTION).doc('plain').set(personalFilePayload(CITIZEN_UID, 'plain')));
       await seedPersonalFile(env, DOC_ID, CITIZEN_UID, CUSTODY);
       const db = citizenDb();
       await assertSucceeds(db.collection(COLLECTION).doc(DOC_ID).update({ description: 'τοπογραφικό οικοπέδου' }));
-      await assertSucceeds(commitPairedActivity(db, {
+      await assertFails(commitPairedActivity(db, {
         uid: CITIZEN_UID, fileId: DOC_ID, action: 'delete', updates: TRASH_UPDATES,
       }));
       await assertSucceeds(db.collection(COLLECTION).doc(DOC_ID).delete());
@@ -508,7 +512,7 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
   });
 
   // ==========================================================================
-  // 🔴 Π7 — ΚΑΔΟΣ · ΕΠΑΝΑΦΟΡΑ · ΜΕΤΟΝΟΜΑΣΙΑ ΜΟΝΟ ΜΑΖΙ ΜΕ ΤΗ ΓΡΑΜΜΗ ΤΟΥΣ (ADR-866 §2.6.11)
+  // 🔴 Π7 — Η ΜΕΤΟΝΟΜΑΣΙΑ ΜΟΝΟ ΜΑΖΙ ΜΕ ΤΗ ΓΡΑΜΜΗ ΤΗΣ (ADR-866 §2.6.11) · ΚΑΔΟΣ/ΕΠΑΝΑΦΟΡΑ ΚΑΘΟΛΟΥ (ADR-920 §14.11 Ζ3b)
   // ==========================================================================
   // Η πλευρά του ΑΡΧΕΙΟΥ στο ζευγάρωμα (η πλευρά της γραμμής: `file-audit-log-personal`). Στους
   // μεγάλους τη δραστηριότητα τη γράφει η υπηρεσία — ο χρήστης δεν την παραλείπει. Εδώ ο κανόνας
@@ -525,6 +529,21 @@ describe('files_personal.rules — το προσωπικό αρχείο το α�
       await assertFails(ref().update({ ...TRASH_UPDATES }));
       await assertFails(ref().update({ isDeleted: true }));
     });
+
+    // 🗑️ ADR-920 §14.11 Ζ3b — ΚΑΘΕ πεδίο του γραφέα κάδου/επαναφοράς, ΜΟΝΟ του: ούτε ένα δεν το γράφει ο πελάτης.
+    //    (Η ισότητα της λίστας του κανόνα με τον γραφέα φυλάσσεται στην άγκυρα Α35.2.)
+    for (const [key, value] of [
+      ['lifecycleState', 'trashed'], ['isDeleted', true], ['trashedAt', new Date()], ['trashedBy', CITIZEN_UID],
+      ['purgeAt', '2030-01-01T00:00:00.000Z'], ['deletedAt', new Date()], ['deletedBy', CITIZEN_UID],
+      ['restoredAt', new Date()], ['restoredBy', CITIZEN_UID],
+    ] as const) {
+      it(`🔴 \`${key}\` από πελάτη → deny — ακόμη και ΖΕΥΓΑΡΩΜΕΝΟ με γραμμή`, async () => {
+        await assertFails(ref().update({ [key]: value }));
+        await assertFails(commitPairedActivity(citizenDb(), {
+          uid: CITIZEN_UID, fileId: DOC_ID, action: 'rename', updates: { displayName: 'νέο', [key]: value },
+        }));
+      });
+    }
 
     it('μετονομασία ΧΩΡΙΣ γραμμή → deny', async () => {
       await assertFails(ref().update({ displayName: 'άλλο όνομα' }));

@@ -214,8 +214,12 @@ export interface FileAuditRecordFields extends FileAuditActFields {
  *
  * ⚠️ **Κλειστό σύνολο, με κάτοπτρο στο `firestore.rules`** (`personalActivityMatchesChange`) — η
  * άγκυρα Α35 συγκρίνει τα δύο. Νέα πράξη εδώ χωρίς κλάδο εκεί = γραφή που ο κανόνας **αρνείται**.
+ *
+ * 🗑️ **ADR-920 §14.11 Ζ3b — ο κάδος και η επαναφορά ΒΓΗΚΑΝ από εδώ**: έγιναν πράξη διακομιστή, που γράφει αλλαγή **και**
+ * γραμμή στην ίδια δέσμη Admin (`writePersonalFileTrashState` · `stagePairedFileActivity`). Ζευγάρωμα από κανόνες
+ * χρειάζεται μόνο ό,τι γράφει ακόμη ο **πελάτης** — η μετονομασία.
  */
-export const FILE_ACTIVITY_PAIRED_ACTIONS = ['delete', 'restore', 'rename'] as const satisfies readonly FileAuditAction[];
+export const FILE_ACTIVITY_PAIRED_ACTIONS = ['rename'] as const satisfies readonly FileAuditAction[];
 
 /** Μία από τις ζευγαρωμένες πράξεις. */
 export type FileActivityPairedAction = (typeof FILE_ACTIVITY_PAIRED_ACTIONS)[number];

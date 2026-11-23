@@ -54,6 +54,21 @@ jest.mock('@/lib/auth', () => ({
     (callback: (...args: unknown[]) => Promise<unknown>) =>
     async (request: unknown) => callback(request, caller, undefined),
 }));
+// 🗂️ ADR-920 §14.11 Ζ3b — η πόρτα του ανθρώπου: ο αιτών είναι ΜΟΝΟ `uid` (ο πολίτης χωρίς οργανισμό).
+jest.mock('@/lib/auth/personal-scope-middleware', () => ({
+  withPersonalOrOrgAuth:
+    (callback: (...args: unknown[]) => Promise<unknown>) =>
+    async (request: unknown) => callback(request, { ctx: { uid: caller.uid } }, undefined),
+}));
+
+/** Ο γραφέας της αγγελίας ιδιοκτήτη — mock όπως ο εταιρικός· η κηδεμονία πριν από αυτόν ΔΕΝ γίνεται mock. */
+const republishOwnerProperty = jest.fn(async (..._args: unknown[]) => ({ publish: 'published', property: {} }));
+jest.mock('@/services/owner-property/owner-property-publication.service', () => ({
+  republishOwnerProperty: (...args: unknown[]) => republishOwnerProperty(...args),
+}));
+jest.mock('@/lib/owner-property/owner-property-from-document', () => ({
+  ownerPropertyFromDocument: (raw: unknown, id: string) => (raw === undefined ? null : { ...(raw as object), id }),
+}));
 
 const republishListing = jest.fn(async (..._args: unknown[]): Promise<string> => 'published');
 jest.mock('@/services/listings/publish-public-listing', () => ({
@@ -80,8 +95,9 @@ interface Wire {
   files: { fileId: string; purgeAt: string | null; displayName?: string; entityId?: string; entityType?: string }[];
 }
 
-async function call(body: unknown): Promise<{ status: number; body: Wire }> {
-  const response = (await POST({ json: async () => body } as never, undefined as never)) as unknown as {
+async function call(body: unknown, custody?: 'company' | 'personal'): Promise<{ status: number; body: Wire }> {
+  const nextUrl = new URL(`http://localhost/api/files/trash${custody === undefined ? '' : `?custody=${custody}`}`);
+  const response = (await POST({ json: async () => body, nextUrl } as never, undefined as never)) as unknown as {
     status: number;
     json: () => Promise<Wire>;
   };
@@ -295,5 +311,117 @@ describe('ADR-845 §7.17 Α2 — ποιος επιτρέπεται (ό,τι έκ
     expect(bad.body.files).toEqual([]);
     expect(empty.status).toBe(400);
     expect(stored(MINE).isDeleted).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// 🗂️ ADR-920 §14.11 Ζ3b — ΤΟ ΠΡΟΣΩΠΙΚΟ ΔΙΑΜΕΡΙΣΜΑ: ίδια πόρτα, ίδιος σκελετός, ίδια επαναπροβολή
+// =============================================================================
+
+const DOSSIER = 'pdos_1';
+const OWNER_LISTING = 'oprop_1';
+const DRAWING = 'pfile_drawing';
+const STRANGERS = 'pfile_strangers';
+
+function storedPersonal(id: string): Record<string, unknown> {
+  return fake.all<Record<string, unknown>>(COLLECTIONS.FILES_PERSONAL).find((doc) => doc.id === id) ?? {};
+}
+
+function personalAuditRows(): Record<string, unknown>[] {
+  return fake.all<Record<string, unknown>>(COLLECTIONS.FILE_AUDIT_LOG_PERSONAL);
+}
+
+function seedPersonal(id: string, extra: Record<string, unknown>): void {
+  fake.seed(COLLECTIONS.FILES_PERSONAL, id, {
+    id, userId: 'u_alpha', status: 'ready', createdBy: 'u_alpha', category: 'drawings',
+    entityType: 'property_dossier', entityId: DOSSIER, displayName: `${id}.dxf`, ...extra,
+  });
+}
+
+describe('ADR-920 §14.11 Ζ3b — ο κάδος ΠΡΟΣΩΠΙΚΟΥ αρχείου είναι πράξη διακομιστή', () => {
+  beforeEach(() => {
+    seedPersonal(DRAWING, { publicationIdentity: 'terrain/plot-drawing' });
+    seedPersonal(STRANGERS, { userId: 'u_someone_else', createdBy: 'u_someone_else' });
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, OWNER_LISTING, {
+      dossierId: DOSSIER, authorUserId: 'u_alpha', authorCompanyId: null,
+    });
+  });
+
+  it('🏆 Π1 — αρχείο ΦΑΚΕΛΟΥ: πετιέται, η Δραστηριότητα γράφεται ΖΕΥΓΑΡΩΜΕΝΗ, και η αγγελία ιδιοκτήτη ξαναπροβάλλεται', async () => {
+    const { body } = await call({ fileIds: [DRAWING], action: 'trash' }, 'personal');
+
+    expect(body.errors).toEqual([]);
+    expect(body.processedCount).toBe(1);
+    expect(storedPersonal(DRAWING)).toMatchObject({ lifecycleState: 'trashed', isDeleted: true, trashedBy: 'u_alpha' });
+    const rows = personalAuditRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ fileId: DRAWING, action: 'delete', performedBy: 'u_alpha', userId: 'u_alpha' });
+    expect(rows[0]).not.toHaveProperty('companyId');
+    expect(storedPersonal(DRAWING).lastActivityId).toBe(Object.keys(fake.getAllDocs(COLLECTIONS.FILE_AUDIT_LOG_PERSONAL))[0]);
+    expect(republishOwnerProperty).toHaveBeenCalledTimes(1);
+    expect(body.listings).toEqual([{ propertyId: OWNER_LISTING, outcome: 'published' }]);
+    expect(auditRows()).toEqual([]);
+    expect(republishListing).not.toHaveBeenCalled();
+  });
+
+  it('♻️ Π2 — ΕΠΑΝΑΦΟΡΑ: ξαναζωντανεύει, γραμμή `restore`, ΚΑΙ η αγγελία ξαναπροβάλλεται (το περίγραμμα επιστρέφει)', async () => {
+    await call({ fileIds: [DRAWING], action: 'trash' }, 'personal');
+    republishOwnerProperty.mockClear();
+
+    const { body } = await call({ fileIds: [DRAWING], action: 'restore' }, 'personal');
+
+    expect(body.errors).toEqual([]);
+    expect(storedPersonal(DRAWING)).toMatchObject({ lifecycleState: 'active', isDeleted: false, purgeAt: null });
+    expect(personalAuditRows().map((row) => row.action)).toEqual(['delete', 'restore']);
+    expect(republishOwnerProperty).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔴 Π3 — ΙΔΕΜΠΟΤΗΤΑ: δεύτερος κάδος ⇒ καμία γραφή, καμία γραμμή, καμία επαναπροβολή', async () => {
+    await call({ fileIds: [DRAWING], action: 'trash' }, 'personal');
+    const purgeAt = storedPersonal(DRAWING).purgeAt;
+    republishOwnerProperty.mockClear();
+
+    const { body } = await call({ fileIds: [DRAWING], action: 'trash' }, 'personal');
+
+    expect(body.processedCount).toBe(0);
+    expect(storedPersonal(DRAWING).purgeAt).toBe(purgeAt);
+    expect(personalAuditRows()).toHaveLength(1);
+    expect(republishOwnerProperty).not.toHaveBeenCalled();
+  });
+
+  it('🔒 Π4 — αρχείο ΑΛΛΟΥ ανθρώπου ⇒ το ΙΔΙΟ «not found» με το ανύπαρκτο, καμία γραφή', async () => {
+    const { body } = await call({ fileIds: [STRANGERS, 'pfile_missing'], action: 'trash' }, 'personal');
+
+    expect(body.errors).toEqual([`${STRANGERS}: not found`, 'pfile_missing: not found']);
+    expect(storedPersonal(STRANGERS).isDeleted).toBeUndefined();
+    expect(personalAuditRows()).toEqual([]);
+  });
+
+  it('🔒 Π5 — το διαμέρισμα είναι ΔΗΛΩΣΗ: εταιρικό αρχείο ζητημένο ως προσωπικό ⇒ «not found»', async () => {
+    const { body } = await call({ fileIds: [MINE], action: 'trash' }, 'personal');
+
+    expect(body.errors).toEqual([`${MINE}: not found`]);
+    expect(stored(MINE).isDeleted).toBeUndefined();
+  });
+
+  it('Π6 — `not-ready` · `not-in-trash` — ίδια ονόματα με το εταιρικό', async () => {
+    seedPersonal('pfile_pending', { status: 'pending' });
+
+    const pending = await call({ fileIds: ['pfile_pending'], action: 'trash' }, 'personal');
+    const notTrashed = await call({ fileIds: [DRAWING], action: 'restore' }, 'personal');
+
+    expect(pending.body.errors).toEqual(['pfile_pending: not-ready']);
+    expect(notTrashed.body.errors).toEqual([`${DRAWING}: not-in-trash`]);
+    expect(personalAuditRows()).toEqual([]);
+  });
+
+  it('Π7 — άκυρο `custody` ⇒ 400, ποτέ «μάντεψε εταιρεία»', async () => {
+    const response = (await POST(
+      { json: async () => ({ fileIds: [DRAWING], action: 'trash' }), nextUrl: new URL('http://localhost/api/files/trash?custody=x') } as never,
+      undefined as never,
+    )) as unknown as { status: number };
+
+    expect(response.status).toBe(400);
+    expect(storedPersonal(DRAWING).isDeleted).toBeUndefined();
   });
 });
