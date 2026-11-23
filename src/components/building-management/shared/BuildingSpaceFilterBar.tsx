@@ -27,7 +27,7 @@ import { Search } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SpaceExportButton } from './SpaceExportButton';
-import type { ExportAction } from './useExportAction';
+import type { ExportAction } from '@/hooks/useExportAction';
 
 export interface SpaceFilterOption<V extends string> {
   readonly value: V;

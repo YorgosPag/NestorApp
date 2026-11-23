@@ -41,7 +41,7 @@ import {
   type ObjectiveValueDeclaredReading,
   type ObjectiveValueReadingApplication,
 } from '@/lib/objective-value/objective-value-declared-reading';
-import { deriveInputProvenance } from '@/lib/objective-value/objective-value-input-provenance';
+import { deriveInputProvenance, type ObjectiveValueProvenance } from '@/lib/objective-value/objective-value-input-provenance';
 import { objectiveValueReturnHref, type ObjectiveValueReturn } from '@/lib/objective-value/objective-value-return';
 import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
 import { Link } from '@/lib/workspace/navigation';
@@ -52,6 +52,7 @@ import { ObjectiveValueEvidenceSurfaces } from './objective-value-evidence-surfa
 import { ObjectiveValueFaq } from './ObjectiveValueFaq';
 import { ObjectiveValueLocation } from './ObjectiveValueLocation';
 import { ObjectiveValueMobileBar } from './ObjectiveValueMobileBar';
+import { ObjectiveValuePdfButton } from './ObjectiveValuePdfButton';
 import { ObjectiveValueProperty } from './ObjectiveValueProperty';
 import {
   ObjectiveValueOverrideSummary,
@@ -122,6 +123,8 @@ function useCalculatorEvaluation(draft: ObjectiveValueDraft, location: Objective
   );
   return {
     result,
+    // ADR-947 Φ2β — το πρόχειρο όπως το είδε η μηχανή: το PDF τυπώνει ΑΥΤΟ, ποτέ δεύτερη σύνθεση.
+    effective,
     questions,
     commercialityAssumed: effective.commercialityAssumed && questions.includes('commercialityFactor'),
     // Η γραμμή προέλευσης μόνο όταν ο ΣΕ ΜΕΤΡΑ για αυτό το ακίνητο (π.χ. όχι πάνω από τον Γ' όροφο).
@@ -194,12 +197,40 @@ interface WorkspaceProps {
   readonly location: ObjectiveValueLocationState;
   readonly today: string;
   readonly evaluation: ReturnType<typeof useCalculatorEvaluation>;
+  readonly provenance: ObjectiveValueProvenance;
   readonly resultRef: (element: HTMLElement | null) => void;
   readonly onApplyReading: (application: ObjectiveValueReadingApplication) => void;
 }
 
-function CalculatorWorkspace({ draft, update, location, today, evaluation, resultRef, onApplyReading }: WorkspaceProps) {
-  const { result, questions, commercialityAssumed, sourcedFactor } = evaluation;
+type ResultCellProps = Omit<WorkspaceProps, 'update' | 'resultRef'>;
+
+/** Η στήλη του αποτελέσματος — ποσό · «γιατί» · ελλείψεις · «Λήψη PDF» (ADR-947 Φ2β), όλα υποδοχές του `ObjectiveValueResult`. */
+function CalculatorResult({ draft, location, today, evaluation, provenance, onApplyReading }: ResultCellProps) {
+  const { result, effective, commercialityAssumed, sourcedFactor } = evaluation;
+  return (
+    <ObjectiveValueResult
+      result={result}
+      commercialityAssumed={commercialityAssumed}
+      sourcedCommercialityFactor={sourcedFactor}
+      commercialityProvenance={<ObjectiveValueProvenanceBadge input="commercialityFactor" />}
+      overrides={<ObjectiveValueOverrideSummary />}
+      evidence={
+        <ObjectiveValueEvidenceSurfaces.ObjectiveValueEvidenceGuide
+          missing={missingOf(result)}
+          reading={{ draft, mapZone: location.mapZone, onApply: onApplyReading }}
+        />
+      }
+      actions={
+        result.kind === 'computed' && (
+          <ObjectiveValuePdfButton result={result} effective={effective} provenance={provenance} location={location} valuationDate={today} />
+        )
+      }
+    />
+  );
+}
+
+function CalculatorWorkspace(props: WorkspaceProps) {
+  const { draft, update, location, today, evaluation, resultRef } = props;
   return (
     // 🔑 `data-shell-span="full"` (ADR-797 §Β.11 breakout): το ΕΡΓΑΛΕΙΟ απλώνεται· κεφαλίδα και FAQ μένουν στο μέτρο.
     // Νέος ρόλος > 80ch στο `measure` απαγορεύεται σκόπιμα — το μέτρο είναι μήκος γραμμής κειμένου, όχι πλάτος εργαλείου.
@@ -210,7 +241,7 @@ function CalculatorWorkspace({ draft, update, location, today, evaluation, resul
       <div className={FORM_CELL}>
         <ObjectiveValueProperty draft={draft} update={update} />
         <ObjectiveValueQuestions
-          questions={questions}
+          questions={evaluation.questions}
           draft={draft}
           update={update}
           today={today}
@@ -220,19 +251,7 @@ function CalculatorWorkspace({ draft, update, location, today, evaluation, resul
         <ObjectiveValueAdjustments draft={draft} update={update} />
       </div>
       <aside ref={resultRef} className={RESULT_CELL}>
-        <ObjectiveValueResult
-          result={result}
-          commercialityAssumed={commercialityAssumed}
-          sourcedCommercialityFactor={sourcedFactor}
-          commercialityProvenance={<ObjectiveValueProvenanceBadge input="commercialityFactor" />}
-          overrides={<ObjectiveValueOverrideSummary />}
-          evidence={
-            <ObjectiveValueEvidenceSurfaces.ObjectiveValueEvidenceGuide
-              missing={missingOf(result)}
-              reading={{ draft, mapZone: location.mapZone, onApply: onApplyReading }}
-            />
-          }
-        />
+        <CalculatorResult {...props} />
       </aside>
     </div>
   );
@@ -263,7 +282,7 @@ export function ObjectiveValueContent() {
       <ShellSurface as="main" measure="wide" busy={false} className="gap-y-6 py-4">
         <BackLink back={prefill?.back ?? null} />
         <PageHeader />
-        <CalculatorWorkspace draft={draft} update={update} location={location} today={today} evaluation={evaluation} resultRef={resultView.ref} onApplyReading={applyReading} />
+        <CalculatorWorkspace draft={draft} update={update} location={location} today={today} evaluation={evaluation} provenance={provenance.provenance} resultRef={resultView.ref} onApplyReading={applyReading} />
         <ObjectiveValueFaq />
         {/* Τελευταίο παιδί του `<main>`: το `sticky` προσγειώνεται εδώ στο τέλος, χωρίς να καλύπτει τίποτα. */}
         <ObjectiveValueMobileBar result={result} resultInView={resultView.inView} onShowBreakdown={showBreakdown} />

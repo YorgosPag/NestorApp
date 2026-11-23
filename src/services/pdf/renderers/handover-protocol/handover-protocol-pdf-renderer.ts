@@ -17,6 +17,7 @@ import { jsPDF } from 'jspdf';
 import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import { handoverDeliveryDigestSchemeOf } from '@/lib/property-handover/handover-delivery-plan';
 import { registerGreekFont } from '@/services/pdf/greek-font-loader';
+import { pdfDateOf, pdfFileIdOf } from '@/services/pdf/pdf-deterministic-identity';
 import { addReportPdfFooters, type PdfVerticalLayout } from '@/services/report-engine/report-pdf-chrome';
 
 import {
@@ -35,21 +36,6 @@ import type { HandoverProtocolView } from './handover-protocol-view';
 import type { HandoverProtocolWording } from './handover-protocol-wording';
 
 const LAYOUT: PdfVerticalLayout = { pageHeight: 297, marginTop: 16, marginBottom: 18 };
-
-const pad = (n: number): string => String(n).padStart(2, '0');
-
-/** ISO → ημερομηνία PDF (ISO 32000-1 §7.9.4) σε **UTC** — ποτέ η τοπική ζώνη του διακομιστή. */
-export function pdfDateOf(iso: string): string {
-  const t = new Date(iso);
-  return `D:${t.getUTCFullYear()}${pad(t.getUTCMonth() + 1)}${pad(t.getUTCDate())}${pad(t.getUTCHours())}${pad(t.getUTCMinutes())}${pad(t.getUTCSeconds())}+00'00'`;
-}
-
-/** Το `/ID` του αρχείου (32 hex) — το uuid της ταυτότητας του πρωτοκόλλου, χωρίς πρόθεμα και παύλες. */
-export function pdfFileIdOf(protocolId: string): string {
-  const hex = protocolId.replace(/^[a-z]+_/, '').replace(/-/g, '').toUpperCase();
-  if (!/^[0-9A-F]{32}$/.test(hex)) throw new Error(`Handover protocol id has no uuid: ${protocolId}`);
-  return hex;
-}
 
 function stampMetadata(pdf: jsPDF, view: HandoverProtocolView, wording: HandoverProtocolWording): void {
   pdf.setCreationDate(pdfDateOf(view.issuedAt));

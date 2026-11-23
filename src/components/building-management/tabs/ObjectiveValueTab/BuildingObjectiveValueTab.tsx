@@ -21,7 +21,7 @@ import { BuildingSpaceTable } from '../../shared/BuildingSpaceTable';
 import { SpaceExportButton } from '../../shared/SpaceExportButton';
 import type { SortState } from '../../shared/space-table-sort';
 import type { SpaceColumn } from '../../shared/types';
-import { useExportAction } from '../../shared/useExportAction';
+import { useExportAction } from '@/hooks/useExportAction';
 import { buildingObjectiveValueColumns, FLOOR_COLUMN_KEY } from './building-objective-value-columns';
 import { exportBuildingObjectiveValuesXlsx } from './building-objective-value-xlsx';
 import { BuildingObjectiveValueFacts, focusBuildingFact } from './BuildingObjectiveValueFacts';

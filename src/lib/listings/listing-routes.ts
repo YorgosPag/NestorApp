@@ -193,3 +193,18 @@ export function objectiveValueHref(query?: string | null) {
   if (query && query.length > 0) return typedHref(`${OBJECTIVE_VALUE_ROUTE}?${query}`);
   return typedHref(OBJECTIVE_VALUE_ROUTE);
 }
+
+/**
+ * 🔎 **Η σελίδα επαλήθευσης ενός στιγμιοτύπου** (ADR-947 Φ2β/Φ2γ) — τη δείχνει το QR του PDF. Η σελίδα έρχεται στη Φ2γ·
+ *    η διαδρομή ορίζεται **εδώ, μία φορά**, ώστε PDF και σελίδα να μη διαφωνήσουν ποτέ.
+ *
+ * 🔑 **Το αποτύπωμα ταξιδεύει στο fragment** (`#sha256=…`), όχι στο query: ο browser **δεν** στέλνει ποτέ το fragment
+ *    στον server (RFC 3986 §3.5). Η σελίδα συγκρίνει στη συσκευή το αποτύπωμα του **χαρτιού** με το καταχωρισμένο —
+ *    ένα αλλοιωμένο αντίγραφο με γνήσιο κωδικό φαίνεται αμέσως, χωρίς να καταγραφεί πουθενά τι σαρώθηκε.
+ */
+const OBJECTIVE_VALUE_VERIFY_ROUTE = `${OBJECTIVE_VALUE_ROUTE}/epalitheysi` as const;
+
+export function objectiveValueVerifyHref(snapshotId: string, digest?: string): string {
+  const path = `${OBJECTIVE_VALUE_VERIFY_ROUTE}/${encodeURIComponent(snapshotId)}`;
+  return digest === undefined ? path : `${path}#sha256=${digest}`;
+}

@@ -7,7 +7,7 @@ import { act, fireEvent, render, renderHook, screen } from '@testing-library/rea
 
 import { BuildingSpaceFilterBar } from '../BuildingSpaceFilterBar';
 import { SpaceExportButton } from '../SpaceExportButton';
-import { useExportAction } from '../useExportAction';
+import { useExportAction } from '@/hooks/useExportAction';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),

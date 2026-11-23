@@ -23,6 +23,7 @@ import { formatCurrency, formatNumber } from '@/lib/intl-formatting';
 import { AADE_MYPROPERTY_URL } from '@/lib/objective-value/objective-value-page-sections';
 import { formatCommercialityFactor } from '@/lib/objective-value/objective-value-zone';
 import { missingOf } from '@/lib/objective-value/objective-value-draft';
+import { objectiveValueFactorLabel } from '@/lib/objective-value/objective-value-factor-label';
 import type { AppliedFactor, ComputedObjectiveValue, ObjectiveValueResult as Result } from '@/lib/objective-value/objective-value-types';
 import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
 
@@ -30,13 +31,10 @@ const NS = 'objective-value';
 const R = `${NS}:result`;
 
 
-/** Το όνομα ενός συντελεστή («Όροφος (επίπεδο 2)») — το ΕΝΑ, για την ανάλυση **και** την εξαγωγή XLSX (ADR-898 Φ4β). */
+/** Το όνομα ενός συντελεστή — η ανάλυση, η εξαγωγή XLSX (ADR-898 Φ4β) και το PDF (ADR-947 Φ2β) ρωτούν τον ΕΝΑ κανόνα. */
 export function useObjectiveValueFactorLabel(): (factor: AppliedFactor) => string {
   const { t } = useTranslation([NS]);
-  return (factor) => {
-    const level = factor.level === undefined ? '' : ` ${t(`${R}.levelSuffix`, { number: factor.level + 1 })}`;
-    return `${t(`${R}.factors.${factor.key}`)}${level}`;
-  };
+  return (factor) => objectiveValueFactorLabel(t, factor);
 }
 
 function FactorRow({ factor }: { readonly factor: AppliedFactor }) {
@@ -111,6 +109,8 @@ interface ObjectiveValueResultProps {
   readonly overrides?: React.ReactNode;
   /** ADR-949 Α-1 — «ποιο έγγραφο, από πού» για ό,τι λείπει· υποδοχή, μόνο ο δημόσιος υπολογιστής τη γεμίζει. */
   readonly evidence?: React.ReactNode;
+  /** ADR-947 Φ2β — ενέργειες πάνω στο υπολογισμένο αποτέλεσμα («Λήψη PDF»)· υποδοχή, μόνο ο δημόσιος υπολογιστής τη γεμίζει. */
+  readonly actions?: React.ReactNode;
 }
 
 export function ObjectiveValueResult({
@@ -120,6 +120,7 @@ export function ObjectiveValueResult({
   commercialityProvenance = null,
   overrides = null,
   evidence = null,
+  actions = null,
 }: ObjectiveValueResultProps) {
   const { t } = useTranslation([NS]);
   return (
@@ -151,6 +152,7 @@ export function ObjectiveValueResult({
       )}
       {overrides}
       {result.kind === 'computed' && <ObjectiveValueBreakdown result={result} />}
+      {result.kind === 'computed' && actions}
       <p className="m-0 text-xs text-muted-foreground">{t(`${R}.disclaimer`)}</p>
       <a href={AADE_MYPROPERTY_URL} target="_blank" rel="noopener noreferrer" className={`self-start text-sm ${VISIBLE_LINK_CLASS}`}>
         {t(`${R}.myProperty`)}

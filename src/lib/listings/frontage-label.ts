@@ -11,10 +11,10 @@
  * Η αντιστοίχιση μένει **μία** — το `vocabularyLabel` δεν ξαναγράφει το πρόθεμα, καλεί αυτή τη συνάρτηση.
  */
 
-import type { TFunction } from 'i18next';
-
+import type { PriceLabelT } from '@/lib/listings/listing-price-label';
 import type { ResidenceFrontage } from '@/lib/objective-value/objective-value-types';
 
-export function frontageLabel(t: TFunction, value: ResidenceFrontage | string): string {
+/** `t` = ο ΕΝΑΣ τύπος καθαρού μεταφραστή: i18next στην οθόνη, `createBundleTranslate` στο PDF του server (ADR-947 Φ2β). */
+export function frontageLabel(t: PriceLabelT, value: ResidenceFrontage | string): string {
   return t(`properties-enums:frontage.${value}`);
 }

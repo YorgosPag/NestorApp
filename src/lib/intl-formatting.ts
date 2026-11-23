@@ -340,10 +340,12 @@ function currencyOptionsOf(
 /**
  * Format number according to current locale
  */
-export const formatNumber = (number: number, options?: Intl.NumberFormatOptions): string => {
-  const locale = getCurrentLocale();
-  return new Intl.NumberFormat(locale, options).format(number);
-};
+export const formatNumber = (number: number, options?: Intl.NumberFormatOptions): string =>
+  formatNumberIn(getCurrentLocale(), number, options);
+
+/** Το ίδιο, σε ρητή γλώσσα (βλ. {@link formatCurrencyIn}) — ADR-947 Φ2β: PDF στη γλώσσα του εγγράφου, όχι της οθόνης. */
+export const formatNumberIn = (locale: string, number: number, options?: Intl.NumberFormatOptions): string =>
+  new Intl.NumberFormat(locale, options).format(number);
 
 /**
  * Format percentage according to current locale

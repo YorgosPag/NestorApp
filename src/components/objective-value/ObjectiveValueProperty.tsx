@@ -19,9 +19,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isLevelStackEnd, levelStackNeighbours, shiftLevelStack, type LevelStackNeighbours } from '@/lib/floor/level-stack';
 import type { LevelDraft, ObjectiveValueDraft, UpdateDraft } from '@/lib/objective-value/objective-value-draft';
 import { MAX_LEVELS, OBJECTIVE_VALUE_FLOOR_BOUNDS } from '@/lib/objective-value/objective-value-prefill';
+import { FLOOR_VALUES, floorValueOf } from '@/lib/objective-value/objective-value-floor-bucket';
 import { OBJECTIVE_VALUE_FORMS, PARKING_POSITIONS, STORAGE_POSITIONS } from '@/lib/objective-value/objective-value-types';
 
-import { FLOOR_VALUES, floorValueOf, useBucketLabel, useFloorValueLabel } from './objective-value-floor-label';
+import { useBucketLabel, useFloorValueLabel } from './objective-value-floor-label';
 import { CalculatorStep, ChoiceSelect, LabelledNumber } from './objective-value-inputs';
 import { ObjectiveValueProvenanceBadge } from './ObjectiveValueProvenanceBadge';
 

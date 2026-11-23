@@ -5,86 +5,35 @@
  * @related handover-protocol-pdf-renderer.ts (η σειρά και η σελίδα) · report-engine/report-pdf-chrome.ts (παλέτα · περιθώριο)
  *
  * 🔑 Κάθε ενότητα παίρνει το `y` όπου ξεκινά και επιστρέφει το `y` όπου τελείωσε — καμία κοινή μεταβλητή κατάστασης.
- * 🔑 **Τα αναγνωριστικά και τα αποτυπώματα σπάνε σε σταθερά σημεία** (`chunk`), ποτέ όπου τύχει: ο άνθρωπος τα διαβάζει
+ * 🔑 Τα δομικά στοιχεία της ροής (επικεφαλίδα · παράγραφος · ζεύγη · πίνακας · QR) είναι κοινή υποδομή
+ *    (`services/pdf/pdf-flow.ts`, ADR-947 Φ2β)· εδώ μένει **τι** γράφει το Πρωτόκολλο.
+ * 🔑 **Τα αναγνωριστικά και τα αποτυπώματα σπάνε σε σταθερά σημεία** (`chunkText`), ποτέ όπου τύχει: ο άνθρωπος τα διαβάζει
  *    ομοιόμορφα, και το μηχαναγνώσιμο αντίγραφό τους είναι το `manifest.json` (χωρίς αλλαγές γραμμής).
  */
-
-import type jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 import type { FrozenLegalBlock, FrozenLegalSection } from '@/lib/legal/frozen-legal-document';
 import { formatOperatorDateTime } from '@/lib/operator-time-format';
 import {
-  MARGIN,
-  PRIMARY,
-  SLATE_200,
-  SLATE_500,
-  SLATE_800,
-  ensurePageSpace,
-  forceRobotoCell,
-  yAfterTable,
-  type PdfVerticalLayout,
-} from '@/services/report-engine/report-pdf-chrome';
+  chunkText,
+  drawFlowHeading,
+  drawFlowPairs,
+  drawFlowParagraph,
+  drawFlowQrPairs,
+  drawFlowTable,
+  type PdfFlowPage,
+} from '@/services/pdf/pdf-flow';
+import { MARGIN, SLATE_800, ensurePageSpace } from '@/services/report-engine/report-pdf-chrome';
 
 import type { HandoverProtocolView } from './handover-protocol-view';
 import type { HandoverProtocolWording } from './handover-protocol-wording';
 
-export interface ProtocolPage {
-  readonly pdf: jsPDF;
+export interface ProtocolPage extends PdfFlowPage {
   readonly view: HandoverProtocolView;
   readonly wording: HandoverProtocolWording;
-  readonly layout: PdfVerticalLayout;
-  readonly width: number;
 }
 
-const LINE = 4.2;
-const SMALL_LINE = 3.6;
-
-/** Σπάει σε κομμάτια των `size` χαρακτήρων — σταθερά, για αναγνωριστικά και hex. */
-const chunk = (text: string, size: number): string => (text.match(new RegExp(`.{1,${size}}`, 'gu')) ?? [text]).join('\n');
 const when = (page: ProtocolPage, iso: string | null): string => (iso === null ? page.wording.unnamed : formatOperatorDateTime(iso, 'el'));
 const bytesOf = (n: number): string => new Intl.NumberFormat('el-GR').format(n);
-
-function heading(page: ProtocolPage, text: string, y: number): number {
-  const top = ensurePageSpace(page.pdf, y, 12, page.layout);
-  page.pdf.setFont('Roboto', 'bold');
-  page.pdf.setFontSize(10.5);
-  page.pdf.setTextColor(...SLATE_800);
-  page.pdf.text(text, MARGIN, top + 5);
-  page.pdf.setDrawColor(...SLATE_200);
-  page.pdf.setLineWidth(0.2);
-  page.pdf.line(MARGIN, top + 6.5, page.width - MARGIN, top + 6.5);
-  return top + 10;
-}
-
-/** Παράγραφος με αναδίπλωση και αλλαγή σελίδας ανά γραμμή — ποτέ κείμενο κάτω από το υποσέλιδο. */
-function paragraph(page: ProtocolPage, text: string, y: number, size = 8.5, indent = 0): number {
-  page.pdf.setFont('Roboto', 'normal');
-  page.pdf.setFontSize(size);
-  page.pdf.setTextColor(...SLATE_800);
-  const lines: string[] = page.pdf.splitTextToSize(text, page.width - 2 * MARGIN - indent);
-  let cursor = y;
-  for (const line of lines) {
-    cursor = ensurePageSpace(page.pdf, cursor, LINE, page.layout);
-    page.pdf.text(line, MARGIN + indent, cursor + 3);
-    cursor += size >= 8.5 ? LINE : SMALL_LINE;
-  }
-  return cursor + 1.5;
-}
-
-/** Ζεύγη «ετικέτα · τιμή» σε πίνακα δύο στηλών — κεφαλίδα, μέρη, ίχνος. */
-function labelled(page: ProtocolPage, rows: readonly (readonly [string, string])[], y: number, rightInset = 0): number {
-  autoTable(page.pdf, {
-    startY: y,
-    margin: { left: MARGIN, right: MARGIN + rightInset, top: page.layout.marginTop, bottom: page.layout.marginBottom },
-    theme: 'plain',
-    body: rows.map(([label, value]) => [label, value]),
-    styles: { font: 'Roboto', fontSize: 8.5, cellPadding: 1, textColor: SLATE_800 },
-    columnStyles: { 0: { cellWidth: 58, textColor: SLATE_500 } },
-    didParseCell: forceRobotoCell,
-  });
-  return yAfterTable(page.pdf, y, rows.length * LINE) + 3;
-}
 
 /** **Η κεφαλίδα**: ο δεσμευτικός τίτλος του παγωμένου κειμένου, αριθμός, αναθεώρηση, έκδοση, εκδότης. */
 export function drawProtocolHeader(page: ProtocolPage, y: number): number {
@@ -96,7 +45,7 @@ export function drawProtocolHeader(page: ProtocolPage, y: number): number {
   const supersedes = view.supersedes === null
     ? wording.firstRevision
     : wording.supersedes(view.supersedes.revision, view.supersedes.protocolId);
-  return labelled(page, [
+  return drawFlowPairs(page, [
     [wording.protocolNumber, view.protocolId],
     [wording.revision(view.revision), supersedes],
     [wording.issuedAt, when(page, view.issuedAt)],
@@ -110,14 +59,14 @@ export function drawProtocolParties(page: ProtocolPage, y: number): number {
   const rows: (readonly [string, string])[] = [[wording.property, view.propertyLabel ?? wording.unnamed]];
   if (view.appurtenances.length > 0) rows.push([wording.appurtenances, view.appurtenances.join(' · ')]);
   rows.push([wording.recipient, view.recipientName ?? wording.unnamed]);
-  return labelled(page, rows, y);
+  return drawFlowPairs(page, rows, y);
 }
 
 /** **Το ίχνος γεγονότων** — χρόνοι στη ζώνη του φορέα. */
 export function drawProtocolEvents(page: ProtocolPage, y: number): number {
   const { view, wording } = page;
-  const top = heading(page, wording.eventsHeading, y);
-  return labelled(page, [
+  const top = drawFlowHeading(page, wording.eventsHeading, y);
+  return drawFlowPairs(page, [
     [wording.events.saleCompleted, when(page, view.events.saleCompletedAt)],
     [wording.events.invitationAccepted, when(page, view.events.invitationAcceptedAt)],
     [wording.events.deliveryStarted, when(page, view.events.deliveryStartedAt)],
@@ -126,34 +75,17 @@ export function drawProtocolEvents(page: ProtocolPage, y: number): number {
   ], top);
 }
 
-type FileTableColumns = NonNullable<Parameters<typeof autoTable>[1]['columnStyles']>;
-
-/** Ο ΕΝΑΣ πίνακας αρχείων του Πρωτοκόλλου — ίδια γραμματοσειρά, χρώματα, περιθώρια· επιστρέφει πού τελείωσε. */
-function fileTable(page: ProtocolPage, top: number, head: readonly string[], body: readonly string[][], columnStyles: FileTableColumns): number {
-  autoTable(page.pdf, {
-    startY: top,
-    margin: { left: MARGIN, right: MARGIN, top: page.layout.marginTop, bottom: page.layout.marginBottom },
-    head: [[...head]],
-    body: body.map((row) => [...row]),
-    styles: { font: 'Roboto', fontSize: 6.5, cellPadding: 1.2, textColor: SLATE_800, valign: 'top' },
-    headStyles: { fillColor: PRIMARY, textColor: [255, 255, 255], fontSize: 7 },
-    columnStyles,
-    didParseCell: forceRobotoCell,
-  });
-  return yAfterTable(page.pdf, top, 10);
-}
-
 /** **Ο πίνακας αρχείων** — με τη σειρά του αποτυπώματος· πηγή · αντίγραφο · SHA-256 · bytes ανά γραμμή. */
 export function drawProtocolFiles(page: ProtocolPage, y: number): number {
   const { view, wording } = page;
-  const top = heading(page, wording.filesHeading, y);
+  const top = drawFlowHeading(page, wording.filesHeading, y);
   const { columns } = wording;
-  const after = fileTable(page, top, [columns.index, columns.file, columns.source, columns.copy, columns.sha256, columns.size],
+  const after = drawFlowTable(page, top, [columns.index, columns.file, columns.source, columns.copy, columns.sha256, columns.size],
     view.rows.map((row, i) => [
-      String(i + 1), row.name ?? wording.unnamed, chunk(row.sourceFileId, 21), chunk(row.copyFileId, 21), chunk(row.sha256, 32), bytesOf(row.size),
+      String(i + 1), row.name ?? wording.unnamed, chunkText(row.sourceFileId, 21), chunkText(row.copyFileId, 21), chunkText(row.sha256, 32), bytesOf(row.size),
     ]),
     { 0: { cellWidth: 7 }, 1: { cellWidth: 40 }, 2: { cellWidth: 31 }, 3: { cellWidth: 31 }, 4: { cellWidth: 43 }, 5: { cellWidth: 30, halign: 'right' } });
-  return paragraph(page, wording.totals(view.rows.length, bytesOf(view.totalBytes)), after + 3);
+  return drawFlowParagraph(page, wording.totals(view.rows.length, bytesOf(view.totalBytes)), after + 3);
 }
 
 /**
@@ -163,33 +95,33 @@ export function drawProtocolFiles(page: ProtocolPage, y: number): number {
 export function drawProtocolClosedFiles(page: ProtocolPage, y: number): number {
   const { view, wording } = page;
   if (view.closed.length === 0) return y;
-  const top = heading(page, wording.closedHeading, y);
+  const top = drawFlowHeading(page, wording.closedHeading, y);
   const columns = wording.closedColumns;
-  const after = fileTable(page, top, [columns.index, columns.file, columns.source, columns.copy, columns.crc32c, columns.size, columns.cause],
+  const after = drawFlowTable(page, top, [columns.index, columns.file, columns.source, columns.copy, columns.crc32c, columns.size, columns.cause],
     view.closed.map((row, i) => [
       String(i + 1), `${row.name ?? wording.unnamed}
-${when(page, row.deliveredAt)}`, chunk(row.sourceFileId, 21), chunk(row.copyFileId, 21),
+${when(page, row.deliveredAt)}`, chunkText(row.sourceFileId, 21), chunkText(row.copyFileId, 21),
       row.crc32c, bytesOf(row.size), `${wording.closedCauses[row.cause]} (${row.cause})`,
     ]),
     { 0: { cellWidth: 7 }, 1: { cellWidth: 34 }, 2: { cellWidth: 28 }, 3: { cellWidth: 28 }, 4: { cellWidth: 18 }, 5: { cellWidth: 22, halign: 'right' }, 6: { cellWidth: 45 } });
-  return paragraph(page, wording.closedNote, after + 3, 7.5);
+  return drawFlowParagraph(page, wording.closedNote, after + 3, 7.5);
 }
 
 /** **Το αποτύπωμα φακέλου** — ετικέτα σχήματος + SHA-256, αυτολεξεί όπως τα ξαναϋπολογίζει ο τρίτος. */
 export function drawProtocolDigest(page: ProtocolPage, y: number, scheme: string): number {
   const { view, wording } = page;
-  const top = heading(page, wording.digestHeading, y);
-  const after = labelled(page, [[wording.digestScheme, scheme], [wording.digestValue, chunk(view.ledgerDigest, 32)]], top);
-  return paragraph(page, wording.manifestNote, after, 7.5);
+  const top = drawFlowHeading(page, wording.digestHeading, y);
+  const after = drawFlowPairs(page, [[wording.digestScheme, scheme], [wording.digestValue, chunkText(view.ledgerDigest, 32)]], top);
+  return drawFlowParagraph(page, wording.manifestNote, after, 7.5);
 }
 
 function block(page: ProtocolPage, item: FrozenLegalBlock, y: number): number {
   switch (item.kind) {
     case 'paragraph':
     case 'clause':
-      return paragraph(page, item.text, y);
+      return drawFlowParagraph(page, item.text, y);
     case 'list':
-      return item.items.reduce((cursor, entry, i) => paragraph(page, `${item.ordered ? `${i + 1}.` : '•'} ${entry.text}`, cursor, 8.5, 3), y);
+      return item.items.reduce((cursor, entry, i) => drawFlowParagraph(page, `${item.ordered ? `${i + 1}.` : '•'} ${entry.text}`, cursor, 8.5, 3), y);
     case 'operator-identity':
       return operatorIdentity(page, y);
   }
@@ -202,7 +134,7 @@ function operatorIdentity(page: ProtocolPage, y: number): number {
   const name = operator.qualifier === null ? operator.name : `${operator.name} (${operator.qualifier.text})`;
   const registry = [`${labels.vatNumber} ${operator.vatNumber}`, ...(operator.gemiNumber === null ? [] : [`${labels.gemiNumber} ${operator.gemiNumber}`])];
   return [name, `${operator.seatLine} · ${operator.countryCode}`, registry.join(' · ')]
-    .reduce((cursor, line) => paragraph(page, line, cursor, 8.5, 3), y);
+    .reduce((cursor, line) => drawFlowParagraph(page, line, cursor, 8.5, 3), y);
 }
 
 function legalSection(page: ProtocolPage, section: FrozenLegalSection, y: number): number {
@@ -216,25 +148,15 @@ function legalSection(page: ProtocolPage, section: FrozenLegalSection, y: number
 
 /** **Οι όροι** — το δεσμευτικό κείμενο της έκδοσης σε ισχύ, αυτολεξεί, ενότητα προς ενότητα. */
 export function drawProtocolTerms(page: ProtocolPage, y: number): number {
-  const top = heading(page, page.wording.legalHeading(page.view.legalText.version), y);
+  const top = drawFlowHeading(page, page.wording.legalHeading(page.view.legalText.version), y);
   return page.view.legalText.text.sections.reduce((cursor, section) => legalSection(page, section, cursor), top);
-}
-
-const QR_SIZE = 26;
-
-/** Γραμμές με ετικέτα και, δεξιά, QR — μόνο όταν υπάρχει απόλυτος σύνδεσμος (το ΕΝΑ σχήμα «σύνδεσμος + QR»). */
-function qrReference(page: ProtocolPage, y: number, rows: readonly (readonly [string, string])[], qrPng: string | null): number {
-  const top = ensurePageSpace(page.pdf, y, QR_SIZE + 6, page.layout);
-  if (qrPng !== null) page.pdf.addImage(qrPng, 'PNG', page.width - MARGIN - QR_SIZE, top, QR_SIZE, QR_SIZE);
-  const after = labelled(page, rows, top, qrPng === null ? 0 : QR_SIZE + 3);
-  return Math.max(after, qrPng === null ? after : top + QR_SIZE + 3);
 }
 
 /** **Η επαλήθευση του κειμένου**: έκδοση + αποτύπωμα + σύνδεσμος, και QR μόνο όταν υπάρχει απόλυτος σύνδεσμος. */
 export function drawProtocolTextReference(page: ProtocolPage, y: number, qrPng: string | null): number {
   const { view, wording } = page;
-  return qrReference(page, y, [
-    [wording.legalDigest, chunk(view.legalText.digest, 39)],
+  return drawFlowQrPairs(page, y, [
+    [wording.legalDigest, chunkText(view.legalText.digest, 39)],
     [wording.legalLink, view.legalText.url ?? view.legalText.path],
   ], qrPng);
 }
@@ -242,5 +164,5 @@ export function drawProtocolTextReference(page: ProtocolPage, y: number, qrPng: 
 /** **Η επαλήθευση του πρωτοκόλλου** (Σ6): η δημόσια πόρτα για **αυτόν** τον κωδικό — ο τρίτος σκανάρει το χαρτί. */
 export function drawProtocolVerification(page: ProtocolPage, y: number, qrPng: string | null): number {
   const { view, wording } = page;
-  return qrReference(page, y, [[wording.verifyLink, view.verification.url ?? view.verification.path]], qrPng);
+  return drawFlowQrPairs(page, y, [[wording.verifyLink, view.verification.url ?? view.verification.path]], qrPng);
 }

@@ -165,8 +165,11 @@ async function liveZoneOf(snapshot: ObjectiveValueSnapshot) {
   return { price: figure.price, validFrom: figure.validFrom, commerciality: figure.commerciality, table: tableIdentity };
 }
 
-/** Το στιγμιότυπο του χώρου του δρώντος, με το αποτύπωμά του **επαληθευμένο** — αλλιώς `null`. */
-async function readOwnSnapshot(db: Firestore, actor: ObjectiveValueSnapshotActor, snapshotId: string): Promise<ObjectiveValueSnapshot | null> {
+/**
+ * Το στιγμιότυπο του χώρου του δρώντος, με το αποτύπωμά του **επαληθευμένο** — αλλιώς `null`. Χωρίς απόκλιση: η εγγραφή
+ * όπως παγώθηκε (το PDF της, ADR-947 Φ2β, δεν χρειάζεται τις τρέχουσες ζώνες).
+ */
+export async function readObjectiveValueSnapshotRecord(db: Firestore, actor: ObjectiveValueSnapshotActor, snapshotId: string): Promise<ObjectiveValueSnapshot | null> {
   const current = await snapshotsOf(db).doc(snapshotId).get();
   const stored = current.data();
   if (!current.exists || !isOwnedByCustody(stored, { companyId: actor.companyId }) || !isObjectiveValueSnapshotRecord(stored)) return null;
@@ -184,7 +187,7 @@ export async function readObjectiveValueSnapshot(
   snapshotId: string,
   now: Date,
 ): Promise<ReadSnapshotResult> {
-  const snapshot = await readOwnSnapshot(db, actor, snapshotId);
+  const snapshot = await readObjectiveValueSnapshotRecord(db, actor, snapshotId);
   if (snapshot === null) return refused('absent');
   const [engine, zone] = await Promise.all([objectiveValueEngineIdentity(), liveZoneOf(snapshot)]);
   const divergence = objectiveValueDivergence(snapshot, { engine, today: marketDayOf(now.getTime()), zone });

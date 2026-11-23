@@ -13,7 +13,7 @@
  */
 
 import type { ValueZoneFigure, ValueZoneFrontCandidate, ValueZoneVerdict } from '@/lib/market/value-zone-at-point';
-import { formatNumber } from '@/lib/intl-formatting';
+import { formatNumber, formatNumberIn } from '@/lib/intl-formatting';
 import type { CommercialityFact } from '@/lib/market/value-zone-file';
 
 import type { ZoneFrontDeclaration } from './objective-value-declarations';
@@ -46,9 +46,14 @@ function uniqueCandidates(candidates: readonly ZoneCandidate[]): readonly ZoneCa
   return [...byKey.values()];
 }
 
-/** Ο ΣΕ όπως τον γράφει η πηγή («1,0», «1,4») — η ΙΔΙΑ μορφή στη σύνοψη ζώνης και στο αποτέλεσμα του υπολογιστή. */
-export function formatCommercialityFactor(factor: number): string {
-  return formatNumber(factor, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+const COMMERCIALITY_DIGITS: Intl.NumberFormatOptions = { minimumFractionDigits: 1, maximumFractionDigits: 2 };
+
+/**
+ * Ο ΣΕ όπως τον γράφει η πηγή («1,0», «1,4») — η ΙΔΙΑ μορφή στη σύνοψη ζώνης, στο αποτέλεσμα του υπολογιστή και στο PDF.
+ * `locale` = η γλώσσα του **εγγράφου** (ADR-947 Φ2β)· απούσα ⇒ η γλώσσα της οθόνης.
+ */
+export function formatCommercialityFactor(factor: number, locale?: string): string {
+  return locale === undefined ? formatNumber(factor, COMMERCIALITY_DIGITS) : formatNumberIn(locale, factor, COMMERCIALITY_DIGITS);
 }
 
 /** Η τιμή που ισχύει: του δηλωμένου μετώπου, αλλιώς της ζώνης· `null` όταν η ετυμηγορία δεν είναι έτοιμη. */

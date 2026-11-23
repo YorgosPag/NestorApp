@@ -24,7 +24,7 @@ import type { SpaceFilterOption } from './BuildingSpaceFilterBar';
 import { exportSpaceTableXlsx, spaceScheduleTotals } from './space-table-export';
 import type { SortState } from './space-table-sort';
 import type { BuildingSpaceViewMode, SpaceColumn } from './types';
-import { useExportAction, type ExportAction } from './useExportAction';
+import { useExportAction, type ExportAction } from '@/hooks/useExportAction';
 
 /** Ό,τι χρειάζεται η εξαγωγή από ένα φίλτρο-επιλογή: η τιμή του και πώς ονομάζεται (όχι ο χειριστής αλλαγής). */
 export interface SpaceFilterSnapshot {

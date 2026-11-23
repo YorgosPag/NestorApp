@@ -1,13 +1,15 @@
 'use client';
 
 /**
- * @fileoverview **Η κατάσταση μιας εξαγωγής** (ADR-898 Φ4β) — `idle` · `busy` · `failed`, για **κάθε** κουμπί εξαγωγής των
- * καρτελών κτιρίου (Μονάδες · Αποθήκες · Στάθμευση · Αντικειμενική). Μία μηχανή, όχι μία ανά καρτέλα.
- * @related `SpaceExportButton.tsx` (η παρουσίαση) · `useSpaceTableExport.ts`
- * @module components/building-management/shared/useExportAction
+ * @fileoverview **Η κατάσταση μιας εξαγωγής αρχείου** — `idle` · `busy` · `failed`, για **κάθε** κουμπί που γράφει αρχείο
+ * στον δίσκο του ανθρώπου: XLSX των καρτελών κτιρίου (ADR-898 Φ4β) · PDF πληροφοριακού υπολογισμού (ADR-947 Φ2β). Μία
+ * μηχανή, όχι μία ανά οθόνη.
+ * @related `components/building-management/shared/SpaceExportButton.tsx` · `components/objective-value/ObjectiveValuePdfButton.tsx`
+ * @module hooks/useExportAction
  *
- * 🔑 **Ποτέ σιωπηλό κλικ**: όσο γράφεται το αρχείο το κουμπί λέει «Εξαγωγή…» και δεν ξαναπατιέται (δεύτερο κλικ = δεύτερο
- *   αρχείο στον δίσκο)· σε αποτυχία μένει **λόγος** στην οθόνη και καταγραφή στο log.
+ * 🔑 **Ποτέ σιωπηλό κλικ**: όσο γράφεται το αρχείο το κουμπί λέει ότι δουλεύει και δεν ξαναπατιέται (δεύτερο κλικ =
+ *   δεύτερο αρχείο στον δίσκο)· σε αποτυχία μένει **λόγος** στην οθόνη και καταγραφή στο log.
+ * 🔑 Προάχθηκε από τις καρτέλες κτιρίου όταν ήρθε ο δεύτερος καταναλωτής (N.0.2) — ίδια συμπεριφορά, γενική θέση.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -47,7 +49,7 @@ export function useExportAction(run: () => Promise<void>): ExportAction {
         if (mounted.current) setStatus('idle');
       })
       .catch((cause: unknown) => {
-        logger.warn('Η εξαγωγή XLSX απέτυχε', { error: cause instanceof Error ? cause.message : String(cause) });
+        logger.warn('Η εξαγωγή αρχείου απέτυχε', { error: cause instanceof Error ? cause.message : String(cause) });
         if (mounted.current) setStatus('failed');
       })
       .finally(() => {
