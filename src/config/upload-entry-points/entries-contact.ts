@@ -134,6 +134,21 @@ export const CONTACT_ENTRY_POINTS: UploadEntryPoint[] = [
       icon: 'FileText',
       order: 9,
     },
+    // ADR-191 — εικόνα σφραγίδας/υπογραφής (προσώπου ή εταιρείας): ΔΙΚΟΣ της τύπος, ώστε η εφαρμογή
+    // να βρίσκει τη σφραγίδα μιας επαφής κατά `purpose` όταν θα τη θέτει σε έγγραφα που παράγει.
+    {
+      id: 'stamp-signature',
+      purpose: 'stamp-signature',
+      domain: 'admin',
+      category: 'documents',
+      label: { el: 'Σφραγίδα & Υπογραφή', en: 'Stamp & Signature' },
+      description: {
+        el: 'Εικόνα σφραγίδας ή/και υπογραφής προσώπου ή εταιρείας',
+        en: 'Image of a person or company stamp and/or signature',
+      },
+      icon: 'Stamp',
+      order: 14,
+    },
     {
       id: 'generic-document',
       purpose: 'generic',
