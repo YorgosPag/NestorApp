@@ -5,7 +5,8 @@
  * @module components/contacts/dynamic/use-hq-address-proposal-intake
  *
  * Η πρόταση (`hq-address-proposal-store`) εφαρμόζεται **μέσα από τον ίδιο γραφέα** που χρησιμοποιεί η
- * πληκτρολόγηση (`handleHqChange` → `commitHq`), με τον editor της έδρας **ανοιχτό**: ο editor ξαναδιαβάζει την
+ * πληκτρολόγηση (`handleHqRegistrySeat` → `applyHqRegistrySeat` → `commitHq`· στο `replace` αδειάζει και η
+ * ιεραρχία, ADR-332 §D35), με τον editor της έδρας **ανοιχτό**: ο editor ξαναδιαβάζει την
  * τιμή, γεωκωδικοποιεί και ζητά επιβεβαίωση πινέζας όπως για κάθε ανθρώπινη διόρθωση — η θέση χάρτη δεν μένει
  * ποτέ σιωπηλά μπαγιάτικη πίσω από νέο κείμενο.
  *
@@ -18,7 +19,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
-import { registrySeatAsAddressFields } from '@/lib/company/registry-form-acceptance';
+import { registrySeatAsAddressFields, type RegistrySeatApplication } from '@/lib/company/registry-form-acceptance';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import { pruneBlankContactAddresses } from '@/utils/contacts/contact-address-blankness';
 
@@ -37,7 +38,8 @@ interface HqAddressProposalIntakeDeps {
   readonly disabled: boolean;
   readonly openHqEditor: () => void;
   readonly closeHqEditor: () => void;
-  readonly handleHqChange: (addr: ResolvedAddressFields) => void;
+  /** Ο γραφέας της πρότασης: ίδιος δρόμος με την πληκτρολόγηση, + άδειασμα ιεραρχίας στο `replace` (ADR-332 §D35). */
+  readonly handleHqRegistrySeat: (addr: ResolvedAddressFields, application: RegistrySeatApplication) => void;
 }
 
 export interface HqAddressProposalIntake {
@@ -61,7 +63,7 @@ export function useHqAddressProposalIntake({
   disabled,
   openHqEditor,
   closeHqEditor,
-  handleHqChange,
+  handleHqRegistrySeat,
 }: HqAddressProposalIntakeDeps): HqAddressProposalIntake {
   const pending = useHqAddressProposal(formData.id);
   const [applied, setApplied] = useState<AppliedHqAddressProposal | null>(null);
@@ -73,7 +75,7 @@ export function useHqAddressProposalIntake({
     if (disabled || !setFormData) return;
     setApplied({ proposal: pending, before: contactAddressList(formData)[0] });
     openHqEditor();
-    handleHqChange(registrySeatAsAddressFields(pending.seat, pending.application));
+    handleHqRegistrySeat(registrySeatAsAddressFields(pending.seat, pending.application), pending.application);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
 

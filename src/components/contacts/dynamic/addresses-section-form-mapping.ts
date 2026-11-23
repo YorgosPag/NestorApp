@@ -14,6 +14,7 @@
  */
 
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
+import type { RegistrySeatApplication } from '@/lib/company/registry-form-acceptance';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 import { toStoredCountryCode } from '@/utils/address/country-codes';
@@ -97,4 +98,24 @@ export function applyResolvedToContactHq(resolved: ResolvedAddressFields, hq: Co
  */
 export function applyHqEditorChange(prev: ContactFormData, resolved: ResolvedAddressFields): ContactFormData {
   return commitHq(prev, (hq) => applyResolvedToContactHq(resolved, hq));
+}
+
+/**
+ * Η έδρα του ΓΕΜΗ πάνω στην έδρα της φόρμας (ADR-948 §8.7.4 · ADR-332 §D35). Καθαρή συνάρτηση.
+ *
+ * - `complete` — η **ίδια** διεύθυνση: ό,τι κάνει ο editor (`applyHqEditorChange`), η ιεραρχία **μένει**.
+ * - `replace` — **άλλη** διεύθυνση: η ιεραρχία ανήκε στην παλιά, άρα **αδειάζει ολόκληρη**
+ *   (`COMPANY_ADDRESS_HIERARCHY_CLEARED`). Το ΓΕΜΗ δεν δίνει ποτέ δήμο/οικισμό.
+ *
+ * 🔴 Μετρημένο ζωντανά (ARIES, 2026-11-23, `6c90995`): «Ωραιόκαστρον» ⇒ «Διόρθωση έδρας» ⇒ αποθηκεύτηκε
+ * `city: ΘΕΣΣΑΛΟΝΙΚΗ` · `settlementId: null` δίπλα σε `municipalityName: Δήμος Ωραιοκάστρου` ·
+ * `municipalityId: municipality:0714` — όνομα μιας περιοχής δίπλα σε πόλη άλλης (ADR-277).
+ */
+export function applyHqRegistrySeat(
+  prev: ContactFormData,
+  resolved: ResolvedAddressFields,
+  application: RegistrySeatApplication,
+): ContactFormData {
+  if (application === 'complete') return applyHqEditorChange(prev, resolved);
+  return commitHq(prev, (hq) => ({ ...applyResolvedToContactHq(resolved, hq), ...COMPANY_ADDRESS_HIERARCHY_CLEARED }));
 }

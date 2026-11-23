@@ -40,7 +40,8 @@ import { pickStoredAddressPosition } from '@/utils/address/stored-address-positi
 import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
 import { applyDraggedToContactAddress, withHumanPoint } from './contact-address-drag';
 import { commitHq, contactAddressList, selectContactHq, withContactAddressAt } from './contact-hq-state';
-import { applyHqEditorChange } from './addresses-section-form-mapping';
+import type { RegistrySeatApplication } from '@/lib/company/registry-form-acceptance';
+import { applyHqEditorChange, applyHqRegistrySeat } from './addresses-section-form-mapping';
 
 export interface HqAddressMutationsDeps {
   formData: ContactFormData;
@@ -54,6 +55,8 @@ export interface HqAddressMutationsDeps {
 
 export interface HqAddressMutations {
   handleHqChange: (addr: ResolvedAddressFields) => void;
+  /** Η έδρα του ΓΕΜΗ — `replace` αδειάζει και την ιεραρχία (ADR-948 §8.7.4 · ADR-332 §D35). */
+  handleHqRegistrySeat: (addr: ResolvedAddressFields, application: RegistrySeatApplication) => void;
   /** Επιβεβαιωμένο σύρσιμο στη θέση `addressIndex`: κείμενο (`dragged`) και/ή σημείο — **μία** εγγραφή. */
   applyConfirmedDrag: (dragged: DragResolvedAddress | null, addressIndex: number, point: GeoPoint | null) => void;
   handleHqDragApplied: (addr: ResolvedAddressFields) => void;
@@ -69,7 +72,7 @@ export interface HqAddressMutations {
 /**
  * Η έδρα μετά από επιλογή στην ιεραρχία — ολόκληρη η εγγραφή, από τον πίνακα (ADR-772).
  *
- * 🔴 **Η ιεραρχία ΑΝΤΙΚΑΘΙΣΤΑΤΑΙ, δεν συγχωνεύεται** (ADR-332 §D33). Η φόρμα ιεραρχίας κρατά
+ * 🔴 **Η ιεραρχία ΑΝΤΙΚΑΘΙΣΤΑΤΑΙ, δεν συγχωνεύεται** (ADR-332 §D34). Η φόρμα ιεραρχίας κρατά
  * **ολόκληρη** την ιεραρχία της έδρας, άρα η τιμή της **είναι** η ιεραρχία. Με το
  * `projectAddressVocabulary` (που **παραλείπει τα κενά**) το ✕ ή το ελεύθερο κείμενο στην πόλη
  * καθάριζε τα επίπεδα στη φόρμα, αλλά τα κενά ονόματα δεν έφταναν ποτέ στην εγγραφή: έμεναν
@@ -192,6 +195,11 @@ export function useHqAddressMutations({
     setFormData(prev => applyHqEditorChange(prev, addr));
   }, [setFormData]);
 
+  const handleHqRegistrySeat = useCallback((addr: ResolvedAddressFields, application: RegistrySeatApplication) => {
+    if (!setFormData) return;
+    setFormData(prev => applyHqRegistrySeat(prev, addr, application));
+  }, [setFormData]);
+
   const applyConfirmedDrag = useCallback((
     dragged: DragResolvedAddress | null,
     addressIndex: number,
@@ -243,6 +251,7 @@ export function useHqAddressMutations({
 
   return {
     handleHqChange,
+    handleHqRegistrySeat,
     applyConfirmedDrag,
     handleHqDragApplied,
     hqPlacement: hq.placement,

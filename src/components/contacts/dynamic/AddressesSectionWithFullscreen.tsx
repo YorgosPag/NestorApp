@@ -154,6 +154,7 @@ export function AddressesSectionWithFullscreen({
   /** Όλες οι γραφές της έδρας — **ένας** ιδιοκτήτης, πάνω στον έναν γραφέα (`commitHq`). */
   const {
     handleHqChange,
+    handleHqRegistrySeat,
     applyConfirmedDrag,
     handleHqDragApplied,
     hqPlacement,
@@ -183,7 +184,7 @@ export function AddressesSectionWithFullscreen({
     disabled,
     openHqEditor: openHqEditorForProposal,
     closeHqEditor,
-    handleHqChange,
+    handleHqRegistrySeat,
   });
   const { dismiss: dismissHqProposal } = hqProposal;
   const cancelHqEditor = useCallback(() => {
