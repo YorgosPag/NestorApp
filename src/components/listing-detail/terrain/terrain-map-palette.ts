@@ -139,13 +139,14 @@ export const TERRAIN_MARK_CLASS = {
  * ADR-920 §14.11 Ζ4 · Ζ5 — **το περίγραμμα οικοπέδου**: κόκκινο **και** σημειο-παύλα (ο τύπος γραμμής «όριο ιδιοκτησίας» του
  * CAD) — ποτέ μόνο χρώμα (CHECK 3.41). Η ΙΔΙΑ γραφή στην προβολή του σχεδίου (Ζ4), στον χάρτη και στο 3Δ (Ζ5).
  * Στην προβολή του σχεδίου: το σχέδιο είναι αχνό μελάνι (φόντο), τα υποψήφια διακεκομμένο μελάνι, το επιλεγμένο το
- * περίγραμμα. Πάχη σε css px (`non-scaling-stroke`), όπως όλος ο χάρτης.
+ * περίγραμμα, και ό,τι ΘΑ διάλεγε το κλικ η παύλα του υποψηφίου στο κόκκινο του περιγράμματος (προ-τονισμός). Πάχη σε css px (`non-scaling-stroke`), όπως όλος ο χάρτης.
  */
 export const TERRAIN_PLOT_OUTLINE_CLASS = {
   outline: 'fill-none stroke-[hsl(var(--terrain-plot-outline))] [stroke-dasharray:12_3_2_3]',
   outlineArea: 'fill-[hsl(var(--terrain-plot-outline)/0.08)] stroke-none',
   candidate: 'fill-none stroke-[hsl(var(--plan-ink))] [stroke-dasharray:5_3]',
-  hitArea: 'fill-none stroke-transparent cursor-pointer',
+  /** Προ-τονισμός: ό,τι ΘΑ διάλεγε το κλικ — η παύλα του υποψηφίου στο χρώμα και το πάχος του περιγράμματος (όχι μόνο χρώμα). */
+  candidateHover: 'fill-none stroke-[hsl(var(--terrain-plot-outline))] [stroke-dasharray:5_3]',
   drawing: 'fill-none stroke-[hsl(var(--plan-ink-muted)/0.6)]',
   cornerLabel: `${SPACE_LABEL_CLASS} tabular-nums`,
 } as const;
@@ -154,6 +155,6 @@ export const TERRAIN_PLOT_OUTLINE_STROKE_PX = {
   drawing: 0.75,
   candidate: 1.5,
   outline: 2.5,
-  /** Η αόρατη, φαρδιά γραμμή κλικ — αρκετή για δάχτυλο (WCAG 2.5.8: στόχος ≥ 24 px). */
+  /** Ο στόχος κλικ γύρω από τη γραμμή — αρκετός για δάχτυλο (WCAG 2.5.8: στόχος ≥ 24 px). Τον εφαρμόζει ο κριτής επιλογής ως ανοχή (`usePlotCandidatePointer`), όχι αόρατη γραμμή. */
   hitArea: 24,
 } as const;

@@ -21,7 +21,7 @@
 import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import type { PdfPositionedPage } from '@/lib/pdf/pdf-page-text';
 import type { LocalOrigin } from '@/lib/terrain/terrain-types';
-import { worldToLocal } from '@/lib/terrain/topo-local-origin';
+import { localToWorld, worldToLocal } from '@/lib/terrain/topo-local-origin';
 
 import type { DxfPlotDrawing } from './dxf-plot-outline-candidates';
 import { coordinateRowsOf } from './pdf-coordinate-rows';
@@ -70,6 +70,11 @@ export function planSvgPoint(point: PlanarPoint, box: PlanViewBox): { readonly x
   const local = worldToLocal(point, box.origin);
   // `0 - y`: το μηδέν μένει +0 (ποτέ «-0» μέσα στο `d`).
   return { x: local.x, y: 0 - local.y };
+}
+
+/** Το αντίστροφο του {@link planSvgPoint}: θέση SVG μέσα στο πλαίσιο → σημείο κάτοψης (WORLD mm) — για τον δείκτη πάνω στο σχέδιο. */
+export function planWorldPoint(svgPoint: { readonly x: number; readonly y: number }, box: PlanViewBox): PlanarPoint {
+  return localToWorld({ x: svgPoint.x, y: 0 - svgPoint.y }, box.origin);
 }
 
 /** Μια γραμμή κάτοψης (WORLD mm) → `d` ενός SVG path μέσα στο πλαίσιο. */
