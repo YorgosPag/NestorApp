@@ -7,6 +7,7 @@
  * 🔑 Κάθε ενότητα παίρνει το `y` όπου ξεκινά και επιστρέφει το `y` όπου τελείωσε. **Καμία λέξη εδώ**: μόνο ό,τι έφερε η όψη.
  */
 
+import { drawPdfAppLogo, type PdfAppLogo } from '@/services/pdf/pdf-app-logo';
 import {
   drawFlowHeading,
   drawFlowPairs,
@@ -27,14 +28,25 @@ const TABLE_FONT_SIZE = 8;
 export const FACTOR_COLUMNS: PdfFlowColumnStyles = { 0: { cellWidth: 62 }, 1: { cellWidth: 22, halign: 'right' }, 2: { cellWidth: 98 } };
 export const INPUT_COLUMNS: PdfFlowColumnStyles = { 0: { cellWidth: 62 }, 1: { cellWidth: 52 }, 2: { cellWidth: 68 } };
 
-/** **Η κεφαλίδα**: τίτλος · χαρακτήρας του αντιγράφου (συσκευή ή στιγμιότυπο) · βασικά στοιχεία. */
-export function drawObjectiveValueHeader(page: PdfFlowPage, view: ObjectiveValuePdfView, y: number): number {
+/** Το λογότυπο της κεφαλίδας: πλευρά (mm) και κενό ως τον τίτλο. */
+const HEADER_LOGO_SIZE = 12;
+const HEADER_LOGO_GAP = 4;
+
+/**
+ * **Η κεφαλίδα**: λογότυπο της εφαρμογής πάνω αριστερά με τον τίτλο δίπλα · χαρακτήρας του αντιγράφου (συσκευή ή
+ * στιγμιότυπο) · βασικά στοιχεία. Χωρίς λογότυπο ⇒ ο τίτλος στο περιθώριο, όπως πριν.
+ */
+export function drawObjectiveValueHeader(page: PdfFlowPage, view: ObjectiveValuePdfView, y: number, logo: PdfAppLogo | null): number {
   const { pdf } = page;
+  if (logo !== null) drawPdfAppLogo(pdf, logo, { x: MARGIN, y, size: HEADER_LOGO_SIZE });
+  const titleLeft = logo === null ? MARGIN : MARGIN + HEADER_LOGO_SIZE + HEADER_LOGO_GAP;
+  const titleBaseline = logo === null ? y + 6 : y + HEADER_LOGO_SIZE / 2 + 2;
   pdf.setFont('Roboto', 'bold');
   pdf.setFontSize(15);
   pdf.setTextColor(...SLATE_800);
-  pdf.text(view.title, MARGIN, y + 6);
-  const afterNotice = drawFlowParagraph(page, view.notice, y + 10, 8);
+  pdf.text(view.title, titleLeft, titleBaseline);
+  const noticeTop = logo === null ? y + 10 : y + HEADER_LOGO_SIZE + 4;
+  const afterNotice = drawFlowParagraph(page, view.notice, noticeTop, 8);
   return drawFlowPairs(page, view.facts, afterNotice + 1);
 }
 

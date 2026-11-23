@@ -44,18 +44,20 @@ interface ObjectiveValuePdfButtonProps {
 
 /** Η σύνθεση και η λήψη — μόνο μέσα στο κλικ, με δυναμική φόρτωση όλων των βαριών εξαρτήσεων. */
 async function downloadObjectiveValuePdf(props: ObjectiveValuePdfButtonProps, t: PriceLabelT, languageTag: string) {
-  const [{ liveObjectiveValuePdfView }, { renderObjectiveValuePdf }, { objectiveValueEngineIdentity }, { downloadPDF }] = await Promise.all([
+  const [{ liveObjectiveValuePdfView }, { renderObjectiveValuePdf }, { objectiveValueEngineIdentity }, { downloadPDF }, { fetchPdfAppLogo }] = await Promise.all([
     import('@/services/pdf/renderers/objective-value/objective-value-pdf-view'),
     import('@/services/pdf/renderers/objective-value/objective-value-pdf-renderer'),
     import('@/lib/objective-value/objective-value-engine-version'),
     import('@/services/pdf/utils/download'),
+    import('@/services/pdf/pdf-app-logo'),
   ]);
   const { result, effective, provenance, location, valuationDate } = props;
   const words = { t, language: resolveHumanLanguage(languageTag) };
   const zone = { ...chosenZoneOrigin(location.lookup, location.frontKey), table: null };
   const calculation = { valuationDate, draft: effective, result, provenance, zone, engine: await objectiveValueEngineIdentity() };
   const view = liveObjectiveValuePdfView(words, { calculation, generatedAt: nowISO(), place: location.resolved?.label ?? null });
-  downloadPDF(await renderObjectiveValuePdf(view, null), `${t(`${NS}:pdf.fileName`, { date: valuationDate })}.pdf`);
+  const logo = await fetchPdfAppLogo();
+  downloadPDF(await renderObjectiveValuePdf(view, { qrPng: null, logo }), `${t(`${NS}:pdf.fileName`, { date: valuationDate })}.pdf`);
 }
 
 export function ObjectiveValuePdfButton(props: ObjectiveValuePdfButtonProps) {

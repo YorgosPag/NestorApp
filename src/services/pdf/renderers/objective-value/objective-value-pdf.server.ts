@@ -36,6 +36,7 @@ import {
   type ObjectiveValueSnapshot,
 } from '@/lib/objective-value/objective-value-snapshot';
 import { qrPngDataUrl } from '@/lib/qr/qr-code';
+import { readPdfAppLogo } from '@/services/pdf/pdf-app-logo.server';
 import { attachPdfTextFile, readPdfTextFile } from '@/services/pdf/pdf-associated-file';
 
 import type { PdfWords } from './objective-value-pdf-inputs';
@@ -81,8 +82,11 @@ export async function produceObjectiveValueSnapshotPdf(
   const words = objectiveValuePdfWords(language);
   const verify = verifyTargetOf(snapshot);
   const view = snapshotObjectiveValuePdfView(words, { snapshot, verify, attachmentName: OBJECTIVE_VALUE_SNAPSHOT_ATTACHMENT_NAME });
-  const qrPng = verify.qr === null ? null : await qrPngDataUrl(verify.qr, 'print', QR_WIDTH_PX);
-  const rendered = await renderObjectiveValuePdf(view, qrPng);
+  const [qrPng, logo] = await Promise.all([
+    verify.qr === null ? null : qrPngDataUrl(verify.qr, 'print', QR_WIDTH_PX),
+    readPdfAppLogo(),
+  ]);
+  const rendered = await renderObjectiveValuePdf(view, { qrPng, logo });
   const pdf = await attachPdfTextFile(rendered, {
     name: OBJECTIVE_VALUE_SNAPSHOT_ATTACHMENT_NAME,
     text: canonicalJson(snapshotContentOf(snapshot)),

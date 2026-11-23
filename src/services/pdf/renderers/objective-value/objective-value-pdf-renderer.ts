@@ -14,6 +14,7 @@
 import { jsPDF } from 'jspdf';
 
 import { registerGreekFont } from '@/services/pdf/greek-font-loader';
+import type { PdfAppLogo } from '@/services/pdf/pdf-app-logo';
 import { pdfDateOf, pdfFileIdOf } from '@/services/pdf/pdf-deterministic-identity';
 import type { PdfFlowPage } from '@/services/pdf/pdf-flow';
 import { addReportPdfFooters, type PdfVerticalLayout } from '@/services/report-engine/report-pdf-chrome';
@@ -32,6 +33,16 @@ import type { ObjectiveValuePdfView } from './objective-value-pdf-view';
 
 const LAYOUT: PdfVerticalLayout = { pageHeight: 297, marginTop: 16, marginBottom: 18 };
 
+/**
+ * Οι εικόνες του PDF — **υποχρεωτικές** και οι δύο, ώστε κανείς καλών να μην ξεχάσει σιωπηλά το λογότυπο.
+ * `qrPng` = QR επαλήθευσης (μόνο στιγμιότυπο)· `logo` = λογότυπο της εφαρμογής (`fetchPdfAppLogo` στη συσκευή,
+ * `readPdfAppLogo` στον server). `null` ⇒ η εικόνα παραλείπεται.
+ */
+export interface ObjectiveValuePdfImages {
+  readonly qrPng: string | null;
+  readonly logo: PdfAppLogo | null;
+}
+
 function stampMetadata(pdf: jsPDF, view: ObjectiveValuePdfView): void {
   if (view.identity !== null) {
     pdf.setCreationDate(pdfDateOf(view.identity.issuedAt));
@@ -42,25 +53,25 @@ function stampMetadata(pdf: jsPDF, view: ObjectiveValuePdfView): void {
 }
 
 /** Η σειρά των ενοτήτων — η ΙΔΙΑ για συσκευή και στιγμιότυπο· η επαλήθευση εμφανίζεται μόνο όπου υπάρχει. */
-function drawBody(page: PdfFlowPage, view: ObjectiveValuePdfView, qrPng: string | null): void {
+function drawBody(page: PdfFlowPage, view: ObjectiveValuePdfView, images: ObjectiveValuePdfImages): void {
   let y = page.layout.marginTop;
-  y = drawObjectiveValueHeader(page, view, y);
+  y = drawObjectiveValueHeader(page, view, y, images.logo);
   y = drawObjectiveValueResult(page, view, y);
   y = drawObjectiveValueTable(page, view.factors, y, FACTOR_COLUMNS);
   y = drawObjectiveValueTable(page, view.inputs, y, INPUT_COLUMNS);
   y = drawObjectiveValuePairs(page, view.zone, y);
   y = drawObjectiveValuePairs(page, view.engine, y);
   y = drawObjectiveValueStatement(page, view, y);
-  drawObjectiveValueVerification(page, view, y, qrPng);
+  drawObjectiveValueVerification(page, view, y, images.qrPng);
 }
 
-/** **Αποδίδει** την όψη σε PDF. `qrPng` = εικόνα του QR επαλήθευσης (μόνο στιγμιότυπο)· `null` ⇒ κανένα QR. */
-export async function renderObjectiveValuePdf(view: ObjectiveValuePdfView, qrPng: string | null): Promise<Uint8Array> {
+/** **Αποδίδει** την όψη σε PDF, με τις εικόνες του {@link ObjectiveValuePdfImages}. */
+export async function renderObjectiveValuePdf(view: ObjectiveValuePdfView, images: ObjectiveValuePdfImages): Promise<Uint8Array> {
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
   await registerGreekFont(pdf);
   stampMetadata(pdf, view);
   const width = pdf.internal.pageSize.getWidth();
-  drawBody({ pdf, layout: LAYOUT, width }, view, qrPng);
+  drawBody({ pdf, layout: LAYOUT, width }, view, images);
   addReportPdfFooters(pdf, {
     pageWidth: width,
     pageHeight: LAYOUT.pageHeight,

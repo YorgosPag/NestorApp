@@ -169,7 +169,7 @@ describe('ADR-947 Φ2β — PDF της συσκευής (βαθμίδα 1)', () 
   });
 
   it('αποδίδεται σε PDF χωρίς «βεβαίωση»/«επίσημη»', async () => {
-    const text = textOf(await renderObjectiveValuePdf(liveView(), null));
+    const text = textOf(await renderObjectiveValuePdf(liveView(), { qrPng: null, logo: null }));
     expect(text).toContain('Υπολογίστηκε στη συσκευή σας');
     expect(text).not.toMatch(FORBIDDEN);
   });

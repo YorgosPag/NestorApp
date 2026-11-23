@@ -304,6 +304,14 @@ manifest, με τα εργαλεία του Πρωτοκόλλου παράδο�
 - `objective-value-pdf-sections.ts` + `objective-value-pdf-renderer.ts`: ο ΕΝΑΣ renderer jsPDF, ισομορφικός (συσκευή
   και server). Καμία λέξη μέσα του. `/Lang` του PDF = η γλώσσα του εγγράφου.
 - Λεξιλόγιο: «Πληροφοριακός υπολογισμός». **Κανένα** κείμενο του PDF δεν λέει «βεβαίωση» ή «επίσημη» (§2, §9.6).
+- **Λογότυπο της εφαρμογής** (εντολή Giorgio 2026-11-23, «όπως τα email»): πάνω αριστερά, 12 mm, ο τίτλος δεξιά του, σε
+  **και τις δύο** πηγές. Οι εικόνες περνούν στον renderer ως ένα **υποχρεωτικό** `ObjectiveValuePdfImages { qrPng, logo }`
+  (κανείς καλών δεν ξεχνά σιωπηλά το λογότυπο). Πηγή: το `NESTOR_APP_LOGO` (`config/email-assets`, το ίδιο JPEG των
+  email) μέσω `services/pdf/pdf-app-logo.ts` (τύπος · `drawPdfAppLogo` · `fetchPdfAppLogo` στη συσκευή — στατικό
+  αρχείο, όχι API) και `pdf-app-logo.server.ts` (`readPdfAppLogo` από το `public/`). Το JPEG μπαίνει αυτούσιο (DCT,
+  ~14 KB). Αποτυχία φόρτωσης ⇒ `null` ⇒ κεφαλίδα μόνο με κείμενο, ποτέ αποτυχία του PDF. ⚠️ Είναι σήμα του
+  **προϊόντος**· το λογότυπο του ενοίκου είναι άλλη υπόθεση (ADR-928 §5.11). Το `logo-data.ts` της λογιστικής **δεν**
+  χρησιμοποιήθηκε: είναι σε εκκρεμότητα αντικατάστασης από λογότυπο ενοίκου.
 
 **Δ-Φ2β.2 Βαθμίδα 1 — στη συσκευή.** Υποδοχή `actions` στο `ObjectiveValueResult`, γεμάτη **μόνο** από τον δημόσιο
 υπολογιστή (`ObjectiveValuePdfButton`), μόνο όταν το αποτέλεσμα είναι `computed`. jsPDF, γραμματοσειρά και όψη
@@ -348,6 +356,11 @@ CreationDate και `/ID` από `createdAt` και `id`.
 PDF στη συσκευή, που διαβάζει το συνημμένο με το `readPdfTextFile`). Σφραγίδα/υπογραφή μηχανικού: Φ5 (Δ5).
 
 ## Changelog
+
+- **2026-11-23** — **Λογότυπο Νέστωρ στο PDF** (εντολή Giorgio, §11 Δ-Φ2β.1): πάνω αριστερά δίπλα στον τίτλο, σε συσκευή
+  **και** στιγμιότυπο. Νέα `services/pdf/pdf-app-logo.ts` + `pdf-app-logo.server.ts` πάνω στο `NESTOR_APP_LOGO`. Ο
+  renderer παίρνει πλέον `ObjectiveValuePdfImages { qrPng, logo }` αντί για σκέτο `qrPng` (ενημερώθηκε και η κλήση στο
+  `objective-value-pdf.test.ts`). Tests **δεν** έτρεξαν (αναμένουν έγκριση Giorgio).
 
 - **2026-11-23** — **Ζωντανή επαλήθευση Φ2β** (nestorconstruct.gr, μόνο ανάγνωση). `/api/build-info` ⇒ `6c90995`, που
   περιέχει το `cd0d67cd` (`merge-base --is-ancestor`). Υπολογισμός: χειροκίνητη τιμή ζώνης 1.500 € · κατοικία · Α'
