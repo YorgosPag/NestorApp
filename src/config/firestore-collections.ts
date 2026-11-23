@@ -1084,6 +1084,9 @@ export const COLLECTIONS = {
   // ADR-915 §28 — οι ΣΥΝΔΕΣΜΟΙ ΧΩΡΙΣ ΛΟΓΑΡΙΑΣΜΟ της ανάθεσης (έγκριση υπευθύνου · απάντηση επαγγελματία), πάνω στον
   // κοινό πυρήνα προσκλήσεων (ADR-853 §20). Deny-all, μόνο server· στη βάση μόνο το `sha256` του nonce.
   DOCUMENT_ISSUANCE_INVITATIONS: process.env.NEXT_PUBLIC_DOCUMENT_ISSUANCE_INVITATIONS_COLLECTION || 'document_issuance_invitations',
+  // ADR-947 Δ3 — το ΑΜΕΤΑΒΛΗΤΟ ΣΤΙΓΜΙΟΤΥΠΟ αντικειμενικής αξίας (βαθμίδες 2 και 3): αυτάρκες αντίγραφο εισόδων · ζώνης ·
+  // μηχανής · αποτελέσματος, με digest. ΕΝΑ ανά (εκδότης, περιεχόμενο), ντετερμινιστικό· `create()`, ποτέ update. Deny-all, μόνο server.
+  OBJECTIVE_VALUE_SNAPSHOTS: process.env.NEXT_PUBLIC_OBJECTIVE_VALUE_SNAPSHOTS_COLLECTION || 'objective_value_snapshots',
   BROKERAGE_AGREEMENTS: process.env.NEXT_PUBLIC_BROKERAGE_AGREEMENTS_COLLECTION || 'brokerage_agreements',
   COMMISSION_RECORDS: process.env.NEXT_PUBLIC_COMMISSION_RECORDS_COLLECTION || 'commission_records',
 
@@ -1754,6 +1757,7 @@ export const IMMUTABLE_COLLECTIONS: readonly string[] = [
   'ATTENDANCE_EVENTS',
   'ATTENDANCE_QR_TOKENS',
   'EMAIL_INGESTION_QUEUE',
+  'OBJECTIVE_VALUE_SNAPSHOTS',
 ] as const;
 
 // ============================================================================

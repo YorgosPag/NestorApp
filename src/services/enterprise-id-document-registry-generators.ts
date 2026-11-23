@@ -63,4 +63,13 @@ export abstract class DocumentRegistryIdGenerators extends AreaMarketIdGenerator
   generateDocumentIssuanceInvitationId(): string {
     return this.generateId(P.DOCUMENT_ISSUANCE_INVITATION).id;
   }
+
+  /**
+   * ADR-947 Δ3 — **ΕΝΑ** αμετάβλητο στιγμιότυπο αντικειμενικής αξίας ανά (εκδότης, περιεχόμενο): ο σπόρος είναι το
+   * `digest` του κανονικού περιεχομένου ⇒ η ίδια οριστικοποίηση δύο φορές δίνει το **ίδιο** έγγραφο (ιδεμποτές από
+   * κατασκευή, όπως ένα commit του Git), και κάθε διαφορετικό περιεχόμενο νέο.
+   */
+  generateDeterministicObjectiveValueSnapshotId(seed: string): string {
+    return this.mintDeterministicV4Id(P.OBJECTIVE_VALUE_SNAPSHOT, seed);
+  }
 }

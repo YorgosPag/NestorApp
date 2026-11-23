@@ -475,6 +475,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   PROPERTY_UPKEEP_DECLARATION: 'pupk', // ADR-915 §35 — απόφαση μόνιμης υποχρέωσης ακινήτου· ΜΙΑ ανά (γραφείο, ακίνητο, είδος) — ντετερμινιστικό
   DOCUMENT_ISSUANCE_REQUEST: 'disr', // ADR-945 §7.2 — αίτημα προσφορών έκδοσης· ΕΝΑ ανά (κάτοχος, ακίνητο, είδος) — ντετερμινιστικό· seed γραφείου `<companyId>:…`, ιδιώτη `user:<uid>:…`
   DOCUMENT_ISSUANCE_BID: 'dibd', // ADR-945 §7.2 — προσφορά αιτήματος = έγγραφο του `document_issuance_assignments`· ΜΙΑ ανά (αίτημα, κύκλος, επαγγελματίας) — ντετερμινιστικό· διακριτό πρόθεμα ⇒ ποτέ σύμπτωση με το id απευθείας ανάθεσης (`dias`)
+  OBJECTIVE_VALUE_SNAPSHOT: 'ovsn', // ADR-947 Δ3 — αμετάβλητο στιγμιότυπο αντικειμενικής αξίας· ΕΝΑ ανά (εκδότης, περιεχόμενο) — ντετερμινιστικό από το digest (ίδιο περιεχόμενο ⇒ ίδιο id, ποτέ δύο)
   DOCUMENT_ISSUANCE_INVITATION: 'diin', // ADR-915 §28 — σύνδεσμος χωρίς λογαριασμό (έγκριση ιδιοκτήτη · απάντηση επαγγελματία)· επαναποστολή = νέο id
   PIPELINE_QUEUE: 'pq',
   BROKERAGE: 'brk',

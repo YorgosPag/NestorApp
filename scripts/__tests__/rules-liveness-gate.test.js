@@ -127,10 +127,12 @@ describe('Ζ — το ζωντανό δέντρο', () => {
   // (`cebce5de`) = 897, μετά = 899 ⇒ **+2 δικά μας** (`document_issuance_requests`: read/write `if false`). Τα υπόλοιπα
   // +14 πάνω από το 883 προϋπήρχαν (τα +8 του 2026-11-16 και +6 από τότε)· ΔΕΝ αποδόθηκαν ανά commit. 883 + 14 + 2 = 899.
   // 2026-11-19: +1 (ADR-332 §D33 — `address_position_work`: read, write `if false`) ⇒ 900, μετρημένο με την πύλη.
-  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (900 + 72 allow)', () => {
+  // 2026-11-23: +2 (ADR-947 Φ2 — `objective_value_snapshots`: read/write `if false`) ⇒ 902. ⚠️ ΔΕΝ μετρήθηκε με την
+  // πύλη (κανένα test χωρίς έγκριση Giorgio): 900 + 2 υποθέτει ότι η άγκυρα ήταν πράσινη πριν.
+  it('Ζ 🔑 0 ευρήματα — ΚΑΙ ο πληθυσμός είναι αυτός που μετρήθηκε (902 + 72 allow)', () => {
     const result = sweep(ROOT);
     expect(result.violations).toEqual([]);
-    expect(result.perFile.map((f) => f.allows)).toEqual([900, 72]);
+    expect(result.perFile.map((f) => f.allows)).toEqual([902, 72]);
     expect(result.tally[GATE_STATES.COVERED]).toBeGreaterThan(600);
     expect(result.claimName).toBe('revokedSignIns');
   });

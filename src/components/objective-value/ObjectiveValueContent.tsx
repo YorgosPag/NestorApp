@@ -26,7 +26,16 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { prefersReducedMotion } from '@/lib/a11y/reduced-motion';
 import { marketDayOf } from '@/lib/listings/listing-stats';
 import { computeObjectiveValue } from '@/lib/objective-value/compute-objective-value';
-import { draftToInput, INITIAL_DRAFT, missingOf, relevantQuestions, type ObjectiveValueDraft, type UpdateDraft } from '@/lib/objective-value/objective-value-draft';
+import {
+  draftToInput,
+  effectiveDraftOf,
+  INITIAL_DRAFT,
+  missingOf,
+  relevantQuestions,
+  sourcedCommercialityFactorOf,
+  type ObjectiveValueDraft,
+  type UpdateDraft,
+} from '@/lib/objective-value/objective-value-draft';
 import {
   mergeDeclaredReadings,
   type ObjectiveValueDeclaredReading,
@@ -102,12 +111,8 @@ function useCalculatorEvaluation(draft: ObjectiveValueDraft, location: Objective
   const { commerciality, zonePrice } = location;
   const sourceFactor = commerciality.kind === 'factor' ? commerciality.value : null;
   const effective = useMemo<ObjectiveValueDraft>(
-    () => ({
-      ...draft,
-      zonePrice,
-      ...(sourceFactor === null ? {} : { commercialityFactor: sourceFactor, commercialityAssumed: false }),
-    }),
-    [draft, zonePrice, sourceFactor],
+    () => effectiveDraftOf(draft, { price: zonePrice, commerciality }),
+    [draft, zonePrice, commerciality],
   );
   const result = useMemo(() => computeObjectiveValue(draftToInput(effective, today)), [effective, today]);
   const asked = useMemo(() => relevantQuestions(effective, today), [effective, today]);
@@ -120,7 +125,7 @@ function useCalculatorEvaluation(draft: ObjectiveValueDraft, location: Objective
     questions,
     commercialityAssumed: effective.commercialityAssumed && questions.includes('commercialityFactor'),
     // Η γραμμή προέλευσης μόνο όταν ο ΣΕ ΜΕΤΡΑ για αυτό το ακίνητο (π.χ. όχι πάνω από τον Γ' όροφο).
-    sourcedFactor: sourceFactor !== null && asked.includes('commercialityFactor') ? sourceFactor : null,
+    sourcedFactor: sourcedCommercialityFactorOf(effective, commerciality, today),
   };
 }
 

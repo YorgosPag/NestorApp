@@ -368,6 +368,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-947 Δ3 — το αμετάβλητο στιγμιότυπο αντικειμενικής αξίας. `deny_all`: εγγραφή από πελάτη θα πάγωνε ποσό που δεν
+    // έβγαλε η μηχανή του server· ανάγνωση θα παρέκαμπτε τον έλεγχο αποτυπώματος. Η σουίτα σπέρνει έγγραφο του ΙΔΙΟΥ γραφείου.
+    collection: 'objective_value_snapshots',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/objective-value-snapshots.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-915 §28 — οι σύνδεσμοι χωρίς λογαριασμό της ανάθεσης. `deny_all`: ανάγνωση θα έδινε email τρίτων· εγγραφή
     // (`state: 'accepted'`) θα «απαντούσε» χωρίς σύνδεσμο. Η σουίτα σπέρνει έγγραφο του ΙΔΙΟΥ μισθωτή.
     collection: 'document_issuance_invitations',

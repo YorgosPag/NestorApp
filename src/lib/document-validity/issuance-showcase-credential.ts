@@ -49,6 +49,14 @@ function qualificationRegistryNumber(showcase: PublicShowcase, qualification: Is
 export function showcaseIssuanceCredential(showcase: PublicShowcase, kind: DocumentKind): IssuanceCredential | null {
   const { issuer } = documentKindSpec(kind);
   if (issuer.kind !== 'professional') return null;
-  const qualification = issuer.qualifications.find((candidate) => showcaseHasQualification(showcase, candidate));
+  return showcaseCredentialAmong(showcase, issuer.qualifications);
+}
+
+/**
+ * Το **πρώτο** προσόν της λίστας που έχει η βιτρίνα, με τον αριθμό μητρώου του — ο ΙΔΙΟΣ κριτής για έγγραφο του
+ * μητρώου **και** για υπηρεσία που δεν είναι έγγραφο (ADR-947 Δ9: στιγμιότυπο αντικειμενικής αξίας). `null` = κανένα.
+ */
+export function showcaseCredentialAmong(showcase: PublicShowcase, qualifications: readonly IssuerQualification[]): IssuanceCredential | null {
+  const qualification = qualifications.find((candidate) => showcaseHasQualification(showcase, candidate));
   return qualification === undefined ? null : { qualification, registryNumber: qualificationRegistryNumber(showcase, qualification) };
 }

@@ -62,7 +62,10 @@ const AREAS = createKeyedServerJsonFiles<ValueZoneArea>(MAX_CACHED_AREAS, (areaI
  */
 async function areasAround(point: GeoPoint): Promise<readonly ValueZoneArea[] | null> {
   const index = await INDEX.read();
-  if (index === null) return null;
+  return index === null ? null : areasOfIndex(index, point);
+}
+
+async function areasOfIndex(index: ValueZonesIndex, point: GeoPoint): Promise<readonly ValueZoneArea[] | null> {
   const ids = [...index.areas].filter(([, box]) => bboxWithin(point, box, FRONT_REACH_M)).map(([id]) => id);
   const areas = await Promise.all(ids.map((id) => AREAS.read(id)));
   return areas.every((area): area is ValueZoneArea => area !== null) ? areas : null;
@@ -73,6 +76,25 @@ export async function readValueZoneAt(position: PlacePosition): Promise<ValueZon
   const point = valueZonePointOf(position);
   if (point === null) return { kind: 'imprecise' };
   return valueZoneAtPoint(point, await areasAround(point));
+}
+
+/** Η ταυτότητα του πίνακα ζωνών: η πηγή (με το sha256 της) και το εύρος ισχύος — το ίδιο `index.json` με την ετυμηγορία. */
+export interface ValueZonesTableMeta {
+  readonly validFrom: ValueZonesIndex['validFrom'];
+  readonly source: ValueZonesIndex['source'];
+}
+
+/**
+ * **Η ζώνη μιας θέσης ΜΑΖΙ με την ταυτότητα του πίνακα** από τον οποίο βγήκε (ADR-947 Δ3: στιγμιότυπο · απόκλιση).
+ * **Μία** ανάγνωση του ευρετηρίου για τα δύο ⇒ ποτέ ετυμηγορία από τον έναν πίνακα με ταυτότητα του άλλου. Δεν πετά:
+ * αποτυχία ⇒ `unavailable` και `table: null`.
+ */
+export async function readValueZoneWithTable(position: PlacePosition): Promise<{ readonly verdict: ValueZoneVerdict; readonly table: ValueZonesTableMeta | null }> {
+  const index = await INDEX.read();
+  const table = index === null ? null : { validFrom: index.validFrom, source: index.source };
+  const point = valueZonePointOf(position);
+  if (point === null) return { verdict: { kind: 'imprecise' }, table };
+  return { verdict: valueZoneAtPoint(point, index === null ? null : await areasOfIndex(index, point)), table };
 }
 
 /**

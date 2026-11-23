@@ -17,6 +17,12 @@ describe('APP_FEATURE_FLAGS', () => {
     expect(isAppFeatureEnabled('OWNER_ISSUANCE_REQUESTS')).toBe(false);
   });
 
+  // ADR-947 Φ2 — dark launch: ανοίγει με απόφαση Giorgio στη Φ7· όποιος τον ανοίξει αλλάζει ρητά κι αυτό.
+  it('οι επαγγελματικές βαθμίδες της αντικειμενικής αξίας είναι ΚΛΕΙΣΤΕΣ', () => {
+    expect(APP_FEATURE_FLAGS.OBJECTIVE_VALUE_PROFESSIONAL_TIERS).toBe(false);
+    expect(isAppFeatureEnabled('OBJECTIVE_VALUE_PROFESSIONAL_TIERS')).toBe(false);
+  });
+
   it('παγωμένοι: καμία αλλαγή στην εκτέλεση', () => {
     expect(Object.isFrozen(APP_FEATURE_FLAGS)).toBe(true);
   });

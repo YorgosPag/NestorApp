@@ -52,10 +52,18 @@ export function formatCommercialityFactor(factor: number): string {
 }
 
 /** Η τιμή που ισχύει: του δηλωμένου μετώπου, αλλιώς της ζώνης· `null` όταν η ετυμηγορία δεν είναι έτοιμη. */
-function chosenFigureOf(verdict: ValueZoneVerdict, frontKey: string | null): ValueZoneFigure | null {
+export function chosenFigureOf(verdict: ValueZoneVerdict, frontKey: string | null): ValueZoneFigure | null {
   if (verdict.kind !== 'ready') return null;
   const front = frontKey === null ? undefined : verdict.fronts.find((candidate) => frontKeyOf(candidate) === frontKey);
   return front ?? verdict.zone;
+}
+
+/**
+ * ADR-947 Δ3 — **είναι αυτό το μέτωπο ακόμη υποψήφιο σε αυτή την ετυμηγορία;** Το στιγμιότυπο **δεν** δέχεται μέτωπο που
+ * δεν υπάρχει (το `chosenFigureOf` θα έπεφτε σιωπηλά στη ζώνη — σωστό για την οθόνη, λάθος για ό,τι παγώνει).
+ */
+export function isCandidateFront(verdict: ValueZoneVerdict, frontKey: string): boolean {
+  return verdict.kind === 'ready' && verdict.fronts.some((front) => frontKeyOf(front) === frontKey);
 }
 
 /** Το ζεύγος για το δηλωμένο μέτωπο, ή της ζώνης· `null` όταν η ετυμηγορία δεν είναι έτοιμη. */

@@ -177,6 +177,8 @@ export const generateDeterministicPaymentPayeeId = (seed: string) =>
   enterpriseIdService.generateDeterministicPaymentPayeeId(seed);
 export const generatePaymentTransferLeaseHolderId = () => enterpriseIdService.generatePaymentTransferLeaseHolderId();
 export const generateDocumentIssuanceInvitationId = () => enterpriseIdService.generateDocumentIssuanceInvitationId();
+export const generateDeterministicObjectiveValueSnapshotId = (seed: string) =>
+  enterpriseIdService.generateDeterministicObjectiveValueSnapshotId(seed);
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();
 export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId();

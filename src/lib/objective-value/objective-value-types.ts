@@ -16,10 +16,12 @@
 // ============================================================================
 
 /** Τρόπος κατασκευής (άρθ. 3 §10 · 6 §9 · 7 §9). */
-export type ConstructionKind = 'frame' | 'masonry' | 'makeshift';
+export const CONSTRUCTION_KINDS = ['frame', 'masonry', 'makeshift'] as const;
+export type ConstructionKind = (typeof CONSTRUCTION_KINDS)[number];
 
 /** Ειδική κατάσταση (άρθ. 2 §21-22): το διατηρητέο **υπερισχύει** του απαλλοτριωτέου. */
-export type LegalEncumbrance = 'none' | 'listed' | 'expropriated';
+export const LEGAL_ENCUMBRANCES = ['none', 'listed', 'expropriated'] as const;
+export type LegalEncumbrance = (typeof LEGAL_ENCUMBRANCES)[number];
 
 /**
  * Στάδιο αποπεράτωσης αποθήκης/θέσης στάθμευσης (άρθ. 6 §8 · 7 §8) — **χωρίς** θεμελίωση και δάπεδα (επαληθευμένο

@@ -13,6 +13,7 @@
  * θα υπολόγιζε μόνος του, συνήθως λάθος (τα δύο πρώτα έτη δεν μετρούν).
  */
 
+import type { CommercialityFact } from '@/lib/market/value-zone-file';
 import { legalAgeYears } from '@/lib/objective-value/objective-value-common';
 import { computeObjectiveValue } from '@/lib/objective-value/compute-objective-value';
 import type {
@@ -150,6 +151,26 @@ export function draftToInput(draft: ObjectiveValueDraft, todayIso: string): Obje
   }
 }
 
+/** Η τιμή ζώνης που ισχύει για το πρόχειρο, **μαζί με τον ΣΕ της πηγής** (`null` τιμή = χωρίς ζώνη ακόμη). */
+export interface DraftZone {
+  readonly price: number | null;
+  readonly commerciality: CommercialityFact;
+}
+
+/**
+ * **Ό,τι βλέπει η μηχανή** — το πρόχειρο με την τιμή ζώνης και, όταν η πηγή τον δίνει, τον ΣΕ της (ADR-898 Φ5). Ο ΕΝΑΣ
+ * κανόνας για τον υπολογιστή (στη συσκευή) **και** για το στιγμιότυπο (στον server, ADR-947 Δ3): ίδιο πρόχειρο + ίδια
+ * ζώνη ⇒ ίδιο ποσό, χωρίς δεύτερη υλοποίηση της προτεραιότητας «η πηγή κερδίζει τη δήλωση».
+ */
+export function effectiveDraftOf(draft: ObjectiveValueDraft, zone: DraftZone): ObjectiveValueDraft {
+  const { price, commerciality } = zone;
+  return {
+    ...draft,
+    zonePrice: price,
+    ...(commerciality.kind === 'factor' ? { commercialityFactor: commerciality.value, commercialityAssumed: false } : {}),
+  };
+}
+
 /** Τι λείπει, σε **κάθε** κατάσταση (και στο `invalid`, ώστε η φόρμα να μην ξεχνά ερωτήσεις). */
 export function missingOf(result: ObjectiveValueResult): readonly ObjectiveValueMissing[] {
   return result.kind === 'computed' ? [] : result.missing;
@@ -180,4 +201,13 @@ export function relevantQuestions(draft: ObjectiveValueDraft, todayIso: string):
   return CONDITIONAL_QUESTIONS.filter((question) =>
     missingOf(computeObjectiveValue(draftToInput(cleared(draft, question), todayIso))).includes(question),
   );
+}
+
+/**
+ * Ο ΣΕ της πηγής **όταν μετρά** για αυτό το ακίνητο (π.χ. όχι πάνω από τον Γ' όροφο) — αλλιώς `null`. Η γραμμή
+ * προέλευσης του υπολογιστή **και** η προέλευση του στιγμιότυπου (ADR-947 Δ3) ρωτούν το ίδιο.
+ */
+export function sourcedCommercialityFactorOf(effective: ObjectiveValueDraft, commerciality: CommercialityFact, todayIso: string): number | null {
+  if (commerciality.kind !== 'factor') return null;
+  return relevantQuestions(effective, todayIso).includes('commercialityFactor') ? commerciality.value : null;
 }

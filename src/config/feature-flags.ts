@@ -40,6 +40,14 @@ export interface AppFeatureFlags {
    *    ένα αίτημα δεν το βλέπει κανείς. Κλειστός ⇒ καμία ενότητα, κανένα κουμπί, καμία κλήση δικτύου.
    */
   readonly OWNER_ISSUANCE_REQUESTS: boolean;
+  /**
+   * **Αντικειμενική αξία από επαγγελματία — βαθμίδες 2 και 3** (ADR-947): το αμετάβλητο στιγμιότυπο (Δ3), το PDF του με
+   * κωδικό επαλήθευσης και, στις επόμενες φάσεις, η παράδοση στον ιδιοκτήτη και στη μεταβίβαση.
+   *
+   * ⛔ **Κλειστός** (dark launch, ADR-947 Φ2): ο κώδικας αναπτύσσεται ολόκληρος αλλά **σιωπηλός**. Ανοίγει με απόφαση
+   *    Giorgio στη Φ7. Κλειστός ⇒ οι διαδρομές των στιγμιοτύπων απαντούν 404, καμία ενότητα, κανένα κουμπί.
+   */
+  readonly OBJECTIVE_VALUE_PROFESSIONAL_TIERS: boolean;
 }
 
 export type AppFeatureFlag = keyof AppFeatureFlags;
@@ -48,6 +56,7 @@ export const APP_FEATURE_FLAGS: Readonly<AppFeatureFlags> = Object.freeze({
   PUBLIC_SHOWCASE_PRICES: false,
   ENERGY_INSPECTOR_REGISTRY_LOOKUP: false,
   OWNER_ISSUANCE_REQUESTS: false,
+  OBJECTIVE_VALUE_PROFESSIONAL_TIERS: false,
 });
 
 /** Η ΜΙΑ ερώτηση «είναι ανοιχτό;». */
