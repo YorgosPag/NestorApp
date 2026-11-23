@@ -5,17 +5,17 @@
  * =============================================================================
  *
  * Extracted from AddressMap.tsx for Google SRP compliance (<500 lines).
- * Contains: geocoding logic, reverse geocoding helper, auto-fit bounds effect,
- * and all geocoding-related state management.
+ * Contains: geocoding logic, reverse geocoding helper and all geocoding-related
+ * state management. Οι θέσεις των πινεζών (`address-map-pins`) και η κάμερα
+ * (`useAddressMapCamera`) ζουν σε δικά τους αρχεία (ADR-948 §8.7.3).
  *
  * @file useAddressMapGeocoding.ts
  * @created 2026-03-28
  * @see AddressMap.tsx
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
-import { LngLatBounds } from '@/lib/maps/maplibre';
 
 import type { ProjectAddress } from '@/types/project/addresses';
 import { getGeocodableAddresses } from '@/types/project/address-helpers';
@@ -26,7 +26,8 @@ import {
 } from '@/lib/geocoding/geocoding-service';
 import { nextPinGesture, resolvePinDrop, type PinDrop } from '@/components/shared/addresses/pin-drop';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
-import { cameraFraming, type CameraIntent } from '@/lib/geo/camera-motion';
+import { addressMapPins, type AddressMapPin } from '@/components/shared/addresses/address-map-pins';
+import { useAddressMapCamera } from '@/components/shared/addresses/useAddressMapCamera';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   type GeocodingStatus,
@@ -57,8 +58,10 @@ interface UseAddressMapGeocodingParams {
   onGeocodingComplete?: (results: Map<string, GeocodingServiceResult>) => void;
   /** ADR-332 D27 Βήμα Β — **πάντα** με σημείο αφής· το κείμενο είναι μία από τρεις εκβάσεις. */
   onAddressDragUpdate?: (drop: PinDrop, addressIndex: number) => void;
-  /** Increment to clear all drag positions and re-fit bounds (e.g. after undo/redo). */
+  /** Increment to clear all drag positions (e.g. after undo/redo). */
   dragResetKey?: number;
+  /** ADR-318: παράγωγες διευθύνσεις μόνο-για-ανάγνωση — ποτέ θέση αναμονής, ποτέ σύρσιμο. */
+  readOnlyAddressIds?: ReadonlySet<string>;
 }
 
 interface UseAddressMapGeocodingReturn {
@@ -67,6 +70,8 @@ interface UseAddressMapGeocodingReturn {
   dragPositions: Map<string, DragPosition>;
   isReverseGeocoding: boolean;
   hasEverRendered: boolean;
+  /** **Όλες** οι πινέζες με τη θέση τους — ό,τι ζωγραφίζει ο χάρτης και ό,τι καδράρει η κάμερα. */
+  pins: readonly AddressMapPin[];
   handleDragEnd: (
     event: { lngLat: { lng: number; lat: number } },
     addressId: string,
@@ -84,8 +89,8 @@ interface UseAddressMapGeocodingReturn {
 
 /**
  * Custom hook encapsulating all geocoding logic for AddressMap.
- * Handles: forward geocoding, reverse geocoding on drag, auto-fit bounds,
- * drag position tracking, and auto-pan during drag.
+ * Handles: forward geocoding, reverse geocoding on drag, drag position
+ * tracking, auto-pan during drag — and composes pins + camera (ADR-948 §8.7.3).
  */
 export function useAddressMapGeocoding({
   addresses,
@@ -95,6 +100,7 @@ export function useAddressMapGeocoding({
   onGeocodingComplete,
   onAddressDragUpdate,
   dragResetKey,
+  readOnlyAddressIds,
 }: UseAddressMapGeocodingParams): UseAddressMapGeocodingReturn {
   const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingServiceResult>>(new Map());
   const [geocodingStatus, setGeocodingStatus] = useState<GeocodingStatus>('idle');
@@ -230,112 +236,28 @@ export function useAddressMapGeocoding({
   }, [addresses, onGeocodingComplete]);
 
   // ===========================================================================
-  // FIT BOUNDS — SSoT helper + two triggers
+  // ΠΙΝΕΖΕΣ + ΚΑΜΕΡΑ — μία πηγή θέσης για ζωγραφική και καδράρισμα (ADR-948 §8.7.3)
   // ===========================================================================
 
-  /**
-   * Zoom the map so every pin (geocoded + drag-pending + unrendered fallback)
-   * is visible. Single source of truth for bounds composition.
-   *
-   * 🔴 ADR-332 D27 Β14 (ζωντανή επαλήθευση): επιστρέφει **αν καδράρισε**. Οι δύο σκανδάλες
-   * σημείωναν «καδράρισα» και όταν ο χάρτης **δεν ήταν έτοιμος** ⇒ θέσεις που έφταναν πριν το
-   * `mapReady` δεν καδραρίζονταν ποτέ, και ο χάρτης έμενε στο προεπιλεγμένο κέντρο (Αθήνα) ενώ η
-   * πινέζα ήταν στη Θεσσαλονίκη.
-   */
-  const runFitBounds = useCallback((intent: CameraIntent): boolean => {
-    if (!mapRef.current || !mapReady) return false;
-    try {
-      const bounds = new LngLatBounds();
-      geocodedAddresses.forEach(result => bounds.extend([result.lng, result.lat]));
-      if (draggableMarkers) {
-        dragPositions.forEach(pos => bounds.extend([pos.lng, pos.lat]));
-        const refPos = findReferencePosition(addresses, dragPositions, geocodedAddresses);
-        for (let i = 0; i < addresses.length; i++) {
-          const addr = addresses[i];
-          if (!dragPositions.has(addr.id) && !geocodedAddresses.has(addr.id) && refPos) {
-            bounds.extend([refPos.lng - 0.003 * i, refPos.lat + 0.003 * i]);
-          }
-        }
-      }
-      if (bounds.isEmpty()) return false;
-      /*
-        🔑 **ΤΟ ΜΟΝΟ ΣΗΜΕΙΟ ΤΗΣ ΕΦΑΡΜΟΓΗΣ ΜΕ ΔΥΟ ΠΡΟΘΕΣΕΙΣ ΣΤΗΝ ΙΔΙΑ ΣΥΝΑΡΤΗΣΗ**, και
-        γι' αυτό η πρόθεση **δίνεται από τον καλούντα**: η **πρώτη** προσαρμογή είναι
-        άφιξη *(ο άνθρωπος δεν είδε ποτέ την προεπιλεγμένη προβολή· μια πτήση από εκεί
-        δεν επικοινωνεί τίποτα)*, ενώ κάθε **επόμενη** — προστέθηκε ή σβήστηκε πινέζα —
-        είναι ταξίδι *(κοιτούσε ένα καδραρισμένο σύνολο και το μετακινήσαμε)*.
-
-        ⚠️ Το `'confirmed'` επιτρέπει ζουμ **κτιρίου** (18) και είναι η μοναδική οθόνη
-        που το δικαιούται: εδώ οι πινέζες είναι **αποθηκευμένες** διευθύνσεις, όχι
-        προτάσεις γεωκωδικοποιητή — γι' αυτό το ίδιο ταβάνι είναι `15` στους υποψηφίους.
-        Οι δύο τιμές έμοιαζαν με ασυνέπεια· είναι **δύο διαφορετικές δηλώσεις ακρίβειας**.
-      */
-      mapRef.current.fitBounds(bounds, cameraFraming(intent, 'pin', 'confirmed'));
-      return true;
-    } catch (error) {
-      logger.error('fitBounds failed:', { error });
-      return false;
-    }
-  }, [geocodedAddresses, mapReady, draggableMarkers, dragPositions, addresses]);
-
-  // Trigger 1 — View mode: auto-fit whenever the geocoded set changes. Skipped
-  // in edit mode so a careful zoom-in + drag is not immediately reversed by
-  // an auto-fit triggered by the new drag position or freshly geocoded entry.
-  const hasFittedViewRef = useRef(false);
-  useEffect(() => {
-    if (draggableMarkers) {
-      hasFittedViewRef.current = false;
-      return;
-    }
-    // Β14: «καδράρισα» ΜΟΝΟ αν έγινε — αλλιώς η άφιξη χάνεται όταν ο χάρτης δεν ήταν έτοιμος.
-    if (runFitBounds(hasFittedViewRef.current ? 'travel' : 'arrive')) hasFittedViewRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geocodedAddresses, mapReady, draggableMarkers]);
-
-  // Trigger 2 — Edit mode: fit on entry + re-fit when pin count CHANGES
-  // (added pin, deleted pin, pending pin appended/removed). Does NOT re-fit
-  // on drag or repeated calls with same counts — that would fight the user
-  // dragging or panning the map.
-  const lastEditFitRef = useRef(false);
-  const lastGeocodedCountRef = useRef(0);
-  const lastAddressCountRef = useRef(0);
-  useEffect(() => {
-    if (!draggableMarkers) {
-      lastEditFitRef.current = false;
-      lastGeocodedCountRef.current = 0;
-      lastAddressCountRef.current = 0;
-      return;
-    }
-    const geocodedCount = geocodedAddresses.size;
-    const addressCount = addresses.length;
-    const countChanged =
-      geocodedCount !== lastGeocodedCountRef.current ||
-      addressCount !== lastAddressCountRef.current;
-    if (lastEditFitRef.current && !countChanged) return;
-    // 🔑 Το `lastEditFitRef` απαντούσε **ήδη** «έχω καδράρει ξανά;» — δηλαδή «υπάρχει
-    //    ΑΠΟ;». Δεν χρειάστηκε νέα κατάσταση, μόνο να ερωτηθεί.
-    // 🔴 Β14: τα πλήθη και η σημαία γράφονται ΜΟΝΟ αν το καδράρισμα έγινε — αλλιώς ένας χάρτης
-    //    που δεν ήταν έτοιμος «κατανάλωνε» την άφιξη και δεν καδράριζε ποτέ.
-    if (!runFitBounds(lastEditFitRef.current ? 'travel' : 'arrive')) return;
-    lastGeocodedCountRef.current = geocodedCount;
-    lastAddressCountRef.current = addressCount;
-    lastEditFitRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draggableMarkers, mapReady, geocodedAddresses, addresses]);
+  const pins = useMemo(
+    () => addressMapPins({ addresses, draggableMarkers, dragPositions, geocodedAddresses, readOnlyAddressIds }),
+    [addresses, draggableMarkers, dragPositions, geocodedAddresses, readOnlyAddressIds],
+  );
+  useAddressMapCamera({ pins, draggableMarkers, mapRef, mapReady });
 
   // ===========================================================================
   // DRAG RESET — Clear drag positions on undo/redo (dragResetKey increment)
   // ===========================================================================
   // When the editor undo/redo restores a previous address, the drag position
   // must revert so the pin renders at the geocoded (not dragged) position.
-  // Placed after lastEditFitRef declaration so the ref is in scope.
+  // 🔑 ADR-948 §8.7.3: η κάμερα ΔΕΝ ξανακαδράρει πια «με το ζόρι» (άλμα) — η πινέζα που
+  //    γύρισε αλλού αποκαλύπτεται από τον κανόνα του `useAddressMapCamera`, αν βγήκε εκτός οθόνης.
   const prevDragResetKeyRef = useRef<number>(0);
   useEffect(() => {
     if (!dragResetKey) return;
     if (dragResetKey === prevDragResetKeyRef.current) return;
     prevDragResetKeyRef.current = dragResetKey;
     setDragPositions(new Map());
-    lastEditFitRef.current = false;
   }, [dragResetKey]);
 
   // ===========================================================================
@@ -421,6 +343,7 @@ export function useAddressMapGeocoding({
     dragPositions,
     isReverseGeocoding,
     hasEverRendered: hasEverRenderedRef.current,
+    pins,
     handleDragEnd,
     autoPanRafRef,
     autoPanDeltaRef,

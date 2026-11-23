@@ -31,7 +31,7 @@ import {
 // Presentation Layer
 import { InteractiveMapPresentation } from './InteractiveMapPresentation';
 // Configuration
-import { GEOGRAPHIC_CONFIG } from '../../../config/geographic-config';
+import { DEFAULT_MAP_OVERVIEW } from '../../../config/geographic-config';
 // Το ακροατήριο του χάρτη — ΕΝΑ όνομα, όχι Ν σημαίες (ADR-777 §2.2)
 import { MAP_CHROME, showsBasemapPanel, type MapChromePreset } from '../config/map-chrome';
 
@@ -119,9 +119,8 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   // Centralized map state management
   const mapState = useMapState({
     initialViewState: {
-      longitude: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
-      latitude: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
-      zoom: 8,
+      // ADR-948 §8.7.3: η ΙΔΙΑ θέαση στην οποία επιστρέφει ο χάρτης διευθύνσεων όταν αδειάσει.
+      ...DEFAULT_MAP_OVERVIEW,
       bearing: 0,
       pitch: 0
     }

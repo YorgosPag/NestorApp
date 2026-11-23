@@ -178,6 +178,21 @@ function getGeographicConfig(): GeographicConfig {
 export const GEOGRAPHIC_CONFIG = getGeographicConfig();
 
 /**
+ * **Η θέαση «δεν ξέρουμε ακόμη πού»** — ό,τι δείχνει ένας χάρτης πριν αποκτήσει οποιοδήποτε σημείο.
+ *
+ * 🔑 Μία δήλωση, δύο αναγνώστες, **ίδια εικόνα εκ κατασκευής**: η αρχική θέαση του `InteractiveMap`
+ * και η επιστροφή της κάμερας όταν ένας χάρτης διευθύνσεων **αδειάζει** (ADR-948 §8.7.3 — μετά την
+ * «Αναίρεση» η κάμερα έμενε πάνω σε διεύθυνση που δεν υπήρχε πια). Το `8` ήταν γραμμένο με το χέρι
+ * στο `InteractiveMapContainer`· ένα δεύτερο χειρόγραφο αντίγραφο θα απέκλινε σιωπηλά.
+ */
+export const DEFAULT_MAP_OVERVIEW = {
+  longitude: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
+  latitude: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
+  /** Επίπεδο περιφέρειας — αρκετά ανοιχτό ώστε να μη μοιάζει με ισχυρισμό θέσης. */
+  zoom: 8,
+} as const;
+
+/**
  * 🏢 ENTERPRISE: Geographic utilities
  */
 const GeographicUtils = {

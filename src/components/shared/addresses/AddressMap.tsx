@@ -57,7 +57,6 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';
 import { cameraFlight } from '@/lib/geo/camera-motion';
 import { createUserLocationMarkerElement } from './user-location-marker';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { getStatusSurfaceClass } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -70,11 +69,7 @@ import {
   DraggableMarkerPin,
   type AddressMapProps,
 } from '@/components/shared/addresses/address-map-config';
-import {
-  useAddressMapGeocoding,
-  findReferencePosition,
-} from '@/components/shared/addresses/useAddressMapGeocoding';
-import { displayedPosition } from '@/components/shared/addresses/useAddressMapGeocoding.helpers';
+import { useAddressMapGeocoding } from '@/components/shared/addresses/useAddressMapGeocoding';
 import { AddressMapStatusChip } from '@/components/shared/addresses/AddressMapStatusChip';
 
 // Re-exports for backward compatibility
@@ -129,9 +124,9 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const {
     geocodedAddresses,
     geocodingStatus,
-    dragPositions,
     isReverseGeocoding,
     hasEverRendered,
+    pins,
     handleDragEnd,
     autoPanRafRef,
     autoPanDeltaRef,
@@ -145,6 +140,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     onGeocodingComplete,
     onAddressDragUpdate,
     dragResetKey,
+    readOnlyAddressIds,
   });
 
   // ===========================================================================
@@ -291,11 +287,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     geocodingStatus === 'partial' ||
     hasEverRendered;
 
-  const defaultCenter = {
-    lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
-    lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
-  };
-
   return (
     <div className={`relative overflow-hidden ${heightClass} ${className}`}>
       <PolygonSystemProvider>
@@ -318,98 +309,48 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               chrome="embedded"
               className="w-full h-full rounded-lg overflow-hidden"
             >
-              {/* Draggable Marker Mode */}
-              {draggableMarkers && (() => {
-                const refPos = findReferencePosition(addresses, dragPositions, geocodedAddresses)
-                  ?? defaultCenter;
-                return addresses.map((addr, index) => {
-                  const geocoded = geocodedAddresses.get(addr.id);
-                  const dragPos = dragPositions.get(addr.id);
-                  const isReadOnly = readOnlyAddressIds?.has(addr.id) === true;
-                  const translatedLabel = renderStoredAddressLabel(addr.label, t) ?? t(`types.${addr.type}`);
+              {/*
+                ADR-948 §8.7.3 — ΜΙΑ πηγή θέσης (`address-map-pins`): ό,τι ζωγραφίζεται εδώ είναι ακριβώς
+                ό,τι καδράρει η κάμερα. Πριν, ο κανόνας της ζωγραφικής και του καδραρίσματος ήταν δύο, και η
+                εφεδρική πινέζα του άδειου χάρτη έμενε εκτός κάδρου.
+              */}
+              {(draggableMarkers || mapLoaded) && pins.map((pin) => {
+                const label = pin.address
+                  ? renderStoredAddressLabel(pin.address.label, t) ?? t(`types.${pin.address.type}`)
+                  : undefined;
+                const isPrimary = pin.address?.isPrimary ?? true;
+                const pinAddress = pin.address;
 
-                  const isActiveEdit = activeEditingAddressId === addr.id;
-
-                  // ADR-318: read-only derived pins require real coords —
-                  // no fallback offset (they are not placeholders).
-                  // ADR-332 D27 Β12: ΙΔΙΟΣ κανόνας θέσης με τις συρόμενες (`displayedPosition`).
-                  if (isReadOnly) {
-                    const shown = displayedPosition(addr, undefined, geocoded);
-                    if (!shown) return null;
-                    return (
-                      <Marker
-                        key={addr.id}
-                        longitude={shown.lng}
-                        latitude={shown.lat}
-                        anchor="bottom"
-                        onClick={() => handleMarkerClick(addr, index)}
-                      >
-                        <DraggableMarkerPin
-                          isPrimary={addr.isPrimary}
-                          label={translatedLabel}
-                        />
-                      </Marker>
-                    );
-                  }
-
-                  // 🔑 Β12: χειρονομία σε εξέλιξη → σημείο του γονιού → γεωκωδικοποίηση οθόνης.
-                  const shown = displayedPosition(addr, dragPos, geocoded);
-                  const position = shown
-                    ?? { lng: refPos.lng - 0.003 * index, lat: refPos.lat + 0.003 * index };
-                  const hasData = shown !== null;
-
+                // ADR-318: παράγωγη διεύθυνση (ή χάρτης προβολής) — ποτέ συρόμενη.
+                if (!pin.draggable) {
                   return (
                     <Marker
-                      key={addr.id}
-                      longitude={position.lng}
-                      latitude={position.lat}
+                      key={pin.id}
+                      longitude={pin.point.lng}
+                      latitude={pin.point.lat}
                       anchor="bottom"
-                      draggable
-                      onDragEnd={(e) => handleDragEnd(e, addr.id, index)}
-                      onDrag={handleAutoPan}
+                      onClick={pinAddress ? () => handleMarkerClick(pinAddress, pin.index) : undefined}
                     >
-                      <DraggableMarkerPin
-                        isPrimary={addr.isPrimary}
-                        pulsate={!hasData}
-                        isEditing={isActiveEdit}
-                        label={translatedLabel}
-                      />
+                      <DraggableMarkerPin isPrimary={isPrimary} label={label} />
                     </Marker>
                   );
-                });
-              })()}
-              {/* Fallback: single pin when no addresses exist in draggable mode */}
-              {draggableMarkers && addresses.length === 0 && (
-                <Marker
-                  longitude={defaultCenter.lng}
-                  latitude={defaultCenter.lat}
-                  anchor="bottom"
-                  draggable
-                  onDragEnd={(e) => handleDragEnd(e, '__new__', 0)}
-                  onDrag={handleAutoPan}
-                >
-                  <DraggableMarkerPin isPrimary pulsate />
-                </Marker>
-              )}
-
-              {/* Read-only Mode */}
-              {!draggableMarkers && mapLoaded && addresses.map((addr, index) => {
-                const geocoded = geocodedAddresses.get(addr.id);
-                if (!geocoded) return null;
-
-                const translatedLabel = renderStoredAddressLabel(addr.label, t) ?? t(`types.${addr.type}`);
+                }
 
                 return (
                   <Marker
-                    key={addr.id}
-                    longitude={geocoded.lng}
-                    latitude={geocoded.lat}
+                    key={pin.id}
+                    longitude={pin.point.lng}
+                    latitude={pin.point.lat}
                     anchor="bottom"
-                    onClick={() => handleMarkerClick(addr, index)}
+                    draggable
+                    onDragEnd={(e) => handleDragEnd(e, pin.id, pin.index)}
+                    onDrag={handleAutoPan}
                   >
                     <DraggableMarkerPin
-                      isPrimary={addr.isPrimary}
-                      label={translatedLabel}
+                      isPrimary={isPrimary}
+                      pulsate={pin.anchor !== 'located'}
+                      isEditing={activeEditingAddressId === pin.id}
+                      label={label}
                     />
                   </Marker>
                 );
