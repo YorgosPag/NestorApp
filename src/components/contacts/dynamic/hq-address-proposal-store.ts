@@ -16,6 +16,7 @@
 import { useSyncExternalStore } from 'react';
 
 import type { SeatFields } from '@/lib/company/contact-registry-comparison';
+import type { RegistrySeatApplication } from '@/lib/company/registry-form-acceptance';
 import { createExternalStore } from '@/lib/state/createExternalStore';
 import type { RegistrySource } from '@/types/company-registry';
 
@@ -26,6 +27,11 @@ export interface HqAddressProposal {
   /** Πότε το είπε η πηγή (`RegistryCheck.checkedAt`) — φαίνεται δίπλα της. */
   readonly observedAt: string;
   readonly seat: SeatFields;
+  /**
+   * Συμπλήρωση της **ίδιας** διεύθυνσης ή αντικατάσταση από **άλλη** (ADR-948 §8.7.4) — την κρίνει ο παραγωγός,
+   * που έχει τη σύγκριση τη στιγμή της πρότασης· ο editor δεν την ξαναμαντεύει.
+   */
+  readonly application: RegistrySeatApplication;
 }
 
 const store = createExternalStore<HqAddressProposal | null>(null);

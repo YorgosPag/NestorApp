@@ -26,7 +26,12 @@ import { API_ROUTES } from '@/config/domain-constants';
 import { useRegistryCheckReport } from '@/hooks/useRegistryCheckReport';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ContactRegistryComparison } from '@/lib/company/contact-registry-comparison';
-import { acceptRegistryField, liveRegistryComparison, type AcceptableRegistryField } from '@/lib/company/registry-form-acceptance';
+import {
+  acceptRegistryField,
+  liveRegistryComparison,
+  registrySeatApplicationOf,
+  type AcceptableRegistryField,
+} from '@/lib/company/registry-form-acceptance';
 import { formatDate } from '@/lib/intl-formatting';
 import type { RegistryCheck } from '@/types/company-registry';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -140,8 +145,14 @@ function useRegistryActions(props: ContactCompanyRegistryCheckProps, check: Regi
   };
   const onProposeSeat = (): void => {
     const seat = comparison?.seat.registry ?? null;
-    if (check === null || seat === null) return;
-    proposeHqAddress({ contactId, source: check.record.source, observedAt: check.checkedAt, seat });
+    if (check === null || comparison === null || seat === null) return;
+    proposeHqAddress({
+      contactId,
+      source: check.record.source,
+      observedAt: check.checkedAt,
+      seat,
+      application: registrySeatApplicationOf(comparison),
+    });
     onOpenAddresses?.();
   };
   return { onAccept, onProposeSeat, canEdit: !props.disabled && setFormData !== undefined };

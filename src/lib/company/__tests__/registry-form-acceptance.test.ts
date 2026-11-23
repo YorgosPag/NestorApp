@@ -3,7 +3,8 @@
  *
  * 🔴 Τα σενάρια που φυλάνε: σύγκριση πάνω σε απάντηση που **δεν** περνά πια τον φράχτη (φυσικό πρόσωπο) · παλιός
  * κωδικός νομικής μορφής στη φόρμα (`AE`) που βγαίνει ψευδής «διαφορά» · «Αποδοχή» που αγγίζει **άλλο** πεδίο ή
- * γράφει χωρίς λόγο · πρόταση έδρας που **σβήνει** μέρος που το ΓΕΜΗ δεν ξέρει.
+ * γράφει χωρίς λόγο · πρόταση έδρας που **σβήνει** μέρος της **ίδιας** διεύθυνσης που το ΓΕΜΗ δεν ξέρει — ή που
+ * **κρατά** μέρος **άλλης** διεύθυνσης και φτιάχνει υβρίδιο («Κάλβου 10» με το 10 της Ερμού, ADR-948 §8.7.4).
  */
 
 import { registryCheck } from '@/lib/company/__fixtures__/registry-record-fixture';
@@ -13,8 +14,10 @@ import {
   canProposeRegistrySeat,
   formRegistryFieldsOf,
   liveRegistryComparison,
+  registrySeatApplicationOf,
   registrySeatAsAddressFields,
 } from '@/lib/company/registry-form-acceptance';
+import { applyResolvedToContactAddress } from '@/components/contacts/dynamic/addresses-section-form-mapping';
 import { initialFormData, type CompanyAddress, type ContactFormData } from '@/types/ContactFormTypes';
 import type { RegistryCheck } from '@/types/company-registry';
 
@@ -107,10 +110,30 @@ describe('Γ — έδρα: πρόταση, ποτέ εγγραφή', () => {
     expect(canProposeRegistrySeat(comparisonOf(form({ companyAddresses: [] })))).toBe(true);
   });
 
-  it('Γ3 — μέρος που το ΓΕΜΗ δεν ξέρει ⇒ ΑΠΟΝ (ο γραφέας κρατά της φόρμας), όχι κενό', () => {
-    expect(registrySeatAsAddressFields({ street: 'ΣΑΜΟΘΡΑΚΗΣ', number: null, postalCode: '54248', city: null })).toEqual({
-      street: 'ΣΑΜΟΘΡΑΚΗΣ',
-      postalCode: '54248',
+  it('Γ3 — συμπλήρωση της ΙΔΙΑΣ διεύθυνσης: μέρος που το ΓΕΜΗ δεν ξέρει ⇒ ΑΠΟΝ (ο γραφέας κρατά της φόρμας)', () => {
+    const fields = registrySeatAsAddressFields({ street: 'ΣΑΜΟΘΡΑΚΗΣ', number: null, postalCode: '54248', city: null }, 'complete');
+    expect(fields).toEqual({ street: 'ΣΑΜΟΘΡΑΚΗΣ', postalCode: '54248' });
+    expect(applyResolvedToContactAddress(fields, HQ)).toMatchObject({ number: '16', city: 'Θεσσαλονίκη' });
+  });
+
+  it('Γ4 — αντικατάσταση από ΑΛΛΗ διεύθυνση: ό,τι δεν ξέρει το ΓΕΜΗ ΑΔΕΙΑΖΕΙ — κανένα υβρίδιο (ADR-948 §8.7.4)', () => {
+    // Το περιστατικό: «Ερμού 10» ⇒ «Διόρθωση έδρας» ⇒ «ΚΑΛΒΟΥ ΚΑΙ ΙΠΠΟΔΡΟΜΙΟΥ 10» — ο αριθμός της ΠΑΛΙΑΣ οδού.
+    const before: CompanyAddress = { ...HQ, street: 'Ερμού', number: '10', postalCode: '105 63', city: 'Αθήναι', neighborhood: 'Σύνταγμα' };
+    const seat = { street: 'ΚΑΛΒΟΥ ΚΑΙ ΙΠΠΟΔΡΟΜΙΟΥ', number: null, postalCode: '57013', city: 'ΘΕΣΣΑΛΟΝΙΚΗ' };
+    expect(applyResolvedToContactAddress(registrySeatAsAddressFields(seat, 'replace'), before)).toMatchObject({
+      street: 'ΚΑΛΒΟΥ ΚΑΙ ΙΠΠΟΔΡΟΜΙΟΥ',
+      number: '',
+      postalCode: '57013',
+      city: 'ΘΕΣΣΑΛΟΝΙΚΗ',
+      neighborhood: '',
     });
+  });
+
+  it('Γ5 — «ίδια ή άλλη» = η κρίση της σύγκρισης: διαφορά ⇒ replace · μόνο κενά ⇒ complete', () => {
+    const other: CompanyAddress = { ...HQ, street: 'Ερμού', postalCode: '105 63', city: 'Αθήναι' };
+    expect(registrySeatApplicationOf(comparisonOf(form({ companyAddresses: [other] })))).toBe('replace');
+    expect(registrySeatApplicationOf(comparisonOf(form({ companyAddresses: [] })))).toBe('complete');
+    const sameWithGap: CompanyAddress = { ...HQ, postalCode: '' };
+    expect(registrySeatApplicationOf(comparisonOf(form({ companyAddresses: [sameWithGap] })))).toBe('complete');
   });
 });

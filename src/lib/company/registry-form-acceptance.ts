@@ -101,14 +101,32 @@ export function canProposeRegistrySeat(comparison: ContactRegistryComparison): b
 }
 
 /**
- * Η έδρα του ΓΕΜΗ στο λεξιλόγιο του `AddressEditor`. Μέρος που το ΓΕΜΗ **δεν** ξέρει ⇒ απών ⇒ ο γραφέας
- * της έδρας κρατά ό,τι έχει η φόρμα (`applyResolvedToContactAddress`: `resolved.x ?? existing.x`).
+ * **Πώς εφαρμόζεται η έδρα του ΓΕΜΗ** (ADR-948 §8.7.4):
+ * - `complete` — η **ίδια** διεύθυνση με κενά (`seat.state === 'missing'`): το ΓΕΜΗ συμπληρώνει, ό,τι δεν ξέρει
+ *   μένει της φόρμας.
+ * - `replace` — **άλλη** διεύθυνση (`seat.state === 'differs'`): αντικαθίσταται **ολόκληρη**. Ό,τι δεν ξέρει το ΓΕΜΗ
+ *   **αδειάζει**, γιατί ανήκε στην παλιά διεύθυνση (ο αριθμός «10» της Ερμού δεν είναι αριθμός της Κάλβου).
+ *
+ * 🔑 Η κρίση «ίδια ή άλλη» **δεν** ξαναγίνεται εδώ: είναι η κρίση της σύγκρισης (`seatState` · μία διαφορά αρκεί).
  */
-export function registrySeatAsAddressFields(seat: SeatFields): ResolvedAddressFields {
+export type RegistrySeatApplication = 'complete' | 'replace';
+
+export function registrySeatApplicationOf(comparison: ContactRegistryComparison): RegistrySeatApplication {
+  return comparison.seat.state === 'differs' ? 'replace' : 'complete';
+}
+
+/**
+ * Η έδρα του ΓΕΜΗ στο λεξιλόγιο του `AddressEditor`. `undefined` = απών ⇒ ο γραφέας κρατά ό,τι έχει η φόρμα
+ * (`applyResolvedToContactAddress`: `resolved.x ?? existing.x`) · `''` = καθαρίζει.
+ * Η «Περιοχή / Συνοικία» δεν υπάρχει στο ΓΕΜΗ: στην αντικατάσταση αδειάζει κι αυτή (ανήκε στην παλιά διεύθυνση).
+ */
+export function registrySeatAsAddressFields(seat: SeatFields, application: RegistrySeatApplication): ResolvedAddressFields {
+  const unknown = application === 'replace' ? '' : undefined;
   return {
-    ...(seat.street !== null ? { street: seat.street } : {}),
-    ...(seat.number !== null ? { number: seat.number } : {}),
-    ...(seat.postalCode !== null ? { postalCode: seat.postalCode } : {}),
-    ...(seat.city !== null ? { city: seat.city } : {}),
+    street: seat.street ?? unknown,
+    number: seat.number ?? unknown,
+    postalCode: seat.postalCode ?? unknown,
+    city: seat.city ?? unknown,
+    neighborhood: unknown,
   };
 }

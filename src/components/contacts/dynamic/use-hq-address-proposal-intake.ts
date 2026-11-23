@@ -73,7 +73,7 @@ export function useHqAddressProposalIntake({
     if (disabled || !setFormData) return;
     setApplied({ proposal: pending, before: contactAddressList(formData)[0] });
     openHqEditor();
-    handleHqChange(registrySeatAsAddressFields(pending.seat));
+    handleHqChange(registrySeatAsAddressFields(pending.seat, pending.application));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
 
