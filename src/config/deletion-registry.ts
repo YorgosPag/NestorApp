@@ -281,6 +281,13 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         label: 'Έλεγχοι στο μητρώο αδειών',
         queryType: 'equals',
       },
+      {
+        // ADR-948 §8 — η απάντηση του ΓΕΜΗ για την επαφή-εταιρεία δεν έχει λόγο ύπαρξης χωρίς την επαφή.
+        collection: COLLECTIONS.CONTACT_REGISTRY_CHECKS,
+        foreignKey: 'contactId',
+        label: 'Έλεγχος στο ΓΕΜΗ',
+        queryType: 'equals',
+      },
     ],
     // Blocking dependencies — DERIVED from unified ContactDependencyRegistry (ADR-145 SSoT)
     // Single source of truth: src/config/contact-dependency-registry.ts

@@ -27,8 +27,11 @@ import {
 // REMAINING SECTIONS (TO BE SPLIT FURTHER IF NEEDED)
 // ============================================================================
 
+/** Η ταυτότητα της καρτέλας διευθύνσεων — τη ζητά όποιος στέλνει τη φόρμα εκεί (π.χ. πρόταση έδρας ΓΕΜΗ, ADR-948 §8). */
+export const COMPANY_ADDRESSES_SECTION_ID = 'addresses' as const;
+
 const addressesSection: SectionConfig = {
-  id: 'addresses',
+  id: COMPANY_ADDRESSES_SECTION_ID,
   title: 'sections.addressesBranches', // i18n key
   icon: 'map-pin',
   description: 'sectionDescriptions.addressesBranches', // i18n key

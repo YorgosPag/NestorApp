@@ -55,6 +55,9 @@ import { useHqAddressMutations } from './use-hq-address-mutations';
 import { useContactAddressDragRouting } from './useContactAddressDragRouting';
 import { ContactViewDragConfirm } from './ContactViewDragConfirm';
 import { useContactDriftFooter } from './useContactDriftFooter';
+// ADR-948 §8 Βήμα 7 — πρόταση έδρας από το ΓΕΜΗ: παραλαμβάνεται ΕΔΩ, από τον ιδιοκτήτη της έδρας.
+import { useHqAddressProposalIntake } from './use-hq-address-proposal-intake';
+import { HqAddressProposalNotice } from './HqAddressProposalNotice';
 
 export function AddressesSectionWithFullscreen({
   formData,
@@ -169,6 +172,25 @@ export function AddressesSectionWithFullscreen({
     resetHqPlacement();
   }, [resetHqPlacement]);
 
+  /**
+   * ADR-948 §8 Βήμα 7 — η πρόταση έδρας (π.χ. από το «Έλεγχος στο ΓΕΜΗ») περνά από τον **ίδιο** γραφέα με την
+   * πληκτρολόγηση, με τον editor ανοιχτό ⇒ γεωκωδικοποίηση + επιβεβαίωση πινέζας όπως κάθε ανθρώπινη διόρθωση.
+   */
+  const openHqEditorForProposal = useCallback(() => setIsEditingHQ(true), []);
+  const hqProposal = useHqAddressProposalIntake({
+    formData,
+    setFormData,
+    disabled,
+    openHqEditor: openHqEditorForProposal,
+    closeHqEditor,
+    handleHqChange,
+  });
+  const { dismiss: dismissHqProposal } = hqProposal;
+  const cancelHqEditor = useCallback(() => {
+    dismissHqProposal();
+    closeHqEditor();
+  }, [dismissHqProposal, closeHqEditor]);
+
   // Close inline form when global edit mode ends
   React.useEffect(() => {
     if (disabled) closeHqEditor();
@@ -257,6 +279,9 @@ export function AddressesSectionWithFullscreen({
           />
         ) : (
           <div className="border-2 border-primary rounded-lg p-3 space-y-3" onKeyDown={handleHqKeyDown}>
+            {hqProposal.applied !== null && (
+              <HqAddressProposalNotice applied={hqProposal.applied} onUndo={hqProposal.undo} onKeep={dismissHqProposal} />
+            )}
             <div className="flex items-center">
               <AddressTypeSelector
                 contactType={formData.type}
@@ -286,7 +311,7 @@ export function AddressesSectionWithFullscreen({
               />
             </AddressEditor>
             <div className="flex justify-end border-t pt-3">
-              <Button type="button" variant="outline" onClick={closeHqEditor}>
+              <Button type="button" variant="outline" onClick={cancelHqEditor}>
                 {tAddr('deleteDialog.cancel')}
               </Button>
             </div>

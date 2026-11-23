@@ -296,6 +296,11 @@
       },
       "searchHint": "Type to search...",
       "postalCodePlaceholder": "e.g. 10001"
+    },
+    "registryProposal": {
+      "notice": "The registered office was filled in from GEMI (checked {date}). Confirm the map position before saving.",
+      "undo": "Undo",
+      "keep": "Keep it"
     }
   },
   "licences": {
@@ -329,6 +334,62 @@
         "unavailableNetwork": "The registry did not respond. Try again shortly or check manually.",
         "unavailableServer": "The registry returned an error. Try again shortly or check manually."
       }
+    }
+  },
+  "companyRegistry": {
+    "title": "Business Registry (GEMI) check",
+    "hint": "Compares this contact with the General Commercial Registry. Nothing changes unless you choose it.",
+    "check": "Check in GEMI",
+    "recheck": "Check again",
+    "checking": "Checking…",
+    "notChecked": "This contact has not been checked in GEMI yet.",
+    "checkedAt": "Last checked: {date}",
+    "failed": "The GEMI check could not be read. Please try again.",
+    "noComparison": "The stored GEMI answer can no longer be compared. Run a new check.",
+    "inactive": "GEMI lists this business as inactive.",
+    "incomplete": "GEMI itself marks this business’s details as incomplete.",
+    "unsavedHint": "The check uses the contact’s saved GEMI number (or VAT number) — save any changes to them first.",
+    "attributionSource": "Source: GEMI — Open Data",
+    "attributionLicence": "Licence ODC-BY 1.0",
+    "table": {
+      "caption": "What the contact says and what GEMI says, field by field.",
+      "field": "Field",
+      "contact": "Contact",
+      "registry": "GEMI",
+      "state": "Result",
+      "empty": "—",
+      "accept": "Accept",
+      "acceptAria": "Accept the GEMI value for “{field}”",
+      "seat": "Registered office",
+      "seatPropose": "Fix registered office",
+      "seatProposeHint": "Opens the address editor with the GEMI values, so you can confirm the map position."
+    },
+    "state": {
+      "match": "Verified by GEMI · {date}",
+      "missing": "Missing from contact",
+      "differs": "Differs",
+      "notComparable": "Not comparable"
+    },
+    "attempt": {
+      "notFound": "GEMI has no business with this number.",
+      "contactChanged": "The contact changed while the check was running — nothing was saved. Please try again.",
+      "noIdentifier": "The contact has no saved GEMI number or valid VAT number.",
+      "ambiguous": "The VAT number matches several GEMI numbers ({numbers}). Enter the correct GEMI number, save and try again."
+    },
+    "refused": {
+      "naturalPerson": "GEMI lists this number as a sole proprietorship (natural person) — nothing was saved.",
+      "noLegalForm": "GEMI gives no legal form for this business — nothing was saved.",
+      "unmapped": "The legal form GEMI returned is not yet known to the app — nothing was saved.",
+      "catalogDrift": "GEMI changed the description of this legal form — nothing is saved until the app is updated.",
+      "unclassifiable": "The legal form GEMI returned cannot be classified with certainty — nothing was saved."
+    },
+    "unavailable": {
+      "notConfigured": "Automatic GEMI checks are not set up on the platform yet.",
+      "unauthorized": "GEMI refused the platform’s access. Please try later.",
+      "rateLimited": "Too many checks in a short time. Try again in a minute.",
+      "server": "GEMI did not respond correctly. Please try later.",
+      "network": "Could not reach GEMI. Please try later.",
+      "malformedResponse": "GEMI answered in an unrecognised format. Please try later."
     }
   }
 }

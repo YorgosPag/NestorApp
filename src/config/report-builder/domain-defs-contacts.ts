@@ -9,6 +9,8 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CONTACT_TYPES } from '@/constants/contact-types';
+// ADR-948 §8 / CHECK 3.73 — η ρίζα του λεξιλογίου· εδώ ζούσε ελληνικό αντίγραφο (`ΑΕ`) που δεν ταίριαζε σε ΚΑΜΙΑ επαφή.
+import { LEGAL_FORMS } from '@/lib/contact/legal-form-vocabulary';
 import type { DomainDefinition } from './report-builder-types';
 
 // ============================================================================
@@ -18,12 +20,6 @@ import type { DomainDefinition } from './report-builder-types';
 const CONTACT_STATUSES = ['active', 'inactive', 'archived'] as const;
 
 const GENDER_VALUES = ['male', 'female', 'other'] as const;
-
-/* eslint-disable custom/no-hardcoded-strings -- Firestore enum values (SSoT), not UI labels */
-const LEGAL_FORMS = [
-  'ΑΕ', 'ΕΠΕ', 'ΟΕ', 'ΕΕ', 'ΙΚΕ', 'ΚΟΙΝΣΕΠ', 'OTHER',
-] as const;
-/* eslint-enable custom/no-hardcoded-strings */
 
 const SERVICE_TYPES = [
   'ministry', 'tax_office', 'municipality', 'public_organization', 'other',

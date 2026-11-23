@@ -111,11 +111,13 @@ TOTAL_VIOLATIONS=0
 for file in $INPUT_FILES; do
   # ΜΙΑ ανάγνωση ανά αρχείο, από την πηγή που κρίνεται (δίσκος ή ευρετήριο)
   content=$(read_source "$file")
+  # ⚠️ ΣΩΛΗΝΑΣ, ΟΧΙ here-string (`<<<`): στο Cygwin bash 5.3 το `<<<` με κείμενο λίγο πάνω από 64 KiB
+  # (μετρημένο: 65.600 bytes) κρεμά ΓΙΑ ΠΑΝΤΑ (2026-11-23). Το ίδιο σε όλα τα σημεία παρακάτω.
   # Skip files that don't use Firestore queries
-  if ! grep -q "query(" <<< "$content" 2>/dev/null; then
+  if ! printf '%s\n' "$content" | grep -q "query(" 2>/dev/null; then
     continue
   fi
-  if ! grep -q "where(" <<< "$content" 2>/dev/null; then
+  if ! printf '%s\n' "$content" | grep -q "where(" 2>/dev/null; then
     continue
   fi
 
@@ -124,7 +126,7 @@ for file in $INPUT_FILES; do
   while IFS= read -r match; do
     lineno=$(echo "$match" | cut -d: -f1)
     # Get 12-line block from query( start
-    block=$(sed -n "${lineno},$((lineno+11))p" <<< "$content" 2>/dev/null)
+    block=$(printf '%s\n' "$content" | sed -n "${lineno},$((lineno+11))p" 2>/dev/null)
     if echo "$block" | grep -q "where(" && ! echo "$block" | grep -q "companyId"; then
       # Δεύτερη ερώτηση: μήπως η συλλογή είναι απομονωμένη ανά ΑΝΘΡΩΠΟ; Το μπλοκ
       # πρέπει να ονομάζει ΚΑΙ τη συλλογή ΚΑΙ το πεδίο που δηλώνει το SSoT — αν
@@ -149,7 +151,7 @@ for file in $INPUT_FILES; do
         count=$((count + 1))
       fi
     fi
-  done < <(grep -n "query(" <<< "$content" 2>/dev/null)
+  done < <(printf '%s\n' "$content" | grep -n "query(" 2>/dev/null)
 
   if [[ $count -gt 0 ]]; then
     # Normalize: keep only src/... path

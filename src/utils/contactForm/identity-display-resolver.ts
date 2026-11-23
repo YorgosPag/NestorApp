@@ -15,6 +15,7 @@
 
 import { getTaxOfficeDisplayName } from '@/subapps/accounting/data/greek-tax-offices';
 import { VOCAB_LEGAL_FORMS, VOCAB_GEMI_STATUSES } from '@/config/vocabulary/options/company';
+import { canonicalLegalForm } from '@/lib/contact/legal-form-vocabulary';
 import type { CompanyIdentityField } from './company-identity-guard';
 
 export type IdentityDisplayTranslator = (key: string) => string;
@@ -51,7 +52,8 @@ export function resolveIdentityDisplay(
     case 'taxOffice':
       return getTaxOfficeDisplayName(value);
     case 'legalForm':
-      return resolveOptionLabel(VOCAB_LEGAL_FORMS, value, t);
+      // ADR-948 §8 — η ΜΙΑ ανεκτική ανάγνωση (`AE` · `ΑΕ` ⇒ `ae`)· άγνωστο ⇒ ωμή τιμή, όπως πριν.
+      return resolveOptionLabel(VOCAB_LEGAL_FORMS, canonicalLegalForm(value) ?? value, t);
     case 'gemiStatus':
       return resolveOptionLabel(VOCAB_GEMI_STATUSES, value, t);
     case 'companyName':

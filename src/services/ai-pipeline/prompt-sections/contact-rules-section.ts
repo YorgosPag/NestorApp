@@ -1,6 +1,7 @@
 /** Contact rules: names, ESCO, disambiguation, DOY, VAT, attachments, doc preview. @see ADR-171 */
 
 import type { PromptSectionContext } from './types';
+import { LEGAL_FORMS } from '@/lib/contact/legal-form-vocabulary';
 
 export function buildContactRulesSection(ctx: PromptSectionContext): string {
   return `ΣΗΜΑΝΤΙΚΟ ΓΙΑ ΟΝΟΜΑΤΑ ΕΠΑΦΩΝ:
@@ -181,7 +182,7 @@ DOCUMENT PREVIEW MODE (ADR-264):
   • companyName — Επωνυμία (auto-syncs displayName)
   • legalName — Πλήρης νομική επωνυμία
   • tradeName — Διακριτικός τίτλος
-  • legalForm — Νομική μορφή: ΜΟΝΟ "ΑΕ", "ΕΠΕ", "ΟΕ", "ΕΕ", "ΙΚΕ", "ΚΟΙΝΣΕΠ", "OTHER"
+  • legalForm — Νομική μορφή: ΜΟΝΟ κωδικός ${LEGAL_FORMS.join(', ')} (π.χ. ΑΕ ⇒ "ae", ΕΠΕ ⇒ "epe", ατομική ⇒ "sole_proprietorship")
   • registrationNumber — Αριθμός ΓΕΜΗ
   • vatNumber — ΑΦΜ (9 ψηφία)
   • taxOffice — ΔΟΥ (4-ψήφιος κωδικός — ΠΑΝΤΑ: 1. lookup_doy_code → 2. update_contact_field ΑΜΕΣΩΣ!)

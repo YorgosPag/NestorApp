@@ -228,6 +228,9 @@ const HARD_EXEMPT_PATTERNS = [
   //     ΜΟΝΟ `contacts` ⇒ CDC όπως πάνω. Έγινε ορατό όταν το χειρόγραφο `batch.update(doc.ref)` πέρασε στο
   //     `flushInBatches`· ο γραφέας σφραγίζει πλέον τον διαχειριστή, άρα η γραμμή του CDC λέει «από ποιον» (ADR-704).
   /[\\/]api[\\/]admin[\\/]search-backfill[\\/]search-backfill\.handlers\.ts$/,
+  //   · legal-form-codes (ADR-948 §8 · CHECK 3.73, 2026-11-23): `AE` ➜ `ae`, ο κωδικός της ρίζας
+  //     (`canonicalLegalForm`). ΜΟΝΟ `contacts` ⇒ CDC όπως πάνω· ο γραφέας σφραγίζει τον διαχειριστή (ADR-704).
+  /[\\/]api[\\/]admin[\\/]migrate-legal-form-codes[\\/]migration-operations\.ts$/,
 ];
 /**
  * Write operations to detect.

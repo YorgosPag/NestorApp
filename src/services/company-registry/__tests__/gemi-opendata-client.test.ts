@@ -7,7 +7,8 @@
  * ⚠️ **Κανένα δίκτυο**: ο μεταφορέας εγχέεται. Τα σώματα ακολουθούν το **πραγματικό** OpenAPI
  * του ΓΕΜΗ (`Company` · `CompanyStatus`), κατεβασμένο ζωντανά 2026-09-14.
  *
- * Ομάδες: **Ε** ετυμηγορία ανά απάντηση · **Λ** ελαχιστοποίηση · **Κ** κατάσταση · **Μ** μνήμη.
+ * Ομάδες: **Ε** ετυμηγορία ανά απάντηση · **Λ** ελαχιστοποίηση · **Κ** κατάσταση · **Μ** μνήμη ·
+ * **Φ** φρένο ανά κλειδί (ADR-948 §6.3.1).
  */
 
 import {
@@ -200,6 +201,46 @@ describe('Μ — μνήμη: γνώση μένει, άγνοια όχι', () => 
       lookupRegistryCompany('123456789000', fake.transport),
       lookupRegistryCompany('123456789000', fake.transport),
     ]);
+    expect(companyCalls(fake)).toBe(1);
+  });
+});
+
+describe('Φ — φρένο ανά κλειδί (ADR-948 §6.3.1: 8/λεπτό για όλη την πλατφόρμα)', () => {
+  /** Μεταφορά με φρένο που απαντά `admitted` και καταγράφει **ποιο** κλειδί ρωτήθηκε. */
+  function braked(admitted: boolean) {
+    const fake = fakeRegistry({ status: 200, body: COMPANY });
+    const asked: string[] = [];
+    const admit = async (apiKey: string): Promise<boolean> => {
+      asked.push(apiKey);
+      return admitted;
+    };
+    return { fake, asked, transport: { ...fake.transport, admit } };
+  }
+
+  it('Φ1 — 🔴 εξαντλημένο ⇒ unavailable/rate-limited και ΚΑΜΙΑ κλήση στο ΓΕΜΗ', async () => {
+    const { fake, asked, transport } = braked(false);
+    const verdict = await fetchRegistryCompany('123456789000', transport);
+
+    expect(verdict).toEqual({ kind: 'unavailable', reason: 'rate-limited' });
+    expect(fake.urls).toEqual([]);
+    expect(asked).toEqual(['test-key']);
+  });
+
+  it('Φ2 — διαθέσιμο ⇒ η ερώτηση φεύγει κανονικά, και το φρένο ρωτιέται ΑΝΑ αίτημα (εταιρεία + κατάλογος)', async () => {
+    const { fake, asked, transport } = braked(true);
+    const verdict = await fetchRegistryCompany('123456789000', transport);
+
+    expect(verdict.kind).toBe('found');
+    expect(asked.length).toBe(fake.urls.length);
+    expect(fake.urls.length).toBeGreaterThan(0);
+  });
+
+  it('Φ3 — 🔑 εξαντλημένο ΔΕΝ αποθηκεύεται: όταν ελευθερωθεί, το επόμενο κλικ ξαναρωτά', async () => {
+    const { transport: closed } = braked(false);
+    expect((await lookupRegistryCompany('123456789000', closed)).kind).toBe('unavailable');
+
+    const { fake, transport: open } = braked(true);
+    expect((await lookupRegistryCompany('123456789000', open)).kind).toBe('found');
     expect(companyCalls(fake)).toBe(1);
   });
 });

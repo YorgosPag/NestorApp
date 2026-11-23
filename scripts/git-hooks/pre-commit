@@ -155,7 +155,9 @@ commit_source_parse --index
 QUERY_FILES=""
 for f in $TS_STAGED; do
     content=$(read_source "$f")
-    grep -q "query(" <<< "$content" 2>/dev/null && grep -q "where(" <<< "$content" 2>/dev/null && QUERY_FILES="$QUERY_FILES
+    # ⚠️ ΣΩΛΗΝΑΣ, ΟΧΙ here-string (`<<<`): στο Cygwin bash 5.3 το `<<<` με κείμενο λίγο πάνω από 64 KiB
+    # (μετρημένο: 65.600 bytes) κρεμά ΓΙΑ ΠΑΝΤΑ — ο hook «πάγωνε» σιωπηλά μετά την πύλη μνήμης (2026-11-23).
+    printf '%s\n' "$content" | grep -q "query(" 2>/dev/null && printf '%s\n' "$content" | grep -q "where(" 2>/dev/null && QUERY_FILES="$QUERY_FILES
 $f"
 done
 QUERY_FILES=$(echo "$QUERY_FILES" | grep -v '^$' || true)

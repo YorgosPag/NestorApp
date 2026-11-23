@@ -32,7 +32,8 @@ export function getCentralizedLegalForms(): LegalFormOption[] {
   const centralizedForms = getLegalFormOptions();
 
   return centralizedForms.map(form => ({
-    value: form.value.toUpperCase(),
+    value: form.value, // ADR-948 §8 — ο κωδικός της ρίζας (`legal-form-vocabulary.ts`), ποτέ κεφαλαία
+
     label: form.label,
     fullName: form.label.match(/\((.*?)\)/)?.[1] || form.label,
     description: form.label,

@@ -2,6 +2,7 @@ import type { Contact, CompanyContact, SocialMediaInfo } from '@/types/contacts'
 import type { ContactFormData, KadActivity } from '@/types/ContactFormTypes';
 import { initialFormData, toLegacyKadActivityType } from '@/types/ContactFormTypes';
 import { isNonEmptyArray } from '@/lib/type-guards';
+import { canonicalLegalForm } from '@/lib/contact/legal-form-vocabulary';
 import { getSafeFieldValue } from '../contactMapper';
 // ADR-332 D18: η ανάγνωση της λίστας διευθύνσεων ζει σε ΕΝΑ σημείο και για τα
 // τρία είδη επαφής — ήταν ιδιωτική εδώ, ενώ individual/service δεν είχαν καμία.
@@ -94,7 +95,9 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     id: contact.id,
 
     ...scalars,
-    legalForm: (scalars.legalForm as CompanyContact['legalForm']) || '',
+    // ADR-948 §8 — ανεκτική ανάγνωση: παλιό `AE`/`ΑΕ` ⇒ `ae`, ώστε το select να δείχνει την επιλογή και η επόμενη
+    // αποθήκευση να γράψει τον κωδικό της ρίζας (αυτο-θεραπεία). Άγνωστη τιμή ⇒ κενό, ποτέ μαντεψιά.
+    legalForm: canonicalLegalForm(scalars.legalForm) ?? '',
     activityType: toLegacyKadActivityType(scalars.activityType),
     companyVatNumber: getSafeFieldValue(companyContact, 'vatNumber') ||
       getSafeFieldValue(companyContact, 'companyVatNumber'),

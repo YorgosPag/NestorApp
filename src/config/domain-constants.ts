@@ -1107,6 +1107,8 @@ export const API_ROUTES = {
     /** ADR-915 §40.7 Φ2 — «Έλεγχος στο μητρώο» της άδειας (GET = κρίση από τα αποθηκευμένα · POST = ρωτά το μητρώο). */
     LICENCE_REGISTRY_CHECK: (contactId: string, licence: string) =>
       `/api/contacts/${contactId}/licences/${licence}/registry-check` as const,
+    /** ADR-948 §8 — «Έλεγχος στο ΓΕΜΗ» της επαφής-εταιρείας (GET = κρίση από τα αποθηκευμένα · POST = ρωτά το ΓΕΜΗ). */
+    REGISTRY_CHECK: (contactId: string) => `/api/contacts/${contactId}/registry-check` as const,
   },
 
   // ── Trash (SSOT Soft-Delete — ADR-281) ─────────────────────────────────

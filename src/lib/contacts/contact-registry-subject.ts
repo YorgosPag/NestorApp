@@ -13,6 +13,7 @@
  */
 
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
+import { canonicalLegalForm } from '@/lib/contact/legal-form-vocabulary';
 import type { ContactRegistryFields, SeatFields } from '@/lib/company/contact-registry-comparison';
 import { isValidGreekVat, normalizeVat } from '@/lib/validation/greek-vat-number';
 import type { Contact } from '@/types/contacts';
@@ -58,7 +59,8 @@ export function contactRegistryFieldsOf(doc: StoredContactDocument): ContactRegi
     companyName: textOrNull(scalars.companyName),
     tradeName: textOrNull(scalars.tradeName),
     gemiNumber: textOrNull(scalars.gemiNumber),
-    legalForm: textOrNull(scalars.legalForm),
+    // Κωδικός της ρίζας — παλιό `AE` δεν είναι «διαφορά» από το `ae` του ΓΕΜΗ· άγνωστη τιμή ⇒ ωμό κείμενο (⇒ `differs`).
+    legalForm: canonicalLegalForm(scalars.legalForm) ?? textOrNull(scalars.legalForm),
     gemiStatus: textOrNull(scalars.gemiStatus),
     headquarters: headquartersOf(doc),
   };

@@ -54,7 +54,7 @@ function buildCompanyContact(): CompanyContact {
     companyId: 'company_e2e',
     companyName: 'Acme Construction SA',
     vatNumber: '099999999',
-    legalForm: 'ΑΕ',
+    legalForm: 'ae',
     taxOffice: 'Athens Tax Office',
     emails: [],
     phones: [],

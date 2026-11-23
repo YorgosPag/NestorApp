@@ -491,6 +491,14 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-948 §8 — ΤΙ ΑΠΑΝΤΗΣΕ ΤΟ ΓΕΜΗ ΓΙΑ ΜΙΑ ΕΠΑΦΗ-ΕΤΑΙΡΕΙΑ. Ίδιος πειρασμός: το γραφείο να γράψει μόνο του
+    // «επαληθευμένο από ΓΕΜΗ» για την επαφή του. Η σουίτα σπέρνει έγγραφο του **ίδιου** μισθωτή.
+    collection: 'contact_registry_checks',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/contact-registry-checks.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. **Ίδιο ζεύγος με το `mandate_requests`
     // από πάνω, ΑΝΤΙΣΤΡΟΦΟΣ λόγος** — και η αντιστροφή είναι το πράγμα που πρέπει
     // να διαβαστεί, γιατί αλλιώς μοιάζει με αντιγραφή.

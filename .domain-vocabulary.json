@@ -547,6 +547,30 @@
       "threshold": 4,
       "reason": "Οι ρόλοι μιας σχέσης επαφών (ADR-372 §8.3). Ο τύπος ήταν χειρόγραφο union και η λίστα Object.keys του μητρώου, άρα η πύλη δεν μπορούσε να τον δει· ο χάρτης εικονιδίων ήταν Record<string,…> και η ιεραρχία ζούσε σε δώδεκα χειρόγραφες λίστες με ασύμβατα σύνολα (μέλη οργανισμού σε τρεις παραλλαγές, «διευθυντικός» σε τέσσερις), ώστε CEO και Πρόεδρος να μη φτάνουν ποτέ στο οργανόγραμμα. Τώρα η ρίζα είναι ο πίνακας as const, ο τύπος παράγεται από αυτόν, και το «μέλος/επίπεδο/διευθυντικός» είναι πεδία του μητρώου RELATIONSHIP_METADATA (Record<RelationshipType,…>), όπως στη Workday supervisory organization και στο SuccessFactors «Is People Manager»: ιδιότητα του ρόλου, ποτέ λίστα ανά αρχείο, ποτέ μαντεψιά από τον τίτλο.",
       "exemptions": []
+    },
+    {
+      "id": "legal-form",
+      "root": "src/lib/contact/legal-form-vocabulary.ts",
+      "rootSymbol": "LEGAL_FORMS",
+      "typeName": "LegalForm",
+      "derivedTypes": [
+        "ContactLegalForm"
+      ],
+      "values": [
+        "ae",
+        "epe",
+        "ee",
+        "oe",
+        "ike",
+        "syndicate",
+        "sole_proprietorship",
+        "civil_partnership",
+        "joint_venture",
+        "other"
+      ],
+      "threshold": 4,
+      "reason": "Η νομική μορφή επαφής-εταιρείας (ADR-948 §8). Ήταν ΤΕΣΣΕΡΑ ασύμβατα λεξιλόγια για την ίδια αποθηκευμένη τιμή: VOCAB_LEGAL_FORMS (ae), η φόρμα εταιρείας με toUpperCase (AE), ο τύπος contracts.ts και ο report-builder (ελληνικά ΑΕ), το AI pipeline (ελληνικά). Μετρημένο 2026-11-22: 6 από 12 εταιρείες με κεφαλαία, 0 πεζά ⇒ η σύγκριση με το ΓΕΜΗ έλεγε πάντα «διαφέρει» και τα φίλτρα του report-builder δεν έπιαναν καμία επαφή. Μία τιμή αποθήκευσης, ετικέτα μόνο μέσω μετάφρασης (Salesforce picklist API name · ISO 20275 ELF), αυστηρή εγγραφή και ανεκτική ανάγνωση με canonicalLegalForm, πρότυπο phone-type (ADR-327 §8.5.4). Κατώφλι 4: οι πέντε συντομογραφίες (ae/epe/ee/oe/ike) δεν εμφανίζονται μαζί σε κανένα άλλο λεξιλόγιο.",
+      "exemptions": []
     }
   ]
 }

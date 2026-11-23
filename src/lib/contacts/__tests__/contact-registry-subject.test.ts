@@ -49,6 +49,15 @@ describe('Α — τα πεδία της επαφής', () => {
   it('Α3 — παλιό έγγραφο με μόνο registrationNumber ⇒ διαβάζεται ως Αρ. ΓΕΜΗ', () => {
     expect(contactRegistryFieldsOf(doc({ gemiNumber: '', registrationNumber: '987654321000' })).gemiNumber).toBe('987654321000');
   });
+
+  it('Α4 — 🔴 νομική μορφή παλαιού λεξιλογίου (`AE` της φόρμας, `ΑΕ`) ⇒ κωδικός της ρίζας, όχι ψευδής «διαφορά»', () => {
+    expect(contactRegistryFieldsOf(doc({ legalForm: 'AE' })).legalForm).toBe('ae');
+    expect(contactRegistryFieldsOf(doc({ legalForm: 'ΑΕ' })).legalForm).toBe('ae');
+  });
+
+  it('Α5 — άγνωστη νομική μορφή ⇒ ωμό κείμενο (η σύγκριση τη λέει «διαφέρει», ποτέ σιωπηλή ταύτιση)', () => {
+    expect(contactRegistryFieldsOf(doc({ legalForm: ' Ltd ' })).legalForm).toBe('Ltd');
+  });
 });
 
 describe('Β — με τι ρωτάμε', () => {

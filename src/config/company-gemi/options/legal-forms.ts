@@ -11,6 +11,7 @@
 import { SelectOption, EnterpriseOptions } from '../core/field-types';
 import { safeJsonParse } from '@/lib/json-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isLegalForm } from '@/lib/contact/legal-form-vocabulary';
 const logger = createModuleLogger('legal-forms');
 
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
@@ -30,12 +31,15 @@ import { businessRulesService } from '../../../services/business/EnterpriseBusin
 const getDefaultLegalForms = (): SelectOption[] => {
   const centralizedForms = getLegalFormOptions();
 
-  // Convert to match local interface (value case conversion if needed)
-  return centralizedForms.map(form => ({
-    value: form.value.toUpperCase(), // Convert to uppercase for compatibility
-    label: form.label
-  }));
+  // ADR-948 §8 — η τιμή της επιλογής ΕΙΝΑΙ ο κωδικός της ρίζας. Εδώ ζούσε ένα `toUpperCase()` που έκανε τη φόρμα να
+  // γράφει `AE` ενώ κάθε αναγνώστης περίμενε `ae` (6/12 εταιρείες, μετρημένο 2026-11-22).
+  return centralizedForms.map(form => ({ value: form.value, label: form.label }));
 };
+
+/** Ο override από περιβάλλον γίνεται δεκτός μόνο αν **κάθε** τιμή του είναι κωδικός της ρίζας — αλλιώς ξαναγεννά λεξιλόγιο. */
+function isRootBound(options: SelectOption[]): boolean {
+  return options.every((option) => isLegalForm(option.value));
+}
 
 /**
  * Static legal form options με fallback
@@ -45,8 +49,8 @@ export const LEGAL_FORM_OPTIONS: SelectOption[] = (() => {
   const envLegalForms = process.env.NEXT_PUBLIC_LEGAL_FORMS_JSON;
   if (envLegalForms) {
     const parsed = safeJsonParse<SelectOption[]>(envLegalForms, null as unknown as SelectOption[]);
-    if (parsed !== null) return parsed;
-    logger.warn('Failed to parse NEXT_PUBLIC_LEGAL_FORMS_JSON, using defaults');
+    if (parsed !== null && isRootBound(parsed)) return parsed;
+    logger.warn('NEXT_PUBLIC_LEGAL_FORMS_JSON is not valid or not bound to LEGAL_FORMS, using defaults');
   }
   return getDefaultLegalForms();
 })();

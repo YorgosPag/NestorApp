@@ -15,6 +15,7 @@
 
 import { isCompanyContact, type Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { canonicalLegalForm } from '@/lib/contact/legal-form-vocabulary';
 
 // ============================================================================
 // CONSTANTS & TYPES
@@ -105,7 +106,10 @@ function extractContactValue(contact: Contact, field: CompanyIdentityField): str
     case 'taxOffice':
       return isCompanyContact(contact) ? contact.taxOffice ?? '' : '';
     case 'legalForm':
-      return isCompanyContact(contact) ? contact.legalForm ?? '' : '';
+      // ADR-948 §8 — ο κωδικός της ρίζας, όπως τον δείχνει η φόρμα (`companyMapper`): αλλιώς ένα αποθηκευμένο `AE` που
+      // η φόρμα διαβάζει ως `ae` θα φαινόταν «αλλαγή ταυτότητας» στην πρώτη αποθήκευση. Άγνωστο ⇒ ωμή τιμή.
+      if (!isCompanyContact(contact)) return '';
+      return canonicalLegalForm(contact.legalForm) ?? contact.legalForm ?? '';
     case 'tradeName':
       return isCompanyContact(contact) ? contact.tradeName ?? '' : '';
     case 'gemiStatus': {

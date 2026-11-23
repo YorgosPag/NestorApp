@@ -7,6 +7,8 @@
  * @compliance CLAUDE.md Enterprise Standards - MODULAR SPLITTING
  */
 
+import type { LegalForm } from '@/lib/contact/legal-form-vocabulary';
+
 // ====================================================================
 // COMPANY & LEGAL FORMS - 🏢 ENTERPRISE CENTRALIZED
 // ====================================================================
@@ -27,7 +29,12 @@ export const VOCAB_LEGAL_FORMS = [
   { value: 'civil_partnership', label: 'options.legalForms.civilPartnership' },
   { value: 'joint_venture', label: 'options.legalForms.jointVenture' },
   { value: 'other', label: 'options.legalForms.other' }
-] as const;
+] as const satisfies readonly { readonly value: LegalForm; readonly label: string }[];
+
+// ADR-948 §8 / CHECK 3.73 — εξαντλητικότητα: μορφή της ρίζας χωρίς ετικέτα ⇒ σφάλμα μεταγλώττισης, όχι κενή επιλογή.
+type MissingLegalFormLabel = Exclude<LegalForm, (typeof VOCAB_LEGAL_FORMS)[number]['value']>;
+const LEGAL_FORM_LABELS_COMPLETE: MissingLegalFormLabel extends never ? true : never = true;
+void LEGAL_FORM_LABELS_COMPLETE;
 
 /**
  * Standardized ΓΕΜΗ statuses

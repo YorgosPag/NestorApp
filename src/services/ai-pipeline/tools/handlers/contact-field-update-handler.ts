@@ -19,6 +19,7 @@ import {
 } from '../executor-shared';
 import { loadAgentContact } from './agent-contact-doc';
 import { aiAgentPerformer } from '../../shared/ai-performer';
+import { canonicalLegalForm, LEGAL_FORMS } from '@/lib/contact/legal-form-vocabulary';
 
 const ESCO_PROTECTED = ['profession', 'escoUri', 'escoLabel', 'iscoCode', 'escoSkills'];
 
@@ -39,7 +40,7 @@ export async function executeUpdateContactField(
 
   const contactId = String(args.contactId ?? '').trim();
   const field = String(args.field ?? '');
-  const value = String(args.value ?? '');
+  const rawValue = String(args.value ?? '');
 
   if (!contactId) {
     return { success: false, error: 'contactId is required.' };
@@ -54,6 +55,13 @@ export async function executeUpdateContactField(
       error: `Το πεδίο "${field}" προστατεύεται — χρησιμοποίησε set_contact_esco αντί update_contact_field.`,
     };
   }
+
+  // ADR-948 §8 / CHECK 3.73 — η νομική μορφή γράφεται ΜΟΝΟ ως κωδικός της ρίζας (`ΑΕ` · `AE` ⇒ `ae`)· άγνωστη ⇒ άρνηση.
+  const legalForm = field === 'legalForm' ? canonicalLegalForm(rawValue) : null;
+  if (field === 'legalForm' && legalForm === null) {
+    return { success: false, error: `legalForm must be one of: ${LEGAL_FORMS.join(', ')}` };
+  }
+  const value = legalForm ?? rawValue;
 
   // FIND-Z: Block 4-digit year values in registrationNumber (ΓΕΜΗ ≠ founded year)
   if (field === 'registrationNumber' && /^(19|20)\d{2}$/.test(value.trim())) {

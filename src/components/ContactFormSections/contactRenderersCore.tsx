@@ -50,6 +50,8 @@ export interface RendererContext {
   companyDisplayName?: string;
   t: (key: string, optionsOrFallback?: string | Record<string, unknown>) => string;
   relationshipsMode: 'summary' | 'full';
+  /** Αλλάζει την ενεργή καρτέλα της φόρμας (ελεγχόμενη μόνο στην προβολή επαφής) — π.χ. πρόταση έδρας ΓΕΜΗ. */
+  onActiveTabChange?: (tabId: string) => void;
   canonicalUploadContext?: CanonicalUploadContext;
   handleLogoChange?: (file: File | null) => void;
   handleFileChange?: (file: File | null) => void;

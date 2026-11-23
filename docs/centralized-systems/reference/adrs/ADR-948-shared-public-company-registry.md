@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| **Status** | 📝 PROPOSED — 2026-11-22 · καμία γραμμή κώδικα · ⛔ ΑΑΔΕ **αποκλείεται** (§6.1) · κοινό μητρώο **σε αναμονή** · **Φάση 1 = έλεγχος ΓΕΜΗ ανά επαφή, μόνο νομικά πρόσωπα (§8) — σχέδιο, περιμένει έγκριση** |
+| **Status** | 🚧 IN PROGRESS — **Φάση 1 (§8) υλοποιείται**: Βήματα 1–7 στον κώδικα (2026-11-23), Βήμα 8 = τεκμηρίωση/ανάπτυξη · ⛔ ΑΑΔΕ **αποκλείεται** (§6.1) · κοινό μητρώο (§4) **σε αναμονή** |
 | **Date** | 2026-11-22 |
 | **Category** | Contacts / Data Model / Multi-tenancy |
-| **Canonical Location** | — (δεν υπάρχει ακόμη κώδικας) |
+| **Canonical Location** | `src/services/contact-registry/` · `src/lib/company/` (φράχτης · σύγκριση · `registry-form-acceptance`) · `src/app/api/contacts/[contactId]/registry-check/` · `src/components/contacts/ContactCompanyRegistryCheck.tsx` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
-| **Σχετικά** | ADR-944 §8 (έλεγχος διπλού ΑΦΜ **μόνο μέσα στον χώρο**) · ADR-747 (tenant scope) · ADR-017 / N.6 (enterprise IDs) · ADR-195 (ιστορικό οντοτήτων) |
+| **Σχετικά** | ADR-944 §8 (έλεγχος διπλού ΑΦΜ **μόνο μέσα στον χώρο**) · ADR-747 (tenant scope) · ADR-017 / N.6 (enterprise IDs) · ADR-195 (ιστορικό οντοτήτων) · ADR-332 (editor διευθύνσεων — πρόταση έδρας) · ADR-915 §40.7 (πρότυπο «Έλεγχος στο μητρώο») |
 
 ---
 
@@ -281,3 +281,92 @@ Data Integration Rules **δεν** ερευνήθηκαν.
   Ιστορικού (`EntityAuditService.recordChange`) μένει στον καλούντα (Βήμα 5, route), όπως στο πρότυπο ADR-915.
   Κανόνες Firestore + διαγραφή μαζί με την επαφή: Βήμα 6. Άγκυρες (γραμμένες, **δεν έτρεξαν** — θέλουν έγκριση):
   `src/services/contact-registry/__tests__/contact-registry-check.test.ts` · `src/lib/contacts/__tests__/contact-registry-subject.test.ts`.
+- **2026-11-22** — Οι άγκυρες του Βήματος 4 έτρεξαν με έγκριση Giorgio: **2/2 σουίτες, 22/22 πράσινα**.
+- **2026-11-22** — §8 Βήμα 5: route `src/app/api/contacts/[contactId]/registry-check/route.ts` (σταθερά
+  `API_ROUTES.CONTACTS.REGISTRY_CHECK`), καθρέφτης του route αδειών ADR-915 §40.7. **GET** (`withStandardRateLimit`,
+  `crm:contacts:view`) = `readContactRegistryReport` — καμία κλήση έξω· **POST** (`withSensitiveRateLimit`,
+  `crm:contacts:update`) = `verifyContactRegistry`. Χωρίς σώμα: οργανισμός από το `ctx`, ερώτημα από την αποθηκευμένη
+  επαφή. `loadOwnedContact` (ξένη ⇒ ίδιο 404)· μη εταιρεία ⇒ **409 `NOT_A_COMPANY`** και στις δύο μεθόδους, πριν από
+  κάθε κλήση. Γραμμή Ιστορικού `gemiRegistryCheck` (τιμή = ο Αρ. ΓΕΜΗ που απάντησε) **μόνο** όταν `recorded !== null`·
+  το πεδίο δηλώθηκε στο `CONTACT_FIELD_DEFS` (`audit-tracked-fields.ts`) με ετικέτα `audit.fields.gemiRegistryCheck`
+  (el/en) και αναπαράχθηκε το `src/types/i18n.ts`. Βαθμίδα ρυθμού: η διαδρομή δεν έχει γραμμή στον πίνακα προθεμάτων ⇒
+  `declared-over-default` (CHECK 3.78, όχι παραβίαση). ⚠️ Το όριο **8/λεπτό ανά κλειδί** (§6.3.1) ισχύει για όλη την
+  πλατφόρμα, ενώ η βαθμίδα `sensitive` (20/λεπτό) είναι ανά χρήστη ⇒ **δεν** το εγγυάται· σήμερα η υπέρβαση φτάνει ως
+  `unavailable: rate-limited` («δοκίμασε αργότερα», ποτέ «δεν υπάρχει»). Καθολικό φρένο ανά κλειδί = ανοιχτό, απόφαση Giorgio.
+- **2026-11-22** — §8 Βήμα 6: κανόνας `match /contact_registry_checks/{contactId}` = `read: if false` · `write: if false`
+  (ίδιο σκεπτικό με το `professional_registry_checks`: γραφή πελάτη = «επαληθευμένο από ΓΕΜΗ» χωρίς ερώτηση). Γραμμή
+  `deny_all` στο `tests/firestore-rules/_registry/coverage-manifest.ts` + σουίτα
+  `tests/firestore-rules/suites/contact-registry-checks.rules.test.ts` (35 κελιά + γραφή/ανάγνωση του **ίδιου**
+  γραφείου + ανώνυμος — **δεν έτρεξε**, θέλει έγκριση). Διαγραφή μαζί με την επαφή: καταρράκτης στο
+  `src/config/deletion-registry.ts` (`foreignKey: 'contactId'`, δίπλα στο `PROFESSIONAL_REGISTRY_CHECKS`).
+  ⚠️ Ο κανόνας ισχύει στην παραγωγή μόνο μετά από ανάπτυξη κανόνων Firestore (commit ≠ deploy)· μέχρι τότε η
+  προεπιλογή του Firestore είναι ήδη άρνηση για συλλογή χωρίς `match`.
+- **2026-11-22** — §6.3.1 **φρένο ανά κλειδί** (απόφαση Giorgio): νέα ποσόστωση `GEMI_OPENDATA_KEY_QUOTA`
+  (8 / 60″) στο `src/lib/middleware/rate-limit-config.ts`, επιβαλλόμενη από το **υπάρχον** `withinSubjectQuota`
+  (`src/lib/middleware/subject-quota.ts`) πάνω στο **ίδιο** κυλιόμενο παράθυρο του Upstash (ZSET) — καμία δεύτερη
+  μηχανή. Το φρένο ζει στη **μία** πόρτα εξόδου του client (`getJson` στο `gemi-opendata.client.ts`), άρα μετρά
+  **κάθε** αίτημα προς το ΓΕΜΗ (επαφή · οργανισμός · αναζήτηση ΑΦΜ · κατάλογοι), όχι μόνο ένα route. Εξαντλημένο ⇒
+  **καμία** κλήση έξω και ετυμηγορία `unavailable: rate-limited` (ίδια με το 429 του ΓΕΜΗ), που η μνήμη ετυμηγοριών
+  **δεν** αποθηκεύει ⇒ το επόμενο κλικ ξαναρωτά. Το κλειδί φτάνει στο store **μόνο ως sha256** (`subjectQuotaKey`).
+  Αποτυχία του Upstash ⇒ περνά (ADR-855 Α3)· δεύτερος φρουρός μένει το 429 του ίδιου του ΓΕΜΗ. Εγχεόμενο ως
+  `RegistryTransport.admit` (προαιρετικό — οι άγκυρες με εγχεόμενο `fetch` μένουν χωρίς φρένο· η ζωντανή μεταφορά το
+  δηλώνει πάντα). Άγκυρες **Φ1–Φ3** στο `src/services/company-registry/__tests__/gemi-opendata-client.test.ts`
+  (**δεν έτρεξαν** — θέλουν έγκριση). Πρότυπο: client-side throttling των Google Cloud client libraries / Stripe.
+- **2026-11-22** — Οι άγκυρες Φ1–Φ3 έτρεξαν με έγκριση Giorgio: `gemi-opendata-client.test.ts` **22/22**.
+- **2026-11-22** — §8 προαπαιτούμενο του Βήματος 7: **ΕΝΑ λεξιλόγιο νομικής μορφής** (απόφαση Giorgio, Plan Mode).
+  Μετρημένο στη βάση: 12 εταιρείες, **6 με `AE`-τύπου κεφαλαία** (η φόρμα έκανε `toUpperCase()`), 0 πεζά, 0 ελληνικά —
+  ενώ ο χάρτης ΓΕΜΗ, η σύγκριση και ο αναλυτής ταυτότητας περίμεναν `ae`, και ο τύπος `contracts.ts`, ο report-builder
+  και το AI pipeline ελληνικά `ΑΕ` (**τέσσερα** λεξιλόγια). Νέα ρίζα `src/lib/contact/legal-form-vocabulary.ts`
+  (`LEGAL_FORMS` · `LegalForm` · `isLegalForm` · `canonicalLegalForm`), δηλωμένη στο `.domain-vocabulary.json`
+  (CHECK 3.73, `legal-form`) — πρότυπο `phone-type` (ADR-327 §8.5.4). **Αυστηρή εγγραφή**: `VOCAB_LEGAL_FORMS`
+  `satisfies` + έλεγχος πληρότητας, `ContactLegalForm` = `LegalForm`, χωρίς `toUpperCase()` σε
+  `company-gemi/options/legal-forms.ts` και `business-rules-defaults.ts` (το env override δεκτό μόνο αν είναι δεμένο στη
+  ρίζα), `contracts.ts` `legalForm?: LegalForm`, report-builder `enumValues: LEGAL_FORMS` με ετικέτες-κωδικούς el/en, ο
+  γραφέας του AI (`contact-field-update-handler.ts`) κανονικοποιεί και αρνείται άγνωστο, prompt/tool με τους κωδικούς.
+  **Ανεκτική ανάγνωση** με τη **μία** `canonicalLegalForm` (`AE`·`ΑΕ` ⇒ `ae` · `ΚΟΙΝΣΕΠ`·`OTHER` ⇒ `other` · άγνωστο ⇒
+  `null`): `companyMapper` (αυτο-θεραπεία: η φόρμα δείχνει την επιλογή, η επόμενη αποθήκευση γράφει κωδικό),
+  `contact-registry-subject` (καμία ψευδής «διαφορά» από το ΓΕΜΗ), `identity-display-resolver`, `company-identity-guard`
+  (αλλιώς `AE`→`ae` θα φαινόταν αλλαγή ταυτότητας). **Μετάπτωση** `src/app/api/admin/migrate-legal-form-codes/`
+  (GET dry-run · POST εκτέλεση, ιδεμπότητη, CDC Ιστορικό ανά επαφή, άγνωστες τιμές **ανέγγιχτες** και αναφερόμενες) —
+  τρέχει μετά από push, με εντολή Giorgio. Άγκυρες (**δεν έτρεξαν**): `src/lib/contact/__tests__/legal-form-vocabulary.test.ts`
+  · `migrate-legal-form-codes.operations.test.ts` · `contact-registry-subject.test.ts` Α4–Α5· fixtures `'ΑΕ'` ⇒ `'ae'`.
+  Εκτός: νεκρά κλειδιά `contacts-form.json` → `company.legalForms`· η `legalForm` των δημόσιων υπηρεσιών (άλλη έννοια).
+- **2026-11-23** — 🔧 Διόρθωση hook `595f53d1` (προαπαιτούμενο για τα commits της φάσης): ο pre-commit **κρεμούσε για
+  πάντα** σε αρχείο ~64 KiB — `grep <<< "$content"` (here-string) με 65.600 bytes κολλά στο Cygwin bash 5.3.9 (μετρημένο
+  με `bash -x`). Σωλήνας στη θέση του σε `scripts/git-hooks/pre-commit` και `scripts/check-firestore-companyid.sh`
+  (CHECK 3.10). Ήταν η αιτία των «κολλημένων» commits — **όχι** η μνήμη.
+- **2026-11-23** — §8 Βήμα 7: **UI «Έλεγχος στο ΓΕΜΗ»** (σχέδιο εγκεκριμένο από Giorgio· έδρα = B1, και μετά από έρευνα
+  «όπως οι μεγάλοι» η πλήρης λύση της πρότασης έδρας).
+  **Ένα hook** `src/hooks/useRegistryCheckReport.ts` (GET = κρίση από τα αποθηκευμένα, POST = η πράξη, `useInFlightAction`
+  = ένα πάτημα τη φορά)· το `useLicenceRegistryCheck` (ADR-915 §40.7) έγινε λεπτό περιτύλιγμά του — αλλιώς θα ήταν
+  σχεδόν πιστό αντίγραφο (N.0.2).
+  **Καθαρές συναρτήσεις** `src/lib/company/registry-form-acceptance.ts`: `formRegistryFieldsOf` (φόρμα ⇒ πεδία, ίδια
+  ανεκτική ανάγνωση νομικής μορφής με τον server) · `liveRegistryComparison` (σύγκριση **πάνω στη φόρμα**· ξαναπερνά
+  τον φράχτη §8.3) · `canAcceptRegistryField` / `acceptRegistryField` (ένα πεδίο, τίποτα άλλο) ·
+  `canProposeRegistrySeat` / `registrySeatAsAddressFields`.
+  **Πάνελ** `src/components/contacts/ContactCompanyRegistryCheck.tsx` + πίνακας `ContactCompanyRegistryComparison.tsx`
+  στο υποσέλιδο της ενότητας `basicInfo` (`buildSectionFooterRenderers`). Ορατό (§8.3 #1) μόνο για **αποθηκευμένη**
+  επαφή-εταιρεία που δεν δηλώνει `sole_proprietorship` (μέσω `canonicalLegalForm`). Ο πίνακας χρησιμοποιεί **ζωντανή**
+  σύγκριση, όχι το `report.comparison` του server ⇒ η «Αποδοχή» πρασινίζει αμέσως, και το «Επαληθευμένο από ΓΕΜΗ ·
+  {ημ/νία}» σβήνει μόνο του αν ο άνθρωπος αλλάξει την τιμή. «Αποδοχή» = `setFormData(acceptRegistryField(…))` — η
+  εγγραφή περνά από την υπάρχουσα αποθήκευση (φρουρός ADR-278, Ιστορικό CDC)· **καμία** δεύτερη πόρτα. Ετικέτες:
+  ονόματα πεδίων από το `fieldLabels`, τιμές από `VOCAB_LEGAL_FORMS` / `VOCAB_GEMI_STATUSES`, μέρη έδρας από το
+  `contacts-form:address.fields` — τίποτα δεν ξαναγράφτηκε. Κάθε `attempt` έχει δικό του μήνυμα (`not-found` ·
+  `ambiguous` με τους αριθμούς · `contact-changed` · `no-identifier` · πέντε λόγοι άρνησης · έξι λόγοι `unavailable` ⇒
+  «δοκιμάστε αργότερα», ποτέ «δεν υπάρχει»). Προειδοποίηση για επιχείρηση **ανενεργή** στο ΓΕΜΗ και για
+  `selfRegistered: false` (ελλιπή στοιχεία κατά το ίδιο το μητρώο). Το κουμπί μένει και μετά από αποτυχία.
+  **Αναφορά πηγής ODC-BY-1.0** (§8.2 #6): νέα σταθερά `src/config/company-registry/gemi-open-data-attribution.ts`
+  (πύλη + άδεια) — ως τώρα ζούσε μόνο ως σχόλιο στον client.
+  **Έδρα — η πρόταση πηγαίνει στον ιδιοκτήτη της, δεν γράφει.** Έρευνα (Oracle Sales enrichment: ο χρήστης διαλέγει
+  ανά πεδίο ποια τιμή κρατά· Salesforce/Experian: η διεύθυνση περνά από επικύρωση + γεωκωδικοποίηση πριν γραφτεί·
+  Trailhead: η παλιά διεύθυνση δεν χάνεται). Ο editor της έδρας ανοίγει μόνο από μέσα του και μόνο αυτός ρυθμίζει θέση
+  χάρτη/`verifiedAt`· άρα η «Διόρθωση έδρας» αφήνει **πρόταση** στο `hq-address-proposal-store.ts` (πάνω στο
+  `createExternalStore`, δεμένη σε επαφή, μία τη φορά) και στέλνει τη φόρμα στην καρτέλα διευθύνσεων
+  (`RendererContext.onActiveTabChange` · νέα σταθερά `COMPANY_ADDRESSES_SECTION_ID`). Εκεί το
+  `use-hq-address-proposal-intake.ts` την **παραλαμβάνει μία φορά**, ανοίγει τον editor και την περνά από τον **ίδιο**
+  γραφέα με την πληκτρολόγηση (`handleHqChange` → `commitHq`) ⇒ γεωκωδικοποίηση + επιβεβαίωση πινέζας όπως κάθε
+  ανθρώπινη διόρθωση (ADR-332). Δύο βελτιώσεις πέρα από τους μεγάλους: λωρίδα «Η έδρα συμπληρώθηκε από το ΓΕΜΗ (έλεγχος
+  {ημ/νία})» με **ακριβή αναίρεση** (η εγγραφή της έδρας πριν την πρόταση — κείμενο, ιεραρχία, θέση· η κενή έδρα δεν
+  γίνεται δεδομένο) ή «Κράτησέ τη»· και η γραμμή «Έδρα» στο πάνελ πρασινίζει μόνη της μετά την επιβεβαίωση.
+  i18n: `contacts-form` el/en `companyRegistry.*` + `addressesSection.registryProposal.*`· αναπαράχθηκε το `src/types/i18n.ts`.
+  Άγκυρες: **καμία δεν έτρεξε** (θέλουν έγκριση).

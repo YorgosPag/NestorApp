@@ -3,6 +3,7 @@ import type { StoredAddressPosition } from '@/types/address-position';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
 import type { PhoneType } from '@/lib/contact/phone-type-vocabulary';
+import type { LegalForm } from '@/lib/contact/legal-form-vocabulary';
 import type { EmailType } from '@/lib/contact/email-type-vocabulary';
 import type { WebsiteType } from '@/lib/contact/website-type-vocabulary';
 import type { SocialMediaType, SocialPlatform } from '@/lib/contact/social-media-type-vocabulary';
@@ -208,7 +209,8 @@ export interface CompanyContact extends BaseContact {
   platformCompanyId?: string;
 
   // Νομικά στοιχεία
-  legalForm?: 'ΑΕ' | 'ΕΠΕ' | 'ΟΕ' | 'ΕΕ' | 'ΙΚΕ' | 'ΚΟΙΝΣΕΠ' | 'OTHER';
+  /** Κωδικός της ρίζας (ADR-948 §8 · CHECK 3.73) — παλαιά αποθηκευμένη τιμή διαβάζεται με `canonicalLegalForm`. */
+  legalForm?: LegalForm;
   vatNumber: string; // ΑΦΜ
   registrationNumber?: string; // ΓΕΜΗ
   taxOffice?: string; // ΔΟΥ

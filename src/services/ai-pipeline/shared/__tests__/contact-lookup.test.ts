@@ -133,7 +133,7 @@ const ACME_COMPANY = {
   emails: [{ email: 'info@acme.gr', type: 'work' }],
   phones: [{ number: '2310123456', type: 'office' }],
   registrationNumber: '12345',
-  legalForm: 'ΑΕ',
+  legalForm: 'ae',
   taxOffice: 'ΦΑΕ Θεσσαλονίκης',
 };
 

@@ -1679,6 +1679,9 @@ const CONTACT_FIELD_DEFS: Record<string, TrackedFieldDef> = {
     nestedKeyCatalog: AUDIT_LICENCE_GRADE_SCOPE_CATALOG,
     itemCatalogs: AUDIT_LICENCE_GRADE_ITEM_CATALOGS,
   },
+  // ADR-948 §8 — «Έλεγχος στο ΓΕΜΗ»: ΔΕΝ είναι πεδίο του εγγράφου· τη γραμμή τη γράφει ο διακομιστής μόνο όταν το ΓΕΜΗ
+  // απάντησε και η απάντηση αποθηκεύτηκε. Τιμή = ο Αρ. ΓΕΜΗ που απάντησε (ψηφία — καμία λέξη, κανένας κατάλογος).
+  gemiRegistryCheck: { kind: 'scalar', label: 'gemiRegistryCheck' },
 };
 
 /** Contact audit registry — `field → TrackedFieldDef`. */

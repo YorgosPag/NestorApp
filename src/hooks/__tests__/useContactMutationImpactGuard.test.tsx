@@ -81,7 +81,7 @@ function makeCompanyContact(overrides: Partial<CompanyContact> = {}): CompanyCon
     vatNumber: '099999999',
     registrationNumber: '123456789000',
     taxOffice: 'Athens FAE',
-    legalForm: 'ΑΕ',
+    legalForm: 'ae',
     tradeName: 'Acme',
     customFields: { gemiStatus: 'active' },
     ...overrides,
@@ -239,7 +239,7 @@ describe('useContactMutationImpactGuard', () => {
       vatNumber: '099999999',
       gemiNumber: '123456789000',
       taxOffice: '1104',
-      legalForm: 'ΑΕ',
+      legalForm: 'ae',
       tradeName: 'Acme',
       gemiStatus: 'active',
     });

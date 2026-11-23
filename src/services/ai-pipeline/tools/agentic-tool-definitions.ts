@@ -26,6 +26,7 @@
 
 import { UOM_CODES } from '@/lib/uom/uom-registry';
 import { KAD_ACTIVITY_TYPES } from '@/types/ContactFormTypes';
+import { LEGAL_FORMS } from '@/lib/contact/legal-form-vocabulary';
 
 /** Οι κωδικοί του ΕΝΟΣ μητρώου μονάδων (ADR-923 «3γ» 4δ) — όχι χειρόγραφη λίστα. */
 const UOM_CODE_LIST = UOM_CODES.join(', ');
@@ -617,7 +618,7 @@ export const AGENTIC_TOOL_DEFINITIONS: AgenticToolDefinition[] = [
         'IMPORTANT for dates (birthDate, documentIssueDate, documentExpiryDate): ALWAYS use DD/MM/YYYY format (e.g. "25/01/2027").',
         'IMPORTANT for documentType: ONLY values "identity_card", "passport", "drivers_license", "other".',
         'IMPORTANT for documentNumber: Pass the EXACT string the user gave, including prefix letters (e.g. "ΑΚ 582946" NOT "582946"). Greek IDs have letter prefixes — NEVER strip them.',
-        'COMPANY FIELDS: companyName (επωνυμία), legalName (πλήρης νομική επωνυμία), tradeName (διακριτικός τίτλος), legalForm (ΑΕ/ΕΠΕ/ΟΕ/ΕΕ/ΙΚΕ/ΚΟΙΝΣΕΠ/OTHER), registrationNumber (αριθμός ΓΕΜΗ), industry (κλάδος), sector (τομέας).',
+        `COMPANY FIELDS: companyName (επωνυμία), legalName (πλήρης νομική επωνυμία), tradeName (διακριτικός τίτλος), legalForm (code: ${LEGAL_FORMS.join('/')}), registrationNumber (αριθμός ΓΕΜΗ), industry (κλάδος), sector (τομέας).`,
         'When updating companyName on a company contact, displayName is auto-synced.',
         'Pass the contact document ID (e.g. cont_xxx) and the field+value to update.',
       ].join(' '),

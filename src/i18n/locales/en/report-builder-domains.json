@@ -457,13 +457,16 @@
           "service": "Public Service"
         },
         "legalForm": {
-          "ΑΕ": "SA (ΑΕ)",
-          "ΕΠΕ": "Ltd (ΕΠΕ)",
-          "ΟΕ": "GP (ΟΕ)",
-          "ΕΕ": "LP (ΕΕ)",
-          "ΙΚΕ": "PC (ΙΚΕ)",
-          "ΚΟΙΝΣΕΠ": "SocEnt",
-          "OTHER": "Other"
+          "ae": "S.A.",
+          "epe": "Ltd.",
+          "ee": "Limited Partnership",
+          "oe": "General Partnership",
+          "ike": "P.C.",
+          "syndicate": "Cooperative",
+          "sole_proprietorship": "Sole Proprietorship",
+          "civil_partnership": "Civil Partnership",
+          "joint_venture": "Joint Venture",
+          "other": "Other"
         },
         "serviceType": {
           "ministry": "Ministry",

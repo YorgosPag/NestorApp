@@ -11,6 +11,9 @@ import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
 import { ContactLinkSurfaces } from '@/components/contacts/contact-link-surfaces';
+import { ContactCompanyRegistryCheck } from '@/components/contacts/ContactCompanyRegistryCheck';
+import { COMPANY_ADDRESSES_SECTION_ID } from '@/config/company-gemi/core/section-registry';
+import { canonicalLegalForm } from '@/lib/contact/legal-form-vocabulary';
 import { pickerRenderer, type RendererContext, type RendererFn } from './contactRenderersCore';
 import '@/lib/design-system';
 
@@ -140,10 +143,21 @@ export function buildServiceRenderers(ctx: RendererContext): Record<string, Rend
 }
 
 /**
+ * ADR-948 §8.3 #1 — πότε φαίνεται το «Έλεγχος στο ΓΕΜΗ»: **αποθηκευμένη** επαφή-εταιρεία που δεν δηλώνει
+ * ατομική επιχείρηση. Κενή ή `other` νομική μορφή ⇒ φαίνεται: τον φράχτη «όχι φυσικό πρόσωπο» τον κρίνει ο server.
+ */
+function companyRegistryContactId(ctx: RendererContext): string | null {
+  const { formData } = ctx;
+  if (ctx.contactType !== 'company' || !formData.id) return null;
+  return canonicalLegalForm(formData.legalForm) === 'sole_proprietorship' ? null : formData.id;
+}
+
+/**
  * Build section footer renderers.
  */
 export function buildSectionFooterRenderers(ctx: RendererContext): Record<string, () => React.ReactNode> {
-  const { formData } = ctx;
+  const { formData, setFormData, disabled, onActiveTabChange } = ctx;
+  const registryContactId = companyRegistryContactId(ctx);
   return {
     contact: () => (
       <ContactAddressMapPreview
@@ -151,5 +165,16 @@ export function buildSectionFooterRenderers(ctx: RendererContext): Record<string
         companyAddresses={formData.companyAddresses}
       />
     ),
+    ...(registryContactId !== null ? {
+      basicInfo: () => (
+        <ContactCompanyRegistryCheck
+          contactId={registryContactId}
+          formData={formData}
+          setFormData={setFormData}
+          disabled={disabled}
+          onOpenAddresses={onActiveTabChange ? () => onActiveTabChange(COMPANY_ADDRESSES_SECTION_ID) : undefined}
+        />
+      ),
+    } : {}),
   };
 }

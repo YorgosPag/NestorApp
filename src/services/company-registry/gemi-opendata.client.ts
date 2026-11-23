@@ -42,6 +42,8 @@ import { createVerdictCache } from '@/lib/cache/verdict-cache';
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { readConfiguredValue, type EnvironmentSource } from '@/lib/environment/environment-audit';
 import { getErrorMessage } from '@/lib/error-utils';
+import { GEMI_OPENDATA_KEY_QUOTA } from '@/lib/middleware/rate-limit-config';
+import { withinSubjectQuota } from '@/lib/middleware/subject-quota';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isValidGreekVat, normalizeVat } from '@/lib/validation/greek-vat-number';
 import type {
@@ -77,6 +79,8 @@ const COMPANY_ENDPOINT = '/companies';
 const LEGAL_TYPES_CATALOG_ENDPOINT = '/metadata/legalTypes';
 const STATUS_CATALOG_ENDPOINT = '/metadata/companyStatuses';
 
+const HTTP_TOO_MANY_REQUESTS = 429;
+
 /** Το ανώτατο `resultsSize` του OpenAPI. Περισσότερα από τόσα ⇒ ο αναλυτής αρνείται, δεν κόβει. */
 const TAX_SEARCH_PAGE_SIZE = 200;
 
@@ -91,11 +95,21 @@ const STATUS_CATALOG_TTL_MS = 24 * 60 * 60_000;
 export interface RegistryTransport {
   readonly fetchImpl: typeof fetch;
   readonly env: EnvironmentSource;
+  /**
+   * **Χωράει ακόμη ένα αίτημα για αυτό το κλειδί;** (ADR-948 §6.3.1) — ο κοινός μετρητής της πλατφόρμας.
+   * Απόν ⇒ χωρίς φρένο (άγκυρες με εγχεόμενο `fetch`)· η ζωντανή μεταφορά το δηλώνει **πάντα**.
+   */
+  readonly admit?: (apiKey: string) => Promise<boolean>;
 }
+
+/** Το υποκείμενο της ποσόστωσης — το κλειδί φτάνει στο store **μόνο ως hash** (`subjectQuotaKey`). */
+const KEY_QUOTA_SCOPE = 'gemi-opendata-key';
 
 const LIVE_TRANSPORT: RegistryTransport = {
   fetchImpl: (input, init) => fetch(input, init),
   env: process.env,
+  // Αποτυχία του store ⇒ περνά (ADR-855 Α3): δεύτερος φρουρός μένει το 429 του ίδιου του ΓΕΜΗ ⇒ `rate-limited`.
+  admit: (apiKey) => withinSubjectQuota(KEY_QUOTA_SCOPE, apiKey, GEMI_OPENDATA_KEY_QUOTA),
 };
 
 /** Υπάρχει κλειδί; Η μόνη απάντηση που κρίνει τον δρόμο εγγράφου, χωρίς κλήση στο μητρώο (ADR-923 §5.13 Ε1γ). */
@@ -124,6 +138,12 @@ async function getJson(
   transport: RegistryTransport,
   logFailureDetail = true,
 ): Promise<Fetched> {
+  // 🔑 Το φρένο ζει στη ΜΙΑ πόρτα εξόδου ⇒ μετρά κάθε αίτημα (επαφή · οργανισμός · ΑΦΜ · κατάλογοι), όχι μόνο ένα route.
+  //    Εξαντλημένο ⇒ καμία κλήση, και η απάντηση είναι **ακριβώς** ό,τι θα έλεγε το ΓΕΜΗ: 429 ⇒ `rate-limited`.
+  if (transport.admit && !(await transport.admit(apiKey))) {
+    logger.warn('ΓΕΜΗ — όριο του κλειδιού εξαντλήθηκε, κανένα αίτημα δεν στάλθηκε', { data: { path: path.split('?')[0] } });
+    return { kind: 'status', status: HTTP_TOO_MANY_REQUESTS };
+  }
   try {
     const response = await transport.fetchImpl(`${BASE_URL}${path}`, {
       method: 'GET',
@@ -142,7 +162,7 @@ async function getJson(
 
 function unavailableReasonOf(status: number): RegistryUnavailableReason {
   if (status === 401 || status === 403) return 'unauthorized';
-  if (status === 429) return 'rate-limited';
+  if (status === HTTP_TOO_MANY_REQUESTS) return 'rate-limited';
   return 'server';
 }
 

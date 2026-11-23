@@ -119,6 +119,7 @@ export function UnifiedContactTabbedSection({
         return t(key, '');
       },
       relationshipsMode,
+      onActiveTabChange,
       canonicalUploadContext,
       handleLogoChange, handleFileChange,
       handleUploadedLogoURL, handleUploadedPhotoURL,

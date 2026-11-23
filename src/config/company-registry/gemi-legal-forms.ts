@@ -31,10 +31,11 @@
  * ⚠️ Τα fixtures του repo είναι **συνθετικά** (π.χ. ΑΕ=`'3'`)· αλήθεια είναι **αυτός** ο πίνακας.
  */
 
-import type { VOCAB_GEMI_STATUSES, VOCAB_LEGAL_FORMS } from '@/config/vocabulary/options/company';
+import type { VOCAB_GEMI_STATUSES } from '@/config/vocabulary/options/company';
+import type { LegalForm } from '@/lib/contact/legal-form-vocabulary';
 
-/** Η τυποποιημένη νομική μορφή της επαφής — **δεμένη** στη ρίζα του λεξιλογίου. */
-export type ContactLegalForm = (typeof VOCAB_LEGAL_FORMS)[number]['value'];
+/** Η τυποποιημένη νομική μορφή της επαφής — **δεμένη** στη ρίζα του λεξιλογίου (`legal-form-vocabulary.ts`). */
+export type ContactLegalForm = LegalForm;
 
 /** Η κατάσταση ΓΕΜΗ της επαφής — **δεμένη** στη ρίζα του λεξιλογίου. */
 export type ContactGemiStatus = (typeof VOCAB_GEMI_STATUSES)[number]['value'];
