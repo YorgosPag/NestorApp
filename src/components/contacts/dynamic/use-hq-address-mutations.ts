@@ -30,7 +30,11 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 import type { StoredAddressPosition } from '@/types/address-position';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactAddressType } from '@/types/contacts/address-types';
-import { projectAddressVocabulary, resolveCityFromHierarchy } from '@/utils/address/administrative-hierarchy';
+import {
+  overwriteAdminHierarchy,
+  projectAddressVocabulary,
+  resolveCityFromHierarchy,
+} from '@/utils/address/administrative-hierarchy';
 import { toStoredCountryCode } from '@/utils/address/country-codes';
 import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
 import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
@@ -62,8 +66,17 @@ export interface HqAddressMutations {
   handlePrimaryTypeChange: (next: { type: ContactAddressType; customLabel?: string }) => void;
 }
 
-/** Η έδρα μετά από επιλογή στην ιεραρχία — ολόκληρη η εγγραφή, από τον πίνακα (ADR-772). */
-function hierarchyToHqBranch(
+/**
+ * Η έδρα μετά από επιλογή στην ιεραρχία — ολόκληρη η εγγραφή, από τον πίνακα (ADR-772).
+ *
+ * 🔴 **Η ιεραρχία ΑΝΤΙΚΑΘΙΣΤΑΤΑΙ, δεν συγχωνεύεται** (ADR-332 §D33). Η φόρμα ιεραρχίας κρατά
+ * **ολόκληρη** την ιεραρχία της έδρας, άρα η τιμή της **είναι** η ιεραρχία. Με το
+ * `projectAddressVocabulary` (που **παραλείπει τα κενά**) το ✕ ή το ελεύθερο κείμενο στην πόλη
+ * καθάριζε τα επίπεδα στη φόρμα, αλλά τα κενά ονόματα δεν έφταναν ποτέ στην εγγραφή: έμεναν
+ * τα **παλιά** ονόματα με `null` ταυτότητες. Μετρημένο ζωντανά (ARIES, 2026-11-23): «Ωραιόκαστρο»
+ * αποθηκεύτηκε δίπλα σε «Δήμος Θεσσαλονίκης». Τα κειμενικά πεδία μένουν συγχώνευση, όπως πριν.
+ */
+export function hierarchyToHqBranch(
   current: CompanyAddress,
   addr: AddressWithHierarchyValue,
   city: string,
@@ -74,6 +87,7 @@ function hierarchyToHqBranch(
       includePostal: true,
       clearedIdsAsNull: true,
     }) as Partial<CompanyAddress>),
+    ...(overwriteAdminHierarchy(addr, 'form', 'companyAddress') as Partial<CompanyAddress>),
     street: addr.street,
     number: addr.number,
     postalCode: addr.postalCode,
