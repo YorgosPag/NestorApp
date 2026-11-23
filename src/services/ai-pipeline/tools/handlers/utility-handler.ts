@@ -26,6 +26,9 @@ import { searchEscoOccupations, searchEscoSkills } from '../esco-search-utils';
 // HANDLER
 // ============================================================================
 
+/** Πόσες ΔΟΥ επιστρέφει το `lookup_doy_code` — λίστα επιλογής για το μοντέλο, όχι κατάλογος. */
+const MAX_DOY_MATCHES = 10;
+
 export class UtilityHandler implements ToolHandler {
   readonly toolNames = [
     'get_collection_schema',
@@ -85,26 +88,9 @@ export class UtilityHandler implements ToolHandler {
       return { success: false, error: 'query is required' };
     }
 
-    const { GREEK_TAX_OFFICES } = await import(
-      '@/subapps/accounting/data/greek-tax-offices'
-    );
-
-    const normalizeGreek = (s: string): string =>
-      s.toLowerCase()
-        .replace(/ά/g, 'α').replace(/έ/g, 'ε').replace(/ή/g, 'η')
-        .replace(/ί/g, 'ι').replace(/ό/g, 'ο').replace(/ύ/g, 'υ').replace(/ώ/g, 'ω')
-        .replace(/ϊ/g, 'ι').replace(/ΐ/g, 'ι').replace(/ϋ/g, 'υ').replace(/ΰ/g, 'υ')
-        .replace(/'/g, '').replace(/'/g, '').replace(/\\/g, '');
-
-    const normalizedQuery = normalizeGreek(query);
-    const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length >= 2);
-
-    const matches = GREEK_TAX_OFFICES.filter(office => {
-      const normalizedName = normalizeGreek(office.name);
-      const normalizedRegion = normalizeGreek(office.region);
-      const fullText = `${normalizedName} ${normalizedRegion} ${office.code}`;
-      return queryWords.every(w => fullText.includes(w));
-    }).slice(0, 10);
+    // ADR-950 §8.4 — η ΜΙΑ γραφή ΔΟΥ (ίδια κανονικοποίηση με τη γείωση εγγράφων), όχι δεύτερος inline κανονικοποιητής.
+    const { searchTaxOffices } = await import('@/subapps/accounting/data/greek-tax-office-match');
+    const matches = searchTaxOffices(query, MAX_DOY_MATCHES);
 
     if (matches.length === 0) {
       return {

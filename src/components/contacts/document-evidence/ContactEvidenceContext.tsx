@@ -113,7 +113,13 @@ export function useContactEvidenceRows(file: FileRecord): readonly EvidenceRow[]
   return useMemo(() => {
     if (host === null || analysis?.fields === undefined || analysis.evidencePurpose === undefined) return null;
     return compareEvidenceWithForm({
-      fields: analysis.fields,
+      // ADR-950 §8 — η ανάγνωση **μαζί** με τα τεκμήρια του διακομιστή (consensus · χάρτης · τύπος γραμμής).
+      reading: {
+        fields: analysis.fields,
+        fieldConsensus: analysis.fieldConsensus,
+        addressVerification: analysis.addressVerification,
+        phoneLineType: analysis.phoneLineType,
+      },
       purpose: analysis.evidencePurpose,
       formData: host.formData,
       contactType: host.contactType,

@@ -115,6 +115,9 @@ export const BIRTH_COUNTRY_OPTIONS: SelectOption[] =
 // INDIVIDUAL SECTIONS CONFIGURATION
 // ============================================================================
 
+/** Η ταυτότητα της καρτέλας διεύθυνσης φυσικού προσώπου — τη ζητά όποιος στέλνει τη φόρμα εκεί (ADR-950 §8.9). */
+export const INDIVIDUAL_ADDRESS_SECTION_ID = 'address' as const;
+
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 // Labels are translated at runtime by components using useTranslation
 export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
@@ -327,7 +330,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // 4. ΔΙΕΥΘΥΝΣΗ ΚΑΤΟΙΚΙΑΣ
   // -------------------------------------------------------------------------
   {
-    id: 'address',
+    id: INDIVIDUAL_ADDRESS_SECTION_ID,
     title: 'individual.sections.address.title',
     icon: 'map-pin',
     description: 'individual.sections.address.description',

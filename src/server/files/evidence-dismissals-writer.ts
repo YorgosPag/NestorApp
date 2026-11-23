@@ -24,7 +24,7 @@ import { z } from 'zod';
 import type { EvidenceDismissReason, EvidenceRowKey } from '@/config/contact-document-evidence';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
-import { evidenceDocumentKey } from '@/lib/contacts/contact-evidence-comparison';
+import { evidenceDocumentKey, type EvidenceReading } from '@/lib/contacts/contact-evidence-comparison';
 import {
   EVIDENCE_DISMISSALS_FIELD,
   readEvidenceDismissals,
@@ -34,7 +34,11 @@ import {
 import { nowISO } from '@/lib/date-local';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { isPlainRecord } from '@/lib/type-guards';
-import { DocumentEvidenceFieldSchema, type DocumentEvidenceField } from '@/schemas/ai-analysis';
+import {
+  DocumentEvidenceFieldSchema,
+  EvidenceAddressVerificationSchema,
+  EvidenceFieldConsensusSchema,
+} from '@/schemas/ai-analysis';
 import { recordFileAudit } from '@/services/file-audit-admin.service';
 import type { EvidenceDismissal } from '@/types/file-record';
 
@@ -63,22 +67,33 @@ type Data = Record<string, unknown>;
  * ⚠️ Κρίνει **μόνο** τα δύο πεδία της ανάγνωσης, όχι όλη την ανάλυση: ο δίσκος κρατά `aiModel: null` /
  * `description: null` (γράφει ο `classify-background`), που το πλήρες σχήμα θα απέρριπτε ⇒ καμία «Αγνόηση» ποτέ.
  */
-function storedReading(data: Data): { readonly fields: readonly DocumentEvidenceField[]; readonly purpose: string | null } {
+function storedReading(data: Data): { readonly reading: EvidenceReading; readonly purpose: string | null } {
   const analysis = isPlainRecord(data.ingestion) ? data.ingestion.analysis : undefined;
-  if (!isPlainRecord(analysis)) return { fields: [], purpose: null };
+  if (!isPlainRecord(analysis)) return { reading: { fields: [] }, purpose: null };
   const fields = StoredEvidenceFieldsSchema.safeParse(analysis.fields);
   const purpose = typeof analysis.evidencePurpose === 'string' ? analysis.evidencePurpose : null;
-  return { fields: fields.success ? fields.data : [], purpose };
+  // ADR-950 §8 — τα τεκμήρια αλλάζουν το κλειδί (διορθωμένη οδός · διαφωνία ψηφίου): ίδια είσοδος με τον πίνακα.
+  const consensus = StoredConsensusSchema.safeParse(analysis.fieldConsensus);
+  const verification = EvidenceAddressVerificationSchema.safeParse(analysis.addressVerification);
+  return {
+    reading: {
+      fields: fields.success ? fields.data : [],
+      ...(consensus.success ? { fieldConsensus: consensus.data } : {}),
+      ...(verification.success ? { addressVerification: verification.data } : {}),
+    },
+    purpose,
+  };
 }
 
 const StoredEvidenceFieldsSchema = z.array(DocumentEvidenceFieldSchema);
+const StoredConsensusSchema = z.array(EvidenceFieldConsensusSchema);
 
 function nextLedger(data: Data, input: EvidenceDismissalInput, now: string): EvidenceDismissalOutcome & { readonly ledger?: readonly EvidenceDismissal[] } {
   const ledger = readEvidenceDismissals(data[EVIDENCE_DISMISSALS_FIELD]);
   const { command } = input;
   if (command.act === 'restore') return { kind: 'restored', ledger: withoutEvidenceDismissal(ledger, command.row) };
-  const { fields, purpose } = storedReading(data);
-  const key = evidenceDocumentKey(fields, purpose, command.row);
+  const { reading, purpose } = storedReading(data);
+  const key = evidenceDocumentKey(reading, purpose, command.row);
   if (key === null) return { kind: 'nothing-to-dismiss' };
   const dismissal: EvidenceDismissal = {
     row: command.row,

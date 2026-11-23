@@ -24,7 +24,7 @@ import { ProcurementContactTab } from '@/components/contacts/tabs/procurement/Pr
 import { getPhotoUploadHandlers, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 import { createModuleLogger } from '@/lib/telemetry';
 import { ENTITY_TYPES } from '@/config/domain-constants';
-import { COMPANY_ADDRESSES_SECTION_ID } from '@/config/company-gemi/core/section-registry';
+import { addressSectionIdFor } from '@/config/contact-address-section';
 import { ContactEvidenceProvider } from '@/components/contacts/document-evidence/ContactEvidenceContext';
 
 const logger = createModuleLogger('ContactRenderers');
@@ -202,14 +202,14 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
             </div>
           )}
           {/* ADR-950 — η φόρμα γίνεται ορατή στη λίστα αρχείων (σήμα + πίνακας «Το έγγραφο λέει / Η επαφή λέει»).
-              Το `addresses` είναι το id του ΕΝΟΣ renderer διευθύνσεων, για κάθε είδος επαφής. */}
+              Η καρτέλα διευθύνσεων λύνεται ΑΝΑ ΕΙΔΟΣ επαφής (`addressSectionIdFor`, ADR-950 §8.9). */}
           <ContactEvidenceProvider
             contactId={contactId}
             contactType={contactType}
             formData={formData}
             setFormData={ctx.setFormData}
             canEdit={!ctx.disabled && ctx.setFormData !== undefined}
-            onOpenAddresses={ctx.onActiveTabChange ? () => ctx.onActiveTabChange?.(COMPANY_ADDRESSES_SECTION_ID) : undefined}
+            onOpenAddresses={ctx.onActiveTabChange ? () => ctx.onActiveTabChange?.(addressSectionIdFor(contactType)) : undefined}
           >
           <EntityFilesManager
             entityType={ENTITY_TYPES.CONTACT}

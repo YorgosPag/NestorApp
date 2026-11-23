@@ -37,7 +37,11 @@ export interface FilesPreviewSplitProps {
   readonly currentUserId?: string;
 }
 
-export function FilesPreviewSplit({ list, files, selectedFile, onSelect, onClose, companyId, currentUserId }: FilesPreviewSplitProps) {
+export function FilesPreviewSplit({ list, files, selectedFile: picked, onSelect, onClose, companyId, currentUserId }: FilesPreviewSplitProps) {
+  // 🔴 ADR-950 §8.10 (ζωντανός έλεγχος 2026-11-23): η επιλογή κρατά **στιγμιότυπο** του `FileRecord` τη στιγμή του κλικ ⇒
+  // όταν τελείωνε η «Ανάγνωση στοιχείων» το σήμα της λίστας άλλαζε, ο πίνακας της ανοιχτής προεπισκόπησης όχι. Ο θεατής
+  // διαβάζει τώρα το **ζωντανό** αρχείο από την ίδια πηγή με τη λίστα (Drive/Figma: επιλογή = ταυτότητα, όχι αντίγραφο).
+  const selectedFile = picked === null ? null : files.find((file) => file.id === picked.id) ?? picked;
   const viewport = useViewportClass();
   const displayNameOf = useFileDisplayName();
   const [listRoot, setListRoot] = useState<HTMLElement | null>(null);

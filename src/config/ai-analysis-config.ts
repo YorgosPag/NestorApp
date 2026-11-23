@@ -8,7 +8,7 @@
  */
 
 import { IntentType, DocumentType } from '@/schemas/ai-analysis';
-import type { EvidenceFieldKey } from '@/config/contact-document-evidence';
+import type { DocumentEvidencePass, EvidenceFieldKey } from '@/config/contact-document-evidence';
 
 export const AI_PROVIDER_IDS = {
   MOCK: 'mock',
@@ -399,8 +399,6 @@ export const AI_DOCUMENT_CLASSIFY_SCHEMA = {
     type: 'object',
     required: [
       'kind',
-      'aiModel',
-      'analysisTimestamp',
       'confidence',
       'needsTriage',
       'extractedEntities',
@@ -411,8 +409,6 @@ export const AI_DOCUMENT_CLASSIFY_SCHEMA = {
     additionalProperties: false,
     properties: {
       kind: { type: 'string', enum: ['document_classify'] },
-      aiModel: { type: 'string' },
-      analysisTimestamp: { type: 'string' },
       confidence: { type: 'number' },
       needsTriage: { type: 'boolean' },
       extractedEntities: EXTRACTED_ENTITIES_SCHEMA,
@@ -440,16 +436,30 @@ const EVIDENCE_FIELD_HINTS: Readonly<Record<EvidenceFieldKey, string>> = {
   taxOffice: 'tax office (ΔΟΥ), as printed',
   addressStreet: 'street name of the address, without the number',
   addressNumber: 'street number of the address',
-  addressPostalCode: 'postal code (Τ.Κ.) of the address',
+  addressPostalCode: 'postal code (Τ.Κ.) of the address — the number only, without the label',
   addressCity: 'city / town of the address',
   phone: 'one telephone number, as printed (the first one if several)',
-  teeRegistryNumber: 'Technical Chamber of Greece registry number (ΑΡ. ΜΗΤΡΩΟΥ ΤΕΕ / Α.Μ. ΤΕΕ)',
+  teeRegistryNumber: 'Technical Chamber of Greece registry number (ΑΡ. ΜΗΤΡΩΟΥ ΤΕΕ / Α.Μ. ΤΕΕ) — the number only, without the label',
 };
 
+/**
+ * ADR-950 §8.3 — η **δεύτερη, ανεξάρτητη** ανάγνωση ψηφίων: άλλη διατύπωση, ψηφίο-ψηφίο, και ρητή άδεια για `null`
+ * όταν ένα ψηφίο καλύπτεται (υπογραφή, μελάνι, σφραγίδα). Ό,τι διαφωνεί με την πρώτη ⇒ «Αβέβαιο» για τον άνθρωπο.
+ */
+const DIGIT_RECHECK_RULES = [
+  'DIGIT VERIFICATION PASS: read each listed value again, one character at a time, directly from the image.',
+  'If ANY digit is covered, crossed or overlapped by a signature, ink stroke, stamp border or smudge, return printed: null for that field.',
+  'Do not complete a partially visible number from context or from what such numbers usually look like.',
+];
+
 /** Οι οδηγίες ανάγνωσης που προστίθενται στο `DOCUMENT_CLASSIFY_SYSTEM` όταν ζητούνται πεδία. */
-export function buildDocumentEvidenceInstructions(fields: readonly EvidenceFieldKey[]): string {
+export function buildDocumentEvidenceInstructions(
+  fields: readonly EvidenceFieldKey[],
+  pass: DocumentEvidencePass = 'primary',
+): string {
   const lines = fields.map((field) => `- ${field}: ${EVIDENCE_FIELD_HINTS[field]}`);
   return [
+    ...(pass === 'digit-recheck' ? DIGIT_RECHECK_RULES : []),
     'FIELD READING (return one entry in "fields" for EVERY field listed below):',
     ...lines,
     'Rules: "printed" = the value EXACTLY as it appears on the document (keep Greek letters, spacing and punctuation).',

@@ -28,6 +28,7 @@ export const CONTACT_EVIDENCE_KEYS = {
   editToAccept: 'contacts-form:documentEvidence.actions.editToAccept',
   personaRequired: 'contacts-form:documentEvidence.actions.personaRequired',
   compareOnly: 'contacts-form:documentEvidence.actions.compareOnly',
+  reread: 'contacts-form:documentEvidence.actions.reread',
   dismissFailed: 'contacts-form:documentEvidence.errors.dismissFailed',
   restoreFailed: 'contacts-form:documentEvidence.errors.restoreFailed',
 } as const;
@@ -70,7 +71,28 @@ export const CONTACT_EVIDENCE_UNGROUNDED_KEYS: Readonly<Record<UngroundedReason,
   absent: 'contacts-form:documentEvidence.ungrounded.absent',
   'low-confidence': 'contacts-form:documentEvidence.ungrounded.lowConfidence',
   'failed-check': 'contacts-form:documentEvidence.ungrounded.failedCheck',
+  disputed: 'contacts-form:documentEvidence.ungrounded.disputed',
+  unverified: 'contacts-form:documentEvidence.ungrounded.unverified',
 };
+
+/** ADR-950 §8 — τα τεκμήρια διακομιστή στην οθόνη (δεύτερη ανάγνωση · διορθωμένη οδός). */
+export const CONTACT_EVIDENCE_CORROBORATION_KEYS = {
+  alternate: 'contacts-form:documentEvidence.corroboration.alternate',
+  alternateUnreadable: 'contacts-form:documentEvidence.corroboration.alternateUnreadable',
+  correctedStreet: 'contacts-form:documentEvidence.corroboration.correctedStreet',
+  printedStreet: 'contacts-form:documentEvidence.corroboration.printedStreet',
+} as const;
+
+/** ADR-950 §8.6 — «Συμπλήρωση κενών». */
+export const CONTACT_EVIDENCE_FILL_KEYS = {
+  button: 'contacts-form:documentEvidence.fill.button',
+  title: 'contacts-form:documentEvidence.fill.title',
+  description: 'contacts-form:documentEvidence.fill.description',
+  address: 'contacts-form:documentEvidence.fill.address',
+  apply: 'contacts-form:documentEvidence.fill.apply',
+  cancel: 'contacts-form:documentEvidence.fill.cancel',
+  editToFill: 'contacts-form:documentEvidence.fill.editToFill',
+} as const;
 
 export const CONTACT_EVIDENCE_REASON_KEYS: Readonly<Record<EvidenceDismissReason, string>> = {
   'outdated-document': 'contacts-form:documentEvidence.reasons.outdatedDocument',

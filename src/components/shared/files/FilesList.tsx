@@ -44,6 +44,7 @@ import { FileRecordBadge } from './FileRecordBadge';
 import { ClassifyAgainButton } from './ClassifyAgainButton';
 import { ContactEvidenceBadge } from '@/components/contacts/document-evidence/ContactEvidenceBadge';
 import { needsEvidenceReading } from '@/lib/contacts/contact-evidence-comparison';
+import { purposeHasEvidence } from '@/config/contact-document-evidence';
 
 // ============================================================================
 // TYPES
@@ -310,8 +311,13 @@ export function FilesList({
                   </span>
                 )}
                 {file.ingestion?.analysis?.documentType && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium leading-none bg-accent text-primary">
-                    {t(`documentType.${file.ingestion.analysis.documentType}`, file.ingestion.analysis.documentType)}
+                  // ADR-950 §8.8 — ζεύγος `accent`/`accent-foreground` (θεματικό): το `text-primary` στο σκοτεινό θέμα
+                  // ήταν σκούρο σε σκούρο (CHECK 3.38). Και όταν η AI λέει «Άλλο» για έγγραφο που ο ΑΝΘΡΩΠΟΣ δήλωσε
+                  // (π.χ. «Σφραγίδα & Υπογραφή»), δείχνουμε τη δήλωση — εκείνος ξέρει τι ανέβασε.
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium leading-none bg-accent text-accent-foreground">
+                    {file.ingestion.analysis.documentType === 'other' && file.purpose && purposeHasEvidence(file.purpose)
+                      ? t(`purposes.${file.purpose}`)
+                      : t(`documentType.${file.ingestion.analysis.documentType}`, file.ingestion.analysis.documentType)}
                   </span>
                 )}
                 {/* ADR-950 §4.6 — ίδια πράξη με την επανάληψη: ανάγνωση στοιχείων για ήδη ταξινομημένο έγγραφο επαφής */}
@@ -320,6 +326,7 @@ export function FilesList({
                     label={t('list.readEvidence')}
                     busy={classifyingIds.has(file.id)}
                     onClick={() => handleRetryClassify(file.id)}
+                    showLabel
                   />
                 )}
                 <ContactEvidenceBadge file={file} />

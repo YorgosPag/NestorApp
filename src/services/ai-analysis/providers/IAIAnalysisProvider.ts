@@ -15,7 +15,7 @@
  * - Provider-agnostic (OpenAI, Anthropic, Mock, etc.)
  */
 
-import type { EvidenceFieldKey } from '@/config/contact-document-evidence';
+import type { DocumentEvidencePass, EvidenceFieldKey } from '@/config/contact-document-evidence';
 import type { AIAnalysisResult } from '@/schemas/ai-analysis';
 
 // ============================================================================
@@ -79,6 +79,8 @@ export interface DocumentClassifyInput {
 export interface DocumentEvidenceRequest {
   readonly purpose: string;
   readonly fields: readonly EvidenceFieldKey[];
+  /** ADR-950 §8.3 — απόν = `primary`. `digit-recheck` = δεύτερη, ανεξάρτητη ανάγνωση **μόνο** ψηφίων. */
+  readonly pass?: DocumentEvidencePass;
 }
 
 /**

@@ -215,6 +215,41 @@ export const DocumentEvidenceFieldSchema = z.object({
 
 export type DocumentEvidenceField = z.infer<typeof DocumentEvidenceFieldSchema>;
 
+// ----------------------------------------------------------------------------
+// ADR-950 §8 — ΤΕΚΜΗΡΙΑ ΔΙΑΚΟΜΙΣΤΗ: ό,τι ΔΕΝ λέει το LLM, το σφραγίζει ο διακομιστής τη στιγμή της ανάγνωσης.
+// Η γείωση (`lib/contacts/contact-evidence-grounding`) μένει καθαρή και τα διαβάζει ως είσοδο.
+// ----------------------------------------------------------------------------
+
+/**
+ * Δεύτερη, **ανεξάρτητη** ανάγνωση ψηφιακού πεδίου (consensus). `agreed` = ίδια κανονική τιμή · `disputed` = άλλη
+ * (η `alternate` είναι ό,τι διάβασε η δεύτερη) · απουσία γραμμής = δεν ξαναδιαβάστηκε (`single`).
+ */
+export const EvidenceFieldConsensusSchema = z.object({
+  field: z.enum(EVIDENCE_FIELD_KEYS),
+  state: z.enum(['agreed', 'disputed']),
+  alternate: z.string().nullable(),
+});
+export type EvidenceFieldConsensus = z.infer<typeof EvidenceFieldConsensusSchema>;
+
+/**
+ * Επαλήθευση της διεύθυνσης **ως συνόλου** στον χάρτη (OSM) — πρότυπο Google Address Validation.
+ * - `confirmed` — η οδός βρέθηκε στον Τ.Κ. όπως διαβάστηκε.
+ * - `corrected` — υπαρκτή οδός του Τ.Κ. που διαφέρει μόνο σε οπτικά συγχεόμενα γράμματα, **επιβεβαιωμένη** με νέα αναζήτηση.
+ * - `unverified` — τίποτα δεν την επιβεβαίωσε · `unavailable` — ο χάρτης δεν απάντησε (καμία κρίση).
+ */
+export const EvidenceAddressVerificationSchema = z.object({
+  verdict: z.enum(['confirmed', 'corrected', 'unverified', 'unavailable']),
+  /** Μόνο στο `corrected`: το υπαρκτό όνομα οδού. */
+  correctedStreet: z.string().optional(),
+  /** Τα τοπωνύμια που επέστρεψε ο χάρτης — αποσαφήνιση ΔΟΥ («Ιωνίας» ⇒ Θεσσαλονίκη). */
+  places: z.array(z.string()).optional(),
+  verifiedAt: z.string(),
+});
+export type EvidenceAddressVerification = z.infer<typeof EvidenceAddressVerificationSchema>;
+
+/** Τύπος γραμμής τηλεφώνου κατά libphonenumber (`MOBILE` · `FIXED_LINE` · …) — ο διακομιστής έχει τα πλήρη μεταδεδομένα. */
+export const EvidencePhoneLineTypeSchema = z.string().min(1);
+
 /**
  * Document classification result
  * @enterprise For analyzing uploaded files/attachments
@@ -237,6 +272,11 @@ export const DocumentClassifyAnalysisSchema = AnalysisBaseSchema.extend({
 
   /** ADR-950: το `purpose` για το οποίο ζητήθηκαν τα `fields` (η ανάγνωση ανήκει σε αυτό, όχι σε μεταγενέστερο). */
   evidencePurpose: z.string().optional(),
+
+  /** ADR-950 §8 — τεκμήρια διακομιστή (ποτέ από το LLM). */
+  fieldConsensus: z.array(EvidenceFieldConsensusSchema).optional(),
+  addressVerification: EvidenceAddressVerificationSchema.optional(),
+  phoneLineType: EvidencePhoneLineTypeSchema.optional(),
 });
 
 export type DocumentClassifyAnalysis = z.infer<typeof DocumentClassifyAnalysisSchema>;

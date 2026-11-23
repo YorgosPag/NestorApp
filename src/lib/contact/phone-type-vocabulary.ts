@@ -61,6 +61,26 @@ export const DEFAULT_PHONE_TYPE: Readonly<Record<PhoneOwnerKind, PhoneType>> = {
   service: 'main',
 };
 
+/** Αριθμοί που υπάρχουν μόνο για επιχειρήσεις (800, 801, 0900, VoIP, UAN) — «εργασία» για πρόσωπο. */
+const BUSINESS_LINE_TYPES: ReadonlySet<string> = new Set(['TOLL_FREE', 'SHARED_COST', 'PREMIUM_RATE', 'VOIP', 'UAN']);
+
+/**
+ * **Ο τύπος από τον τύπο γραμμής** (libphonenumber `getType()`) — πάντα μέσα στο υποσύνολο του κατόχου.
+ *
+ * Καθαρή απόφαση, κοινή σε διακομιστή **και** πελάτη: ο τύπος γραμμής βγαίνει **μόνο** στον διακομιστή (`/max`
+ * metadata, `server/lib/phone-line-type`), αλλά η αντιστοίχιση σε τύπο της φόρμας είναι **μία** (ADR-950 §8.5).
+ * - **Εταιρεία / υπηρεσία** ⇒ η προεπιλογή τους (`main`): ο άξονας εκεί είναι ο **ρόλος** της γραμμής (vCard
+ *   `main-number`, RFC 7852 · `main` του Google People API), όχι κινητό/σταθερό.
+ * - **Πρόσωπο** ⇒ κινητό ⇒ `mobile` · σταθερό ⇒ `home` · επιχειρηματικός ⇒ `work` · άγνωστο ⇒ προεπιλογή, ποτέ μαντεψιά.
+ */
+export function phoneTypeForLineType(lineType: string | undefined, owner: PhoneOwnerKind): PhoneType {
+  if (owner !== 'individual') return DEFAULT_PHONE_TYPE[owner];
+  if (lineType === 'MOBILE') return 'mobile';
+  if (lineType === 'FIXED_LINE') return 'home';
+  if (lineType !== undefined && BUSINESS_LINE_TYPES.has(lineType)) return 'work';
+  return DEFAULT_PHONE_TYPE.individual;
+}
+
 /** `true` όταν η τιμή ανήκει στη ρίζα — το σύνορο εισόδου από φόρμα/εξωτερικά δεδομένα, αντί για τυφλό `as`. */
 export function isPhoneType(value: unknown): value is PhoneType {
   return isVocabularyMember(PHONE_TYPES, value);

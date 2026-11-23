@@ -95,13 +95,16 @@ const basicInfoSection: ServiceSectionConfig = (() => {
   };
 })();
 
+/** Η ταυτότητα της καρτέλας διεύθυνσης υπηρεσίας — τη ζητά όποιος στέλνει τη φόρμα εκεί (ADR-950 §8.9). */
+export const SERVICE_ADDRESS_SECTION_ID = 'address' as const;
+
 /**
  * Διεύθυνση Υπηρεσίας
  * Ξεχωριστό tab — ομοιόμορφο με individual/company address tabs
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const addressSection: ServiceSectionConfig = {
-  id: 'address',
+  id: SERVICE_ADDRESS_SECTION_ID,
   title: 'contacts.service.sections.address.title',
   icon: 'map-pin',
   fields: [

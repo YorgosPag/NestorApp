@@ -71,7 +71,8 @@
     "exterior": "Εξωτερικό",
     "interior": "Εσωτερικό",
     "contract": "Συμβόλαιο",
-    "report": "Αναφορά"
+    "report": "Αναφορά",
+    "stamp-signature": "Σφραγίδα & Υπογραφή"
   },
   "labels": {
     "revision": "Έκδοση",

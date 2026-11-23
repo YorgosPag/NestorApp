@@ -27,25 +27,18 @@ import 'server-only';
 import { parsePhoneNumberFromString } from 'libphonenumber-js/max';
 
 import { DEFAULT_PHONE_COUNTRY } from '@/lib/contact/channel-phone';
-import { DEFAULT_PHONE_TYPE, type PhoneOwnerKind, type PhoneType } from '@/lib/contact/phone-type-vocabulary';
+import { phoneTypeForLineType, type PhoneOwnerKind, type PhoneType } from '@/lib/contact/phone-type-vocabulary';
 
-/** Αριθμοί που υπάρχουν μόνο για επιχειρήσεις (800, 801, 0900, VoIP, UAN) — «εργασία» για πρόσωπο. */
-const BUSINESS_NUMBER_TYPES: ReadonlySet<string> = new Set(['TOLL_FREE', 'SHARED_COST', 'PREMIUM_RATE', 'VOIP', 'UAN']);
+/** Ο τύπος γραμμής κατά libphonenumber (`MOBILE` · `FIXED_LINE` · …) — `undefined` όταν η βιβλιοθήκη δεν ξέρει. */
+export function phoneLineTypeOf(raw: string): string | undefined {
+  return parsePhoneNumberFromString(raw.trim(), DEFAULT_PHONE_COUNTRY)?.getType();
+}
 
 /**
  * Ο τύπος ενός αριθμού χωρίς δηλωμένη ετικέτα — **πάντα μέσα στο υποσύνολο του κατόχου** (`PHONE_TYPES_BY_OWNER`).
- *
- * - **Εταιρεία / υπηρεσία** ⇒ η προεπιλογή τους (`main`): εκεί ο άξονας του λεξιλογίου είναι ο **ρόλος** της γραμμής
- *   (κεντρικό, τμήμα, πωλήσεις…), όχι κινητό/σταθερό — όπως το vCard `main-number` (RFC 7852) και το `main` του
- *   Google People API.
- * - **Πρόσωπο** ⇒ τα metadata του αριθμού: κινητό ⇒ `mobile`, σταθερό ⇒ `home`, επιχειρηματικός ⇒ `work`·
- *   ό,τι η βιβλιοθήκη δεν ξεχωρίζει (`FIXED_LINE_OR_MOBILE` στις ΗΠΑ, άκυρος) ⇒ η προεπιλογή — ποτέ μαντεψιά.
+ * Η αντιστοίχιση είναι η ΜΙΑ `phoneTypeForLineType` (κοινή με τον πελάτη, ADR-950 §8.5)· εδώ μόνο τα `/max` metadata.
+ * Ό,τι η βιβλιοθήκη δεν ξεχωρίζει (`FIXED_LINE_OR_MOBILE` στις ΗΠΑ, άκυρος) ⇒ η προεπιλογή — ποτέ μαντεψιά.
  */
 export function inferPhoneType(raw: string, owner: PhoneOwnerKind): PhoneType {
-  if (owner !== 'individual') return DEFAULT_PHONE_TYPE[owner];
-  const lineType = parsePhoneNumberFromString(raw.trim(), DEFAULT_PHONE_COUNTRY)?.getType();
-  if (lineType === 'MOBILE') return 'mobile';
-  if (lineType === 'FIXED_LINE') return 'home';
-  if (lineType !== undefined && BUSINESS_NUMBER_TYPES.has(lineType)) return 'work';
-  return DEFAULT_PHONE_TYPE.individual;
+  return phoneTypeForLineType(owner === 'individual' ? phoneLineTypeOf(raw) : undefined, owner);
 }

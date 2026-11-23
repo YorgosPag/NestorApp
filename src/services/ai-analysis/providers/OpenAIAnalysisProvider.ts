@@ -158,7 +158,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
     const evidenceFields = input.kind === 'document_classify' ? input.evidence?.fields ?? [] : [];
     const systemPrompt = input.kind === 'document_classify'
       ? evidenceFields.length > 0
-        ? `${AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM}\n\n${buildDocumentEvidenceInstructions(evidenceFields)}`
+        ? `${AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM}\n\n${buildDocumentEvidenceInstructions(evidenceFields, input.evidence?.pass)}`
         : AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM
       : AI_ANALYSIS_PROMPTS.MULTI_INTENT_SYSTEM;
 
@@ -308,7 +308,11 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
     // OpenAI strict mode returns null for optional fields — strip them
     // so Zod .optional() validation passes cleanly
     const normalized = stripNullValues(parsed);
-    const validated = validateAIAnalysisResult(normalized);
+    // ADR-950 §8.1 — μοντέλο και ώρα τα ξέρει ο ΔΙΑΚΟΜΙΣΤΗΣ· το LLM τα επινοούσε («v1», «01/10/2023») και δεν τα ζητάμε πια.
+    const stamped = input.kind === 'document_classify'
+      ? { ...normalized, aiModel: model, analysisTimestamp: nowISO() }
+      : normalized;
+    const validated = validateAIAnalysisResult(stamped);
     return validated;
   }
 

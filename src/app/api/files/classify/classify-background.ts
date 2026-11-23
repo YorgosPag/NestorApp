@@ -7,11 +7,16 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { evidenceFieldKeysFor } from '@/config/contact-document-evidence';
+import { evidenceFieldKeysFor, evidenceRecheckFieldsFor } from '@/config/contact-document-evidence';
 import { ENTITY_TYPES } from '@/config/domain-constants';
-import type { DocumentEvidenceRequest } from '@/services/ai-analysis/providers/IAIAnalysisProvider';
+import type {
+  DocumentClassifyInput,
+  DocumentEvidenceRequest,
+  IAIAnalysisProvider,
+} from '@/services/ai-analysis/providers/IAIAnalysisProvider';
 import { createAIAnalysisProvider } from '@/services/ai-analysis/providers/ai-provider-factory';
-import { isDocumentClassifyAnalysis } from '@/schemas/ai-analysis';
+import { isDocumentClassifyAnalysis, type DocumentEvidenceField } from '@/schemas/ai-analysis';
+import { corroborateEvidence, type EvidenceCorroboration } from '@/server/files/evidence-corroboration';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
@@ -94,6 +99,27 @@ function evidenceRequestFor(input: ClassifyInBackgroundInput): DocumentEvidenceR
   return fields.length > 0 ? { purpose: input.purpose, fields } : undefined;
 }
 
+/**
+ * ADR-950 §8 — τα τεκμήρια διακομιστή μιας ανάγνωσης (consensus ψηφίων · χάρτης · τύπος γραμμής). Η δεύτερη ανάγνωση
+ * είναι **νέα, ανεξάρτητη** κλήση του ίδιου provider στο ίδιο αρχείο, μόνο για τα ψηφιακά πεδία.
+ */
+function corroborate(
+  provider: IAIAnalysisProvider,
+  request: DocumentClassifyInput,
+  evidence: DocumentEvidenceRequest,
+  fields: readonly DocumentEvidenceField[],
+): Promise<EvidenceCorroboration> {
+  return corroborateEvidence({
+    purpose: evidence.purpose,
+    fields,
+    recheckFields: evidenceRecheckFieldsFor(evidence.purpose),
+    rereadDigits: async (recheck) => {
+      const second = await provider.analyze({ ...request, evidence: { purpose: evidence.purpose, fields: recheck, pass: 'digit-recheck' } });
+      return isDocumentClassifyAnalysis(second) ? second.fields ?? null : null;
+    },
+  });
+}
+
 export async function classifyInBackground(input: ClassifyInBackgroundInput): Promise<void> {
   const { fileId, downloadUrl, contentType, originalFilename, sizeBytes, userId, fileExt } = input;
   const evidence = evidenceRequestFor(input);
@@ -124,18 +150,21 @@ export async function classifyInBackground(input: ClassifyInBackgroundInput): Pr
 
     // 3. Call AI provider
     const provider = createAIAnalysisProvider();
-    const result = await provider.analyze({
+    const request: DocumentClassifyInput = {
       kind: 'document_classify',
       content: analyzeBuffer,
       filename: originalFilename ?? (fileExt ? `drawing.${fileExt}` : 'document'),
       mimeType: analyzeMimeType,
       sizeBytes: sizeBytes ?? fileBuffer.length,
-      evidence,
-    });
+    };
+    const result = await provider.analyze({ ...request, evidence });
 
     if (!isDocumentClassifyAnalysis(result)) {
       throw new Error(`AI returned unexpected result kind: ${result.kind}`);
     }
+
+    const evidenceFields = evidence === undefined ? [] : (result.fields ?? []).filter((f) => evidence.fields.includes(f.field));
+    const corroboration = evidence === undefined ? {} : await corroborate(provider, request, evidence, evidenceFields);
 
     // 3. Write classification results to Firestore
     const aiDescription = ('description' in result && typeof result.description === 'string')
@@ -153,7 +182,7 @@ export async function classifyInBackground(input: ClassifyInBackgroundInput): Pr
         description: aiDescription,
         // ADR-950: τα πεδία γράφονται ΜΟΝΟ στο αρχείο — ποτέ στην επαφή. Ανήκουν στο `purpose` για το οποίο ζητήθηκαν.
         ...(evidence !== undefined
-          ? { fields: (result.fields ?? []).filter((f) => evidence.fields.includes(f.field)), evidencePurpose: evidence.purpose }
+          ? { fields: evidenceFields, evidencePurpose: evidence.purpose, ...corroboration }
           : {}),
       },
       'ingestion.state': 'classified',

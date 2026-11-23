@@ -342,7 +342,24 @@
     "ungrounded": {
       "absent": "Not found on the document",
       "lowConfidence": "Illegible",
-      "failedCheck": "Illegible — fails the validity check"
+      "failedCheck": "Illegible — fails the validity check",
+      "disputed": "Uncertain — the second reading disagrees",
+      "unverified": "Not confirmed on the map — re-read the document or check the address"
+    },
+    "corroboration": {
+      "alternate": "Second reading: {value}",
+      "alternateUnreadable": "Second reading: a digit is not clearly legible",
+      "correctedStreet": "Did you mean: {street}?",
+      "printedStreet": "Printed: {street}"
+    },
+    "fill": {
+      "button": "{count, plural, one {Fill empty field (#)} other {Fill empty fields (#)}}",
+      "title": "Fill empty fields from the document",
+      "description": "Only empty contact fields, only verified values. Nothing existing is replaced; changes are saved with “Save”.",
+      "address": "Address (as a proposal in “Addresses”)",
+      "apply": "{count, plural, one {Fill # field} other {Fill # fields}}",
+      "cancel": "Cancel",
+      "editToFill": "Edit to fill"
     },
     "decision": {
       "dismissed": "Ignored: {reason}",
@@ -362,7 +379,8 @@
       "restore": "Undo ignore",
       "editToAccept": "Edit to accept",
       "personaRequired": "To accept, enable the “Engineer” role",
-      "compareOnly": "Corrected from the form"
+      "compareOnly": "Corrected from the form",
+      "reread": "Read again"
     },
     "errors": {
       "dismissFailed": "The ignore was not saved. Please try again.",

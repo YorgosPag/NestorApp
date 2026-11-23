@@ -1,5 +1,5 @@
 /**
- * @fileoverview **ΤΟ ΕΓΓΡΑΦΟ ΛΕΕΙ / Η ΕΠΑΦΗ ΛΕΕΙ** — η ζωντανή σύγκριση ανά γραμμή (ADR-950 §4.3).
+ * @fileoverview **ΤΟ ΕΓΓΡΑΦΟ ΛΕΕΙ / Η ΕΠΑΦΗ ΛΕΕΙ** — η ζωντανή σύγκριση ανά γραμμή (ADR-950 §4.3 · §8).
  * @module lib/contacts/contact-evidence-comparison
  *
  * Τρέχει **πάνω στη φόρμα** (όπως το `liveRegistryComparison` του ADR-948): το «Αποδοχή» πρασινίζει τη γραμμή αμέσως,
@@ -7,6 +7,11 @@
  *
  * Κρίσεις = οι 4 του `lib/comparison/field-judgment` **+ `partial`** (Yoti PARTIAL): μόνο για ονόματα, όταν το
  * `personNameMatch` λέει `fuzzy`. Ανάγνωση που **δεν γειώθηκε** ⇒ `not-comparable`, ποτέ `differs`.
+ *
+ * ADR-950 §8 — τα **τεκμήρια διακομιστή** (`EvidenceCorroborationView`) μπαίνουν εδώ, σε **ένα** σημείο, ώστε πίνακας
+ * (πελάτης) και «Αγνόηση» (διακομιστής) να βλέπουν την ίδια τιμή:
+ * - διαφωνία δεύτερης ανάγνωσης ⇒ `disputed` (καμία αποδοχή, φαίνονται και οι δύο τιμές)·
+ * - διεύθυνση: `confirmed` ⇒ κανονικά · `corrected` ⇒ η υπαρκτή οδός («Μήπως…») · αλλιώς ⇒ `unverified`, καμία πρόταση.
  *
  * Η «Αγνόηση» (`EvidenceDismissal`) κρίνεται με το σχήμα του ADR-759: ισχύει **μόνο** όσο η τιμή του εγγράφου είναι
  * αυτή για την οποία αποφάσισε ο άνθρωπος· αλλιώς `reopened` — ξανά προς κρίση.
@@ -33,7 +38,7 @@ import { sameLegalName } from '@/lib/company/legal-name-match';
 import { formHeadquarters } from '@/lib/company/registry-form-acceptance';
 import { contactValueKey, groundEvidence, type GroundedValue, type UngroundedReason } from '@/lib/contacts/contact-evidence-grounding';
 import { sameAddressFieldValue } from '@/lib/geocoding/field-match';
-import type { DocumentEvidenceField } from '@/schemas/ai-analysis';
+import type { DocumentEvidenceField, EvidenceAddressVerification, EvidenceFieldConsensus } from '@/schemas/ai-analysis';
 import { getTaxOfficeDisplayName } from '@/subapps/accounting/data/greek-tax-offices';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -48,6 +53,18 @@ type EvidenceValueKey = Exclude<EvidenceFieldKey, EvidenceAddressField>;
 /** `none` = καμία απόφαση · `dismissed` = αγνοήθηκε **αυτή** η τιμή · `reopened` = αγνοήθηκε άλλη τιμή. */
 export type EvidenceDecisionState = 'none' | 'dismissed' | 'reopened';
 
+/** Τα τεκμήρια διακομιστή της ανάγνωσης (ADR-950 §8) — όπως αποθηκεύονται στο `ingestion.analysis`. */
+export interface EvidenceCorroborationView {
+  readonly fieldConsensus?: readonly EvidenceFieldConsensus[];
+  readonly addressVerification?: EvidenceAddressVerification;
+  readonly phoneLineType?: string;
+}
+
+/** Η αποθηκευμένη ανάγνωση: πεδία + τεκμήρια. */
+export interface EvidenceReading extends EvidenceCorroborationView {
+  readonly fields: readonly DocumentEvidenceField[];
+}
+
 export interface EvidenceRow {
   readonly key: EvidenceRowKey;
   readonly acceptance: EvidenceAcceptance;
@@ -60,6 +77,12 @@ export interface EvidenceRow {
   /** Κανονική μορφή — το κλειδί της «Αγνόησης». */
   readonly documentKey: string | null;
   readonly ungrounded: UngroundedReason | null;
+  /** `disputed`: ό,τι διάβασε η **δεύτερη** ανάγνωση (`null` = ένα ψηφίο δεν διαβαζόταν καθαρά). */
+  readonly documentAlternate: string | null;
+  /** Διεύθυνση `corrected`: η οδός **όπως τυπώθηκε** — το `documentDisplay` φέρει την υπαρκτή («Μήπως…»). */
+  readonly correctedFrom: string | null;
+  /** Τηλέφωνο: τύπος γραμμής κατά libphonenumber, από τον διακομιστή (ADR-950 §8.5). */
+  readonly phoneLineType: string | null;
   readonly contact: string | null;
   readonly decision: EvidenceDecisionState;
   readonly dismissal: EvidenceDismissal | null;
@@ -74,7 +97,7 @@ export interface EvidenceSeat {
 }
 
 export interface EvidenceComparisonInput {
-  readonly fields: readonly DocumentEvidenceField[];
+  readonly reading: EvidenceReading;
   readonly purpose: string | null;
   readonly formData: ContactFormData;
   readonly contactType: ContactType;
@@ -135,13 +158,20 @@ function decisionOf(key: EvidenceRowKey, documentKey: string | null, dismissals:
   return { decision: dismissal.documentValueAtDecision === documentKey ? 'dismissed' : 'reopened', dismissal };
 }
 
-function readingOf(fields: readonly DocumentEvidenceField[], spec: EvidenceFieldSpec): GroundedValue {
-  const reading = fields.find((field) => field.field === spec.key);
-  return groundEvidence(spec.kind, reading?.printed ?? null, reading?.confidence ?? 0, spec.minConfidence);
+const disputeOf = (reading: EvidenceReading, key: EvidenceFieldKey): EvidenceFieldConsensus | null =>
+  reading.fieldConsensus?.find((c) => c.field === key && c.state === 'disputed') ?? null;
+
+/** Γείωση **και** τεκμήρια: διαφωνία δεύτερης ανάγνωσης ⇒ `disputed`, όσο καθαρή κι αν φαίνεται η πρώτη. */
+function readingOf(reading: EvidenceReading, spec: EvidenceFieldSpec): GroundedValue {
+  const field = reading.fields.find((f) => f.field === spec.key);
+  const places = reading.addressVerification?.places;
+  const grounded = groundEvidence(spec.kind, field?.printed ?? null, field?.confidence ?? 0, spec.minConfidence, { places });
+  if (grounded.ok && disputeOf(reading, spec.key) !== null) return { ok: false, printed: grounded.printed, reason: 'disputed' };
+  return grounded;
 }
 
 function valueRow(spec: EvidenceFieldSpec, key: EvidenceValueKey, target: EvidenceTarget, input: EvidenceComparisonInput): EvidenceRow {
-  const grounded = readingOf(input.fields, spec);
+  const grounded = readingOf(input.reading, spec);
   const contacts = target === 'phones' ? contactPhones(input.formData) : [textField(input.formData, target)].filter((v): v is string => v !== null);
   const documentKey = grounded.ok ? grounded.key : null;
   return {
@@ -153,6 +183,9 @@ function valueRow(spec: EvidenceFieldSpec, key: EvidenceValueKey, target: Eviden
     documentDisplay: grounded.ok ? grounded.display : null,
     documentKey,
     ungrounded: grounded.ok ? null : grounded.reason,
+    documentAlternate: grounded.ok ? null : disputeOf(input.reading, key)?.alternate ?? null,
+    correctedFrom: null,
+    phoneLineType: spec.kind === 'phone' ? input.reading.phoneLineType ?? null : null,
     // Η ΔΟΥ της επαφής είναι συνήθως κωδικός (`DoyPicker`) — ο άνθρωπος βλέπει το όνομα.
     contact: contacts.map((c) => (spec.kind === 'taxOffice' ? getTaxOfficeDisplayName(c) : c)).join(' · ') || null,
     ...decisionOf(key, documentKey, input.dismissals),
@@ -174,82 +207,116 @@ function seatParts(contact: SeatFields | null, document: SeatFields): Readonly<R
 }
 
 interface GroundedAddress {
+  /** Ό,τι διαβάστηκε (γειωμένο ανά μέρος) — για την οθόνη. */
+  readonly printed: SeatFields;
+  /** Ό,τι προτείνεται — με την υπαρκτή οδό όταν ο χάρτης τη διόρθωσε. */
   readonly document: SeatFields;
   readonly documentKey: string | null;
   readonly printedAny: boolean;
+  readonly ungrounded: UngroundedReason | null;
+  readonly correctedFrom: string | null;
 }
 
-/** Η διεύθυνση του εγγράφου, γειωμένη ανά μέρος — **ένας** υπολογισμός για τον πίνακα **και** τον διακομιστή. */
-function groundAddress(specs: readonly AddressSpec[], fields: readonly DocumentEvidenceField[]): GroundedAddress {
-  const document: Record<SeatPart, string | null> = { street: null, number: null, postalCode: null, city: null };
-  const keys: Record<SeatPart, string | null> = { ...document };
-  let printedAny = false;
-  for (const { spec, part } of specs) {
-    const grounded = readingOf(fields, spec);
-    printedAny ||= grounded.printed !== null;
-    document[part] = grounded.ok ? grounded.display : null;
-    keys[part] = grounded.ok ? grounded.key : null;
-  }
-  const documentKey = SEAT_PARTS.some((part) => keys[part] !== null) ? SEAT_PARTS.map((part) => keys[part] ?? '').join('|') : null;
-  return { document, documentKey, printedAny };
+/** Γειωμένα μέρη + αν κάποιο αμφισβητήθηκε από τη δεύτερη ανάγνωση. */
+function groundParts(specs: readonly AddressSpec[], reading: EvidenceReading) {
+  const parts: Record<SeatPart, GroundedValue | null> = { street: null, number: null, postalCode: null, city: null };
+  for (const { spec, part } of specs) parts[part] = readingOf(reading, spec);
+  const pick = (part: SeatPart, which: 'display' | 'key'): string | null => {
+    const grounded = parts[part];
+    return grounded !== null && grounded.ok ? grounded[which] : null;
+  };
+  const value = (part: SeatPart): string | null => pick(part, 'display');
+  const key = (part: SeatPart): string | null => pick(part, 'key');
+  const printed: SeatFields = { street: value('street'), number: value('number'), postalCode: value('postalCode'), city: value('city') };
+  const disputed = SEAT_PARTS.some((part) => {
+    const grounded = parts[part];
+    return grounded !== null && !grounded.ok && grounded.reason === 'disputed';
+  });
+  const printedAny = SEAT_PARTS.some((part) => parts[part] !== null && parts[part]?.printed !== null);
+  return { printed, key, disputed, printedAny };
+}
+
+/** Ο χάρτης κρίνει: καμία επαλήθευση (παλιά ανάγνωση · χάρτης εκτός) ή «δεν βρέθηκε» ⇒ `unverified`. */
+function mapVerdict(verification: EvidenceAddressVerification | undefined): 'confirmed' | 'corrected' | 'unverified' {
+  if (verification?.verdict === 'confirmed') return 'confirmed';
+  return verification?.verdict === 'corrected' && verification.correctedStreet !== undefined ? 'corrected' : 'unverified';
+}
+
+/** Η διεύθυνση του εγγράφου — **ένας** υπολογισμός για τον πίνακα **και** τον διακομιστή. */
+function groundAddress(specs: readonly AddressSpec[], reading: EvidenceReading): GroundedAddress {
+  const { printed, key, disputed, printedAny } = groundParts(specs, reading);
+  const failed = (ungrounded: UngroundedReason): GroundedAddress =>
+    ({ printed, document: printed, documentKey: null, printedAny, ungrounded, correctedFrom: null });
+  if (!SEAT_PARTS.some((part) => printed[part] !== null)) return failed(printedAny ? 'failed-check' : 'absent');
+  if (disputed) return failed('disputed');
+  const verdict = mapVerdict(reading.addressVerification);
+  if (verdict === 'unverified') return failed('unverified');
+  const corrected = verdict === 'corrected' ? reading.addressVerification?.correctedStreet ?? null : null;
+  const document: SeatFields = corrected === null ? printed : { ...printed, street: corrected };
+  const streetKey = corrected === null ? key('street') : contactValueKey('addressPart', corrected);
+  const keys = SEAT_PARTS.map((part) => (part === 'street' ? streetKey : key(part)) ?? '');
+  return { printed, document, documentKey: keys.join('|'), printedAny, ungrounded: null, correctedFrom: corrected === null ? null : printed.street };
 }
 
 function addressRow(specs: readonly AddressSpec[], input: EvidenceComparisonInput): EvidenceRow {
-  const { document, documentKey, printedAny } = groundAddress(specs, input.fields);
+  const grounded = groundAddress(specs, input.reading);
   const contact = formHeadquarters(input.formData);
-  const parts = seatParts(contact, document);
+  const parts = seatParts(contact, grounded.document);
   return {
     key: 'address',
     acceptance: 'propose-address',
     target: 'headquarters',
-    state: seatState(parts),
-    documentPrinted: printedAny ? joinSeat(document) : null,
-    documentDisplay: documentKey === null ? null : joinSeat(document),
-    documentKey,
-    ungrounded: documentKey === null ? (printedAny ? 'failed-check' : 'absent') : null,
+    state: grounded.documentKey === null ? 'not-comparable' : seatState(parts),
+    documentPrinted: grounded.printedAny ? joinSeat(grounded.printed) : null,
+    documentDisplay: grounded.documentKey === null ? null : joinSeat(grounded.document),
+    documentKey: grounded.documentKey,
+    ungrounded: grounded.ungrounded,
+    documentAlternate: null,
+    correctedFrom: grounded.correctedFrom,
+    phoneLineType: null,
     contact: contact === null ? null : joinSeat(contact),
-    ...decisionOf('address', documentKey, input.dismissals),
-    seat: { parts, document, contact },
+    ...decisionOf('address', grounded.documentKey, input.dismissals),
+    seat: { parts, document: grounded.document, contact },
   };
+}
+
+function addressSpecsOf(specs: readonly EvidenceFieldSpec[]): AddressSpec[] {
+  const result: AddressSpec[] = [];
+  for (const spec of specs) {
+    const key = spec.key;
+    if (isEvidenceAddressField(key) && !result.some((s) => s.spec.key === key)) result.push({ spec, part: SEAT_PART_OF[key] });
+  }
+  return result;
 }
 
 /** **Η σύγκριση.** Μία γραμμή ανά πεδίο του `purpose` που αφορά αυτό το είδος επαφής· η διεύθυνση = **μία** γραμμή. */
 export function compareEvidenceWithForm(input: EvidenceComparisonInput): readonly EvidenceRow[] {
+  const specs = evidenceSpecsFor(input.purpose, input.contactType);
   const rows: EvidenceRow[] = [];
-  const addressSpecs: AddressSpec[] = [];
-  for (const spec of evidenceSpecsFor(input.purpose, input.contactType)) {
+  for (const spec of specs) {
     const target = spec.target[input.contactType];
     const key = spec.key;
-    if (target === undefined) continue;
-    if (isEvidenceAddressField(key)) addressSpecs.push({ spec, part: SEAT_PART_OF[key] });
-    else rows.push(valueRow(spec, key, target, input));
+    if (target !== undefined && !isEvidenceAddressField(key)) rows.push(valueRow(spec, key, target, input));
   }
+  const addressSpecs = addressSpecsOf(specs);
   if (addressSpecs.length > 0) rows.push(addressRow(addressSpecs, input));
   return rows;
 }
 
 /**
  * Το κλειδί της τιμής του **εγγράφου** για μία γραμμή — ό,τι θα κρατήσει μια «Αγνόηση». Το υπολογίζει ο **διακομιστής**
- * από την αποθηκευμένη ανάγνωση (ποτέ ο πελάτης): κανείς δεν «αγνοεί» τιμή που το έγγραφο δεν είπε. Ανεξάρτητο από
- * το είδος επαφής — η πλευρά του εγγράφου γειώνεται ίδια για όλους. `null` ⇒ τίποτα γειωμένο να αγνοηθεί.
+ * από την αποθηκευμένη ανάγνωση **και τα τεκμήριά της** (ποτέ ο πελάτης): κανείς δεν «αγνοεί» τιμή που το έγγραφο δεν
+ * είπε. Ανεξάρτητο από το είδος επαφής — η πλευρά του εγγράφου γειώνεται ίδια για όλους. `null` ⇒ τίποτα γειωμένο.
  */
-export function evidenceDocumentKey(
-  fields: readonly DocumentEvidenceField[],
-  purpose: string | null,
-  row: EvidenceRowKey,
-): string | null {
+export function evidenceDocumentKey(reading: EvidenceReading, purpose: string | null, row: EvidenceRowKey): string | null {
   const specs = purpose ? CONTACT_DOCUMENT_EVIDENCE[purpose] ?? [] : [];
   if (row === 'address') {
-    const addressSpecs: AddressSpec[] = [];
-    for (const spec of specs) {
-      const key = spec.key;
-      if (isEvidenceAddressField(key) && !addressSpecs.some((s) => s.spec.key === key)) addressSpecs.push({ spec, part: SEAT_PART_OF[key] });
-    }
-    return addressSpecs.length === 0 ? null : groundAddress(addressSpecs, fields).documentKey;
+    const addressSpecs = addressSpecsOf(specs);
+    return addressSpecs.length === 0 ? null : groundAddress(addressSpecs, reading).documentKey;
   }
   const spec = specs.find((s) => s.key === row);
   if (spec === undefined) return null;
-  const grounded = readingOf(fields, spec);
+  const grounded = readingOf(reading, spec);
   return grounded.ok ? grounded.key : null;
 }
 

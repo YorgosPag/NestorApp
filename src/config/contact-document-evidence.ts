@@ -63,6 +63,7 @@ export type EvidenceFieldKind =
   | 'taxOffice'
   | 'text'
   | 'code'
+  | 'registryNumber'
   | 'date'
   | 'postalCode'
   | 'addressPart'
@@ -132,7 +133,7 @@ export const CONTACT_DOCUMENT_EVIDENCE: Readonly<Record<string, readonly Evidenc
     TAX_OFFICE,
     ...ADDRESS,
     spec('phone', 'phone', 'append-phone', { individual: 'phones', company: 'phones', service: 'phones' }, CODE_CONFIDENCE),
-    spec('teeRegistryNumber', 'code', 'persona-field', { individual: 'engineerTeeRegistryNumber' }, CODE_CONFIDENCE),
+    spec('teeRegistryNumber', 'registryNumber', 'persona-field', { individual: 'engineerTeeRegistryNumber' }, CODE_CONFIDENCE),
   ],
   id: [
     spec('lastName', 'nameToken', 'form-field', { individual: 'lastName' }, TEXT_CONFIDENCE),
@@ -156,6 +157,37 @@ export function evidenceFieldKeysFor(purpose: string | null | undefined): readon
 export function evidenceSpecsFor(purpose: string | null | undefined, contactType: ContactType): readonly EvidenceFieldSpec[] {
   const specs = purpose ? CONTACT_DOCUMENT_EVIDENCE[purpose] : undefined;
   return (specs ?? []).filter((s) => s.target[contactType] !== undefined);
+}
+
+/** Ποιο πέρασμα ανάγνωσης: η κύρια (ταξινόμηση + πεδία) ή η δεύτερη, ανεξάρτητη ανάγνωση ψηφίων (ADR-950 §8.3). */
+export type DocumentEvidencePass = 'primary' | 'digit-recheck';
+
+/**
+ * ADR-950 §8.3 — τα πεδία που διαβάζονται **δεύτερη φορά, ανεξάρτητα** (consensus): εκείνα όπου ένα ψηφίο κάνει άλλη
+ * τιμή και κανένας ελεγκτής δεν το πιάνει πάντα (το τηλέφωνο δεν έχει ψηφίο ελέγχου· ο ΑΦΜ το πιάνει στο ~90%).
+ * 🔴 2026-11-23: η υπογραφή κάλυψε το τελευταίο «5» και η AI διάβασε «…96» με δηλωμένη εμπιστοσύνη 0.95.
+ */
+const DIGIT_RECHECK_FIELDS: ReadonlySet<EvidenceFieldKey> = new Set<EvidenceFieldKey>([
+  'phone',
+  'vatNumber',
+  'addressPostalCode',
+  'addressNumber',
+  'teeRegistryNumber',
+  'documentNumber',
+  'birthDate',
+]);
+
+/** Τα πεδία του `purpose` που ξαναδιαβάζονται για consensus — `[]` ⇒ καμία δεύτερη κλήση. */
+export function evidenceRecheckFieldsFor(purpose: string | null | undefined): readonly EvidenceFieldKey[] {
+  return evidenceFieldKeysFor(purpose).filter((key) => DIGIT_RECHECK_FIELDS.has(key));
+}
+
+/**
+ * Η δήλωση ενός πεδίου του `purpose` (είδος + κατώφλι). Για το `fullName`, που έχει δύο δηλώσεις (πρόσωπο/εταιρεία),
+ * επιστρέφει την πρώτη — κανένας καταναλωτής του διακομιστή δεν το ζητά (δεν ξαναδιαβάζεται, δεν είναι διεύθυνση).
+ */
+export function evidenceSpecOf(purpose: string, key: EvidenceFieldKey): EvidenceFieldSpec | null {
+  return CONTACT_DOCUMENT_EVIDENCE[purpose]?.find((s) => s.key === key) ?? null;
 }
 
 /** Έχει νόημα η ανάγνωση στοιχείων για αυτό το `purpose`; */

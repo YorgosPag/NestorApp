@@ -71,7 +71,8 @@
     "exterior": "Exterior",
     "interior": "Interior",
     "contract": "Contract",
-    "report": "Report"
+    "report": "Report",
+    "stamp-signature": "Stamp & Signature"
   },
   "labels": {
     "revision": "Version",

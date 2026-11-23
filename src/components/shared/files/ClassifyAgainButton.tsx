@@ -19,9 +19,14 @@ interface ClassifyAgainButtonProps {
   readonly label: string;
   readonly busy: boolean;
   readonly onClick: () => void;
+  /**
+   * Ορατό κείμενο δίπλα στο εικονίδιο — όταν η πράξη είναι η **κύρια** πρόσκληση της γραμμής (ADR-950 §8.7).
+   * 🔴 2026-11-23 (ζωντανός έλεγχος): το σκέτο εικονίδιο «↻» για την «Ανάγνωση στοιχείων» δεν το έβρισκε κανείς.
+   */
+  readonly showLabel?: boolean;
 }
 
-export function ClassifyAgainButton({ label, busy, onClick }: ClassifyAgainButtonProps) {
+export function ClassifyAgainButton({ label, busy, onClick, showLabel = false }: ClassifyAgainButtonProps) {
   const iconSizes = useIconSizes();
   return (
     <Tooltip>
@@ -30,15 +35,17 @@ export function ClassifyAgainButton({ label, busy, onClick }: ClassifyAgainButto
           type="button"
           onClick={onClick}
           disabled={busy}
-          aria-label={label}
+          aria-label={showLabel ? undefined : label}
           className={cn(
-            'inline-flex items-center justify-center rounded p-0.5',
+            'inline-flex items-center justify-center gap-1 rounded p-0.5',
+            showLabel && 'px-1.5 text-xs font-medium',
             // CHECK 3.38 (ADR-770): μελάνι = token ΣΚΟΠΟΥ· το `text-primary` στο σκοτεινό θέμα = 1,00:1 με το `--card`.
             'text-[hsl(var(--text-info))]',
             'hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity',
           )}
         >
           <RotateCcw className={cn(iconSizes.xs, busy && 'animate-spin')} aria-hidden="true" />
+          {showLabel && <span>{label}</span>}
         </button>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>

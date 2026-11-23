@@ -14,7 +14,7 @@ import { useCallback } from 'react';
 import type { EvidenceDismissReason } from '@/config/contact-document-evidence';
 import { proposeHqAddress } from '@/components/contacts/dynamic/hq-address-proposal-store';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { acceptEvidence, evidenceSeatProposal } from '@/lib/contacts/contact-evidence-acceptance';
+import { acceptEvidence, acceptEvidenceBatch, evidenceSeatProposal } from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -30,48 +30,74 @@ const logger = createModuleLogger('ContactEvidenceActions');
 export interface ContactEvidenceActions {
   readonly accept: (row: EvidenceRow) => void;
   readonly proposeAddress: (row: EvidenceRow) => void;
+  readonly fillEmpty: (rows: readonly EvidenceRow[], seat: EvidenceRow | null) => void;
   readonly dismiss: (row: EvidenceRow, reason: EvidenceDismissReason) => void;
   readonly restore: (row: EvidenceRow) => void;
 }
 
-export function useContactEvidenceActions(file: FileRecord, fileName: string): ContactEvidenceActions | null {
+/** «Αγνόηση» / «Αναίρεση» — διακομιστής (ο ΕΝΑΣ γραφέας), **αισιόδοξα**: φαίνεται αμέσως, επαναφορά σε αποτυχία. */
+function useEvidenceDecisions(fileId: string): Pick<ContactEvidenceActions, 'dismiss' | 'restore'> {
   const host = useContactEvidenceHost();
   const { t } = useTranslation('contacts-form');
   const { error } = useNotifications();
-
-  const accept = useCallback((row: EvidenceRow) => {
-    if (host?.setFormData && host.canEdit) host.setFormData(acceptEvidence(host.formData, row, host.contactType));
-  }, [host]);
-
-  const proposeAddress = useCallback((row: EvidenceRow) => {
-    const proposal = evidenceSeatProposal(row);
-    if (host === null || proposal === null) return;
-    const observedAt = file.ingestion?.analysis?.analysisTimestamp ?? nowISO();
-    proposeHqAddress({ contactId: host.contactId, origin: { kind: 'document', fileId: file.id, fileName }, observedAt, ...proposal });
-    host.onOpenAddresses?.();
-  }, [host, file.id, file.ingestion?.analysis?.analysisTimestamp, fileName]);
 
   const dismiss = useCallback((row: EvidenceRow, reason: EvidenceDismissReason) => {
     if (host === null || row.documentKey === null) return;
     // Αισιόδοξα: η τιμή-κλειδί είναι η ίδια που θα υπολογίσει ο διακομιστής (`evidenceDocumentKey`). Το `decidedBy`
     // μένει κενό **μόνο** στην εκκρεμή τιμή — την αυθεντική τη γράφει ο διακομιστής από την ταυτότητα του αιτήματος.
-    host.setPending(file.id, row.key, { row: row.key, documentValueAtDecision: row.documentKey, reason, decidedBy: '', decidedAt: nowISO() });
-    dismissEvidenceWithPolicy(file.id, row.key, reason).catch((cause: unknown) => {
-      logger.error('Evidence dismissal failed', { fileId: file.id, row: row.key, cause });
-      host.setPending(file.id, row.key, undefined);
+    host.setPending(fileId, row.key, { row: row.key, documentValueAtDecision: row.documentKey, reason, decidedBy: '', decidedAt: nowISO() });
+    dismissEvidenceWithPolicy(fileId, row.key, reason).catch((cause: unknown) => {
+      logger.error('Evidence dismissal failed', { fileId, row: row.key, cause });
+      host.setPending(fileId, row.key, undefined);
       error(t(KEYS.dismissFailed));
     });
-  }, [host, file.id, error, t]);
+  }, [host, fileId, error, t]);
 
   const restore = useCallback((row: EvidenceRow) => {
     if (host === null) return;
-    host.setPending(file.id, row.key, null);
-    restoreEvidenceWithPolicy(file.id, row.key).catch((cause: unknown) => {
-      logger.error('Evidence restore failed', { fileId: file.id, row: row.key, cause });
-      host.setPending(file.id, row.key, undefined);
+    host.setPending(fileId, row.key, null);
+    restoreEvidenceWithPolicy(fileId, row.key).catch((cause: unknown) => {
+      logger.error('Evidence restore failed', { fileId, row: row.key, cause });
+      host.setPending(fileId, row.key, undefined);
       error(t(KEYS.restoreFailed));
     });
-  }, [host, file.id, error, t]);
+  }, [host, fileId, error, t]);
 
-  return host === null ? null : { accept, proposeAddress, dismiss, restore };
+  return { dismiss, restore };
+}
+
+export function useContactEvidenceActions(file: FileRecord, fileName: string): ContactEvidenceActions | null {
+  const host = useContactEvidenceHost();
+  const { dismiss, restore } = useEvidenceDecisions(file.id);
+
+  const accept = useCallback((row: EvidenceRow) => {
+    if (host?.setFormData && host.canEdit) host.setFormData(acceptEvidence(host.formData, row, host.contactType));
+  }, [host]);
+
+  // ADR-950 §8.1 — «ανάγνωση <ημερομηνία>» = η ώρα που ΣΦΡΑΓΙΣΕ ο διακομιστής (`stateChangedAt`), όχι ό,τι επινοούσε η AI
+  // στο `analysisTimestamp` («01/10/2023» στον ζωντανό έλεγχο της 2026-11-23).
+  const observedAt = readingTimeOf(file);
+
+  const proposeAddress = useCallback((row: EvidenceRow) => {
+    const proposal = evidenceSeatProposal(row);
+    if (host === null || proposal === null) return;
+    proposeHqAddress({ contactId: host.contactId, origin: { kind: 'document', fileId: file.id, fileName }, observedAt, ...proposal });
+    host.onOpenAddresses?.();
+  }, [host, file.id, observedAt, fileName]);
+
+  /** «Συμπλήρωση κενών»: όλα τα επιλεγμένα σε **μία** αλλαγή φόρμας, και η διεύθυνση ως πρόταση (ADR-950 §8.6). */
+  const fillEmpty = useCallback((rows: readonly EvidenceRow[], seat: EvidenceRow | null) => {
+    if (host?.setFormData === undefined || !host.canEdit) return;
+    if (rows.length > 0) host.setFormData(acceptEvidenceBatch(host.formData, rows, host.contactType));
+    if (seat !== null) proposeAddress(seat);
+  }, [host, proposeAddress]);
+
+  return host === null ? null : { accept, proposeAddress, fillEmpty, dismiss, restore };
+}
+
+/** Πότε διαβάστηκε — η σφραγίδα του διακομιστή· χωρίς αυτήν, «τώρα» (ποτέ ημερομηνία από το LLM). */
+function readingTimeOf(file: FileRecord): string {
+  const at = file.ingestion?.stateChangedAt;
+  if (typeof at === 'string') return at;
+  return at instanceof Date ? at.toISOString() : nowISO();
 }
