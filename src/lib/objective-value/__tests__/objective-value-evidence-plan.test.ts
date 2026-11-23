@@ -44,6 +44,30 @@ describe('ADR-949 Α-1 — objectiveValueEvidencePlan', () => {
     expect([...fields].sort()).toEqual(['ageYears', 'area', 'floor']);
   });
 
+  it('ADR-949 §11.8: ισοδύναμο έγγραφο ⇒ εναλλακτική του βήματος (η πράξη ΕΝΦΙΑ δίπλα στο Ε9, όχι αόρατη)', () => {
+    const [e9] = objectiveValueEvidencePlan(['area', 'floor']).steps;
+    expect(e9.alternatives.map((a) => a.document)).toEqual(['owner-enfia-assessment']);
+    expect(e9.alternatives[0].covers.map((c) => c.field)).toEqual(['area', 'floor']);
+  });
+
+  it('εναλλακτική ΜΟΝΟ με αποδεδειγμένη θέση για κάθε πεδίο — το συμβόλαιο (χωρίς «πού») δεν προτείνεται', () => {
+    const [e9] = objectiveValueEvidencePlan(['area']).steps;
+    expect(e9.alternatives.map((a) => a.document)).not.toContain('title-deed');
+  });
+
+  it('εναλλακτική μόνο όταν καλύπτει ΟΛΑ τα πεδία του βήματος, και ποτέ έγγραφο που είναι ήδη βήμα', () => {
+    const plan = objectiveValueEvidencePlan(['area', 'floor', 'ageYears']);
+    const permit = plan.steps.find((s) => s.document === 'unit-permit');
+    expect(permit?.alternatives).toEqual([]);
+    const planned = new Set(plan.steps.map((s) => s.document));
+    for (const step of plan.steps) {
+      for (const alternative of step.alternatives) {
+        expect(planned.has(alternative.document)).toBe(false);
+        expect(alternative.covers.map((c) => c.field)).toEqual(step.covers.map((c) => c.field));
+      }
+    }
+  });
+
   it('ό,τι κανένα έγγραφο δεν γράφει λέγεται με τον λόγο του, ποτέ σιωπηλά', () => {
     const plan = objectiveValueEvidencePlan(['commercialityFactor', 'hasElevator', 'plotUtilisation']);
     expect(plan.steps).toEqual([]);

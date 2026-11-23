@@ -205,6 +205,7 @@
   "evidence": {
     "title": "Which documents show these",
     "covers": "Covers: {fields}",
+    "alternative": "Or instead: {document}",
     "held": "You already have it: the notary handed it over when you acquired the property.",
     "note": "The documents help you declare the values correctly. The calculation stays indicative and is not a certification.",
     "documents": {

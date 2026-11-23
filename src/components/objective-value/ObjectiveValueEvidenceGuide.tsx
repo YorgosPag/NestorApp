@@ -25,6 +25,7 @@ import {
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   objectiveValueEvidencePlan,
+  type ObjectiveValueEvidenceOption,
   type ObjectiveValueEvidenceStep,
 } from '@/lib/objective-value/objective-value-evidence-plan';
 import type { ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
@@ -48,33 +49,60 @@ interface ObjectiveValueEvidenceReading {
   readonly onApply: (application: ObjectiveValueReadingApplication) => void;
 }
 
+interface EvidenceOptionProps {
+  readonly option: ObjectiveValueEvidenceOption;
+  readonly reading: ObjectiveValueEvidenceReading | null;
+}
+
+/** Ό,τι λέμε για ένα έγγραφο — πού μέσα του, πώς το αποκτάτε, ανάγνωση στη συσκευή. Κοινό σε βήμα και εναλλακτική. */
+function EvidenceOptionDetails({ option, reading }: EvidenceOptionProps) {
+  const { t } = useTranslation([NS, REGISTRY_NS]);
+  return (
+    <>
+      {option.covers.some(({ whereKey }) => whereKey !== null) && (
+        <ul className="m-0 list-disc pl-5 text-xs text-muted-foreground">
+          {option.covers.map(({ field, whereKey }) => whereKey !== null && <li key={field}>{t(whereKey)}</li>)}
+        </ul>
+      )}
+      {option.obtain.kind === 'authority' ? (
+        <>
+          <span className="text-xs text-muted-foreground">{t(SELF_SERVICE_PATH_KEYS[option.obtain.service])}</span>
+          <RegistryAuthorityLink service={option.obtain.service} />
+        </>
+      ) : (
+        <span className="text-xs text-muted-foreground">{t(`${E}.held`)}</span>
+      )}
+      {reading !== null && deviceReaderOf(option.document) !== null && (
+        <ObjectiveValueDocumentReader document={option.document} draft={reading.draft} mapZone={reading.mapZone} onApply={reading.onApply} />
+      )}
+    </>
+  );
+}
+
 interface EvidenceStepProps {
   readonly step: ObjectiveValueEvidenceStep;
   readonly reading: ObjectiveValueEvidenceReading | null;
 }
 
 function EvidenceStep({ step, reading }: EvidenceStepProps) {
-  const { t } = useTranslation([NS, REGISTRY_NS]);
+  const { t } = useTranslation([NS]);
   const fields = step.covers.map(({ field }) => t(`${NS}:result.missing.${field}`)).join(', ');
   return (
     <li className="flex flex-col gap-1">
       <span className="text-sm font-medium text-foreground">{t(`${E}.documents.${step.document}`)}</span>
       <span className="text-sm text-muted-foreground">{t(`${E}.covers`, { fields })}</span>
-      {step.covers.some(({ whereKey }) => whereKey !== null) && (
-        <ul className="m-0 list-disc pl-5 text-xs text-muted-foreground">
-          {step.covers.map(({ field, whereKey }) => whereKey !== null && <li key={field}>{t(whereKey)}</li>)}
+      <EvidenceOptionDetails option={step} reading={reading} />
+      {step.alternatives.length > 0 && (
+        <ul className="m-0 mt-1 flex list-none flex-col gap-1 border-l border-border pl-3">
+          {step.alternatives.map((alternative) => (
+            <li key={alternative.document} className="flex flex-col gap-1">
+              <span className="text-sm text-foreground">
+                {t(`${E}.alternative`, { document: t(`${E}.documents.${alternative.document}`) })}
+              </span>
+              <EvidenceOptionDetails option={alternative} reading={reading} />
+            </li>
+          ))}
         </ul>
-      )}
-      {step.obtain.kind === 'authority' ? (
-        <>
-          <span className="text-xs text-muted-foreground">{t(SELF_SERVICE_PATH_KEYS[step.obtain.service])}</span>
-          <RegistryAuthorityLink service={step.obtain.service} />
-        </>
-      ) : (
-        <span className="text-xs text-muted-foreground">{t(`${E}.held`)}</span>
-      )}
-      {reading !== null && deviceReaderOf(step.document) !== null && (
-        <ObjectiveValueDocumentReader document={step.document} draft={reading.draft} mapZone={reading.mapZone} onApply={reading.onApply} />
       )}
     </li>
   );

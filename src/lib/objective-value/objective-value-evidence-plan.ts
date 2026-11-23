@@ -29,10 +29,20 @@ export interface ObjectiveValueEvidenceCoverage {
   readonly whereKey: ObjectiveValueEvidenceWhereKey | null;
 }
 
-export interface ObjectiveValueEvidenceStep {
+/** Ένα έγγραφο και ό,τι καλύπτει από τα ανοιχτά πεδία. */
+export interface ObjectiveValueEvidenceOption {
   readonly document: ObjectiveValueEvidenceDocument;
   readonly obtain: ObjectiveValueEvidenceObtain;
   readonly covers: readonly ObjectiveValueEvidenceCoverage[];
+}
+
+/**
+ * Βήμα του οδηγού. `alternatives` (ADR-949 §11.8): έγγραφα που **δεν** έγιναν βήμα αλλά καλύπτουν **όλα** τα πεδία του
+ * βήματος, με αποδεδειγμένη θέση για καθένα — «ή αλλιώς». Χωρίς αυτά, η άπληστη κάλυψη έκρυβε κάθε ισοδύναμο έγγραφο
+ * (η πράξη ΕΝΦΙΑ, ίδια πεδία με το Ε9, δεν εμφανιζόταν ποτέ ⇒ ο αναγνώστης της ήταν απρόσιτος — ζωντανός έλεγχος Α-3).
+ */
+export interface ObjectiveValueEvidenceStep extends ObjectiveValueEvidenceOption {
+  readonly alternatives: readonly ObjectiveValueEvidenceOption[];
 }
 
 export interface ObjectiveValueEvidencePlan {
@@ -63,12 +73,12 @@ function coverageByDocument(
 }
 
 /** Πόσα από τα πεδία που καλύπτει έχουν **αποδεδειγμένη** θέση στο έγγραφο (είδαμε δείγμα). */
-function locatedCount(step: ObjectiveValueEvidenceStep): number {
+function locatedCount(step: ObjectiveValueEvidenceOption): number {
   return step.covers.filter(({ whereKey }) => whereKey !== null).length;
 }
 
 /** Λεξικογραφική σύγκριση: κάλυψη ⇒ αποδεδειγμένη θέση ⇒ ευκολία. Αυστηρά καλύτερο, αλλιώς κρατά τη σειρά του μητρώου. */
-function isBetter(candidate: ObjectiveValueEvidenceStep, best: ObjectiveValueEvidenceStep | null): boolean {
+function isBetter(candidate: ObjectiveValueEvidenceOption, best: ObjectiveValueEvidenceOption | null): boolean {
   if (best === null) return true;
   if (candidate.covers.length !== best.covers.length) return candidate.covers.length > best.covers.length;
   if (locatedCount(candidate) !== locatedCount(best)) return locatedCount(candidate) > locatedCount(best);
@@ -79,8 +89,8 @@ function isBetter(candidate: ObjectiveValueEvidenceStep, best: ObjectiveValueEvi
 function bestNext(
   coverage: ReadonlyMap<ObjectiveValueEvidenceDocument, readonly ObjectiveValueEvidenceCoverage[]>,
   open: ReadonlySet<ObjectiveValueMissing>,
-): ObjectiveValueEvidenceStep | null {
-  let best: ObjectiveValueEvidenceStep | null = null;
+): ObjectiveValueEvidenceOption | null {
+  let best: ObjectiveValueEvidenceOption | null = null;
   for (const [document, all] of coverage) {
     const covers = all.filter(({ field }) => open.has(field));
     if (covers.length === 0) continue;
@@ -90,16 +100,38 @@ function bestNext(
   return best;
 }
 
-/** Τα έγγραφα για ό,τι λείπει, με σειρά (άπληστη κάλυψη) — κενό `missing` ⇒ κενό πλάνο. */
+/**
+ * Τα ισοδύναμα ενός βήματος: έγγραφα εκτός πλάνου που καλύπτουν **όλα** τα πεδία του, με αποδεδειγμένη θέση για καθένα
+ * («μόνο ό,τι αποδείχθηκε» — ένα έγγραφο χωρίς `whereKey` δεν υπόσχεται πού). Σειρά = σειρά του μητρώου.
+ */
+function alternativesOf(
+  step: ObjectiveValueEvidenceOption,
+  coverage: ReadonlyMap<ObjectiveValueEvidenceDocument, readonly ObjectiveValueEvidenceCoverage[]>,
+  planned: ReadonlySet<ObjectiveValueEvidenceDocument>,
+): ObjectiveValueEvidenceOption[] {
+  const stepFields = new Set(step.covers.map(({ field }) => field));
+  const alternatives: ObjectiveValueEvidenceOption[] = [];
+  for (const [document, all] of coverage) {
+    if (planned.has(document)) continue;
+    const covers = all.filter(({ field }) => stepFields.has(field));
+    if (covers.length !== stepFields.size || covers.some(({ whereKey }) => whereKey === null)) continue;
+    alternatives.push({ document, obtain: OBJECTIVE_VALUE_EVIDENCE_DOCUMENT_SPECS[document], covers });
+  }
+  return alternatives;
+}
+
+/** Τα έγγραφα για ό,τι λείπει, με σειρά (άπληστη κάλυψη) και τα ισοδύναμά τους — κενό `missing` ⇒ κενό πλάνο. */
 export function objectiveValueEvidencePlan(missing: readonly ObjectiveValueMissing[]): ObjectiveValueEvidencePlan {
   const fields = [...new Set(missing)];
   const coverage = coverageByDocument(fields);
   const open = new Set(fields.filter((field) => OBJECTIVE_VALUE_EVIDENCE[field].kind === 'documents'));
-  const steps: ObjectiveValueEvidenceStep[] = [];
+  const chosen: ObjectiveValueEvidenceOption[] = [];
   for (let next = bestNext(coverage, open); next !== null; next = bestNext(coverage, open)) {
-    steps.push(next);
+    chosen.push(next);
     for (const { field } of next.covers) open.delete(field);
   }
+  const planned = new Set(chosen.map(({ document }) => document));
+  const steps = chosen.map((option) => ({ ...option, alternatives: alternativesOf(option, coverage, planned) }));
   const selfAnswered = fields.flatMap((field) => {
     const evidence = OBJECTIVE_VALUE_EVIDENCE[field];
     return evidence.kind === 'none' ? [{ field, reason: evidence.reason }] : [];
