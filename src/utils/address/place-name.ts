@@ -297,10 +297,31 @@ function differsByArchaicEnding(a: string, b: string, [archaic, modern]: readonl
   return stem.length >= MIN_ARCHAIC_STEM && stem === b.slice(0, -modern.length);
 }
 
+/**
+ * **ΚΑΘΑΡΕΥΟΥΣΑ ΟΝΟΜΑΣΤΙΚΗ ⇄ ΓΕΝΙΚΗ** — δύο βήματα των **ίδιων** πινάκων, ποτέ τρίτος πίνακας.
+ *
+ * 🔴 **ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ — ΜΕΤΡΗΜΕΝΟ 2026-11-23** (ADR-332 §D36, ARIES Α.Ε.): οικισμός ΕΛΣΤΑΤ «Ωραιόκαστρον»,
+ * δήμος του ΓΕΜΗ «ΩΡΑΙΟΚΑΣΤΡΟΥ». Κάθε βήμα χωριστά υπήρχε («-ον → -ο» · «-ο ⇄ -ου»), αλλά η σύνθεσή τους
+ * όχι — άρα ο ~21% του μητρώου που είναι σε καθαρεύουσα **δεν ταυτιζόταν ποτέ με τη γενική του**, δηλαδή
+ * με τη μορφή που έχει **κάθε** όνομα δήμου («Δήμος Ωραιοκάστρου»).
+ *
+ * ⚠️ Μόνο **ονομαστική → γενική** (η εκσυγχρονισμένη μορφή στο αριστερό μέλος του ζεύγους) και με τα
+ * **ίδια** ελάχιστα ρίζας: το «Νέον ⇄ Νέου» (ρίζα `νε`) μένει εκτός, όπως το «Ίος ⇄ Ίου».
+ */
+function differsByArchaicThenDeclined(a: string, b: string): boolean {
+  return KATHAREVOUSA_PAIRS.some(([archaic, modern]) => {
+    if (!a.endsWith(archaic)) return false;
+    const stem = a.slice(0, -archaic.length);
+    if (stem.length < MIN_ARCHAIC_STEM) return false;
+    return DECLENSION_PAIRS.some((pair) => differsByPair(stem + modern, b, pair));
+  });
+}
+
 function sameDeclinedWord(a: string, b: string): boolean {
   if (a === b) return true;
   if (DECLENSION_PAIRS.some((pair) => differsByPair(a, b, pair) || differsByPair(b, a, pair))) return true;
-  return KATHAREVOUSA_PAIRS.some((pair) => differsByArchaicEnding(a, b, pair) || differsByArchaicEnding(b, a, pair));
+  if (KATHAREVOUSA_PAIRS.some((pair) => differsByArchaicEnding(a, b, pair) || differsByArchaicEnding(b, a, pair))) return true;
+  return differsByArchaicThenDeclined(a, b) || differsByArchaicThenDeclined(b, a);
 }
 
 /**

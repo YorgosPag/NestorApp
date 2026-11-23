@@ -15,6 +15,8 @@
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { canonicalLegalForm } from '@/lib/contact/legal-form-vocabulary';
 import type { ContactRegistryFields, SeatFields } from '@/lib/company/contact-registry-comparison';
+import { seatWiderAreasOf } from '@/lib/company/seat-locality';
+import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { isValidGreekVat, normalizeVat } from '@/lib/validation/greek-vat-number';
 import type { Contact } from '@/types/contacts';
 import type { ContactRegistryQuery } from '@/types/contact-registry-check';
@@ -39,10 +41,13 @@ export function isCompanyContact(doc: StoredContactDocument): boolean {
   return doc.type === 'company';
 }
 
-/** Η έδρα = **θέση 0** της λίστας διευθύνσεων· `null` όταν η επαφή δεν έχει διεύθυνση. */
-function headquartersOf(doc: StoredContactDocument): SeatFields | null {
+/** Η εγγραφή της έδρας = **θέση 0** της λίστας διευθύνσεων· `undefined` όταν η επαφή δεν έχει διεύθυνση. */
+function headquartersRecordOf(doc: StoredContactDocument): CompanyAddress | undefined {
   // Ο αναγνώστης δέχεται `Contact` αλλά διαβάζει ο ίδιος ωμά `customFields`/`companyAddresses`/`addresses`.
-  const hq = resolveContactAddresses(doc as unknown as Contact, 'company')[0];
+  return resolveContactAddresses(doc as unknown as Contact, 'company')[0];
+}
+
+function seatFieldsOf(hq: CompanyAddress | undefined): SeatFields | null {
   if (hq === undefined) return null;
   return {
     street: textOrNull(hq.street ?? ''),
@@ -55,6 +60,7 @@ function headquartersOf(doc: StoredContactDocument): SeatFields | null {
 /** Το έγγραφο επαφής ⇒ τα έξι πεδία της φάσης 1 (ADR-948 §8.5), ωμά όπως είναι αποθηκευμένα. */
 export function contactRegistryFieldsOf(doc: StoredContactDocument): ContactRegistryFields {
   const scalars = readCompanyScalarFields(doc);
+  const hq = headquartersRecordOf(doc);
   return {
     companyName: textOrNull(scalars.companyName),
     tradeName: textOrNull(scalars.tradeName),
@@ -62,7 +68,9 @@ export function contactRegistryFieldsOf(doc: StoredContactDocument): ContactRegi
     // Κωδικός της ρίζας — παλιό `AE` δεν είναι «διαφορά» από το `ae` του ΓΕΜΗ· άγνωστη τιμή ⇒ ωμό κείμενο (⇒ `differs`).
     legalForm: canonicalLegalForm(scalars.legalForm) ?? textOrNull(scalars.legalForm),
     gemiStatus: textOrNull(scalars.gemiStatus),
-    headquarters: headquartersOf(doc),
+    headquarters: seatFieldsOf(hq),
+    // Τεκμήριο για την κρίση της πόλης (ADR-948 §8.7.5) — ίδια ανάγνωση με τη φόρμα (`formRegistryFieldsOf`).
+    headquartersWiderAreas: seatWiderAreasOf(hq ?? {}),
   };
 }
 

@@ -33,6 +33,7 @@ const contact = (overrides: Partial<ContactRegistryFields> = {}): ContactRegistr
   legalForm: 'ae',
   gemiStatus: 'active',
   headquarters: { street: 'Σαμοθράκης', number: '16', postalCode: '542 48', city: 'Θεσσαλονίκη' },
+  headquartersWiderAreas: [],
   ...overrides,
 });
 
@@ -131,6 +132,60 @@ describe('Δ — δεν συγκρίνεται ⇒ not-comparable, ποτέ «δ
     expect(result.seat.registry?.number).toBeNull();
     expect(result.seat.parts.number).toBe('not-comparable');
     expect(result.seat.parts.street).toBe('missing');
+  });
+});
+
+/**
+ * 🔴 ADR-948 §8.7.5 · ADR-332 §D36 — μετρημένο ζωντανά (ARIES Α.Ε., 2026-11-23): το ΓΕΜΗ γράφει «ΘΕΣΣΑΛΟΝΙΚΗ» στην
+ * πόλη έδρας που ο **δικός του** δήμος λέει «ΩΡΑΙΟΚΑΣΤΡΟΥ / ΘΕΣΣΑΛΟΝΙΚΗΣ». Η έδρα έβγαινε «διαφέρει» ⇒ `replace` ⇒
+ * η «Διόρθωση έδρας» έδενε Δήμο Θεσσαλονίκης σε εταιρεία του Ωραιοκάστρου.
+ */
+describe('Η — πόλη έδρας: ο ίδιος τόπος δηλωμένος ευρύτερα ⇒ match, όχι «άλλη διεύθυνση»', () => {
+  const ARIES_SEAT = {
+    street: 'ΚΑΛΒΟΥ ΚΑΙ ΙΠΠΟΔΡΟΜΙΟΥ',
+    streetNumber: '0',
+    postalCode: '57013',
+    city: 'ΘΕΣΣΑΛΟΝΙΚΗ',
+    municipality: { id: '61058', label: 'ΩΡΑΙΟΚΑΣΤΡΟΥ / ΘΕΣΣΑΛΟΝΙΚΗΣ' },
+  };
+  const ARIES_HQ = { street: 'ΚΑΛΒΟΥ ΚΑΙ ΙΠΠΟΔΡΟΜΙΟΥ', number: null, postalCode: '57013', city: 'Ωραιόκαστρον' };
+  const ARIES_AREAS = ['Δημοτική Κοινότητα Ωραιοκάστρου', 'Δήμος Ωραιοκάστρου', 'Περιφερειακή Ενότητα Θεσσαλονίκης'];
+  const seatOf = (headquarters: ContactRegistryFields['headquarters'], areas: readonly string[], seat = ARIES_SEAT) =>
+    compareContactWithRegistry(contact({ headquarters, headquartersWiderAreas: areas }), record({ seat }), AE).seat;
+
+  it('Η1 — το περιστατικό: και τα δύο τεκμήρια ⇒ η έδρα match, καμία πρόταση', () => {
+    const seat = seatOf(ARIES_HQ, ARIES_AREAS);
+    expect(seat.state).toBe('match');
+    expect(seat.parts).toEqual({ street: 'match', number: 'not-comparable', postalCode: 'match', city: 'match' });
+  });
+
+  it('Η2 — τεκμήριο (Α) μόνο του: ο δήμος του μητρώου ονομάζει την πόλη της επαφής (έδρα χωρίς ιεραρχία)', () => {
+    expect(seatOf(ARIES_HQ, []).parts.city).toBe('match');
+  });
+
+  it('Η3 — τεκμήριο (Β) μόνο του: η πόλη του μητρώου είναι ευρύτερη περιοχή της ιεραρχίας της επαφής', () => {
+    const village = { ...ARIES_HQ, city: 'Μελισσοχώριον' };
+    const noMunicipality = { ...ARIES_SEAT, municipality: null };
+    expect(seatOf(village, ARIES_AREAS, noMunicipality).parts.city).toBe('match');
+  });
+
+  it('Η4 — 🔴 κανένα τεκμήριο ⇒ differs (η ευρύτερη δήλωση δεν μαντεύεται)', () => {
+    expect(seatOf(ARIES_HQ, [], { ...ARIES_SEAT, municipality: null }).parts.city).toBe('differs');
+  });
+
+  it('Η5 — 🔴 άλλος οικισμός του ίδιου δήμου ⇒ differs (η πόλη του μητρώου δεν είναι ευρύτερη περιοχή)', () => {
+    const sibling = { ...ARIES_SEAT, city: 'ΜΕΛΙΣΣΟΧΩΡΙ', municipality: null };
+    expect(seatOf(ARIES_HQ, ARIES_AREAS, sibling).parts.city).toBe('differs');
+  });
+
+  it('Η6 — 🔴 άλλη οδός ⇒ η έδρα differs όσο κι αν ταιριάζει η πόλη (η μετακόμιση δεν περνά ως «ίδια»)', () => {
+    const moved = seatOf({ ...ARIES_HQ, street: 'Εγνατίας' }, ARIES_AREAS);
+    expect(moved.parts.city).toBe('match');
+    expect(moved.state).toBe('differs');
+  });
+
+  it('Η7 — 🔴 άσχετη πόλη ⇒ differs, ακόμη και με τα δύο τεκμήρια παρόντα', () => {
+    expect(seatOf({ ...ARIES_HQ, city: 'Πάτρα' }, ['Δήμος Πατρέων', 'Περιφερειακή Ενότητα Αχαΐας']).parts.city).toBe('differs');
   });
 });
 

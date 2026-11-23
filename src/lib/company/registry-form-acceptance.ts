@@ -21,6 +21,7 @@ import {
   type SeatFields,
 } from '@/lib/company/contact-registry-comparison';
 import { classifyRegistryLegalForm } from '@/lib/company/registry-legal-person';
+import { seatWiderAreasOf } from '@/lib/company/seat-locality';
 import type { ResolvedAddressFields } from '@/lib/geocoding/geocoding-types';
 import type { RegistryCheck } from '@/types/company-registry';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -67,6 +68,7 @@ export function formRegistryFieldsOf(formData: ContactFormData): ContactRegistry
     legalForm: canonicalLegalForm(formData.legalForm) ?? textOrNull(formData.legalForm),
     gemiStatus: textOrNull(formData.gemiStatus),
     headquarters: formHeadquarters(formData),
+    headquartersWiderAreas: seatWiderAreasOf(formData.companyAddresses?.[0] ?? {}),
   };
 }
 

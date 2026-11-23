@@ -16,7 +16,8 @@
  * **δεν αφήνει** σύγκριση πριν από τον φράχτη «όχι φυσικό πρόσωπο» (ADR-948 §8.3).
  *
  * Κρίσεις που **δεν** ξαναγράφονται εδώ: επωνυμία/τίτλος → `sameLegalName` · Αρ. ΓΕΜΗ →
- * `canonicalGemiNumber` · μέρος διεύθυνσης → `sameAddressFieldValue` · ολίσθηση καταλόγου → `sameDescription`.
+ * `canonicalGemiNumber` · μέρος διεύθυνσης → `sameAddressFieldValue` · πόλη έδρας → `sameSeatCity` ·
+ * ολίσθηση καταλόγου → `sameDescription`.
  *
  * **Layering**: καθαρή — καμία εισαγωγή I/O. Ο καλών αντιστοιχίζει το έγγραφο επαφής στο `ContactRegistryFields`
  * (έδρα = **θέση 0** της `companyAddresses`, `components/contacts/dynamic/contact-hq-state.ts`).
@@ -37,6 +38,7 @@ import {
 import { sameAddressFieldValue } from '@/lib/geocoding/field-match';
 import { canonicalGemiNumber } from '@/lib/company/gemi-number';
 import { sameLegalName } from '@/lib/company/legal-name-match';
+import { registrySeatAreas, sameSeatCity, type SeatCityEvidence } from '@/lib/company/seat-locality';
 import { sameDescription, type LegalSubjectVerdict } from '@/lib/company/registry-legal-person';
 import type { RegistryCompanyRecord, RegistrySeat, RegistryStatus } from '@/types/company-registry';
 
@@ -58,6 +60,11 @@ export interface ContactRegistryFields {
   readonly gemiStatus: string | null;
   /** Η έδρα (θέση 0) — `null` όταν η επαφή δεν έχει διεύθυνση. */
   readonly headquarters: SeatFields | null;
+  /**
+   * Οι **ευρύτερες περιοχές** της έδρας, από τη διοικητική ιεραρχία της (`seatWiderAreasOf`) — `[]` χωρίς ιεραρχία.
+   * Τεκμήριο για την κρίση της πόλης (ADR-948 §8.7.5), **όχι** γραμμή σύγκρισης: δεν εμφανίζεται, δεν προτείνεται.
+   */
+  readonly headquartersWiderAreas: readonly string[];
 }
 
 export interface ContactRegistryComparison {
@@ -149,17 +156,27 @@ export function seatState(parts: Readonly<Record<SeatPart, FieldComparisonState>
   return states.includes('missing') ? 'missing' : 'match';
 }
 
-/** Έδρα ανά μέρος, με την **ίδια** κρίση πεδίου που έχει ο γεωκωδικοποιητής (Τ.Κ. «546 24» = «54624», οικισμοί). */
-function compareSeat(headquarters: SeatFields | null, seat: RegistrySeat): SeatComparison {
-  const contact = seatOf(headquarters);
+/**
+ * Έδρα ανά μέρος, με την **ίδια** κρίση πεδίου που έχει ο γεωκωδικοποιητής (Τ.Κ. «546 24» = «54624», οικισμοί).
+ *
+ * 🔑 Η **πόλη** κρίνεται με τα τεκμήρια της έδρας (`sameSeatCity`, ADR-948 §8.7.5): το ΓΕΜΗ γράφει συχνά τον
+ * νομό στη θέση της πόλης («ΘΕΣΣΑΛΟΝΙΚΗ» για έδρα στο Ωραιόκαστρο, με δήμο «ΩΡΑΙΟΚΑΣΤΡΟΥ / ΘΕΣΣΑΛΟΝΙΚΗΣ») —
+ * ευρύτερη δήλωση του **ίδιου** τόπου, όχι άλλη διεύθυνση. Οδός και Τ.Κ. κρίνονται όπως πάντα.
+ */
+function compareSeat(contactFields: ContactRegistryFields, seat: RegistrySeat): SeatComparison {
+  const contact = seatOf(contactFields.headquarters);
   const registry = registrySeatFields(seat);
+  const evidence: SeatCityEvidence = {
+    registryAreas: registrySeatAreas(seat),
+    contactWiderAreas: contactFields.headquartersWiderAreas,
+  };
   const judgePart = (part: SeatPart): FieldComparisonState =>
     judge(contact[part], registry[part], (a, b) => sameAddressFieldValue(part, a, b));
   const parts = {
     street: judgePart('street'),
     number: judgePart('number'),
     postalCode: judgePart('postalCode'),
-    city: judgePart('city'),
+    city: judge(contact.city, registry.city, (a, b) => sameSeatCity(a, b, evidence)),
   };
   const empty = (fields: SeatFields): boolean => SEAT_PARTS.every((part) => fields[part] === null);
   return { state: seatState(parts), parts, contact: empty(contact) ? null : contact, registry: empty(registry) ? null : registry };
@@ -177,6 +194,6 @@ export function compareContactWithRegistry(
     gemiNumber: compareGemiNumber(contact.gemiNumber, record.registrationNumber),
     legalForm: compareValue(contact.legalForm, verdict.entry.contactLegalForm, sameCode),
     status: compareStatus(contact.gemiStatus, record.status),
-    seat: compareSeat(contact.headquarters, record.seat),
+    seat: compareSeat(contact, record.seat),
   };
 }

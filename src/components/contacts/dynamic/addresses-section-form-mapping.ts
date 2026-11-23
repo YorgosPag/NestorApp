@@ -105,7 +105,9 @@ export function applyHqEditorChange(prev: ContactFormData, resolved: ResolvedAdd
  *
  * - `complete` — η **ίδια** διεύθυνση: ό,τι κάνει ο editor (`applyHqEditorChange`), η ιεραρχία **μένει**.
  * - `replace` — **άλλη** διεύθυνση: η ιεραρχία ανήκε στην παλιά, άρα **αδειάζει ολόκληρη**
- *   (`COMPANY_ADDRESS_HIERARCHY_CLEARED`). Το ΓΕΜΗ δεν δίνει ποτέ δήμο/οικισμό.
+ *   (`COMPANY_ADDRESS_HIERARCHY_CLEARED`). Η πρόταση δεν κουβαλά διοικητικά επίπεδα (`ResolvedAddressFields`).
+ *   ⚠️ Το ΓΕΜΗ **δίνει** δήμο (`seat.municipality`) — τον διαβάζει η **κρίση** «ίδια ή άλλη» (`sameSeatCity`,
+ *   ADR-948 §8.7.5), ώστε πόλη δηλωμένη ευρύτερα να μη φτάνει ποτέ εδώ ως `replace` (ADR-332 §D36).
  *
  * 🔴 Μετρημένο ζωντανά (ARIES, 2026-11-23, `6c90995`): «Ωραιόκαστρον» ⇒ «Διόρθωση έδρας» ⇒ αποθηκεύτηκε
  * `city: ΘΕΣΣΑΛΟΝΙΚΗ` · `settlementId: null` δίπλα σε `municipalityName: Δήμος Ωραιοκάστρου` ·

@@ -39,7 +39,28 @@ describe('Α — τα πεδία της επαφής', () => {
       legalForm: 'ae',
       gemiStatus: 'active',
       headquarters: { street: 'Σαμοθράκης', number: '16', postalCode: '54248', city: 'Θεσσαλονίκη' },
+      headquartersWiderAreas: [],
     });
+  });
+
+  it('Α1β — οι ευρύτερες περιοχές της έδρας από την ιεραρχία της θέσης 0, με τη σειρά του πίνακα (ADR-948 §8.7.5)', () => {
+    const hq = {
+      type: 'headquarters',
+      street: 'ΚΑΛΒΟΥ ΚΑΙ ΙΠΠΟΔΡΟΜΙΟΥ',
+      postalCode: '57013',
+      city: 'Ωραιόκαστρον',
+      communityName: 'Δημοτική Κοινότητα Ωραιοκάστρου',
+      municipalUnitName: '',
+      municipalityName: 'Δήμος Ωραιοκάστρου',
+      regionalUnitName: 'Περιφερειακή Ενότητα Θεσσαλονίκης',
+      decentAdminName: 'Αποκεντρωμένη Διοίκηση Μακεδονίας - Θράκης',
+    };
+    const fields = contactRegistryFieldsOf(doc({ customFields: { gemiStatus: 'active', companyAddresses: [hq] } }));
+    expect(fields.headquartersWiderAreas).toEqual([
+      'Δημοτική Κοινότητα Ωραιοκάστρου',
+      'Δήμος Ωραιοκάστρου',
+      'Περιφερειακή Ενότητα Θεσσαλονίκης',
+    ]);
   });
 
   it('Α2 — χωρίς διεύθυνση ⇒ headquarters null', () => {
