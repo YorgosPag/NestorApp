@@ -11,6 +11,8 @@
  * - «Δέξου» = `setFormData(acceptRegistryField(…))` — η εγγραφή περνά από την υπάρχουσα αποθήκευση· καμία δεύτερη πόρτα·
  * - η έδρα πηγαίνει ως **πρόταση** στον editor διευθύνσεων (`proposeHqAddress`) και η φόρμα πάει στην καρτέλα του·
  * - κάθε αποτυχία λέει **τι** απέτυχε· «δεν μπόρεσα να ρωτήσω» δεν λέγεται ποτέ «δεν υπάρχει».
+ * - αποτυχία του **πατήματος** ≠ αποτυχία της **ανάγνωσης**: η τελευταία απάντηση μένει, και κάτω από το κουμπί
+ *   λέγεται γιατί δεν έγινε ο νέος έλεγχος (`RegistryCheckActionFailureNotice` · ADR-948 §8.7).
  * 🔑 Ο server ρωτά με τα **αποθηκευμένα** Αρ. ΓΕΜΗ / ΑΦΜ — η οθόνη το λέει δίπλα στο κουμπί.
  * ⚖️ ODC-BY-1.0: η αναφορά πηγής φαίνεται πάντα κάτω από την απάντηση (`GEMI_OPEN_DATA_ATTRIBUTION`).
  */
@@ -31,6 +33,7 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactRegistryAttempt, ContactRegistryReport } from '@/types/contact-registry-check';
 
 import { ContactCompanyRegistryComparison } from './ContactCompanyRegistryComparison';
+import { RegistryCheckActionFailureNotice } from './RegistryCheckActionFailureNotice';
 import {
   CONTACT_COMPANY_REGISTRY_ATTEMPT_KEYS as ATTEMPT_KEYS,
   CONTACT_COMPANY_REGISTRY_KEYS as KEYS,
@@ -39,6 +42,9 @@ import {
 } from './contact-company-registry-labels';
 
 type Translate = ReturnType<typeof useTranslation>['t'];
+
+/** Ετικέτα διάγνωσης (`reportApiFailure`) — σταθερή, ομαδοποιεί τις αποτυχίες αυτής της πράξης. */
+const REGISTRY_CHECK_OPERATION = 'contact-gemi-registry-check';
 
 export interface ContactCompanyRegistryCheckProps {
   /** Αποθηκευμένη επαφή — ο server ελέγχει τα αποθηκευμένα της. */
@@ -160,9 +166,10 @@ function CheckButton({ answered, checking, check, t }: CheckButtonProps) {
 export function ContactCompanyRegistryCheck(props: ContactCompanyRegistryCheckProps) {
   const { t } = useTranslation('contacts-form');
   const headingId = React.useId();
-  const { state, checking, check } = useRegistryCheckReport<ContactRegistryReport>(
+  const { state, checking, actionFailure, check } = useRegistryCheckReport<ContactRegistryReport>(
     API_ROUTES.CONTACTS.REGISTRY_CHECK(props.contactId),
     props.contactId,
+    REGISTRY_CHECK_OPERATION,
   );
   const report = state.kind === 'ready' ? state.report : null;
   const comparison = liveRegistryComparison(props.formData, report?.check ?? null);
@@ -180,6 +187,7 @@ export function ContactCompanyRegistryCheck(props: ContactCompanyRegistryCheckPr
       )}
       {attempt !== null && <p className="m-0 text-xs text-foreground" role="status">{attempt}</p>}
       <CheckButton answered={(report?.check ?? null) !== null} checking={checking} check={check} t={t} />
+      <RegistryCheckActionFailureNotice failure={actionFailure} />
       <p className="m-0 text-xs text-muted-foreground">{t(KEYS.unsavedHint)}</p>
     </section>
   );

@@ -226,6 +226,31 @@ Data Integration Rules **δεν** ερευνήθηκαν.
 3. Πού ζει η προέλευση ανά πεδίο στο έγγραφο επαφής (σχήμα) + κανόνες Firestore.
 4. Εκτίμηση: **5+ αρχεία, 2 τομείς** (επαφές + company-registry) ⇒ N.8: επιλογή Orchestrator / Plan Mode από Giorgio.
 
+### 8.7 Αποτυχία της πράξης στην οθόνη (εύρημα 503, 2026-11-23)
+
+**Αφορμή:** στη ζωντανή επαλήθευση το 1ο «Έλεγχος στο ΓΕΜΗ» έδωσε `POST …/registry-check` **503** (αμέσως μετά το
+Restart του container)· το 2ο έδωσε 200. **Η πηγή δεν εξακριβώθηκε**: στη διαδρομή υπάρχουν πέντε παραγωγοί 503 —
+proxy του Coolify κατά την εκκίνηση (σώμα χωρίς JSON) · φρένο ρυθμού `sensitive` σε βλάβη Upstash
+(`RATE_LIMIT_UNAVAILABLE`, fail-closed) · `WORKSPACE_UNAVAILABLE` του `withAuth` · `IDEMPOTENCY_STORE_UNAVAILABLE` ·
+`Database not available` της διαδρομής.
+
+**Τι ΔΕΝ άλλαξε (σωστό ως έχει):** το 503 + `Retry-After` είναι η σωστή απάντηση για «δεν μπόρεσα να ρωτήσω»
+(Google AIP-194: `UNAVAILABLE` = επαναλήψιμο). Ο `apiClient` **ήδη** ξαναστέλνει το POST (φεύγει με
+`Idempotency-Key`, ADR-853 Ε3) έως 3 φορές με εκθετικό backoff και σεβασμό του `Retry-After` (οροφή 10″). Καμία
+αναμονή μέσα στον server, κανένας δεύτερος βρόχος στον πελάτη.
+
+**Τι διορθώθηκε (`useRegistryCheckReport`, κοινό με την άδεια ADR-915 §40.7):**
+1. **Δύο αποτυχίες, δύο κατοικίες.** Ανάγνωση (GET) απέτυχε ⇒ `state: failed`. Πράξη (POST) απέτυχε ⇒
+   `actionFailure` — η τελευταία γνωστή αναφορά **μένει**. Πριν, η αποτυχία του POST έσβηνε όλη την αναφορά και
+   έδειχνε το μήνυμα της **ανάγνωσης**· στην άδεια χανόταν και το κουμπί (καμία επανάληψη χωρίς ανανέωση σελίδας).
+2. **Λόγος ανά αιτία** (`registryCheckActionFailureOf`, πάνω στο `classifyApiFailure`): `unavailable` (δίκτυο ·
+   502/503/504) · `rate-limited` (429) · `forbidden` (403) · `failed`. Το `unavailable` **δεν** υπόσχεται «τίποτα
+   δεν άλλαξε» — σε 504 / κομμένη σύνδεση ο handler μπορεί να έγραψε.
+3. **Μία γραμμή, δύο πάνελ**: `RegistryCheckActionFailureNotice` (`role="alert"`, κλειδιά `contacts-form:registryAction.*`).
+4. **Διάγνωση**: κάθε αποτυχία (ανάγνωση και πράξη) περνά από το `reportApiFailure` (ADR-327 §7.5) με σταθερή
+   ετικέτα (`contact-gemi-registry-check` · `contact-licence-registry-check`) ⇒ το επόμενο 503 θα λέει στο Sentry
+   **ποιος** απάντησε (`envelope: json` = server μας · `none` = proxy) και με ποιον `errorCode`.
+
 ## Changelog
 
 - **2026-11-22** — Δημιουργία ως PROPOSED. Αφορμή: δύο επαφές ΠΑΓΩΝΗΣ ΕΝΕΡΓΕΙΑΚΗ σε διαφορετικούς χώρους.
@@ -370,3 +395,9 @@ Data Integration Rules **δεν** ερευνήθηκαν.
   γίνεται δεδομένο) ή «Κράτησέ τη»· και η γραμμή «Έδρα» στο πάνελ πρασινίζει μόνη της μετά την επιβεβαίωση.
   i18n: `contacts-form` el/en `companyRegistry.*` + `addressesSection.registryProposal.*`· αναπαράχθηκε το `src/types/i18n.ts`.
   Άγκυρες: **καμία δεν έτρεξε** (θέλουν έγκριση).
+- **2026-11-23** — §8.7 εύρημα 503 της ζωντανής επαλήθευσης: η αποτυχία του «Έλεγχος στο μητρώο» δεν σβήνει πλέον
+  την τελευταία αναφορά και λέει **γιατί** δεν έγινε (`unavailable` · `rate-limited` · `forbidden` · `failed`)· κάθε
+  αποτυχία πάει στο `reportApiFailure`. Αρχεία: `src/hooks/useRegistryCheckReport.ts` ·
+  `src/components/contacts/RegistryCheckActionFailureNotice.tsx` (νέο) · `ContactCompanyRegistryCheck.tsx` ·
+  `ContactLicenceRegistryCheck.tsx` · `useLicenceRegistryCheck.ts` · `contacts-form` el/en `registryAction.*`·
+  αναπαράχθηκε το `src/types/i18n.ts`. Άγκυρες: **καμία δεν έτρεξε** (θέλουν έγκριση).

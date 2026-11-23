@@ -34,6 +34,7 @@ import type {
 } from '@/types/professional-registry-check';
 
 import { CONTACT_LICENCE_REGISTRY_ATTEMPT_KEYS, CONTACT_LICENCE_REGISTRY_KEYS as KEYS } from './contact-licence-labels';
+import { RegistryCheckActionFailureNotice } from './RegistryCheckActionFailureNotice';
 import { useLicenceRegistryCheck } from './useLicenceRegistryCheck';
 
 const NAMESPACES = ['contacts-form', 'property-market'];
@@ -92,7 +93,7 @@ function JudgmentLines({ held, judgment, t }: { readonly held: ContactLicence; r
 
 export function ContactLicenceRegistryCheck({ contactId, held }: { readonly contactId: string; readonly held: ContactLicence }) {
   const { t } = useTranslation(NAMESPACES);
-  const { state, checking, check } = useLicenceRegistryCheck(contactId, held.licence, held.attestation.registration.number);
+  const { state, checking, actionFailure, check } = useLicenceRegistryCheck(contactId, held.licence, held.attestation.registration.number);
   if (state.kind === 'loading') return null;
   if (state.kind === 'failed') return <p className="m-0 text-xs text-muted-foreground" role="status">{t(KEYS.failed)}</p>;
   const { report } = state;
@@ -110,6 +111,7 @@ export function ContactLicenceRegistryCheck({ contactId, held }: { readonly cont
           {checking ? t(KEYS.checking) : report.judgment.state === 'not-checked' ? t(KEYS.check) : t(KEYS.recheck)}
         </Button>
       )}
+      <RegistryCheckActionFailureNotice failure={actionFailure} />
     </section>
   );
 }

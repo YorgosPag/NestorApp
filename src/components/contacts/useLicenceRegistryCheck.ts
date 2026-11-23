@@ -13,8 +13,15 @@ import type { ProfessionalLicence } from '@/config/professional-licences';
 import { useRegistryCheckReport, type RegistryCheckReportState } from '@/hooks/useRegistryCheckReport';
 import type { RegistryCheckReport } from '@/types/professional-registry-check';
 
+/** Ετικέτα διάγνωσης (`reportApiFailure`) — σταθερή, ομαδοποιεί τις αποτυχίες αυτής της πράξης. */
+const LICENCE_REGISTRY_CHECK_OPERATION = 'contact-licence-registry-check';
+
 export type LicenceRegistryCheckState = RegistryCheckReportState<RegistryCheckReport>;
 
 export function useLicenceRegistryCheck(contactId: string, licence: ProfessionalLicence, storedNumber: string) {
-  return useRegistryCheckReport<RegistryCheckReport>(API_ROUTES.CONTACTS.LICENCE_REGISTRY_CHECK(contactId, licence), storedNumber);
+  return useRegistryCheckReport<RegistryCheckReport>(
+    API_ROUTES.CONTACTS.LICENCE_REGISTRY_CHECK(contactId, licence),
+    storedNumber,
+    LICENCE_REGISTRY_CHECK_OPERATION,
+  );
 }

@@ -336,6 +336,12 @@
       }
     }
   },
+  "registryAction": {
+    "unavailable": "The check did not complete: the server was unavailable. Please try again shortly.",
+    "rateLimited": "Too many checks in a short time. Nothing changed — please try again in a minute.",
+    "forbidden": "Your role does not allow registry checks.",
+    "failed": "The check did not complete. Please try again."
+  },
   "companyRegistry": {
     "title": "Business Registry (GEMI) check",
     "hint": "Compares this contact with the General Commercial Registry. Nothing changes unless you choose it.",
