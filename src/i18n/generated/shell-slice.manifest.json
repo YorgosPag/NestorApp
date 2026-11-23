@@ -20,7 +20,7 @@
     "src/i18n/generated/routes/email__preferences__token.el.json": "95ad8b3c951ab6fa8db90e0701424325016f2c62a6600aa576ee80197a6c35ad",
     "src/i18n/generated/routes/engagements.el.json": "76e20123c51827a315c646031ff3b33e4f1567fee847125cae0b6de31cf4f3d0",
     "src/i18n/generated/routes/engagements__engagementId.el.json": "3e070c1b1274fc21eabc274b6bcfa61837a0851327f34798801fc571b4fcd018",
-    "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "96cebf9eb0bf7c8aa1fc8a9dd0ac1d42e0dcd90c040cfdef9e4d3ebf7a3aeb8b",
+    "src/i18n/generated/routes/ergaleia__antikeimeniki-axia.el.json": "1510a48c681f4ca2a0bc7c3ce7756340c2488af87bf7e2c03aecf43270343ce3",
     "src/i18n/generated/routes/handover-invite__token.el.json": "5f802bb153f7da3e1f25e91ec7ed91fb1acf50d1bfc8381b5c1661a996567d70",
     "src/i18n/generated/routes/handover-protocol.el.json": "96e9b0f4dfc20673dd8ed2c2f8351da91a53600e1e4a1f818557b093997be52b",
     "src/i18n/generated/routes/handover-protocol__verify.el.json": "bf46310bff0d59b1341fa8417b8e6b93a406aef159e5e0c2ff9d2152974233b3",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2aacf67c00b989293f295123c50445e49c70d1b27855253b713f98cc41562ccc",
+  "inputsSha256": "bf26b1fefb9b09d832fb5a6c38f293dd9787fa676c795b501e409c1fea8f0657",
   "languages": [
     "el"
   ],
@@ -3504,6 +3504,17 @@
             "pdf.downloadFailed",
             "pdf.downloading",
             "pdf.fileName",
+            "pdf.fileNameWithSubject",
+            "pdf.identification.descriptionHint",
+            "pdf.identification.descriptionLabel",
+            "pdf.identification.descriptionPlaceholder",
+            "pdf.identification.help",
+            "pdf.identification.kaekHint",
+            "pdf.identification.kaekInvalid",
+            "pdf.identification.kaekLabel",
+            "pdf.identification.kaekPlaceholder",
+            "pdf.identification.optional",
+            "pdf.identification.title",
             "property.addLevel",
             "property.areaHelp",
             "property.areaLabel",
@@ -41398,7 +41409,7 @@
   ],
   "stats": {
     "matchedKeys": 281,
-    "sliceBytes": 1375406
+    "sliceBytes": 1376625
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

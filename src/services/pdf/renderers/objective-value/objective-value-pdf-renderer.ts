@@ -26,6 +26,7 @@ import {
   drawObjectiveValuePairs,
   drawObjectiveValueResult,
   drawObjectiveValueStatement,
+  drawObjectiveValueSubject,
   drawObjectiveValueTable,
   drawObjectiveValueVerification,
 } from './objective-value-pdf-sections';
@@ -56,6 +57,7 @@ function stampMetadata(pdf: jsPDF, view: ObjectiveValuePdfView): void {
 function drawBody(page: PdfFlowPage, view: ObjectiveValuePdfView, images: ObjectiveValuePdfImages): void {
   let y = page.layout.marginTop;
   y = drawObjectiveValueHeader(page, view, y, images.logo);
+  y = drawObjectiveValueSubject(page, view, y);
   y = drawObjectiveValueResult(page, view, y);
   y = drawObjectiveValueTable(page, view.factors, y, FACTOR_COLUMNS);
   y = drawObjectiveValueTable(page, view.inputs, y, INPUT_COLUMNS);

@@ -207,6 +207,24 @@
     "downloading": "Creating PDF…",
     "downloadFailed": "The PDF could not be created. Please try again.",
     "fileName": "objective-value-{date}",
+    "fileNameWithSubject": "objective-value-{subject}-{date}",
+    "subject": {
+      "description": "Description",
+      "kaek": "KAEK (cadastral code)",
+      "summary": "Characteristics"
+    },
+    "identification": {
+      "title": "Property details on the PDF (optional)",
+      "help": "So you know which property the PDF refers to. They stay on your device and are not stored.",
+      "optional": "(optional)",
+      "descriptionLabel": "Property description",
+      "descriptionPlaceholder": "e.g. Apartment A2, 147 Egnatia St.",
+      "descriptionHint": "Printed on the PDF and used in the file name.",
+      "kaekLabel": "KAEK (cadastral code)",
+      "kaekPlaceholder": "e.g. 050681726003/0/1",
+      "kaekHint": "The Hellenic Cadastre code, from the cadastral extract or the deed. Printed only if valid.",
+      "kaekInvalid": "Not a valid KAEK: 12 digits, and for a unit /vertical/horizontal property (e.g. 050681726003/0/1)."
+    },
     "title": "Informational objective value calculation",
     "liveNotice": "Calculated on your device. It was not stored and carries no verification code.",
     "snapshotNotice": "Immutable calculation snapshot with a verification code. Its contents apply as of the valuation date.",

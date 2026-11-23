@@ -1,5 +1,5 @@
 /**
- * @fileoverview **ΟΙ ΕΝΟΤΗΤΕΣ ΤΟΥ PDF ΠΛΗΡΟΦΟΡΙΑΚΟΥ ΥΠΟΛΟΓΙΣΜΟΥ** — κεφαλίδα · αποτέλεσμα · πίνακες · ζεύγη · χαρακτήρας ·
+ * @fileoverview **ΟΙ ΕΝΟΤΗΤΕΣ ΤΟΥ PDF ΠΛΗΡΟΦΟΡΙΑΚΟΥ ΥΠΟΛΟΓΙΣΜΟΥ** — κεφαλίδα · ακίνητο · αποτέλεσμα · πίνακες · ζεύγη · χαρακτήρας ·
  *               επαλήθευση (ADR-947 Φ2β).
  * @module services/pdf/renderers/objective-value/objective-value-pdf-sections
  * @related services/pdf/pdf-flow.ts (τα δομικά στοιχεία — κοινά με το Πρωτόκολλο παράδοσης) · objective-value-pdf-view.ts
@@ -7,7 +7,7 @@
  * 🔑 Κάθε ενότητα παίρνει το `y` όπου ξεκινά και επιστρέφει το `y` όπου τελείωσε. **Καμία λέξη εδώ**: μόνο ό,τι έφερε η όψη.
  */
 
-import { drawPdfAppLogo, type PdfAppLogo } from '@/services/pdf/pdf-app-logo';
+import { drawPdfAppBrand, type PdfAppLogo } from '@/services/pdf/pdf-app-logo';
 import {
   drawFlowHeading,
   drawFlowPairs,
@@ -28,26 +28,27 @@ const TABLE_FONT_SIZE = 8;
 export const FACTOR_COLUMNS: PdfFlowColumnStyles = { 0: { cellWidth: 62 }, 1: { cellWidth: 22, halign: 'right' }, 2: { cellWidth: 98 } };
 export const INPUT_COLUMNS: PdfFlowColumnStyles = { 0: { cellWidth: 62 }, 1: { cellWidth: 52 }, 2: { cellWidth: 68 } };
 
-/** Το λογότυπο της κεφαλίδας: πλευρά (mm) και κενό ως τον τίτλο. */
+/** Το λογότυπο της κεφαλίδας: πλευρά (mm). */
 const HEADER_LOGO_SIZE = 12;
-const HEADER_LOGO_GAP = 4;
 
 /**
- * **Η κεφαλίδα**: λογότυπο της εφαρμογής πάνω αριστερά με τον τίτλο δίπλα · χαρακτήρας του αντιγράφου (συσκευή ή
- * στιγμιότυπο) · βασικά στοιχεία. Χωρίς λογότυπο ⇒ ο τίτλος στο περιθώριο, όπως πριν.
+ * **Η κεφαλίδα**: σφραγίδα «λογότυπο + Nestor App» πάνω αριστερά, σύνδεσμος στην εφαρμογή (όπως το υποσέλιδο των
+ * email) · ο τίτλος από κάτω · χαρακτήρας του αντιγράφου (συσκευή ή στιγμιότυπο) · βασικά στοιχεία.
  */
 export function drawObjectiveValueHeader(page: PdfFlowPage, view: ObjectiveValuePdfView, y: number, logo: PdfAppLogo | null): number {
   const { pdf } = page;
-  if (logo !== null) drawPdfAppLogo(pdf, logo, { x: MARGIN, y, size: HEADER_LOGO_SIZE });
-  const titleLeft = logo === null ? MARGIN : MARGIN + HEADER_LOGO_SIZE + HEADER_LOGO_GAP;
-  const titleBaseline = logo === null ? y + 6 : y + HEADER_LOGO_SIZE / 2 + 2;
+  const afterBrand = drawPdfAppBrand(pdf, logo, view.brand, { x: MARGIN, y, size: HEADER_LOGO_SIZE });
   pdf.setFont('Roboto', 'bold');
   pdf.setFontSize(15);
   pdf.setTextColor(...SLATE_800);
-  pdf.text(view.title, titleLeft, titleBaseline);
-  const noticeTop = logo === null ? y + 10 : y + HEADER_LOGO_SIZE + 4;
-  const afterNotice = drawFlowParagraph(page, view.notice, noticeTop, 8);
+  pdf.text(view.title, MARGIN, afterBrand + 9);
+  const afterNotice = drawFlowParagraph(page, view.notice, afterBrand + 13, 8);
   return drawFlowPairs(page, view.facts, afterNotice + 1);
+}
+
+/** **Το ακίνητο** — περιγραφή · διεύθυνση · ΚΑΕΚ · χαρακτηριστικά (RICS: «identification»). `null` ⇒ τίποτα. */
+export function drawObjectiveValueSubject(page: PdfFlowPage, view: ObjectiveValuePdfView, y: number): number {
+  return view.subject === null ? y : drawObjectiveValuePairs(page, view.subject, y);
 }
 
 /** **Το αποτέλεσμα**: η ετικέτα «αντικειμενική (ενδεικτική)» μικρή, το ποσό μεγάλο, η βάση από κάτω. */

@@ -41,6 +41,10 @@ import {
   type ObjectiveValueDeclaredReading,
   type ObjectiveValueReadingApplication,
 } from '@/lib/objective-value/objective-value-declared-reading';
+import {
+  EMPTY_IDENTIFICATION_DRAFT,
+  type ObjectiveValueIdentificationDraft,
+} from '@/lib/objective-value/objective-value-identification';
 import { deriveInputProvenance, type ObjectiveValueProvenance } from '@/lib/objective-value/objective-value-input-provenance';
 import { objectiveValueReturnHref, type ObjectiveValueReturn } from '@/lib/objective-value/objective-value-return';
 import { VISIBLE_LINK_CLASS } from '@/lib/ui/link-style';
@@ -53,6 +57,7 @@ import { ObjectiveValueFaq } from './ObjectiveValueFaq';
 import { ObjectiveValueLocation } from './ObjectiveValueLocation';
 import { ObjectiveValueMobileBar } from './ObjectiveValueMobileBar';
 import { ObjectiveValuePdfButton } from './ObjectiveValuePdfButton';
+import { ObjectiveValuePdfIdentification } from './ObjectiveValuePdfIdentification';
 import { ObjectiveValueProperty } from './ObjectiveValueProperty';
 import {
   ObjectiveValueOverrideSummary,
@@ -207,6 +212,8 @@ type ResultCellProps = Omit<WorkspaceProps, 'update' | 'resultRef'>;
 /** Η στήλη του αποτελέσματος — ποσό · «γιατί» · ελλείψεις · «Λήψη PDF» (ADR-947 Φ2β), όλα υποδοχές του `ObjectiveValueResult`. */
 function CalculatorResult({ draft, location, today, evaluation, provenance, onApplyReading }: ResultCellProps) {
   const { result, effective, commercialityAssumed, sourcedFactor } = evaluation;
+  // Εδώ και όχι στην υποδοχή: η υποδοχή αποσυναρμολογείται όσο το ποσό λείπει — η περιγραφή δεν πρέπει να χάνεται μαζί της.
+  const [identification, setIdentification] = useState<ObjectiveValueIdentificationDraft>(EMPTY_IDENTIFICATION_DRAFT);
   return (
     <ObjectiveValueResult
       result={result}
@@ -222,7 +229,17 @@ function CalculatorResult({ draft, location, today, evaluation, provenance, onAp
       }
       actions={
         result.kind === 'computed' && (
-          <ObjectiveValuePdfButton result={result} effective={effective} provenance={provenance} location={location} valuationDate={today} />
+          <>
+            <ObjectiveValuePdfIdentification value={identification} onChange={setIdentification} />
+            <ObjectiveValuePdfButton
+              result={result}
+              effective={effective}
+              provenance={provenance}
+              location={location}
+              valuationDate={today}
+              identification={identification}
+            />
+          </>
         )
       }
     />

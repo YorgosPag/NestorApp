@@ -22,8 +22,15 @@ import { useExportAction } from '@/hooks/useExportAction';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { nowISO } from '@/lib/date-local';
+import { publicUrl } from '@/lib/http/public-origin';
 import type { PriceLabelT } from '@/lib/listings/listing-price-label';
 import type { ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
+import {
+  identificationFileSlug,
+  resolveIdentification,
+  type ObjectiveValueIdentification,
+  type ObjectiveValueIdentificationDraft,
+} from '@/lib/objective-value/objective-value-identification';
 import type { ObjectiveValueProvenance } from '@/lib/objective-value/objective-value-input-provenance';
 import type { ComputedObjectiveValue } from '@/lib/objective-value/objective-value-types';
 
@@ -40,6 +47,19 @@ interface ObjectiveValuePdfButtonProps {
   readonly location: ObjectiveValueLocationState;
   /** `YYYY-MM-DD` — η ημερομηνία αποτίμησης του υπολογισμού. */
   readonly valuationDate: string;
+  /** Περιγραφή + ΚΑΕΚ, όπως τα πληκτρολόγησε ο άνθρωπος (`ObjectiveValuePdfIdentification`). */
+  readonly identification: ObjectiveValueIdentificationDraft;
+}
+
+/** Η αρχική της εφαρμογής για τη σφραγίδα: η δηλωμένη δημόσια διεύθυνση, αλλιώς εκεί όπου τρέχει η σελίδα. */
+function appHref(): string {
+  return publicUrl('/') ?? `${window.location.origin}/`;
+}
+
+/** Όνομα αρχείου — με την περιγραφή όταν δόθηκε, ώστε πολλά PDF στις Λήψεις να ξεχωρίζουν. */
+function pdfFileName(t: PriceLabelT, identification: ObjectiveValueIdentification, date: string): string {
+  const subject = identificationFileSlug(identification);
+  return subject === null ? t(`${NS}:pdf.fileName`, { date }) : t(`${NS}:pdf.fileNameWithSubject`, { subject, date });
 }
 
 /** Η σύνθεση και η λήψη — μόνο μέσα στο κλικ, με δυναμική φόρτωση όλων των βαριών εξαρτήσεων. */
@@ -52,12 +72,14 @@ async function downloadObjectiveValuePdf(props: ObjectiveValuePdfButtonProps, t:
     import('@/services/pdf/pdf-app-logo'),
   ]);
   const { result, effective, provenance, location, valuationDate } = props;
+  const identification = resolveIdentification(props.identification);
   const words = { t, language: resolveHumanLanguage(languageTag) };
   const zone = { ...chosenZoneOrigin(location.lookup, location.frontKey), table: null };
   const calculation = { valuationDate, draft: effective, result, provenance, zone, engine: await objectiveValueEngineIdentity() };
-  const view = liveObjectiveValuePdfView(words, { calculation, generatedAt: nowISO(), place: location.resolved?.label ?? null });
+  const place = location.resolved?.label ?? null;
+  const view = liveObjectiveValuePdfView(words, { calculation, generatedAt: nowISO(), place, identification, appHref: appHref() });
   const logo = await fetchPdfAppLogo();
-  downloadPDF(await renderObjectiveValuePdf(view, { qrPng: null, logo }), `${t(`${NS}:pdf.fileName`, { date: valuationDate })}.pdf`);
+  downloadPDF(await renderObjectiveValuePdf(view, { qrPng: null, logo }), `${pdfFileName(t, identification, valuationDate)}.pdf`);
 }
 
 export function ObjectiveValuePdfButton(props: ObjectiveValuePdfButtonProps) {

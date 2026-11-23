@@ -15,6 +15,7 @@ import { ISSUER_QUALIFICATION_LABEL_KEYS } from '@/components/document-registry/
 import { PRODUCT_NAME } from '@/constants/product-identity';
 import { snapshotEffectiveDraft, type ObjectiveValueSnapshot } from '@/lib/objective-value/objective-value-snapshot';
 import { formatOperatorDate, formatOperatorDateTime } from '@/lib/operator-time-format';
+import { pdfAppBrand } from '@/services/pdf/pdf-app-logo';
 import { chunkText, type PdfFlowPair } from '@/services/pdf/pdf-flow';
 
 import type { PdfWords } from './objective-value-pdf-inputs';
@@ -40,6 +41,8 @@ interface ObjectiveValueSnapshotPdfSource {
   readonly verify: ObjectiveValueSnapshotVerifyTarget;
   /** Το όνομα του συνημμένου με το περιεχόμενο — τυπώνεται, ώστε ο τρίτος να ξέρει τι να ψάξει. */
   readonly attachmentName: string;
+  /** Η αρχική της εφαρμογής, για τη σφραγίδα της κεφαλίδας — `null` ⇒ χωρίς σύνδεσμο. */
+  readonly appHref: string | null;
 }
 
 /** **Στιγμιότυπο → υπολογισμός** — το ΕΝΑ σχήμα της όψης. Το πρόχειρο όπως το είδε η μηχανή, με τον ΕΝΑ κανόνα. */
@@ -95,8 +98,10 @@ export function snapshotObjectiveValuePdfView(words: PdfWords, source: Objective
   return {
     ...body,
     language,
+    brand: pdfAppBrand(source.appHref),
     notice,
     facts: snapshotFacts(words, snapshot),
+    subject: null,
     verification: snapshotVerification(words, source),
     footer: { center: snapshot.id, timestamp: formatOperatorDateTime(snapshot.createdAt, language), pageLabel: objectiveValuePdfPageLabel(words) },
     identity: { id: snapshot.id, issuedAt: snapshot.createdAt },

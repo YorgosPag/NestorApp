@@ -81,7 +81,7 @@ export async function produceObjectiveValueSnapshotPdf(
 ): Promise<ObjectiveValueSnapshotPdfOutcome> {
   const words = objectiveValuePdfWords(language);
   const verify = verifyTargetOf(snapshot);
-  const view = snapshotObjectiveValuePdfView(words, { snapshot, verify, attachmentName: OBJECTIVE_VALUE_SNAPSHOT_ATTACHMENT_NAME });
+  const view = snapshotObjectiveValuePdfView(words, { snapshot, verify, attachmentName: OBJECTIVE_VALUE_SNAPSHOT_ATTACHMENT_NAME, appHref: publicUrl('/') });
   const [qrPng, logo] = await Promise.all([
     verify.qr === null ? null : qrPngDataUrl(verify.qr, 'print', QR_WIDTH_PX),
     readPdfAppLogo(),

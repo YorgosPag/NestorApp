@@ -145,7 +145,20 @@
       "download": "Λήψη PDF",
       "downloadFailed": "Το PDF δεν δημιουργήθηκε. Δοκιμάστε ξανά.",
       "downloading": "Δημιουργία PDF…",
-      "fileName": "antikeimeniki-axia-{date}"
+      "fileName": "antikeimeniki-axia-{date}",
+      "fileNameWithSubject": "antikeimeniki-axia-{subject}-{date}",
+      "identification": {
+        "descriptionHint": "Τυπώνεται στο PDF και γίνεται μέρος του ονόματος του αρχείου.",
+        "descriptionLabel": "Περιγραφή ακινήτου",
+        "descriptionPlaceholder": "π.χ. Διαμέρισμα Α2, Εγνατίας 147",
+        "help": "Για να ξέρετε σε ποιο ακίνητο αντιστοιχεί το PDF. Μένουν μόνο στη συσκευή σας και δεν αποθηκεύονται.",
+        "kaekHint": "Ο κωδικός του Κτηματολογίου, από το απόσπασμα ή το συμβόλαιο. Τυπώνεται μόνο αν είναι έγκυρος.",
+        "kaekInvalid": "Δεν είναι έγκυρος ΚΑΕΚ: 12 ψηφία, και για διαμέρισμα /κάθετη/οριζόντια ιδιοκτησία (π.χ. 050681726003/0/1).",
+        "kaekLabel": "ΚΑΕΚ",
+        "kaekPlaceholder": "π.χ. 050681726003/0/1",
+        "optional": "(προαιρετικό)",
+        "title": "Στοιχεία ακινήτου στο PDF (προαιρετικά)"
+      }
     },
     "property": {
       "addLevel": "Προσθήκη επιπέδου (μεζονέτα)",

@@ -22,10 +22,17 @@ import { objectiveValueFactorLabel } from '@/lib/objective-value/objective-value
 import { AADE_MYPROPERTY_URL } from '@/lib/objective-value/objective-value-page-sections';
 import type { ObjectiveValueSnapshotProvenance, ZoneTableIdentity } from '@/lib/objective-value/objective-value-snapshot';
 import type { ComputedObjectiveValue } from '@/lib/objective-value/objective-value-types';
+import type { ObjectiveValueIdentification } from '@/lib/objective-value/objective-value-identification';
 import { formatOperatorDate, formatOperatorDateTime } from '@/lib/operator-time-format';
+import { pdfAppBrand, type PdfAppBrand } from '@/services/pdf/pdf-app-logo';
 import type { PdfFlowPair } from '@/services/pdf/pdf-flow';
 
-import { objectiveValuePdfInputRows, type ObjectiveValuePdfInputRow, type PdfWords } from './objective-value-pdf-inputs';
+import {
+  objectiveValuePdfInputRows,
+  objectiveValuePdfSummary,
+  type ObjectiveValuePdfInputRow,
+  type PdfWords,
+} from './objective-value-pdf-inputs';
 
 const NS = 'objective-value';
 
@@ -75,9 +82,13 @@ export interface ObjectiveValuePdfVerification {
 export interface ObjectiveValuePdfView {
   /** Η γλώσσα του εγγράφου — γράφεται και στο `/Lang` του PDF (αναγνώστες οθόνης, PDF/UA). */
   readonly language: HumanLanguage;
+  /** Η σφραγίδα «λογότυπο + Nestor App» της κεφαλίδας και πού οδηγεί. */
+  readonly brand: PdfAppBrand;
   readonly title: string;
   readonly notice: string;
   readonly facts: readonly PdfFlowPair[];
+  /** **Το ακίνητο** (RICS «identification») — μόνο η συσκευή· το στιγμιότυπο το γράφει στα `facts` (`subject`). */
+  readonly subject: ObjectiveValuePdfPairsSection | null;
   readonly result: { readonly heading: string; readonly value: PdfFlowPair; readonly base: string };
   readonly factors: ObjectiveValuePdfTable;
   readonly inputs: ObjectiveValuePdfTable;
@@ -88,7 +99,14 @@ export interface ObjectiveValuePdfView {
   readonly footer: { readonly center: string; readonly timestamp: string; readonly pageLabel: (page: number, total: number) => string };
   /** Ντετερμινιστικά μεταδεδομένα — `null` ⇒ ο renderer δεν τα σφραγίζει (ζωντανός υπολογισμός, κανένα id). */
   readonly identity: { readonly id: string; readonly issuedAt: string } | null;
-  readonly properties: { readonly title: string; readonly subject: string; readonly author: string; readonly creator: string };
+  readonly properties: {
+    readonly title: string;
+    readonly subject: string;
+    readonly author: string;
+    readonly creator: string;
+    /** Λέξεις για την αναζήτηση του λειτουργικού (περιγραφή · διεύθυνση · ΚΑΕΚ) — μόνο όταν δόθηκαν. */
+    readonly keywords?: string;
+  };
 }
 
 /** Οι συντελεστές της μηχανής — όνομα · τιμή · άρθρο, ποτέ δεύτερος πολλαπλασιασμός. */
@@ -170,24 +188,56 @@ interface ObjectiveValueLivePdfSource {
   readonly generatedAt: string;
   /** Η διεύθυνση όπως την κατάλαβε ο γεωκωδικοποιητής — `null` όταν δόθηκε μόνο σημείο ή χειροκίνητη τιμή. */
   readonly place: string | null;
+  /** Περιγραφή + ΚΑΕΚ που έδωσε ο άνθρωπος — μόνο στη συσκευή, ποτέ αποθηκευμένα. */
+  readonly identification: ObjectiveValueIdentification;
+  /** Η αρχική της εφαρμογής, για τη σφραγίδα — `null` ⇒ χωρίς σύνδεσμο. */
+  readonly appHref: string | null;
+}
+
+/** **Το ακίνητο**: περιγραφή · διεύθυνση · ΚΑΕΚ · χαρακτηριστικά — όσα δόθηκαν, με αυτή τη σειρά. */
+function liveSubject(words: PdfWords, source: ObjectiveValueLivePdfSource): ObjectiveValuePdfPairsSection {
+  const { t } = words;
+  const { description, kaek } = source.identification;
+  const rows: PdfFlowPair[] = [];
+  if (description !== null) rows.push([t(`${NS}:pdf.subject.description`), description]);
+  if (source.place !== null) rows.push([t(`${NS}:pdf.facts.place`), source.place]);
+  if (kaek !== null) rows.push([t(`${NS}:pdf.subject.kaek`), kaek]);
+  rows.push([t(`${NS}:pdf.subject.summary`), objectiveValuePdfSummary(words, source.calculation.draft)]);
+  return { heading: t(`${NS}:pdf.facts.subject`), rows };
+}
+
+/** Τίτλος και λέξεις αναζήτησης του αρχείου — η περιγραφή κάνει το PDF **ευρέσιμο** από το λειτουργικό. */
+function liveProperties(title: string, notice: string, source: ObjectiveValueLivePdfSource): ObjectiveValuePdfView['properties'] {
+  const { description, kaek } = source.identification;
+  const keywords = [description, source.place, kaek].filter((word): word is string => word !== null);
+  return {
+    title: description === null ? title : `${title} — ${description}`,
+    subject: notice,
+    author: PRODUCT_NAME,
+    creator: PRODUCT_NAME,
+    ...(keywords.length > 0 ? { keywords: keywords.join(', ') } : {}),
+  };
 }
 
 export function liveObjectiveValuePdfView(words: PdfWords, source: ObjectiveValueLivePdfSource): ObjectiveValuePdfView {
   const { t, language } = words;
   const body = objectiveValuePdfBody(words, source.calculation);
   const generated = formatOperatorDateTime(source.generatedAt, language);
-  const facts: PdfFlowPair[] = [[t(`${NS}:pdf.facts.valuationDate`), formatOperatorDate(source.calculation.valuationDate, language)]];
-  if (source.place !== null) facts.push([t(`${NS}:pdf.facts.place`), source.place]);
-  facts.push([t(`${NS}:pdf.facts.generatedAt`), generated]);
+  const facts: PdfFlowPair[] = [
+    [t(`${NS}:pdf.facts.valuationDate`), formatOperatorDate(source.calculation.valuationDate, language)],
+    [t(`${NS}:pdf.facts.generatedAt`), generated],
+  ];
   const notice = t(`${NS}:pdf.liveNotice`);
   return {
     ...body,
     language,
+    brand: pdfAppBrand(source.appHref),
     notice,
     facts,
+    subject: liveSubject(words, source),
     verification: null,
     footer: { center: body.title, timestamp: generated, pageLabel: objectiveValuePdfPageLabel(words) },
     identity: null,
-    properties: { title: body.title, subject: notice, author: PRODUCT_NAME, creator: PRODUCT_NAME },
+    properties: liveProperties(body.title, notice, source),
   };
 }

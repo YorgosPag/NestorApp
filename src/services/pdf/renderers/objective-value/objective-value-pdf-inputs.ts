@@ -150,6 +150,23 @@ function residenceRows(ctx: InputContext): ObjectiveValuePdfInputRow[] {
   return rows;
 }
 
+/**
+ * **Η μία γραμμή του ακινήτου** — «Κατοικία · Α' όροφος · 80 τ.μ.», με το ΙΔΙΟ λεξιλόγιο των εισόδων. Μεζονέτα ⇒ οι
+ * όροφοι με «+» και η **συνολική** επιφάνεια. Ό,τι δεν δόθηκε απλώς λείπει.
+ */
+export function objectiveValuePdfSummary(words: PdfWords, draft: ObjectiveValueDraft): string {
+  const parts: string[] = [words.t(`${NS}:property.form.${draft.form}`)];
+  if (draft.form === 'residence') {
+    const floors = draft.levels.flatMap((level) => (level.floor === null ? [] : [floorOf(words, level.floor)]));
+    const areas = draft.levels.flatMap((level) => (level.area === null ? [] : [level.area]));
+    if (floors.length > 0) parts.push(floors.join(' + '));
+    if (areas.length > 0) parts.push(squareMetres(words, areas.reduce((sum, area) => sum + area, 0)));
+  } else if (draft.area !== null) {
+    parts.push(squareMetres(words, draft.area));
+  }
+  return parts.join(' · ');
+}
+
 /** **Οι γραμμές εισόδων** — είδος · θέση · τιμή ζώνης · ΣΕ · επιφάνεια/επίπεδα · χαρακτηριστικά, με τη σειρά της οθόνης. */
 export function objectiveValuePdfInputRows(
   words: PdfWords,

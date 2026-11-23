@@ -152,8 +152,27 @@ describe('ADR-947 Φ2β — PDF της συσκευής (βαθμίδα 1)', () 
       calculation: { valuationDate: SNAPSHOT_REQUEST.valuationDate, draft, result, provenance, engine: SNAPSHOT_REQUEST.engine, zone: { fromSource: false, validFrom: null, table: null } },
       generatedAt: '2026-11-23T10:00:00.000Z',
       place: 'Εγνατίας 147, Θεσσαλονίκη',
+      identification: { description: 'Διαμέρισμα Α2', kaek: '050681726003/0/1' },
+      appHref: 'https://nestorconstruct.gr/',
     });
   }
+
+  it('ταυτοποιεί το ακίνητο (RICS): περιγραφή · θέση · ΚΑΕΚ · χαρακτηριστικά — και τα κάνει ευρέσιμα στα μεταδεδομένα', () => {
+    const view = liveView();
+    expect(view.subject?.heading).toBe('Ακίνητο');
+    expect(view.subject?.rows.map(([label]) => label)).toEqual(['Περιγραφή', 'Θέση', 'ΚΑΕΚ', 'Χαρακτηριστικά']);
+    expect(view.subject?.rows[2]).toEqual(['ΚΑΕΚ', '050681726003/0/1']);
+    expect(view.properties.title).toContain('Διαμέρισμα Α2');
+    expect(view.properties.keywords).toBe('Διαμέρισμα Α2, Εγνατίας 147, Θεσσαλονίκη, 050681726003/0/1');
+    expect(view.brand).toEqual({ name: 'Nestor App', href: 'https://nestorconstruct.gr/' });
+  });
+
+  it('η σφραγίδα «Nestor App» είναι σύνδεσμος στην εφαρμογή μέσα στο PDF', async () => {
+    const bytes = await renderObjectiveValuePdf(liveView(), { qrPng: null, logo: null });
+    const raw = new TextDecoder('latin1').decode(bytes);
+    expect(textOf(bytes)).toContain('Nestor App');
+    expect(raw).toContain('/URI (https://nestorconstruct.gr/)');
+  });
 
   it('κάθε κείμενο της όψης είναι επιλυμένο — κανένα ωμό κλειδί locale', () => {
     const raw = stringsOf(liveView()).filter((text) => /^(objective-value|properties-enums):|^[a-z]+(\.[a-zA-Z]+){2,}$/u.test(text));

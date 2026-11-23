@@ -312,6 +312,30 @@ manifest, με τα εργαλεία του Πρωτοκόλλου παράδο�
   ~14 KB). Αποτυχία φόρτωσης ⇒ `null` ⇒ κεφαλίδα μόνο με κείμενο, ποτέ αποτυχία του PDF. ⚠️ Είναι σήμα του
   **προϊόντος**· το λογότυπο του ενοίκου είναι άλλη υπόθεση (ADR-928 §5.11). Το `logo-data.ts` της λογιστικής **δεν**
   χρησιμοποιήθηκε: είναι σε εκκρεμότητα αντικατάστασης από λογότυπο ενοίκου.
+- **Σφραγίδα «λογότυπο + Nestor App» ως σύνδεσμος** (εντολή Giorgio 2026-11-23, «όπως στο email»): ο τίτλος δεν κάθεται
+  πια δίπλα στο λογότυπο αλλά **από κάτω**· δίπλα στο λογότυπο το όνομα του προϊόντος (`PRODUCT_NAME`), και λογότυπο +
+  όνομα είναι **μία** περιοχή συνδέσμου (`pdf.link`) προς την αρχική της εφαρμογής. SSoT: `drawPdfAppBrand` +
+  `PdfAppBrand`/`pdfAppBrand(href)` στο `pdf-app-logo.ts`· η όψη φέρει `brand`. Σύνδεσμος: στη συσκευή
+  `publicUrl('/')` αλλιώς `window.location.origin`· στον server `publicUrl('/')`, και `null` ⇒ **καμία** περιοχή
+  συνδέσμου (ποτέ σχετικός ή μαντεμένος, `lib/http/public-origin`). Χωρίς λογότυπο ⇒ μόνο το όνομα, πάλι σύνδεσμος.
+- **Ταυτοποίηση ακινήτου — ενότητα «Ακίνητο»** (ερώτηση Giorgio: «πώς ξέρει ο χρήστης με πολλά ακίνητα για ποιο
+  πρόκειται;»). Πρότυπα: **RICS** (Valuation Report Framework 2025: «identification» = διεύθυνση · περιγραφή · θέση) ·
+  **Idealista / Casafari** (επίσημος κωδικός κτηματολογίου). Στην Ελλάδα ο κωδικός είναι ο **ΚΑΕΚ** — επικυρώνεται και
+  κανονικοποιείται **μόνο** από το υπάρχον `lib/geo/kaek` (ADR-900 §3.8). Γραμμές, όσες δόθηκαν: Περιγραφή · Θέση (η
+  διεύθυνση του γεωκωδικοποιητή, που πριν ήταν στα `facts`) · ΚΑΕΚ (κανονική μορφή) · Χαρακτηριστικά
+  (`objectiveValuePdfSummary`: «Κατοικία · Α' όροφος · 80 τ.μ.», μεζονέτα ⇒ όροφοι με «+» και συνολική επιφάνεια).
+  Μόνο η **συσκευή** τη φέρει· το στιγμιότυπο έχει ήδη `facts.subject` (`subject: null`).
+  - Κανόνας: `lib/objective-value/objective-value-identification.ts` (`resolveIdentification` · `kaekFieldState` ·
+    `identificationFileSlug`). Άκυρος ΚΑΕΚ **δεν** τυπώνεται· το πεδίο το λέει στο `blur` (Baymard).
+  - Πεδία: `ObjectiveValuePdfIdentification` (πάνω στο κοινό `HintedField`), αναδιπλούμενο «Στοιχεία ακινήτου στο PDF
+    (προαιρετικά)» **ακριβώς πάνω** από τη «Λήψη PDF» — αφορούν μόνο το PDF, όχι τη μηχανή. Η κατάσταση ζει στο
+    `CalculatorResult`, όχι στην υποδοχή (που αποσυναρμολογείται όσο το ποσό λείπει).
+  - **Μόνο στη συσκευή**: κατάσταση React, καμία αποθήκευση, κανένα αίτημα.
+  - **Πέρα από τους μεγάλους**: η περιγραφή γίνεται **όνομα αρχείου** (`pdf.fileNameWithSubject`, μεταγραφή με το ΕΝΑ
+    `transliterateGreekToLatin` ⇒ `antikeimeniki-axia-diamerisma-a2-egnatias-147-2026-11-23.pdf`) και **μεταδεδομένα**
+    (Title «… — Διαμέρισμα Α2», Keywords περιγραφή · θέση · ΚΑΕΚ) ⇒ ευρέσιμο από την αναζήτηση του λειτουργικού.
+  - ⚠️ **ΟΧΙ ΑΤΑΚ**: η μορφή του δεν βρέθηκε σε επίσημη πηγή και το `lib/document-validity/e9-text.ts` τον αποκλείει ρητά
+    (ελαχιστοποίηση). Μπαίνει μόνο με επιβεβαιωμένη μορφή από πραγματικό Ε9/ΕΝΦΙΑ.
 
 **Δ-Φ2β.2 Βαθμίδα 1 — στη συσκευή.** Υποδοχή `actions` στο `ObjectiveValueResult`, γεμάτη **μόνο** από τον δημόσιο
 υπολογιστή (`ObjectiveValuePdfButton`), μόνο όταν το αποτέλεσμα είναι `computed`. jsPDF, γραμματοσειρά και όψη
@@ -356,6 +380,16 @@ CreationDate και `/ID` από `createdAt` και `id`.
 PDF στη συσκευή, που διαβάζει το συνημμένο με το `readPdfTextFile`). Σφραγίδα/υπογραφή μηχανικού: Φ5 (Δ5).
 
 ## Changelog
+
+- **2026-11-23** — **Σφραγίδα «Nestor App» ως σύνδεσμος + ενότητα «Ακίνητο»** (εντολή Giorgio, §11 Δ-Φ2β.1). Νέα:
+  `lib/objective-value/objective-value-identification.ts` · `components/objective-value/ObjectiveValuePdfIdentification.tsx`
+  · `drawPdfAppBrand`/`pdfAppBrand` στο `pdf-app-logo.ts` · `objectiveValuePdfSummary` · `drawObjectiveValueSubject`. Η
+  όψη απέκτησε `brand` · `subject` · προαιρετικά `properties.keywords`· η πηγή της συσκευής `identification` + `appHref`,
+  του στιγμιοτύπου `appHref`. i18n el/en: `pdf.fileNameWithSubject` · `pdf.subject.*` · `pdf.identification.*`. Tests
+  γράφτηκαν (`objective-value-identification.test.ts` νέο, `objective-value-pdf.test.ts` +2) — **δεν** έτρεξαν (αναμένουν
+  έγκριση Giorgio). Route slice της σελίδας: **νέα σφράγιση 15.339 → 20.174** (`.i18n-shell-slice.json`, μετρημένο με
+  `--measure`· χωρίς τα πεδία 19.138 ⇒ +1.036 = το δέντρο `pdf.identification`). Όριο `next/dynamic` δοκιμάστηκε και
+  απορρίφθηκε: θα ζητούσε +1 χρέος εισδοχής (ADR-744 §27) και τα πεδία θα περίμεναν φόρτωση namespace.
 
 - **2026-11-23** — **Ζωντανή επαλήθευση λογοτύπου PDF** (nestorconstruct.gr, Chrome, μόνο ανάγνωση). `/api/build-info` ⇒
   `e11826ca`, που περιέχει το `c7fd087c` (`merge-base --is-ancestor`)· το `c7fd087c` είναι το rebase του `6136cfbb`
