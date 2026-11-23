@@ -1,8 +1,8 @@
 /**
  * @fileoverview ADR-949 Α-2 — **ανάγνωση εγγράφου ΣΤΗ ΣΥΣΚΕΥΗ**: το PDF ανοίγει στον browser με το **ίδιο** pdf.js του
  *   θεατή (`loadPdfJs`, ένας φορτωτής) και δεν φεύγει ποτέ από τη συσκευή — κανένα αίτημα, καμία αποθήκευση.
- * @related `lib/pdf/pdf-page-text.ts` (το κοινό μοντέλο σελίδας) · `lib/objective-value/objective-value-document-reading.ts`
- *   (ποιος αναγνώστης, τι προτείνει) · `components/file-manager/pdf-canvas-config.ts` (ο φορτωτής)
+ * @related `lib/pdf/pdf-page-text.ts` (το κοινό μοντέλο σελίδας) · `lib/objective-value/objective-value-device-readers.ts`
+ *   (ποιος αναγνώστης, ποιες γραμμές) · `components/file-manager/pdf-canvas-config.ts` (ο φορτωτής)
  * @module components/objective-value/read-pdf-on-device
  *
  * 🔑 **Συντεταγμένες οθόνης** (`viewport.convertToViewportPoint`): το ίδιο έντυπο φτάνει με και χωρίς περιστροφή
@@ -16,7 +16,7 @@ import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
 
 import { loadPdfJs, type PdfDocProxy, type PdfPageProxy } from '@/components/file-manager/pdf-canvas-config';
 import type { ObjectiveValueEvidenceDocument } from '@/config/objective-value/objective-value-evidence';
-import { deviceReaderOf, type ObjectiveValueDocumentRow } from '@/lib/objective-value/objective-value-document-reading';
+import { deviceReaderOf, type ObjectiveValueDocumentRow } from '@/lib/objective-value/objective-value-device-readers';
 import {
   DOCUMENT_TEXT_MAX_BYTES,
   hasReadableText,

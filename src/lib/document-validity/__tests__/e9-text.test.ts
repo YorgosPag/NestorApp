@@ -4,7 +4,8 @@
  */
 
 import { E9_A_PAGES, E9_B_PAGES, ENFIA_BROKEN_FONT_PAGES } from './e9-text.fixture';
-import { parseE9Floor, parseGreekNumber, readE9Text, type E9BuildingRow } from '../e9-text';
+import { parseE9Floor, parseGreekNumber } from '../e9-codes';
+import { readE9Text, type E9BuildingRow } from '../e9-text';
 
 function rowsOf(pages: Parameters<typeof readE9Text>[0]): readonly E9BuildingRow[] {
   const result = readE9Text(pages);

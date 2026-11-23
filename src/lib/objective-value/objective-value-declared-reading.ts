@@ -20,18 +20,27 @@ export interface ObjectiveValueDeclarationSource {
   readonly page: number;
 }
 
-/** Η είσοδος του υπολογιστή που γράφτηκε από έγγραφο — στη γλώσσα της προέλευσης (`levelFloor`/`levelArea` ανά επίπεδο). */
-export type ObjectiveValueDeclaredTarget =
+/** Οι είσοδοι **θέσης** (όροφος/επιφάνεια) — εξαρτώνται από το είδος: επίπεδα κατοικίας ή επιφάνεια αποθήκης/στάθμευσης. */
+type ObjectiveValuePlaceTarget =
   | { readonly input: 'area' }
   | { readonly input: 'levelFloor'; readonly level: number }
   | { readonly input: 'levelArea'; readonly level: number };
 
-/** Μια αποδεκτή ανάγνωση: ποια είσοδος, ποια τιμή, από ποιο έγγραφο. */
-export interface ObjectiveValueDeclaredReading {
-  readonly target: ObjectiveValueDeclaredTarget;
-  readonly value: number;
-  readonly source: ObjectiveValueDeclarationSource;
-}
+/**
+ * Η είσοδος του υπολογιστή που γράφτηκε από έγγραφο — στη γλώσσα της προέλευσης (`levelFloor`/`levelArea` ανά επίπεδο).
+ * ADR-949 Α-3: + η ημερομηνία άδειας, κοινή σε κάθε είδος.
+ */
+export type ObjectiveValueDeclaredTarget = ObjectiveValuePlaceTarget | { readonly input: 'permitDate' };
+
+/** Μια αποδεκτή ανάγνωση: ποια είσοδος, ποια τιμή (στον τύπο της εισόδου), από ποιο έγγραφο. */
+export type ObjectiveValueDeclaredReading =
+  | { readonly target: ObjectiveValuePlaceTarget; readonly value: number; readonly source: ObjectiveValueDeclarationSource }
+  | {
+      readonly target: { readonly input: 'permitDate' };
+      /** `YYYY-MM-DD` — η μορφή του προχείρου. */
+      readonly value: string;
+      readonly source: ObjectiveValueDeclarationSource;
+    };
 
 /** Η αποδοχή: μία αλλαγή του προχείρου + οι δηλώσεις για την προέλευση. */
 export interface ObjectiveValueReadingApplication {
@@ -39,22 +48,33 @@ export interface ObjectiveValueReadingApplication {
   readonly declared: readonly ObjectiveValueDeclaredReading[];
 }
 
+const levelOf = (target: ObjectiveValueDeclaredTarget): number | null => ('level' in target ? target.level : null);
+
 function sameTarget(a: ObjectiveValueDeclaredTarget, b: ObjectiveValueDeclaredTarget): boolean {
-  return a.input === b.input && (a.input === 'area' || (b.input !== 'area' && a.level === b.level));
+  return a.input === b.input && levelOf(a) === levelOf(b);
+}
+
+/** Σε ποιο είδος ανήκει μια είσοδος θέσης — `null` για όσες είναι κοινές σε κάθε είδος (ημερομηνία άδειας). */
+function placeKindOf(target: ObjectiveValueDeclaredTarget): 'unit' | 'levels' | null {
+  if (target.input === 'permitDate') return null;
+  return target.input === 'area' ? 'unit' : 'levels';
 }
 
 /**
  * Νέες δηλώσεις πάνω στις παλιές: ίδια είσοδος ⇒ κερδίζει η νεότερη. Αλλαγή είδους (επίπεδα κατοικίας ↔ επιφάνεια
- * αποθήκης/στάθμευσης) ⇒ οι δηλώσεις του παλιού είδους δεν αφορούν πια τίποτα — φεύγουν.
+ * αποθήκης/στάθμευσης) ⇒ οι δηλώσεις θέσης του παλιού είδους δεν αφορούν πια τίποτα — φεύγουν. Η ημερομηνία άδειας
+ * είναι κοινή: ούτε διώχνει ούτε διώχνεται από αλλαγή είδους.
  */
 export function mergeDeclaredReadings(
   previous: readonly ObjectiveValueDeclaredReading[],
   next: readonly ObjectiveValueDeclaredReading[],
 ): readonly ObjectiveValueDeclaredReading[] {
   if (next.length === 0) return previous;
-  const residenceNext = next.some(({ target }) => target.input !== 'area');
-  const kept = previous.filter(
-    ({ target }) => !next.some((reading) => sameTarget(reading.target, target)) && (target.input === 'area') !== residenceNext,
-  );
+  const nextPlaceKind = next.map(({ target }) => placeKindOf(target)).find((kind) => kind !== null) ?? null;
+  const kept = previous.filter(({ target }) => {
+    if (next.some((reading) => sameTarget(reading.target, target))) return false;
+    const kind = placeKindOf(target);
+    return kind === null || nextPlaceKind === null || kind === nextPlaceKind;
+  });
   return [...kept, ...next];
 }

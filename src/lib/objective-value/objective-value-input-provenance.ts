@@ -231,7 +231,7 @@ function declarationFor(
  */
 function withDeclaration(
   source: ObjectiveValueInputSource | null,
-  value: number | null,
+  value: ObjectiveValueInputValue | null,
   declaration: ObjectiveValueDeclaredReading | undefined,
 ): ObjectiveValueInputSource | null {
   if (declaration === undefined || value !== declaration.value || source?.kind === 'property') return source;
@@ -253,13 +253,18 @@ function declaredLevels(
   }));
 }
 
-function declaredArea(
-  source: ObjectiveValueInputSource | null,
+/** Οι βαθμωτές είσοδοι που γράφει ένας αναγνώστης εγγράφου (Α-2: επιφάνεια αποθήκης/στάθμευσης · Α-3: ημερομηνία άδειας). */
+type DeclarableScalar = Extract<ObjectiveValueScalarInput, 'area' | 'permitDate'>;
+
+function declaredScalar(
+  key: DeclarableScalar,
   draft: ObjectiveValueDraft,
+  prefill: Partial<ObjectiveValueDraft> | null,
   declared: readonly ObjectiveValueDeclaredReading[],
 ): ObjectiveValueInputSource | null {
-  if (!scalarApplies('area', draft.form)) return source;
-  return withDeclaration(source, draft.area, declarationFor(declared, (target) => target.input === 'area'));
+  const source = scalarSource(key, draft, prefill);
+  if (!scalarApplies(key, draft.form)) return source;
+  return withDeclaration(source, draft[key], declarationFor(declared, (target) => target.input === key));
 }
 
 function overridesOf(sources: readonly (ObjectiveValueInputSource | null)[]): readonly ObjectiveValueOverride[] {
@@ -284,11 +289,11 @@ function revertAllOf(
 export function deriveInputProvenance({ draft, prefill, location, declared = [] }: ObjectiveValueProvenanceInput): ObjectiveValueProvenance {
   const fields: Record<ObjectiveValueScalarInput, ObjectiveValueInputSource | null> = {
     form: scalarSource('form', draft, prefill),
-    area: declaredArea(scalarSource('area', draft, prefill), draft, declared),
+    area: declaredScalar('area', draft, prefill, declared),
     frontage: scalarSource('frontage', draft, prefill),
     hasCentralHeating: scalarSource('hasCentralHeating', draft, prefill),
     hasElevator: scalarSource('hasElevator', draft, prefill),
-    permitDate: scalarSource('permitDate', draft, prefill),
+    permitDate: declaredScalar('permitDate', draft, prefill, declared),
     areaIncludesCommon: scalarSource('areaIncludesCommon', draft, prefill),
   };
   const levels = declaredLevels(levelSources(draft, prefill), draft, declared);

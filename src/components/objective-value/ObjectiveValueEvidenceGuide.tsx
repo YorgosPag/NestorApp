@@ -29,17 +29,22 @@ import {
 } from '@/lib/objective-value/objective-value-evidence-plan';
 import type { ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
 import type { ObjectiveValueReadingApplication } from '@/lib/objective-value/objective-value-declared-reading';
-import { deviceReaderOf } from '@/lib/objective-value/objective-value-document-reading';
+import { deviceReaderOf } from '@/lib/objective-value/objective-value-device-readers';
 import type { ObjectiveValueMissing } from '@/lib/objective-value/objective-value-types';
+import type { ObjectiveValueMapZone } from '@/lib/objective-value/objective-value-zone';
 
 import { ObjectiveValueDocumentReader } from './ObjectiveValueDocumentReader';
 
 const NS = 'objective-value';
 const E = `${NS}:evidence`;
 
-/** ADR-949 Α-2 — ό,τι χρειάζεται η ανάγνωση στη συσκευή: το πρόχειρο (για «τώρα → από το έγγραφο») και η αποδοχή. */
+/**
+ * ADR-949 Α-2 · Α-3 — ό,τι χρειάζεται η ανάγνωση στη συσκευή: το πρόχειρο (για «τώρα → από το έγγραφο»), η ζώνη του
+ * χάρτη (για τη διασταύρωση της τιμής ζώνης του εγγράφου) και η αποδοχή.
+ */
 interface ObjectiveValueEvidenceReading {
   readonly draft: ObjectiveValueDraft;
+  readonly mapZone: ObjectiveValueMapZone | null;
   readonly onApply: (application: ObjectiveValueReadingApplication) => void;
 }
 
@@ -69,7 +74,7 @@ function EvidenceStep({ step, reading }: EvidenceStepProps) {
         <span className="text-xs text-muted-foreground">{t(`${E}.held`)}</span>
       )}
       {reading !== null && deviceReaderOf(step.document) !== null && (
-        <ObjectiveValueDocumentReader document={step.document} draft={reading.draft} onApply={reading.onApply} />
+        <ObjectiveValueDocumentReader document={step.document} draft={reading.draft} mapZone={reading.mapZone} onApply={reading.onApply} />
       )}
     </li>
   );

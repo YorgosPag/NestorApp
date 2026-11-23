@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * **«Διαβάστε το από το έγγραφο»** (ADR-949 Α-2) — ο άνθρωπος διαλέγει το PDF, η **συσκευή** το διαβάζει
+ * **«Διαβάστε το από το έγγραφο»** (ADR-949 Α-2 · Α-3: Ε9 · πράξη ΕΝΦΙΑ · άδεια) — ο άνθρωπος διαλέγει το PDF, η **συσκευή** το διαβάζει
  * (`readDocumentOnDevice`), και οι τιμές προτείνονται ανά πεδίο (`ObjectiveValueReadingReview`).
  *
  * 🔒 **Η δήλωση ιδιωτικότητας είναι ΑΛΗΘΙΝΗ, όχι υπόσχεση**: κανένα αίτημα δικτύου με το αρχείο — το pdf.js τρέχει στον
@@ -22,6 +22,7 @@ import type { ObjectiveValueEvidenceDocument } from '@/config/objective-value/ob
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ObjectiveValueDraft } from '@/lib/objective-value/objective-value-draft';
 import type { ObjectiveValueReadingApplication } from '@/lib/objective-value/objective-value-declared-reading';
+import type { ObjectiveValueMapZone } from '@/lib/objective-value/objective-value-zone';
 
 import { EVIDENCE_DOCUMENT_LABEL_KEYS } from './objective-value-document-labels';
 import { ObjectiveValueReadingReview } from './ObjectiveValueReadingReview';
@@ -69,10 +70,11 @@ interface ReadingBodyProps {
   readonly document: ObjectiveValueEvidenceDocument;
   readonly state: ReadingState;
   readonly draft: ObjectiveValueDraft;
+  readonly mapZone: ObjectiveValueMapZone | null;
   readonly onApply: (application: ObjectiveValueReadingApplication) => void;
 }
 
-function ReadingBody({ document, state, draft, onApply }: ReadingBodyProps) {
+function ReadingBody({ document, state, draft, mapZone, onApply }: ReadingBodyProps) {
   const { t } = useTranslation([NS]);
   switch (state.phase) {
     case 'idle':
@@ -83,7 +85,7 @@ function ReadingBody({ document, state, draft, onApply }: ReadingBodyProps) {
       return <p className="m-0 text-sm text-foreground" role="alert">{t(`${R}.outcome.failed`)}</p>;
     case 'done':
       return state.outcome.kind === 'read'
-        ? <ObjectiveValueReadingReview document={document} rows={state.outcome.rows} draft={draft} onApply={onApply} />
+        ? <ObjectiveValueReadingReview document={document} rows={state.outcome.rows} draft={draft} mapZone={mapZone} onApply={onApply} />
         : <OutcomeMessage outcome={state.outcome} />;
   }
 }
@@ -91,10 +93,12 @@ function ReadingBody({ document, state, draft, onApply }: ReadingBodyProps) {
 interface ObjectiveValueDocumentReaderProps {
   readonly document: ObjectiveValueEvidenceDocument;
   readonly draft: ObjectiveValueDraft;
+  /** Η ζώνη του χάρτη — για τη διασταύρωση της τιμής ζώνης του εγγράφου (ΕΝΦΙΑ). */
+  readonly mapZone: ObjectiveValueMapZone | null;
   readonly onApply: (application: ObjectiveValueReadingApplication) => void;
 }
 
-export function ObjectiveValueDocumentReader({ document, draft, onApply }: ObjectiveValueDocumentReaderProps) {
+export function ObjectiveValueDocumentReader({ document, draft, mapZone, onApply }: ObjectiveValueDocumentReaderProps) {
   const { t } = useTranslation([NS]);
   const inputId = useId();
   const [open, setOpen] = useState(false);
@@ -126,7 +130,7 @@ export function ObjectiveValueDocumentReader({ document, draft, onApply }: Objec
           <Input id={inputId} type="file" accept="application/pdf,.pdf" disabled={state.phase === 'reading'}
             onChange={(event) => { const file = event.target.files?.[0]; if (file) void read(file); }} />
         </p>
-        <ReadingBody document={document} state={state} draft={draft} onApply={apply} />
+        <ReadingBody document={document} state={state} draft={draft} mapZone={mapZone} onApply={apply} />
       </DialogContent>
     </Dialog>
   );

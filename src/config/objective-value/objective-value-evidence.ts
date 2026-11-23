@@ -47,7 +47,6 @@ export type ObjectiveValueEvidenceWhereKey =
   | 'objective-value:evidence.where.e9Floor'
   | 'objective-value:evidence.where.enfiaArea'
   | 'objective-value:evidence.where.enfiaFloor'
-  | 'objective-value:evidence.where.enfiaZonePrice'
   | 'objective-value:evidence.where.permitDate';
 
 export interface ObjectiveValueEvidenceSource {
@@ -92,7 +91,9 @@ export const OBJECTIVE_VALUE_EVIDENCE: Readonly<Record<ObjectiveValueMissing, Ob
   // Ο υπολογιστής ζητά την ΗΜΕΡΟΜΗΝΙΑ ΑΔΕΙΑΣ (ετικέτα `result.missing.ageYears`). Το «έτος κατασκευής» του Ε9/ΕΝΦΙΑ
   // είναι άλλο μέγεθος — θα ήταν υπόθεση, όχι απόδειξη· γι' αυτό δεν μπαίνει εδώ.
   ageYears: documents({ document: PERMIT, whereKey: 'objective-value:evidence.where.permitDate' }),
-  zonePrice: documents({ document: ENFIA, whereKey: 'objective-value:evidence.where.enfiaZonePrice' }),
+  // ADR-949 Α-3: η πράξη ΕΝΦΙΑ γράφει τιμή ζώνης, αλλά **χρονολογημένη** (1/1 του έτους της πράξης — το ΕΝΦΙΑ 2020 έχει
+  // τιμή πριν από αναθεώρηση 2022, μετρημένο). Αυθεντία είναι ο πίνακας ζωνών της θέσης· το έγγραφο μόνο διασταυρώνεται.
+  zonePrice: { kind: 'none', reason: 'zone-tables' },
   // ΣΑΟ και ΣΕ είναι στήλες των πινάκων ζωνών (όπως η τιμή ζώνης) — όχι μεγέθη της άδειας ή του Ε9.
   plotUtilisation: { kind: 'none', reason: 'zone-tables' },
   commercialityFactor: { kind: 'none', reason: 'zone-tables' },

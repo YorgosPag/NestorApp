@@ -218,7 +218,6 @@
       "e9Floor": "E9 — Table 1, column “Floor”",
       "enfiaArea": "ENFIA — section D, column “Main spaces (m²)”",
       "enfiaFloor": "ENFIA — section D, column “Floor”",
-      "enfiaZonePrice": "ENFIA — section D, column “Zone price”",
       "permitDate": "Permit — first page, “Act issue date”. If the document is an update or revision, the original permit it cites is what counts."
     },
     "noDocument": {
@@ -244,13 +243,18 @@
       "acceptAll": "Fill in all",
       "acceptSelected": "Fill in selected",
       "flags": {
-        "maisonette-single-row": "E9 lists a maisonette on one row, with the highest floor and the total area. It cannot be split into levels automatically: fill in each level from the deed or the permit.",
+        "maisonette-single-row": "E9 (and the ENFIA assessment, which reprints it) lists a maisonette on one row, with the highest floor and the total area. It cannot be split into levels automatically: fill in each level from the deed or the permit.",
         "unfinished": "The document declares an unfinished building. Check the completion stage in the questions.",
         "form-unsupported": "This use is not calculated here. The calculator values homes, storage rooms and parking spaces.",
         "form-changes": "The property type will become “{form}”.",
         "right-not-full": "The right on this row is not full ownership (e.g. bare ownership or usufruct). The calculator values full ownership; the share is not filled in automatically.",
         "ownership-unread": "The type of right or the share could not be read with certainty. Check the share in the special cases.",
-        "condition-to-check": "The document declares the special condition “expropriation or demolition”. It is not always the same as “to be expropriated”; check the special status by hand."
+        "condition-to-check": "The document declares the special condition “expropriation or demolition”. It is not always the same as “to be expropriated”; check the special status by hand.",
+        "permit-update": "This act updates permit {original}; its date is not the permit date. Age is counted from the original permit {original}: enter its date by hand or read that permit itself.",
+        "permit-update-unnamed": "This act updates a permit; its date is not the permit date. Age is counted from the original permit: enter its date by hand.",
+        "permit-minor-works": "This act approves minor-scale works; it is not a building permit. Its date does not show the age of the building: enter the building permit date by hand.",
+        "permit-unsupported": "This type of act cannot be read automatically yet. Enter the building permit date by hand.",
+        "permit-date-unread": "The permit issue date could not be read with certainty. Enter it by hand from the first page."
       },
       "outcome": {
         "no-reader": "This document cannot be read automatically yet. Fill in the fields by hand.",
@@ -263,7 +267,19 @@
       },
       "yes": "Yes",
       "no": "No",
-      "percent": "{pct}%"
+      "percent": "{pct}%",
+      "permitAct": {
+        "initial": "Building permit",
+        "update": "Permit update",
+        "minor-works": "Minor-scale works approval",
+        "unsupported": "Other act"
+      },
+      "zoneCheck": {
+        "agrees": "✓ The map zone price matches the ENFIA {year} assessment ({price} €/m²).",
+        "differs": "The ENFIA {year} assessment states a zone price of {documentPrice} €/m², while the map gives {mapPrice} €/m² for the same period. The property may face a priced street front, or the pin may not be on the property; check the location. The calculation uses the map price.",
+        "superseded": "The zone price in the ENFIA {year} assessment ({documentPrice} €/m²) is older: the zone was revised with effect from {validFrom}. The calculation uses the current map price.",
+        "needs-location": "The ENFIA {year} assessment states a zone price of {documentPrice} €/m². The zone price is not filled in from a document: show the property on the map and we will compare it."
+      }
     }
   },
   "listing": {

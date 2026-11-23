@@ -224,7 +224,7 @@ function CalculatorWorkspace({ draft, update, location, today, evaluation, resul
           evidence={
             <ObjectiveValueEvidenceSurfaces.ObjectiveValueEvidenceGuide
               missing={missingOf(result)}
-              reading={{ draft, onApply: onApplyReading }}
+              reading={{ draft, mapZone: location.mapZone, onApply: onApplyReading }}
             />
           }
         />

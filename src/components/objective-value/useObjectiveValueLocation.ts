@@ -18,6 +18,7 @@ import { nowISO } from '@/lib/date-local';
 import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
 import { valueZonePointOf } from '@/lib/market/value-zone-at-point';
 import { UNKNOWN_COMMERCIALITY, type CommercialityFact } from '@/lib/market/value-zone-file';
+import { mapZoneOf, type ObjectiveValueMapZone } from '@/lib/objective-value/objective-value-zone';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
 import { chosenZone } from './objective-value-zone';
@@ -46,6 +47,8 @@ export interface ObjectiveValueLocationState {
   readonly zonePrice: number | null;
   /** Ο ΣΕ της πηγής για αυτή την τιμή (ADR-898 Φ5) — `unknown` χωρίς ζώνη ή με χειροκίνητη τιμή. */
   readonly commerciality: CommercialityFact;
+  /** ADR-949 Α-3 — η τιμή των δεδομένων ζωνών με την ημερομηνία ισχύος της (διασταύρωση εγγράφου)· `null` χωρίς ζώνη. */
+  readonly mapZone: ObjectiveValueMapZone | null;
 }
 
 interface PinState {
@@ -123,5 +126,6 @@ export function useObjectiveValueLocation(): ObjectiveValueLocationState {
     setManualPrice,
     zonePrice: zone?.price ?? null,
     commerciality: zone?.commerciality ?? UNKNOWN_COMMERCIALITY,
+    mapZone: lookup.kind === 'answered' ? mapZoneOf(lookup.verdict, frontKey) : null,
   };
 }

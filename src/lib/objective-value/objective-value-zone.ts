@@ -51,11 +51,33 @@ export function formatCommercialityFactor(factor: number): string {
   return formatNumber(factor, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
 }
 
-/** Το ζεύγος για το δηλωμένο μέτωπο, ή της ζώνης· `null` όταν η ετυμηγορία δεν είναι έτοιμη. */
-export function zoneCandidateOf(verdict: ValueZoneVerdict, frontKey: string | null): ZoneCandidate | null {
+/** Η τιμή που ισχύει: του δηλωμένου μετώπου, αλλιώς της ζώνης· `null` όταν η ετυμηγορία δεν είναι έτοιμη. */
+function chosenFigureOf(verdict: ValueZoneVerdict, frontKey: string | null): ValueZoneFigure | null {
   if (verdict.kind !== 'ready') return null;
   const front = frontKey === null ? undefined : verdict.fronts.find((candidate) => frontKeyOf(candidate) === frontKey);
-  return candidateOf(front ?? verdict.zone);
+  return front ?? verdict.zone;
+}
+
+/** Το ζεύγος για το δηλωμένο μέτωπο, ή της ζώνης· `null` όταν η ετυμηγορία δεν είναι έτοιμη. */
+export function zoneCandidateOf(verdict: ValueZoneVerdict, frontKey: string | null): ZoneCandidate | null {
+  const figure = chosenFigureOf(verdict, frontKey);
+  return figure === null ? null : candidateOf(figure);
+}
+
+/**
+ * ADR-949 Α-3 — **η τιμή του χάρτη με την ημερομηνία ισχύος της**, για τη διασταύρωση με την τιμή ζώνης ενός εγγράφου
+ * (πράξη ΕΝΦΙΑ). Μόνο από τα δεδομένα ζωνών: η χειροκίνητη τιμή είναι δήλωση του ανθρώπου, όχι μητρώο.
+ */
+export interface ObjectiveValueMapZone {
+  /** €/τ.μ. */
+  readonly price: number;
+  /** `YYYY-MM-DD` — έναρξη ισχύος της τιμής. */
+  readonly validFrom: string;
+}
+
+export function mapZoneOf(verdict: ValueZoneVerdict, frontKey: string | null): ObjectiveValueMapZone | null {
+  const figure = chosenFigureOf(verdict, frontKey);
+  return figure === null ? null : { price: figure.price, validFrom: figure.validFrom };
 }
 
 /**

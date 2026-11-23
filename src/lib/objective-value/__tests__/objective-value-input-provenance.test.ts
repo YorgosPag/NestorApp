@@ -210,4 +210,14 @@ describe('ADR-949 Α4 — «δηλώσατε από το έγγραφο»', () =
     const provenance = deriveInputProvenance({ draft: storage, prefill: null, location: NO_ZONE, declared: area });
     expect(provenance.fields.area).toEqual({ kind: 'user', overrides: null, declaredFrom: source });
   });
+
+  it('ADR-949 Α-3: η ημερομηνία άδειας από την πράξη e-Άδειες ⇒ «δική σας, από την άδεια, σελ. 1» — όσο μένει ίδια', () => {
+    const permitSource = { document: 'unit-permit', page: 1 } as const;
+    const permit: readonly ObjectiveValueDeclaredReading[] = [{ target: { input: 'permitDate' }, value: '2020-06-09', source: permitSource }];
+    const dated: ObjectiveValueDraft = { ...INITIAL_DRAFT, permitDate: '2020-06-09' };
+    const provenance = deriveInputProvenance({ draft: dated, prefill: null, location: NO_ZONE, declared: permit });
+    expect(provenance.fields.permitDate).toEqual({ kind: 'user', overrides: null, declaredFrom: permitSource });
+    const edited = deriveInputProvenance({ draft: { ...dated, permitDate: '2019-01-01' }, prefill: null, location: NO_ZONE, declared: permit });
+    expect(edited.fields.permitDate).toBeNull();
+  });
 });

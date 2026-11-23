@@ -20,11 +20,11 @@ describe('ADR-949 Α-1 — objectiveValueEvidencePlan', () => {
     expect(objectiveValueEvidencePlan([])).toEqual({ steps: [], selfAnswered: [] });
   });
 
-  it('πρώτο το έγγραφο που κλείνει τα περισσότερα κενά: επιφάνεια + όροφος + τιμή ζώνης ⇒ ΜΟΝΟ το ΕΝΦΙΑ', () => {
+  it('ADR-949 Α-3: η τιμή ζώνης ΔΕΝ υπόσχεται έγγραφο (η πράξη ΕΝΦΙΑ τη γράφει χρονολογημένη) ⇒ Ε9 + «πίνακες ζωνών»', () => {
     const plan = objectiveValueEvidencePlan(['area', 'floor', 'zonePrice']);
-    expect(plan.steps).toHaveLength(1);
-    expect(plan.steps[0].document).toBe('owner-enfia-assessment');
-    expect(plan.steps[0].covers.map((c) => c.field)).toEqual(['area', 'floor', 'zonePrice']);
+    expect(plan.steps.map((step) => step.document)).toEqual(['owner-e9']);
+    expect(plan.steps[0].covers.map((c) => c.field)).toEqual(['area', 'floor']);
+    expect(plan.selfAnswered).toEqual([{ field: 'zonePrice', reason: 'zone-tables' }]);
   });
 
   it('ισοπαλία κάλυψης ⇒ αποδεδειγμένη θέση πριν από ευκολία (Ε9 πριν από συμβόλαιο) και μετά η σειρά του μητρώου (Ε9 πριν από ΕΝΦΙΑ)', () => {
@@ -41,7 +41,7 @@ describe('ADR-949 Α-1 — objectiveValueEvidencePlan', () => {
     expect(new Set(documents).size).toBe(documents.length);
     const fields = plan.steps.flatMap((s) => s.covers.map((c) => c.field));
     expect(new Set(fields).size).toBe(fields.length);
-    expect([...fields].sort()).toEqual(['ageYears', 'area', 'floor', 'zonePrice']);
+    expect([...fields].sort()).toEqual(['ageYears', 'area', 'floor']);
   });
 
   it('ό,τι κανένα έγγραφο δεν γράφει λέγεται με τον λόγο του, ποτέ σιωπηλά', () => {
