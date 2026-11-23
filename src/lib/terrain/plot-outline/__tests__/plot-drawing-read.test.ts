@@ -13,7 +13,7 @@ import {
   rankedDxfDrawing,
   rankedPdfReading,
 } from '../plot-drawing-read';
-import { pdfTableBandOf, planPathData, planViewBoxOf } from '../plot-drawing-view';
+import { pdfTableBandOf, planPathData, planSvgPoint, planViewBoxOf, viewBoxAttribute } from '../plot-drawing-view';
 import { PLOT_DRAWING_MAX_BYTES } from '../plot-outline-config';
 import { parsePlotOutlineStatus } from '../plot-outline-status';
 import type { PlotOutlineCandidate } from '../plot-outline-types';
@@ -117,16 +117,39 @@ describe('Σ — συμβόλαιο κατάστασης', () => {
 });
 
 describe('Π — προβολή', () => {
-  it('βορράς πάνω: το y αναστρέφεται μία φορά', () => {
-    expect(planPathData([{ x: 0, y: 0 }, { x: 10, y: 5 }], true)).toBe('M0 0L10 -5Z');
+  it('βορράς πάνω: το y αναστρέφεται μία φορά, σχετικά προς την πάνω-αριστερή γωνία του πλαισίου', () => {
+    const box = { origin: { x: 0, y: 5 }, width: 10, height: 5 };
+    expect(planPathData([{ x: 0, y: 0 }, { x: 10, y: 5 }], true, box)).toBe('M0 5L10 0Z');
   });
   it('το κουτί χωρά τα πάντα, τετράγωνο, με περιθώριο', () => {
     const box = planViewBoxOf([[{ x: 0, y: 0 }, { x: 30000, y: 20000 }]]);
     expect(box).not.toBeNull();
     expect(box!.width).toBe(box!.height);
-    expect(box!.minX).toBeLessThan(0);
-    expect(box!.minY).toBeLessThan(-20000);
+    expect(box!.origin.x).toBeLessThan(0);
+    expect(box!.origin.y).toBeGreaterThan(20000);
     expect(planViewBoxOf([])).toBeNull();
+  });
+  it('μέγεθος ΕΓΣΑ: το SVG δεν βλέπει ΠΟΤΕ απόλυτη συντεταγμένη — viewBox από το 0, όλα μέσα στο πλαίσιο', () => {
+    // 40×30 m γύρω από E 410000 / N 4498000 (WORLD mm): ο ζωγράφος του browser είναι float32 και εκεί βγάζει ΚΕΝΟ.
+    const ring = [
+      { x: 410000000, y: 4498000000 }, { x: 410040000, y: 4498000000 },
+      { x: 410040000, y: 4498030000 }, { x: 410000000, y: 4498030000 },
+    ];
+    const box = planViewBoxOf([ring])!;
+    expect(viewBoxAttribute(box)).toBe(`0 0 ${box.width} ${box.height}`);
+    expect(box.width).toBeLessThan(100000);
+    const d = planPathData(ring, true, box);
+    const numbers = (d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+    expect(numbers).toHaveLength(8);
+    for (const n of numbers) {
+      expect(n).toBeGreaterThanOrEqual(0);
+      expect(n).toBeLessThanOrEqual(box.width);
+    }
+    // Η ετικέτα κορυφής ακολουθεί την ΙΔΙΑ μετατόπιση με τη γραμμή· η ΒΔ κορυφή είναι 30 m πιο ψηλά από τη ΝΔ (βορράς πάνω).
+    const sw = planSvgPoint(ring[0], box), nw = planSvgPoint(ring[3], box);
+    expect(d.startsWith(`M${sw.x} ${sw.y}L`)).toBe(true);
+    expect(nw.x).toBe(sw.x);
+    expect(sw.y - nw.y).toBe(30000);
   });
   it('η ζώνη του πίνακα: μόνο οι γραμμές που δίνουν τις κορυφές, μόνο στη σελίδα τους', () => {
     const candidate: PlotOutlineCandidate = {

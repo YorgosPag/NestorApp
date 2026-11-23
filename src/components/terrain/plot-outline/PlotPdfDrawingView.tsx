@@ -62,12 +62,12 @@ function TableRingDiagram({ candidate }: { readonly candidate: PlotOutlineCandid
   const labelSize = box.width * 0.035;
   return (
     <svg viewBox={viewBoxAttribute(box)} role="img" aria-label={t(`${NS}.view.ringLabel`)} className="block h-auto w-full">
-      <rect x={box.minX} y={box.minY} width={box.width} height={box.height} className={TERRAIN_PAPER_CLASS} />
-      <path d={planPathData(candidate.ringWorldMm, true)} className={TERRAIN_PLOT_OUTLINE_CLASS.outlineArea} />
-      <path d={planPathData(candidate.ringWorldMm, true)} {...NON_SCALING} className={TERRAIN_PLOT_OUTLINE_CLASS.outline}
+      <rect x={0} y={0} width={box.width} height={box.height} className={TERRAIN_PAPER_CLASS} />
+      <path d={planPathData(candidate.ringWorldMm, true, box)} className={TERRAIN_PLOT_OUTLINE_CLASS.outlineArea} />
+      <path d={planPathData(candidate.ringWorldMm, true, box)} {...NON_SCALING} className={TERRAIN_PLOT_OUTLINE_CLASS.outline}
         strokeWidth={TERRAIN_PLOT_OUTLINE_STROKE_PX.outline} />
       {candidate.corners.map((corner, index) => corner.label === null ? null : (
-        <text key={index} {...planSvgPoint(corner.at)} fontSize={labelSize} textAnchor="middle" dominantBaseline="middle"
+        <text key={index} {...planSvgPoint(corner.at, box)} fontSize={labelSize} textAnchor="middle" dominantBaseline="middle"
           className={TERRAIN_PLOT_OUTLINE_CLASS.cornerLabel}>{corner.label}</text>
       ))}
     </svg>

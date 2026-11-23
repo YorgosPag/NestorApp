@@ -10,7 +10,8 @@
  * 🔑 **Πάνω από το Revit**: εκεί το property line «Pick Lines» ο άνθρωπος, γραμμή-γραμμή, πάνω σε ένα αμίλητο CAD· εδώ το
  *    σχέδιο έρχεται με τα κλειστά σχήματα ήδη βρεμένα, το προτεινόμενο τονισμένο, και ένα κλικ πάνω στη γραμμή αλλάζει
  *    την επιλογή. Η λίστα δίπλα (με τα τεκμήρια) είναι ο δρόμος του πληκτρολογίου — εδώ τα σχήματα είναι και κουμπιά.
- * 🔑 Όλα σε WORLD mm, με την ίδια κλίμακα που έδωσε τα υποψήφια ⇒ το τονισμένο πέφτει πάνω στη γραμμή του σχεδίου.
+ * 🔑 Όλα από το ίδιο WORLD mm, με την ίδια κλίμακα που έδωσε τα υποψήφια ⇒ το τονισμένο πέφτει πάνω στη γραμμή του σχεδίου.
+ * 🔑 Στο SVG γράφονται **σχετικά προς την αρχή του πλαισίου** (`box`) — απόλυτο ΕΓΣΑ δεν ζωγραφίζεται (float32, βλ. plot-drawing-view).
  */
 
 import React, { useMemo } from 'react';
@@ -30,6 +31,7 @@ import {
   planPathData,
   planViewBoxOf,
   viewBoxAttribute,
+  type PlanViewBox,
 } from '@/lib/terrain/plot-outline/plot-drawing-view';
 import type { PlotOutlineCandidate, PlotOutlineRanking } from '@/lib/terrain/plot-outline/plot-outline-types';
 
@@ -44,13 +46,14 @@ export interface PlotDxfDrawingViewProps {
   readonly onSelect: (candidateId: string) => void;
 }
 
-function CandidateShape({ candidate, selected, onSelect }: {
+function CandidateShape({ candidate, box, selected, onSelect }: {
+  readonly box: PlanViewBox;
   readonly candidate: PlotOutlineCandidate;
   readonly selected: boolean;
   readonly onSelect: (candidateId: string) => void;
 }) {
   const { t } = useTranslation(['terrain-survey']);
-  const d = planPathData(candidate.ringWorldMm, true);
+  const d = planPathData(candidate.ringWorldMm, true, box);
   const choose = () => onSelect(candidate.id);
   return (
     <g role="button" tabIndex={0} aria-pressed={selected}
@@ -77,15 +80,15 @@ export function PlotDxfDrawingView({ fileKey, drawing, scaleToMm, ranking, selec
       {() => (
         <svg viewBox={viewBoxAttribute(box)} role="group" aria-label={t(`${NS}.view.label`)}
           className="block h-auto max-h-[70vh] w-full">
-          <rect x={box.minX} y={box.minY} width={box.width} height={box.height} className={TERRAIN_PAPER_CLASS} />
+          <rect x={0} y={0} width={box.width} height={box.height} className={TERRAIN_PAPER_CLASS} />
           <g aria-hidden="true">
             {context.map((line, index) => (
-              <path key={index} d={planPathData(line.points, line.closed)} {...NON_SCALING}
+              <path key={index} d={planPathData(line.points, line.closed, box)} {...NON_SCALING}
                 className={TERRAIN_PLOT_OUTLINE_CLASS.drawing} strokeWidth={TERRAIN_PLOT_OUTLINE_STROKE_PX.drawing} />
             ))}
           </g>
           {ordered.map(({ candidate }) => (
-            <CandidateShape key={candidate.id} candidate={candidate} selected={candidate.id === selectedId} onSelect={onSelect} />
+            <CandidateShape key={candidate.id} candidate={candidate} box={box} selected={candidate.id === selectedId} onSelect={onSelect} />
           ))}
         </svg>
       )}
