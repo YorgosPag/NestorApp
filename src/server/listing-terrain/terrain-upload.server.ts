@@ -32,9 +32,11 @@ import { judgeListingTerrainSource } from '@/lib/terrain/publication/listing-ter
 import {
   encodeListingTerrainSource,
   parseListingTerrainSource,
+  withGeoreferenceChoice,
   withPlotOutline,
   type ListingTerrainSource,
   type PlotOutlineChoice,
+  type TerrainGeoreferenceChoice,
 } from '@/lib/terrain/publication/listing-terrain-source';
 import { LISTING_TERRAIN_SOURCE_MAX_BYTES } from '@/lib/terrain/publication/listing-terrain-config';
 import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
@@ -89,6 +91,12 @@ export interface TerrainPublicationResponse {
     /** ADR-920 §14.11 — το περίγραμμα όπως το βλέπει ο ιδιοκτήτης (κάλυψη Π6), ή γιατί λείπει· `null` + `null` = κανένα. */
     readonly plotOutline: Omit<NonNullable<ListingTerrainSnapshot['plotOutline']>, 'ring'> | null;
     readonly plotOutlineOmission: ListingTerrainSnapshot['plotOutlineOmission'];
+    /**
+     * ADR-920 §14.12 φάση Α — έχει το ανάγλυφο θέση (όπως το βλέπει ο ιδιοκτήτης), ή γιατί όχι. **Ποτέ** οι συντεταγμένες:
+     * η απάντηση μιας δημοσίευσης δεν είναι δρόμος για τη θέση.
+     */
+    readonly georeferenced: boolean;
+    readonly georeferenceOmission: ListingTerrainSnapshot['georeferenceOmission'];
   };
 }
 
@@ -144,6 +152,17 @@ function withConfirmedOutline(source: ListingTerrainSource, confirmed: PlotOutli
 }
 
 /**
+ * 🔴 **ADR-920 §14.12 φάση Α — ΤΗ ΔΗΛΩΣΗ ΣΥΣΤΗΜΑΤΟΣ ΚΑΙ ΤΗ ΣΥΓΚΑΤΑΘΕΣΗ ΘΕΣΗΣ ΤΙΣ ΒΑΖΕΙ Ο SERVER, ΠΑΝΤΑ.** Ό,τι έστειλε ο browser
+ * σε αυτά τα δύο πεδία **αντικαθίσταται** από ό,τι ισχύει στην κηδεμονία: ένα ανέβασμα σημείων δεν είναι δήλωση του
+ * ιδιοκτήτη. Οι ΔΥΟ γραφείς (`withGeoreferenceChoice`)· ό,τι δεν χωρά στο συμβόλαιο ⇒ 503, ποτέ σιωπή.
+ */
+function withCarriedGeoreference(source: ListingTerrainSource, choice: TerrainGeoreferenceChoice): ListingTerrainSource {
+  const composed = withGeoreferenceChoice(source, choice);
+  if (composed === null) throw new ApiError(503, 'TERRAIN_CURRENT_SOURCE_UNREADABLE');
+  return composed;
+}
+
+/**
  * **Η πηγή → ό,τι ανεβαίνει**: ο ΕΝΑΣ κριτής (ίδιος με την προεπισκόπηση) και η κανονική σειριοποίηση. Τον καλούν η
  * δημοσίευση ισοϋψών **και** η επαναδημοσίευση μετά από επιβεβαίωση περιγράμματος (Ζ3) — μία κρίση, όχι δύο.
  */
@@ -168,18 +187,21 @@ export function terrainUploadOfSource(params: {
  *
  * @param propertyType το είδος του ακινήτου **όπως το διάβασε ο φρουρός κηδεμονίας** — ποτέ από τον πελάτη.
  * @param confirmedOutline το επιβεβαιωμένο περίγραμμα **της πόρτας** (φάκελος ή `null`) — ρωτιέται αφού περάσουν τα φθηνά.
+ * @param carriedGeoreference η δήλωση συστήματος + η συγκατάθεση θέσης που **ισχύουν** για τα νέα σημεία (§14.12 φάση Α).
  */
 export async function readTerrainUpload(
   formData: FormData,
   propertyType: unknown,
   confirmedOutline: () => Promise<PlotOutlineChoice | null>,
+  carriedGeoreference: (incoming: ListingTerrainSource) => Promise<TerrainGeoreferenceChoice>,
 ): Promise<TerrainUpload> {
   const file = readSourceFile(formData);
   const declaration = readDeclaration(formData);
   // Δ1: μόνο οικόπεδο / αγροτεμάχιο — ο ισχυρός κριτής, που λύνει και τις ελληνικές ετικέτες.
   if (!isLandProperty(propertyType)) throw new ApiError(422, 'TERRAIN_NOT_LAND');
 
-  const source = withConfirmedOutline(await readSource(file), await confirmedOutline());
+  const outlined = withConfirmedOutline(await readSource(file), await confirmedOutline());
+  const source = withCarriedGeoreference(outlined, await carriedGeoreference(outlined));
   return terrainUploadOfSource({
     source,
     declaration,
@@ -197,6 +219,12 @@ interface TerrainDoorParts<TEnv, TBirth> {
    * γραφείο (χωρίς φάκελο) απαντά `null`. ⚠️ Χωρίς προεπιλογή: κάθε πόρτα δηλώνει τι ισχύει γι' αυτήν.
    */
   readonly confirmedOutlineOf: (env: TEnv) => Promise<PlotOutlineChoice | null>;
+  /**
+   * 📍 Η δήλωση συστήματος + η συγκατάθεση θέσης που ισχύουν για τα **νέα** σημεία (ADR-920 §14.12 φάση Α): ο φάκελος του
+   * ιδιοκτήτη τις μεταφέρει από το προηγούμενο ανάγλυφο (και ξανακρίνει τη δήλωση)· το γραφείο, χωρίς κάρτα ιδιοκτήτη,
+   * απαντά `NO_TERRAIN_GEOREFERENCE_CHOICE`. ⚠️ Χωρίς προεπιλογή: κάθε πόρτα δηλώνει τι ισχύει γι' αυτήν.
+   */
+  readonly carriedGeoreferenceOf: (env: TEnv, incoming: ListingTerrainSource) => Promise<TerrainGeoreferenceChoice>;
   /** 🔒 Η γέννηση: `buildPublishedTerrainFileRecord`, γραμμένο **στην πόρτα** (CHECK 3.105 Κ2). */
   readonly recordOf: (birth: TBirth) => BuildPendingFileRecordResult;
   /** Το ίχνος στο ιστορικό του ακινήτου. ⚠️ Δεν επιτρέπεται να ρίξει τη δημοσίευση. */
@@ -210,7 +238,12 @@ export function terrainMaterialDoor<TEnv, TBirth>(
   return {
     category: FILE_CATEGORIES.DRAWINGS,
     codes: { uploadFailed: TERRAIN_DOOR_CODES.uploadFailed },
-    read: (formData, env) => readTerrainUpload(formData, parts.propertyTypeOf(env), () => parts.confirmedOutlineOf(env)),
+    read: (formData, env) => readTerrainUpload(
+      formData,
+      parts.propertyTypeOf(env),
+      () => parts.confirmedOutlineOf(env),
+      (incoming) => parts.carriedGeoreferenceOf(env, incoming),
+    ),
     fileOf: (upload) => upload.file,
     sceneFileIdsOf: (upload) => upload.sceneFileIds,
     recordOf: (_upload, birth) => parts.recordOf(birth),
@@ -240,6 +273,8 @@ export function terrainResponseOf(published: PublishedTerrain): TerrainPublicati
       envelopeOmission: snapshot.envelopeOmission,
       plotOutline: plotOutlineFactsOf(snapshot.plotOutline),
       plotOutlineOmission: snapshot.plotOutlineOmission,
+      georeferenced: snapshot.georeference !== null,
+      georeferenceOmission: snapshot.georeferenceOmission,
     },
   };
 }

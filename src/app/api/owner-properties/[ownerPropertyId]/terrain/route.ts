@@ -14,8 +14,11 @@
  *   → κινητήρας: εγγραφή στο files_personal · bytes+δήλωση · διαδοχή · ΕΠΑΝΑΠΡΟΒΟΛΗ
  * PUT — επιβεβαίωση περιγράμματος (§14.11 Π2/Π3/Π6): σχέδιο DXF/PDF + { candidateId, showInListing }
  *   → ίδιος φρουρός κηδεμονίας/φακέλου → ο server ξαναβρίσκει το υποψήφιο → Π6 → σχέδιο στον φάκελο → ίδιος κινητήρας
+ *   · `?view=georeference` (§14.12 φάση Α): τι δηλώθηκε, τι προτείνουν τα σημεία, τι θα έδινε η ανάγνωση ως ΕΓΣΑ'87
  * PATCH — αλλαγή περιγράμματος χωρίς νέο σχέδιο (§14.11 Ζ3c): { kind: 'visibility', showInListing } | { kind: 'remove' }
  *   → ίδιος φρουρός → το περίγραμμα που ισχύει → νέα πηγή από τον ίδιο κινητήρα (διαδοχή · ΕΠΑΝΑΠΡΟΒΟΛΗ)
+ *   · γεωαναφορά (§14.12 φάση Α): { kind: 'coordinate-system', system } | { kind: 'location-visibility', showInListing }
+ *   → ίδιος φρουρός → περιοχή χρήσης + διασταύρωση με τη θέση της αγγελίας → νέα πηγή από τον ίδιο κινητήρα
  * ```
  *
  * 🔑 **ΜΙΑ ΠΟΡΤΑ ΕΔΑΦΟΥΣ, ΔΥΟ ΠΡΑΞΕΙΣ.** Η επιβεβαίωση **δεν** είναι δεύτερη πόρτα δημοσίευσης (CHECK 3.76 · 3.105): ζει
@@ -52,6 +55,18 @@ import {
 } from '@/lib/terrain/plot-outline/plot-outline-status';
 import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
 import {
+  OWNER_TERRAIN_GEOREFERENCE_VIEW,
+  parseTerrainGeoreferenceAmendment,
+  type TerrainGeoreferenceAmendment,
+  type TerrainGeoreferenceStatus,
+} from '@/lib/terrain/publication/terrain-georeference-declaration';
+import {
+  amendOwnerTerrainGeoreference,
+  carriedOwnerGeoreference,
+  loadOwnerTerrainGeoreferenceStatus,
+  type TerrainGeoreferenceAmendmentResponse,
+} from '@/server/listing-terrain/terrain-georeference.server';
+import {
   loadDossierOwnerReliefSnapshot,
   loadDossierPlotOutline,
   loadDossierPlotOutlineStatus,
@@ -81,9 +96,10 @@ type RouteContext = { params: Promise<{ ownerPropertyId: string }> };
 /**
  * Τα πεδία του ιστορικού (ADR-195): `terrain` = «ποιο τοπογραφικό δημοσιεύεται» — το **ίδιο** με το γραφείο·
  * `plotOutline` = «ποια εγγραφή κρατά πλέον την απόφαση για το περίγραμμα»: το σχέδιο στην επιβεβαίωση (`PUT`, Ζ3), η νέα
- * πηγή εδάφους στην αλλαγή χωρίς σχέδιο (`PATCH`, Ζ3c) — ο ίδιος γραφέας, ίδιο σχήμα «ποιο διαδέχεται ποιο».
+ * πηγή εδάφους στην αλλαγή χωρίς σχέδιο (`PATCH`, Ζ3c) — ο ίδιος γραφέας, ίδιο σχήμα «ποιο διαδέχεται ποιο»·
+ * `terrainGeoreference` = «ποια πηγή κρατά πλέον τη δήλωση συστήματος / τη συγκατάθεση θέσης» (§14.12 φάση Α).
  */
-const AUDIT_FIELDS = { terrain: 'terrain', plotOutline: 'plotOutline' } as const;
+const AUDIT_FIELDS = { terrain: 'terrain', plotOutline: 'plotOutline', georeference: 'terrainGeoreference' } as const;
 
 /** Το ίχνος στο βιβλίο του χώρου του ιδιοκτήτη: ποιο αρχείο ισχύει, ποια διαδέχεται. Ποτέ δεν ρίχνει την πράξη. */
 function recordOwnerTerrainChange(
@@ -116,6 +132,8 @@ const TERRAIN_DOOR: OwnerMaterialPublicationDoor<TerrainUpload> = {
     // 🗺️ ADR-920 §14.11 Ζ3c — το περίγραμμα που ΙΣΧΥΕΙ (νικά η νεότερη απόφαση: πηγή ή σχέδιο) — ποτέ μόνο το σχέδιο, που
     //    μπορεί να είναι στον κάδο: ο κάδος του σχεδίου δεν αφαιρεί το περίγραμμα (copy semantics).
     confirmedOutlineOf: (env) => loadDossierPlotOutline(env.adminDb, env.dossier),
+    // 📍 ADR-920 §14.12 φάση Α — η δήλωση ΕΓΣΑ'87 και η συγκατάθεση θέσης μεταφέρονται, αφού ξανακριθούν στα νέα σημεία.
+    carriedGeoreferenceOf: carriedOwnerGeoreference,
     recordOf: ({ userId, dossierId, createdBy, sourceRevisions }) =>
       buildPublishedTerrainFileRecord({ home: { userId, dossierId }, createdBy, sourceRevisions }),
     recordPublished: (verdict, env) => recordOwnerTerrainChange(AUDIT_FIELDS.terrain, verdict.fileId, verdict.supersedes, env),
@@ -127,6 +145,14 @@ const TERRAIN_DOOR: OwnerMaterialPublicationDoor<TerrainUpload> = {
 interface OwnerReliefView {
   readonly snapshot: ListingTerrainSnapshot | null;
 }
+
+/** Η απάντηση του `?view=georeference` (ADR-920 §14.12 φάση Α): η κατάσταση, ή `null` όταν δεν υπάρχει ανάγλυφο. */
+interface OwnerGeoreferenceView {
+  readonly georeference: TerrainGeoreferenceStatus | null;
+}
+
+type OwnerTerrainView = PlotOutlineStatus | OwnerReliefView | OwnerGeoreferenceView;
+type OwnerTerrainAmendment = PlotOutlineAmendmentResponse | TerrainGeoreferenceAmendmentResponse;
 
 async function ownerPropertyIdOf(context?: RouteContext): Promise<string> {
   return (await context?.params)?.ownerPropertyId?.trim() ?? '';
@@ -179,6 +205,26 @@ async function jsonBodyOf(request: NextRequest): Promise<unknown> {
 }
 
 /**
+ * **PATCH, σκέλος γεωαναφοράς** (ADR-920 §14.12 φάση Α): δήλωση συστήματος ή συγκατάθεση θέσης — ίδια πόρτα, ίδιος κινητήρας,
+ * ίδιο ιστορικό. Στο ημερολόγιο μπαίνει **το είδος** της αλλαγής, ποτέ συντεταγμένη.
+ */
+async function amendGeoreference(
+  env: OwnerMaterialDoorEnv,
+  amendment: TerrainGeoreferenceAmendment,
+): Promise<TerrainGeoreferenceAmendmentResponse> {
+  const amended = await amendOwnerTerrainGeoreference(env, amendment, TERRAIN_DOOR);
+  if (amended.terrain !== null) {
+    recordOwnerTerrainChange(AUDIT_FIELDS.georeference, amended.terrain.fileId, amended.terrain.supersedes, env);
+  }
+  logger.info('Γεωαναφορά ανάγλυφου άλλαξε', {
+    ownerPropertyId: env.ownerPropertyId,
+    kind: amendment.kind,
+    changed: amended.changed,
+  });
+  return amended;
+}
+
+/**
  * **PATCH — αλλαγή περιγράμματος χωρίς νέο σχέδιο** (ADR-920 §14.11 Ζ3c): Π9 (δημόσιο ή όχι) ή ρητή αφαίρεση. Ίδιος
  * φρουρός, ίδια πόρτα (`TERRAIN_DOOR` — η γέννηση μένει εδώ, CHECK 3.105 Κ2), ίδιο ιστορικό.
  */
@@ -186,10 +232,16 @@ async function amendHandler(
   request: NextRequest,
   actor: ApiActor,
   context?: RouteContext,
-): Promise<NextResponse<ApiSuccessResponse<PlotOutlineAmendmentResponse>>> {
+): Promise<NextResponse<ApiSuccessResponse<OwnerTerrainAmendment>>> {
   const env = await enterOwnerDoor(await ownerPropertyIdOf(context), actor, TERRAIN_DOOR);
-  const amendment = parsePlotOutlineAmendment(await jsonBodyOf(request));
-  if (amendment === null) throw new ApiError(400, 'TERRAIN_PLOT_OUTLINE_AMENDMENT_INVALID');
+  const body = await jsonBodyOf(request);
+  const amendment = parsePlotOutlineAmendment(body);
+  if (amendment === null) {
+    // 📍 Δύο κλειστά λεξιλόγια, ένα σώμα: ό,τι δεν είναι ΑΚΡΙΒΩΣ ένα από τα δύο είναι άκυρο αίτημα.
+    const georeference = parseTerrainGeoreferenceAmendment(body);
+    if (georeference === null) throw new ApiError(400, 'TERRAIN_PLOT_OUTLINE_AMENDMENT_INVALID');
+    return apiSuccess<TerrainGeoreferenceAmendmentResponse>(await amendGeoreference(env, georeference));
+  }
 
   const amended = await amendOwnerPlotOutline(env, amendment, TERRAIN_DOOR);
   if (amended.terrain !== null) {
@@ -216,16 +268,20 @@ async function statusHandler(
   request: NextRequest,
   actor: ApiActor,
   context?: RouteContext,
-): Promise<NextResponse<ApiSuccessResponse<PlotOutlineStatus | OwnerReliefView>>> {
+): Promise<NextResponse<ApiSuccessResponse<OwnerTerrainView>>> {
   const env = await enterOwnerDoor(await ownerPropertyIdOf(context), actor, TERRAIN_DOOR);
-  if (new URL(request.url).searchParams.get(OWNER_TERRAIN_VIEW_PARAM) === OWNER_TERRAIN_RELIEF_VIEW) {
+  const view = new URL(request.url).searchParams.get(OWNER_TERRAIN_VIEW_PARAM);
+  if (view === OWNER_TERRAIN_RELIEF_VIEW) {
     return apiSuccess<OwnerReliefView>({ snapshot: await loadDossierOwnerReliefSnapshot(env.adminDb, env.dossier) });
+  }
+  if (view === OWNER_TERRAIN_GEOREFERENCE_VIEW) {
+    return apiSuccess<OwnerGeoreferenceView>({ georeference: await loadOwnerTerrainGeoreferenceStatus(env) });
   }
   return apiSuccess<PlotOutlineStatus>(await loadDossierPlotOutlineStatus(env.adminDb, env.dossier));
 }
 
 export const GET = withStandardRateLimit(
-  withPersonalOrOrgAuth<ApiSuccessResponse<PlotOutlineStatus | OwnerReliefView>, RouteContext>(statusHandler),
+  withPersonalOrOrgAuth<ApiSuccessResponse<OwnerTerrainView>, RouteContext>(statusHandler),
 );
 
 export const POST = withHeavyRateLimit(
@@ -237,5 +293,5 @@ export const PUT = withHeavyRateLimit(
 );
 
 export const PATCH = withHeavyRateLimit(
-  withPersonalOrOrgAuth<ApiSuccessResponse<PlotOutlineAmendmentResponse>, RouteContext>(amendHandler),
+  withPersonalOrOrgAuth<ApiSuccessResponse<OwnerTerrainAmendment>, RouteContext>(amendHandler),
 );

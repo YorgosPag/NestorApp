@@ -29,6 +29,7 @@ function ramp(): ListingTerrainSnapshot {
     contourIntervalM: 0.5, contourMajorEvery: 5, slopeBandsPct: [5, 15, 25], boundary: null,
     stats: { planAreaM2: 400, minElevationM: 99, maxElevationM: 101, reliefM: 2, meanSlopePct: 10, maxSlopePct: 10, downslopeAzimuthDeg: 270 },
     envelope: null, envelopeOmission: null, plotOutline: null, plotOutlineOmission: null,
+    georeference: null, georeferenceOmission: null,
   };
 }
 

@@ -6,7 +6,8 @@
  *        ├─ slopeClasses / summariseSlope ─▶ slope map + stats
  *        ├─ placeEnvelope ─▶ indicative building envelope
  *        └─ placePlotOutline ─▶ the plot outline DRAWN on the relief (clips nothing, ADR-920 §14.11 Π1)
- *   everything ─frameOf─▶ metres from the surface centre (no world coordinates leave)
+ *        └─ georeferenceOf ─▶ where the frame sits on the earth — ONLY when the input asks (ADR-920 §14.12 phase Α)
+ *   everything ─frameOf─▶ metres from the surface centre (no world coordinate leaves in the geometry)
  *
  * Every step is the SAME code the DXF Viewer runs (ADR-920 Α1): one TIN, one clip, one contour
  * generator. The server door (Β3) calls this; so can a preview in the browser — same input, same bytes.
@@ -20,6 +21,7 @@ import { generateContoursFromSurface } from '@/lib/terrain/contour-generator';
 import type { ContourLine, TinSurface } from '@/lib/terrain/terrain-types';
 import { placePlotOutline } from '../plot-outline/plot-outline-placement';
 import { chooseContourConfig, contourDensityInputOf } from './contour-interval';
+import { georeferenceOf } from './listing-terrain-georeference';
 import { slopeClasses, summariseSlope } from './terrain-slope';
 import { LISTING_TERRAIN_MAX_TRIANGLES, LISTING_TERRAIN_SLOPE_BANDS_PCT } from './listing-terrain-config';
 import {
@@ -73,6 +75,7 @@ function snapshotOf(tin: TinSurface, frame: SnapshotFrame, input: ListingTerrain
   const outline = input.plotOutlineWorldMm
     ? placePlotOutline(tin, frame, input.plotOutlineWorldMm)
     : { plotOutline: null, omission: null };
+  const placedOnEarth = georeferenceOf(tin, frame, input.georeference);
 
   return {
     version: LISTING_TERRAIN_SNAPSHOT_VERSION,
@@ -87,6 +90,8 @@ function snapshotOf(tin: TinSurface, frame: SnapshotFrame, input: ListingTerrain
     envelopeOmission: placed.omission,
     plotOutline: outline.plotOutline,
     plotOutlineOmission: outline.omission,
+    georeference: placedOnEarth.georeference,
+    georeferenceOmission: placedOnEarth.omission,
   };
 }
 

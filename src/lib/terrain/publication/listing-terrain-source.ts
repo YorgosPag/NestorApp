@@ -18,6 +18,9 @@
  * the server door fills it in from the owner's confirmed outline (Ζ3) — an outline a browser sends with the survey is
  * not a confirmation.
  *
+ * v3 (ADR-920 §14.12 phase Α) adds two things the OWNER says, never a browser's survey: which coordinate system the
+ * numbers are in ({@link withCoordinateSystem}) and whether the public may see where the plot is ({@link withLocationConsent}).
+ *
  * A point without elevation is `[x, y]` and stays WITHOUT `z` — never `0` (ADR-720): the TIN builder
  * keeps such points out of the surface through `surfacePointsOf`.
  *
@@ -28,6 +31,7 @@
 
 import { z } from 'zod';
 
+import { GREEK_GRID_CRS } from '@/lib/geo/greek-grid';
 import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import type { Breakline, TopoPoint, TopoPoint3D } from '@/lib/terrain/terrain-types';
 import {
@@ -36,16 +40,27 @@ import {
   LISTING_TERRAIN_SOURCE_MAX_POINTS,
   LISTING_TERRAIN_SOURCE_MAX_RING_VERTICES,
 } from './listing-terrain-config';
-import type { ListingTerrainInput } from './listing-terrain-types';
+import type { ListingTerrainInput, TerrainCoordinateSystem } from './listing-terrain-types';
 
 /**
  * Bumped on any breaking change of the source shape; the door refuses versions it does not know.
- * History: 1 = Β3 · 2 = Β6.11 Ζ2 (`plotOutline`).
+ * History: 1 = Β3 · 2 = Β6.11 Ζ2 (`plotOutline`) · 3 = Β6.12 phase Α (`coordinateSystem` · `showLocationInListing`).
  */
-export const LISTING_TERRAIN_SOURCE_VERSION = 2 as const;
+export const LISTING_TERRAIN_SOURCE_VERSION = 3 as const;
 
-/** The previous shape, still READ: a v1 source is a v2 source without a plot outline (ADR-920 §14.11 Ζ2). */
+/**
+ * The previous shapes, still READ: v1 has no plot outline (ADR-920 §14.11 Ζ2); v1 and v2 have no declared coordinate
+ * system and no location consent (§14.12 phase Α) — they read as «nobody was asked» and «no».
+ */
 export const LISTING_TERRAIN_SOURCE_LEGACY_VERSION = 1 as const;
+export const LISTING_TERRAIN_SOURCE_OUTLINE_VERSION = 2 as const;
+
+/**
+ * The systems an owner can declare (ADR-920 §14.12 phase Α) — the registry's own name for the Greek grid, or «local».
+ * The tuple is typed against {@link TerrainCoordinateSystem}: a third system must be added to both, or neither compiles.
+ *
+ */
+export const TERRAIN_COORDINATE_SYSTEMS = [GREEK_GRID_CRS.name, 'local'] as const satisfies readonly TerrainCoordinateSystem[];
 
 /**
  * Who a derivative is built for (ADR-920 §14.11 Π9). The owner's preview always shows the plot outline; the PUBLIC
@@ -93,6 +108,16 @@ export interface ListingTerrainSource {
   } | null;
   /** The plot outline drawn on the relief, or `null`. Written ONLY through {@link withPlotOutline}. */
   readonly plotOutline: TerrainSourcePlotOutline | null;
+  /**
+   * The system the OWNER declared the coordinates are in; `null` = nobody was asked yet (never guessed from the numbers).
+   * Written ONLY through {@link withCoordinateSystem}.
+   */
+  readonly coordinateSystem: TerrainCoordinateSystem | null;
+  /**
+   * The public listing may show WHERE the plot is (its measured position) — only when the owner ticked it. The owner's
+   * own view has it regardless. Written ONLY through {@link withLocationConsent}.
+   */
+  readonly showLocationInListing: boolean;
 }
 
 const coordinate = z.number().finite().min(-LISTING_TERRAIN_SOURCE_MAX_ABS_MM).max(LISTING_TERRAIN_SOURCE_MAX_ABS_MM);
@@ -112,12 +137,17 @@ const sharedShape = {
     .nullable(),
 };
 
+const plotOutlineShape = z.object({ ring, showInListing: z.boolean() }).nullable();
+
 const sourceSchema = z.discriminatedUnion('version', [
   z.object({ version: z.literal(LISTING_TERRAIN_SOURCE_LEGACY_VERSION), ...sharedShape }),
+  z.object({ version: z.literal(LISTING_TERRAIN_SOURCE_OUTLINE_VERSION), ...sharedShape, plotOutline: plotOutlineShape }),
   z.object({
     version: z.literal(LISTING_TERRAIN_SOURCE_VERSION),
     ...sharedShape,
-    plotOutline: z.object({ ring, showInListing: z.boolean() }).nullable(),
+    plotOutline: plotOutlineShape,
+    coordinateSystem: z.enum(TERRAIN_COORDINATE_SYSTEMS).nullable(),
+    showLocationInListing: z.boolean(),
   }),
 ]);
 
@@ -146,13 +176,15 @@ function canonicalVertex([x, y, z]: readonly [number, number, number]): TerrainS
 /**
  * The accepted source in canonical form, or `null` for anything else — wrong version, non-finite or
  * out-of-range numbers, rings under three vertices, unknown shapes. Never a default: a source that does
- * not parse is not a survey. A v1 source is read as v2 with `plotOutline: null` — the version says so, nothing is guessed.
+ * not parse is not a survey. An older source is read as the current one with what its version did not have — no plot
+ * outline (v1), no declared system and no location consent (v1, v2): the version says so, nothing is guessed.
  */
 export function parseListingTerrainSource(raw: unknown): ListingTerrainSource | null {
   const parsed = sourceSchema.safeParse(raw);
   if (!parsed.success) return null;
   const { points, breaklines, boundary, envelope } = parsed.data;
   const plotOutline = parsed.data.version === LISTING_TERRAIN_SOURCE_LEGACY_VERSION ? null : parsed.data.plotOutline;
+  const current = parsed.data.version === LISTING_TERRAIN_SOURCE_VERSION ? parsed.data : null;
 
   return {
     version: LISTING_TERRAIN_SOURCE_VERSION,
@@ -167,7 +199,38 @@ export function parseListingTerrainSource(raw: unknown): ListingTerrainSource | 
       ring: plotOutline.ring.map(canonicalPlanar),
       showInListing: plotOutline.showInListing,
     },
+    coordinateSystem: current === null ? null : current.coordinateSystem,
+    showLocationInListing: current === null ? false : current.showLocationInListing,
   };
+}
+
+/**
+ * ADR-920 §14.12 phase Α — **the ONE writer of the declared coordinate system**: the source saying its coordinates are in
+ * `system` (or, with `null`, that nobody has said). Same schema and canonical form as everything the door accepts. Pure:
+ * the door decides when it is called, and judges the declaration first (area of use · the listing's position).
+ */
+export function withCoordinateSystem(source: ListingTerrainSource, system: TerrainCoordinateSystem | null): ListingTerrainSource | null {
+  return parseListingTerrainSource({ ...source, version: LISTING_TERRAIN_SOURCE_VERSION, coordinateSystem: system });
+}
+
+/**
+ * ADR-920 §14.12 phase Α — **the ONE writer of the location consent**: may the PUBLIC listing show where the plot is.
+ * Independent of the plot outline (Π9) — a different question, a different field, a different tick.
+ */
+export function withLocationConsent(source: ListingTerrainSource, showLocationInListing: boolean): ListingTerrainSource | null {
+  return parseListingTerrainSource({ ...source, version: LISTING_TERRAIN_SOURCE_VERSION, showLocationInListing });
+}
+
+/** The two things the owner says about where the survey is — carried from one relief to the next (ADR-920 §14.12 phase Α). */
+export type TerrainGeoreferenceChoice = Pick<ListingTerrainSource, 'coordinateSystem' | 'showLocationInListing'>;
+
+/** Nobody was asked, and no consent: what a first relief — or a custody without an owner's card — carries. */
+export const NO_TERRAIN_GEOREFERENCE_CHOICE: TerrainGeoreferenceChoice = { coordinateSystem: null, showLocationInListing: false };
+
+/** Both choices through their ONE writers — whatever a browser sent in these fields is replaced, never merged. */
+export function withGeoreferenceChoice(source: ListingTerrainSource, choice: TerrainGeoreferenceChoice): ListingTerrainSource | null {
+  const declared = withCoordinateSystem(source, choice.coordinateSystem);
+  return declared === null ? null : withLocationConsent(declared, choice.showLocationInListing);
 }
 
 /**
@@ -223,6 +286,8 @@ export function encodeListingTerrainSource(source: ListingTerrainSource): string
       ring: source.plotOutline.ring,
       showInListing: source.plotOutline.showInListing,
     },
+    coordinateSystem: source.coordinateSystem,
+    showLocationInListing: source.showLocationInListing,
   });
 }
 
@@ -248,12 +313,26 @@ function plotOutlineFor(source: ListingTerrainSource, audience: ListingTerrainAu
 }
 
 /**
+ * ADR-920 §14.12 phase Α — the georeference the given audience may ask for: the owner always, the public only when the
+ * owner ticked the location consent. `null` ⇒ the builder is never told a system, so the derivative carries no position
+ * and no «omitted» note either — nothing to hide.
+ */
+function georeferenceRequestFor(
+  source: ListingTerrainSource,
+  audience: ListingTerrainAudience,
+): ListingTerrainInput['georeference'] {
+  if (audience === 'public' && !source.showLocationInListing) return null;
+  return { coordinateSystem: source.coordinateSystem };
+}
+
+/**
  * The source → the snapshot builder's input (ADR-920 Β2). Same frame: WORLD canonical mm. `audience` has no default on
  * purpose: every caller states who the derivative is for (the shelf's bake = `'public'`, the owner's verdict = `'owner'`).
  */
 export function toListingTerrainInput(source: ListingTerrainSource, audience: ListingTerrainAudience): ListingTerrainInput {
   return {
     plotOutlineWorldMm: plotOutlineFor(source, audience),
+    georeference: georeferenceRequestFor(source, audience),
     points: source.points.map(toTopoPoint),
     breaklines: source.breaklines.map(toBreakline),
     boundaryWorldMm: source.boundary === null ? null : source.boundary.map(toPlanar),

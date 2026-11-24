@@ -148,8 +148,10 @@ jest.mock('@/services/entity-audit.service', () => ({
 
 import { encodeTerrainSurveyDeclaration } from '@/lib/terrain/publication/terrain-survey-declaration';
 
+import { greekGridToGeoPoint } from '@/lib/geo/greek-grid';
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { POST } = require('../route') as typeof import('../route');
+const { GET, POST, PATCH } = require('../route') as typeof import('../route');
 
 const LISTING = 'oprop_a0000009-7777-4aaa-8aaa-000000000031';
 const DOSSIER = 'pdos_a0000009-7777-4aaa-8aaa-000000000032';
@@ -261,8 +263,9 @@ describe('ADR-920 Β4.3 — η πόρτα του τοπογραφικού του
     expect(setDoc.mock.calls[0][0]).not.toHaveProperty('companyId');
     expect(collections).toContain('files_personal');
     expect(collections).not.toContain('files');
-    // Πρώτο ερώτημα: το επιβεβαιωμένο περίγραμμα του φακέλου (Ζ3)· δεύτερο: οι προκάτοχοι.
-    expect(trace).toEqual(['query', 'query', 'set', 'upload', 'update', 'audit', 'refresh']);
+    // Πρώτο ερώτημα: το επιβεβαιωμένο περίγραμμα του φακέλου (Ζ3)· δεύτερο: η γεωαναφορά του προηγούμενου ανάγλυφου
+    // (§14.12 φάση Α)· τρίτο: οι προκάτοχοι.
+    expect(trace).toEqual(['query', 'query', 'query', 'set', 'upload', 'update', 'audit', 'refresh']);
   });
 
   it('Ι2 — 🔒 ξένη αγγελία ⇒ 404, και το σώμα ΔΕΝ διαβάζεται', async () => {
@@ -364,7 +367,9 @@ describe('ADR-920 Β4.3 — η πόρτα του τοπογραφικού του
     siblings = [confirmedDrawing(CONFIRMED), publishedRelief(BEFORE_DRAWING, null)];
     await post();
     expect(storedSource().plotOutline).toEqual({ ring: RING_MM, showInListing: true });
-    expect(downloads).not.toHaveBeenCalled();
+    // Για το ΠΕΡΙΓΡΑΜΜΑ η πηγή δεν κατεβαίνει (νικά το σχέδιο)· κατεβαίνει ΜΙΑ φορά για τη γεωαναφορά που μεταφέρεται
+    // στο νέο ανάγλυφο (§14.12 φάση Α) — η δήλωση συστήματος ζει μόνο μέσα στην πηγή.
+    expect(downloads).toHaveBeenCalledTimes(1);
   });
 
   it('Ι14 — 🔴 ρητή αφαίρεση (πηγή ΝΕΟΤΕΡΗ από το σχέδιο, χωρίς περίγραμμα) ⇒ το ενεργό σχέδιο ΔΕΝ το ξαναφέρνει', async () => {
@@ -383,6 +388,151 @@ describe('ADR-920 Β4.3 — η πόρτα του τοπογραφικού του
     siblings = [publishedRelief(AFTER_DRAWING, null)];
     storedSourceBytes = '{';
     await expect(post()).rejects.toMatchObject({ statusCode: 503, message: 'TERRAIN_CURRENT_SOURCE_UNREADABLE' });
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ADR-920 §14.12 φάση Α — το σκέλος γεωαναφοράς της ΙΔΙΑΣ πόρτας.
+ *
+ * | Μετάλλαξη | Κοκκινίζει |
+ * |---|---|
+ * | η δήλωση ΕΓΣΑ'87 γράφεται χωρίς διασταύρωση με τη θέση της αγγελίας | Γ2 · Γ3 |
+ * | η συγκατάθεση γράφεται χωρίς δηλωμένο σύστημα | Γ4 |
+ * | «τοπικές» αφήνει όρθια τη συγκατάθεση | Γ6 |
+ * | το νέο ανάγλυφο κρατά ό,τι έστειλε ο browser | Γ8 |
+ * | το νέο ανάγλυφο μεταφέρει δήλωση που δεν στέκει για τα νέα σημεία | Γ9 |
+ * | η κατάσταση επιστρέφει συντεταγμένη | Γ10 |
+ */
+describe('ADR-920 §14.12 Α — γεωαναφορά: δήλωση συστήματος και συγκατάθεση θέσης', () => {
+  /** Το κέντρο της αποτύπωσης του fixture (E0 + 10 m, N0 + 10 m), σε WGS84 — από την ΙΔΙΑ σύνθεση με τον χάρτη. */
+  const CENTRE = greekGridToGeoPoint(E0 / 1000 + 10, N0 / 1000 + 10);
+  const placeAt = (metresNorth: number) => ({
+    kind: 'declared', label: 'Οδός 1', accuracy: null, link: null,
+    point: { lat: CENTRE.lat + metresNorth / 111_195, lng: CENTRE.lng },
+  });
+
+  /** Το δημοσιευμένο ανάγλυφο του φακέλου, με ό,τι λέει η πηγή του για τη θέση. */
+  const reliefSaying = (coordinateSystem: string | null, showLocationInListing: boolean): Record<string, unknown> => {
+    const record = publishedRelief(BEFORE_DRAWING, null);
+    storedSourceBytes = JSON.stringify({ ...SOURCE, version: 3, plotOutline: null, coordinateSystem, showLocationInListing });
+    return record;
+  };
+
+  type Stored = { coordinateSystem: unknown; showLocationInListing: unknown };
+  const stored = (): Stored => storedSource() as unknown as Stored;
+  const request = (extra: Record<string, unknown>, query = '') => ({
+    url: `https://x/api/owner-properties/${LISTING}/terrain${query}`, nextUrl: { pathname: '/x' }, ...extra,
+  }) as never;
+  const params = { params: Promise.resolve({ ownerPropertyId: LISTING }) } as never;
+  const patch = async (body: unknown) => {
+    const response = await PATCH(request({ json: async () => body }), params);
+    return (await (response as unknown as Response).json() as { data: { changed: boolean; georeference: Stored; terrain: { fileId: string } | null } }).data;
+  };
+  const view = async () => {
+    const response = await GET(request({}, '?view=georeference'), params);
+    return (await (response as unknown as Response).json() as { data: { georeference: Record<string, unknown> | null } }).data;
+  };
+
+  beforeEach(() => {
+    trace.length = 0;
+    siblings = [];
+    uploadedBuffers.length = 0;
+    downloads.mockClear();
+    sentSource = SOURCE;
+    callerUid = OWNER;
+    dossier = { userId: OWNER, label: 'Οικόπεδο', type: 'plot' };
+    ownerProperty = { authorUserId: OWNER, authorCompanyId: null, dossierId: DOSSIER, type: 'plot', title: 'Οικόπεδο', place: placeAt(100) };
+    jest.clearAllMocks();
+  });
+
+  it('Γ1 — 🏆 δήλωση ΕΓΣΑ\'87 κοντά στη θέση της αγγελίας ⇒ νέα πηγή με τη δήλωση, επαναπροβολή, ίχνος στο ιστορικό', async () => {
+    siblings = [reliefSaying(null, false)];
+    const data = await patch({ kind: 'coordinate-system', system: 'EPSG:2100' });
+
+    expect(data).toMatchObject({ changed: true, georeference: { coordinateSystem: 'EPSG:2100', showLocationInListing: false } });
+    expect(stored()).toMatchObject({ coordinateSystem: 'EPSG:2100', showLocationInListing: false });
+    expect(refreshOwner).toHaveBeenCalledTimes(1);
+    expect(recordChange).toHaveBeenCalledWith(expect.objectContaining({
+      changes: [{ field: 'terrainGeoreference', oldValue: 'file_terrain_old', newValue: data.terrain?.fileId }],
+    }));
+  });
+
+  it('Γ2 — 🔴 η αποτύπωση πέφτει ΜΑΚΡΙΑ από τη θέση της αγγελίας ⇒ 422 με όνομα, τίποτα δεν γράφεται', async () => {
+    siblings = [reliefSaying(null, false)];
+    ownerProperty = { ...ownerProperty, place: placeAt(5_000) };
+    await expect(patch({ kind: 'coordinate-system', system: 'EPSG:2100' }))
+      .rejects.toMatchObject({ statusCode: 422, message: 'TERRAIN_GEOREFERENCE_FAR_FROM_LISTING' });
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(refreshOwner).not.toHaveBeenCalled();
+  });
+
+  it('Γ3 — 🔴 αγγελία που ΑΡΝΗΘΗΚΕ θέση ⇒ 422: δεν υπάρχει τίποτα ανεξάρτητο να διασταυρωθεί', async () => {
+    siblings = [reliefSaying(null, false)];
+    ownerProperty = { ...ownerProperty, place: { kind: 'declined' } };
+    await expect(patch({ kind: 'coordinate-system', system: 'EPSG:2100' }))
+      .rejects.toMatchObject({ statusCode: 422, message: 'TERRAIN_GEOREFERENCE_LISTING_POSITION_UNKNOWN' });
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it('Γ4 — 🔒 συγκατάθεση ΧΩΡΙΣ δηλωμένο ΕΓΣΑ\'87 ⇒ 409: δεν υπάρχει θέση να φανεί', async () => {
+    siblings = [reliefSaying(null, false)];
+    await expect(patch({ kind: 'location-visibility', showInListing: true }))
+      .rejects.toMatchObject({ statusCode: 409, message: 'TERRAIN_GEOREFERENCE_NOT_DECLARED' });
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it('Γ5 — συγκατάθεση με δηλωμένο σύστημα ⇒ γράφεται· η ίδια ξανά ⇒ `changed: false`, καμία εγγραφή', async () => {
+    siblings = [reliefSaying('EPSG:2100', false)];
+    expect(await patch({ kind: 'location-visibility', showInListing: true })).toMatchObject({ changed: true });
+    expect(stored()).toMatchObject({ coordinateSystem: 'EPSG:2100', showLocationInListing: true });
+
+    siblings = [reliefSaying('EPSG:2100', true)];
+    setDoc.mockClear();
+    expect(await patch({ kind: 'location-visibility', showInListing: true })).toMatchObject({ changed: false, terrain: null });
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it('Γ6 — 🔒 «τοπικές συντεταγμένες» ΑΙΡΕΙ τη συγκατάθεση: καμία θέση, κανένα «ναι» που να κρέμεται από αυτήν', async () => {
+    siblings = [reliefSaying('EPSG:2100', true)];
+    await patch({ kind: 'coordinate-system', system: 'local' });
+    expect(stored()).toMatchObject({ coordinateSystem: 'local', showLocationInListing: false });
+  });
+
+  it('Γ7 — χωρίς ανάγλυφο ⇒ 409· σώμα που δεν είναι ΚΑΝΕΝΑ από τα δύο λεξιλόγια ⇒ 400', async () => {
+    await expect(patch({ kind: 'coordinate-system', system: 'local' }))
+      .rejects.toMatchObject({ statusCode: 409, message: 'TERRAIN_GEOREFERENCE_NO_RELIEF' });
+    await expect(patch({ kind: 'coordinate-system', system: 'EPSG:4326' })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(patch({ kind: 'location-visibility', showInListing: true, centre: CENTRE })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('Γ8 — 🔴 ΝΕΟ ανάγλυφο: ό,τι έστειλε ο browser στα δύο πεδία ΑΝΤΙΚΑΘΙΣΤΑΤΑΙ — πρώτο ανάγλυφο = αδήλωτο, χωρίς συγκατάθεση', async () => {
+    sentSource = { ...SOURCE, version: 3, plotOutline: null, coordinateSystem: 'EPSG:2100', showLocationInListing: true };
+    await post();
+    expect(stored()).toMatchObject({ coordinateSystem: null, showLocationInListing: false });
+  });
+
+  it('Γ9 — 🏆 ΝΕΟ ανάγλυφο ΜΕΤΑΦΕΡΕΙ δήλωση + συγκατάθεση όταν στέκουν· σημεία αλλού ⇒ αδήλωτο ΚΑΙ χωρίς συγκατάθεση', async () => {
+    siblings = [reliefSaying('EPSG:2100', true)];
+    await post();
+    expect(stored()).toMatchObject({ coordinateSystem: 'EPSG:2100', showLocationInListing: true });
+
+    siblings = [reliefSaying('EPSG:2100', true)];
+    const elsewhere = surveyPoints().map(([x, y, z]) => [x + 9_000_000, y, z]);
+    sentSource = { ...SOURCE, points: elsewhere };
+    await post();
+    expect(stored()).toMatchObject({ coordinateSystem: null, showLocationInListing: false });
+  });
+
+  it('Γ10 — η κατάσταση (GET ?view=georeference): δήλωση · πρόταση · ανάγνωση — και ΚΑΜΙΑ συντεταγμένη', async () => {
+    expect(await view()).toEqual({ georeference: null });
+
+    siblings = [reliefSaying(null, false)];
+    const data = await view();
+    expect(data.georeference).toMatchObject({
+      coordinateSystem: null, showLocationInListing: false, suggestion: 'EPSG:2100', greekGrid: { kind: 'agrees' },
+    });
+    expect(JSON.stringify(data)).not.toMatch(/"lat"|"lng"/);
     expect(setDoc).not.toHaveBeenCalled();
   });
 });

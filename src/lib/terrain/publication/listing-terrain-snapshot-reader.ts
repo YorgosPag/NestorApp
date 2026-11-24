@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { LISTING_TERRAIN_MAX_TRIANGLES } from './listing-terrain-config';
 import {
   LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION,
+  LISTING_TERRAIN_SNAPSHOT_OUTLINE_VERSION,
   LISTING_TERRAIN_SNAPSHOT_VERSION,
   type ListingTerrainMesh,
   type ListingTerrainSnapshot,
@@ -90,26 +91,48 @@ const sharedShape = {
   envelopeOmission: z.enum(['outside-surface', 'degenerate-footprint']).nullable(),
 };
 
+const outlineShape = {
+  plotOutline: plotOutlineSchema.nullable(),
+  plotOutlineOmission: z.enum(['outside-surface', 'degenerate-outline']).nullable(),
+};
+
+/** ADR-920 §14.12 phase Α — WGS84 degrees inside their own range: a latitude of 400 is not a place. */
+const georeferenceSchema = z.object({
+  centre: z.object({ lat: finite.min(-90).max(90), lng: finite.min(-180).max(180) }),
+  gridConvergenceDeg: finite.min(-90).max(90),
+});
+
 /**
- * ADR-920 §14.11 Ζ2 — v2 adds the plot outline; v1 (published before it) is read as v2 WITHOUT one. That is the version
- * speaking, not a default filling a hole: a v2 file missing the fields is still `malformed`.
+ * v2 adds the plot outline (ADR-920 §14.11 Ζ2), v3 the georeference (§14.12 phase Α); an older file is read as the
+ * current shape WITHOUT what its version did not have. That is the version speaking, not a default filling a hole: a v3
+ * file missing the fields is still `malformed`.
  */
 const snapshotSchema = z.discriminatedUnion('version', [
   z.object({ version: z.literal(LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION), ...sharedShape }),
+  z.object({ version: z.literal(LISTING_TERRAIN_SNAPSHOT_OUTLINE_VERSION), ...sharedShape, ...outlineShape }),
   z.object({
     version: z.literal(LISTING_TERRAIN_SNAPSHOT_VERSION),
     ...sharedShape,
-    plotOutline: plotOutlineSchema.nullable(),
-    plotOutlineOmission: z.enum(['outside-surface', 'degenerate-outline']).nullable(),
+    ...outlineShape,
+    georeference: georeferenceSchema.nullable(),
+    georeferenceOmission: z.enum(['crs-undeclared', 'crs-local', 'outside-area-of-use']).nullable(),
   }),
 ]);
 
 type ParsedSnapshot = z.infer<typeof snapshotSchema>;
 
-/** One in-memory shape for both versions (the readers downstream know only the current one). */
+const KNOWN_VERSIONS: readonly number[] = [
+  LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION,
+  LISTING_TERRAIN_SNAPSHOT_OUTLINE_VERSION,
+  LISTING_TERRAIN_SNAPSHOT_VERSION,
+];
+
+/** One in-memory shape for every version (the readers downstream know only the current one). */
 function currentShapeOf(parsed: ParsedSnapshot): ListingTerrainSnapshot {
   if (parsed.version === LISTING_TERRAIN_SNAPSHOT_VERSION) return parsed;
-  return { ...parsed, version: LISTING_TERRAIN_SNAPSHOT_VERSION, plotOutline: null, plotOutlineOmission: null };
+  const unplaced = { version: LISTING_TERRAIN_SNAPSHOT_VERSION, georeference: null, georeferenceOmission: null } as const;
+  if (parsed.version === LISTING_TERRAIN_SNAPSHOT_OUTLINE_VERSION) return { ...parsed, ...unplaced };
+  return { ...parsed, ...unplaced, plotOutline: null, plotOutlineOmission: null };
 }
 
 function allFinite(values: readonly number[]): boolean {
@@ -148,7 +171,7 @@ function hasNonFiniteOutsideMesh(snapshot: ListingTerrainSnapshot): boolean {
 
 function isUnknownVersion(raw: unknown): boolean {
   return typeof raw === 'object' && raw !== null && 'version' in raw
-    && raw.version !== LISTING_TERRAIN_SNAPSHOT_VERSION && raw.version !== LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION;
+    && !(typeof raw.version === 'number' && KNOWN_VERSIONS.includes(raw.version));
 }
 
 /** Read a fetched (already JSON-parsed) snapshot. Never throws. */

@@ -5,10 +5,11 @@
  * pattern): the surveyor's TIN clipped to the plot, its contours, a slope class per triangle and an
  * indicative building envelope. Three rules shape every field:
  *
- *   1. **No world coordinates.** Plan positions are metres relative to the centre of the surface
+ *   1. **No world coordinates in the geometry.** Plan positions are metres relative to the centre of the surface
  *      (ADR-920 Δ3: the exact location is the owner's choice, never a side effect of the 3D model).
  *      Elevations stay ABSOLUTE metres — the buyer reads «υψόμετρο 124 m», and an altitude alone
- *      does not locate a plot.
+ *      does not locate a plot. Where the plot IS leaves through ONE field only — `georeference` (ADR-920 §14.12
+ *      phase Α) — and only for an audience allowed to see it.
  *   2. **No invented measurements.** The surveyor's vertices are kept as measured (no mesh
  *      simplification — survey-grade input is already thin; point clouds are decimated in the viewer
  *      before they become survey points). A height nobody declared stays `null`.
@@ -21,6 +22,7 @@
  */
 
 import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import type { Breakline, TopoPoint } from '@/lib/terrain/terrain-types';
 import type { SnapshotFrame } from './listing-terrain-frame';
 
@@ -29,13 +31,14 @@ import type { SnapshotFrame } from './listing-terrain-frame';
  * ⛔ Never bump it for a change of CONTENT — every published snapshot would read `unknown-version`. That is
  * {@link LISTING_TERRAIN_BUILDER_REVISION}.
  */
-export const LISTING_TERRAIN_SNAPSHOT_VERSION = 2 as const;
+export const LISTING_TERRAIN_SNAPSHOT_VERSION = 3 as const;
 
 /**
- * The previous shape, still READ (ADR-920 §14.11 Ζ2): a v1 snapshot is a v2 snapshot without a plot outline. Published
- * v1 files stay drawable until the shelf re-bakes them (the version is part of its recipe).
+ * The previous shapes, still READ: v1 has no plot outline (ADR-920 §14.11 Ζ2), v2 has no georeference (§14.12 phase Α).
+ * Published v1/v2 files stay drawable until the shelf re-bakes them (the version is part of its recipe).
  */
 export const LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION = 1 as const;
+export const LISTING_TERRAIN_SNAPSHOT_OUTLINE_VERSION = 2 as const;
 
 /**
  * ADR-920 Β6.9 Β — the revision of the builder (`buildListingTerrainSnapshot`): bumped on ANY change to the bytes it
@@ -45,9 +48,9 @@ export const LISTING_TERRAIN_SNAPSHOT_LEGACY_VERSION = 1 as const;
  * Cloudinary named transformations · Bazel action keys).
  *
  * History: 1 = up to Β6.7 · 2 = Β6.8 (interval from on-screen density, 8 px minimum spacing) · 3 = Β6.11 Ζ2 (the plot
- * outline, its area and the share of it the relief covers).
+ * outline, its area and the share of it the relief covers) · 4 = Β6.12 phase Α (the georeference).
  */
-export const LISTING_TERRAIN_BUILDER_REVISION = 3 as const;
+export const LISTING_TERRAIN_BUILDER_REVISION = 4 as const;
 
 /** The terrain mesh, in the snapshot frame (see module doc). */
 export interface ListingTerrainMesh {
@@ -131,6 +134,36 @@ export type ListingTerrainPlotOutlineOmission =
   /** Fewer than three corners, zero area or a self-intersecting ring. */
   | 'degenerate-outline';
 
+/**
+ * ADR-920 §14.12 phase Α — the coordinate system the OWNER declared for the survey. Never inferred: `'EPSG:2100'` (the
+ * registry name, `GREEK_GRID_CRS.name`) or `'local'` («none» — Civil 3D `GEOCSASSIGN` None, QGIS «leave as unknown»).
+ */
+export type TerrainCoordinateSystem = 'EPSG:2100' | 'local';
+
+/**
+ * ADR-920 §14.12 phase Α — WHERE the snapshot frame sits on the earth: the frame's origin (the surface centre) in WGS84
+ * and the angle from true north to the frame's +y (grid north). With these two a map places every frame point
+ * (Revit: Survey Point + angle to true north · IFC4: `IfcMapConversion`).
+ */
+export interface ListingTerrainGeoreference {
+  /** The frame origin, WGS84 degrees (datum shift applied), rounded to 1e-7° (about a centimetre). */
+  readonly centre: GeoPoint;
+  /** Meridian convergence at the centre, degrees: positive ⇒ grid north lies EAST of true north. */
+  readonly gridConvergenceDeg: number;
+}
+
+/**
+ * Why no georeference is carried although this audience may see one. Never «kept private»: a public snapshot built
+ * without the owner's consent simply has no georeference request, so it has nothing to omit (same rule as the outline, Π9).
+ */
+export type ListingTerrainGeoreferenceOmission =
+  /** Nobody has said which system the coordinates are in (every source older than v3). */
+  | 'crs-undeclared'
+  /** The owner said the coordinates are local — there is no position to compute. */
+  | 'crs-local'
+  /** Declared EPSG:2100, but part of the surface falls outside its area of use: the declaration cannot be true. */
+  | 'outside-area-of-use';
+
 export interface ListingTerrainSnapshot {
   readonly version: typeof LISTING_TERRAIN_SNAPSHOT_VERSION;
   readonly mesh: ListingTerrainMesh;
@@ -147,6 +180,9 @@ export interface ListingTerrainSnapshot {
   /** ADR-920 §14.11 — the plot outline drawn on the relief, or `null` (none, kept private, or omitted — see below). */
   readonly plotOutline: ListingTerrainPlotOutline | null;
   readonly plotOutlineOmission: ListingTerrainPlotOutlineOmission | null;
+  /** ADR-920 §14.12 phase Α — where the frame sits on the earth, or `null` (not for this audience, or omitted — see below). */
+  readonly georeference: ListingTerrainGeoreference | null;
+  readonly georeferenceOmission: ListingTerrainGeoreferenceOmission | null;
 }
 
 /** Why a snapshot cannot be built — surfaced to the person publishing, never swallowed. */
@@ -187,4 +223,10 @@ export interface ListingTerrainInput {
    * (Π9) is decided before the builder, by `toListingTerrainInput(source, audience)`.
    */
   readonly plotOutlineWorldMm?: readonly PlanarPoint[] | null;
+  /**
+   * ADR-920 §14.12 phase Α — the georeference REQUEST: absent or `null` ⇒ this audience gets none (and no omission);
+   * present ⇒ the builder computes it from the declared system, or names why it cannot. Who may see it is decided before
+   * the builder, by `toListingTerrainInput(source, audience)`.
+   */
+  readonly georeference?: { readonly coordinateSystem: TerrainCoordinateSystem | null } | null;
 }

@@ -5,12 +5,19 @@
  * Fixture: real ΕΓΣΑ'87 magnitudes in canonical mm (E 400 km, N 4 200 km), elevation 120 m.
  */
 
+import { GREEK_GRID_CRS } from '@/lib/geo/greek-grid';
+
 import {
   LISTING_TERRAIN_SOURCE_VERSION,
+  NO_TERRAIN_GEOREFERENCE_CHOICE,
+  TERRAIN_COORDINATE_SYSTEMS,
   encodeListingTerrainSource,
   parseListingTerrainSource,
   plotOutlineChoiceIn,
   toListingTerrainInput,
+  withCoordinateSystem,
+  withGeoreferenceChoice,
+  withLocationConsent,
   withPlotOutline,
 } from '../listing-terrain-source';
 import { buildListingTerrainSnapshot } from '../listing-terrain-snapshot';
@@ -33,8 +40,19 @@ function rawSource(overrides: Record<string, unknown> = {}): Record<string, unkn
     boundary: null,
     envelope: null,
     plotOutline: null,
+    coordinateSystem: null,
+    showLocationInListing: false,
     ...overrides,
   };
+}
+
+/** The same survey as an OLDER version wrote it: without the fields that version did not have. */
+function legacySource(version: 1 | 2): Record<string, unknown> {
+  const raw = rawSource({ version });
+  delete raw.coordinateSystem;
+  delete raw.showLocationInListing;
+  if (version === 1) delete raw.plotOutline;
+  return raw;
 }
 
 describe('ADR-920 Β3 — parseListingTerrainSource', () => {
@@ -46,8 +64,12 @@ describe('ADR-920 Β3 — parseListingTerrainSource', () => {
   });
 
   it.each([
-    ['unknown version', { version: 3 }],
-    ['a v2 source without the plotOutline field', { plotOutline: undefined }],
+    ['unknown version', { version: 4 }],
+    ['a current source without the plotOutline field', { plotOutline: undefined }],
+    ['a current source without the coordinateSystem field', { coordinateSystem: undefined }],
+    ['a current source without the location consent', { showLocationInListing: undefined }],
+    ['a coordinate system nobody can declare', { coordinateSystem: 'EPSG:4326' }],
+    ['a location consent that is not a yes or a no', { showLocationInListing: 'yes' }],
     ['a plot outline of two vertices', { plotOutline: { ring: [[E0, N0], [E0 + 1, N0]], showInListing: true } }],
     ['a plot outline without the public choice', { plotOutline: { ring: [[E0, N0], [E0 + 1, N0], [E0, N0 + 1]] } }],
     ['no points', { points: [] }],
@@ -80,7 +102,9 @@ describe('ADR-920 Β3 — one canonical form', () => {
     const b = encodeListingTerrainSource(parseListingTerrainSource(rawSource())!);
     expect(a).toBe(b);
     expect(a).not.toContain('smuggled');
-    expect(Object.keys(JSON.parse(a))).toStrictEqual(['version', 'points', 'breaklines', 'boundary', 'envelope', 'plotOutline']);
+    expect(Object.keys(JSON.parse(a))).toStrictEqual([
+      'version', 'points', 'breaklines', 'boundary', 'envelope', 'plotOutline', 'coordinateSystem', 'showLocationInListing',
+    ]);
   });
 
   it('re-parses its own encoding to the same value', () => {
@@ -121,13 +145,11 @@ describe('ADR-920 §14.11 Ζ2 — the plot outline in the source', () => {
     { x: E0 + 2_000, y: N0 + 18_000 },
   ];
 
-  it('a v1 source is read as v2 WITHOUT an outline, and is stored as v2', () => {
-    const v1 = rawSource({ version: 1 });
-    delete v1.plotOutline;
-    const source = parseListingTerrainSource(v1)!;
+  it('a v1 source is read as the current one WITHOUT an outline, and is stored as the current version', () => {
+    const source = parseListingTerrainSource(legacySource(1))!;
     expect(source.version).toBe(LISTING_TERRAIN_SOURCE_VERSION);
     expect(source.plotOutline).toBeNull();
-    expect(JSON.parse(encodeListingTerrainSource(source)).version).toBe(2);
+    expect(JSON.parse(encodeListingTerrainSource(source)).version).toBe(3);
   });
 
   it('withPlotOutline writes the ring in canonical mm and leaves everything else as it was', () => {
@@ -176,5 +198,63 @@ describe('ADR-920 §14.11 Ζ2 — the plot outline in the source', () => {
       showInListing: false,
     });
     expect(encodeListingTerrainSource(withPlotOutline(outlined, plotOutlineChoiceIn(outlined))!)).toBe(encodeListingTerrainSource(outlined));
+  });
+});
+
+describe('ADR-920 §14.12 Α — the declared coordinate system and the location consent (v3)', () => {
+  it('v1 and v2 sources read as «nobody was asked» and «no» — the version speaks, nothing is guessed', () => {
+    for (const version of [1, 2] as const) {
+      const source = parseListingTerrainSource(legacySource(version))!;
+      expect(source).toMatchObject({ version: 3, coordinateSystem: null, showLocationInListing: false });
+    }
+  });
+
+  it('the declarable Greek grid IS the registry\'s name — bound by type in the module, anchored at run time here', () => {
+    expect(TERRAIN_COORDINATE_SYSTEMS).toStrictEqual([GREEK_GRID_CRS.name, 'local']);
+  });
+
+  it('each field has ONE writer, and neither touches anything else', () => {
+    const source = parseListingTerrainSource(rawSource())!;
+    const declared = withCoordinateSystem(source, 'EPSG:2100')!;
+    expect(declared).toStrictEqual({ ...source, coordinateSystem: 'EPSG:2100' });
+    const consented = withLocationConsent(declared, true)!;
+    expect(consented).toStrictEqual({ ...declared, showLocationInListing: true });
+    expect(withCoordinateSystem(consented, null)).toStrictEqual({ ...consented, coordinateSystem: null });
+  });
+
+  it('the writers are idempotent and survive their own encoding', () => {
+    const source = withLocationConsent(withCoordinateSystem(parseListingTerrainSource(rawSource())!, 'local')!, true)!;
+    expect(withCoordinateSystem(source, 'local')).toStrictEqual(source);
+    expect(withLocationConsent(source, true)).toStrictEqual(source);
+    expect(parseListingTerrainSource(JSON.parse(encodeListingTerrainSource(source)))).toStrictEqual(source);
+  });
+
+  it('the encoding writes the two keys last, in one order', () => {
+    const encoded = encodeListingTerrainSource(parseListingTerrainSource(rawSource({ showLocationInListing: true, coordinateSystem: 'EPSG:2100' }))!);
+    expect(Object.keys(JSON.parse(encoded))).toStrictEqual([
+      'version', 'points', 'breaklines', 'boundary', 'envelope', 'plotOutline', 'coordinateSystem', 'showLocationInListing',
+    ]);
+  });
+
+  it('withGeoreferenceChoice REPLACES whatever the source carried — a browser\'s claim never survives', () => {
+    const claimed = parseListingTerrainSource(rawSource({ coordinateSystem: 'EPSG:2100', showLocationInListing: true }))!;
+    expect(withGeoreferenceChoice(claimed, NO_TERRAIN_GEOREFERENCE_CHOICE)).toMatchObject({ coordinateSystem: null, showLocationInListing: false });
+  });
+
+  it('the plot outline and the location are independent ticks', () => {
+    const source = parseListingTerrainSource(rawSource())!;
+    const ring = [{ x: E0 + 2_000, y: N0 + 2_000 }, { x: E0 + 18_000, y: N0 + 2_000 }, { x: E0 + 18_000, y: N0 + 18_000 }];
+    const outlineOnly = withPlotOutline(withCoordinateSystem(source, 'EPSG:2100')!, { ringWorldMm: ring, showInListing: true })!;
+    expect(toListingTerrainInput(outlineOnly, 'public')).toMatchObject({ georeference: null });
+    expect(toListingTerrainInput(outlineOnly, 'public').plotOutlineWorldMm).toHaveLength(3);
+    const locationOnly = withLocationConsent(withPlotOutline(outlineOnly, { ringWorldMm: ring, showInListing: false })!, true)!;
+    expect(toListingTerrainInput(locationOnly, 'public')).toMatchObject({ plotOutlineWorldMm: null, georeference: { coordinateSystem: 'EPSG:2100' } });
+  });
+
+  it('the owner is always asked for a georeference; the public only with the consent', () => {
+    const source = withCoordinateSystem(parseListingTerrainSource(rawSource())!, 'EPSG:2100')!;
+    expect(toListingTerrainInput(source, 'owner').georeference).toStrictEqual({ coordinateSystem: 'EPSG:2100' });
+    expect(toListingTerrainInput(source, 'public').georeference).toBeNull();
+    expect(toListingTerrainInput(withLocationConsent(source, true)!, 'public').georeference).toStrictEqual({ coordinateSystem: 'EPSG:2100' });
   });
 });

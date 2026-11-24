@@ -41,7 +41,8 @@ describe('readListingTerrainSnapshot', () => {
   });
 
   it('άγνωστη έκδοση ⇒ unknown-version (όχι «malformed»: ο αναγνώστης είναι παλιός, όχι το αρχείο χαλασμένο)', () => {
-    expect(readListingTerrainSnapshot(corrupted((c) => { c.version = 3; }))).toEqual({ ok: false, reason: 'unknown-version' });
+    expect(readListingTerrainSnapshot(corrupted((c) => { c.version = 4; }))).toEqual({ ok: false, reason: 'unknown-version' });
+    expect(readListingTerrainSnapshot(corrupted((c) => { c.version = '3'; }))).toEqual({ ok: false, reason: 'unknown-version' });
   });
 
   it('positions όχι σε τριάδες ⇒ positions-not-triples', () => {
@@ -108,7 +109,10 @@ describe('readListingTerrainSnapshot — ADR-920 §14.11 Ζ2 (περίγραμμ
   const OUTLINE = { ring: [-8, -8, 8, -8, 8, 8, -8, 8], areaM2: 256, coverage: 'covered', coveredFraction: 1 } as const;
 
   it('ένα δημοσιευμένο v1 (χωρίς τα πεδία) διαβάζεται ως v2 ΧΩΡΙΣ περίγραμμα — μιλά η έκδοση, όχι προεπιλογή', () => {
-    const v1 = corrupted((c) => { c.version = 1; delete c.plotOutline; delete c.plotOutlineOmission; });
+    const v1 = corrupted((c) => {
+      c.version = 1;
+      delete c.plotOutline; delete c.plotOutlineOmission; delete c.georeference; delete c.georeferenceOmission;
+    });
     expect(readListingTerrainSnapshot(v1)).toEqual({ ok: true, snapshot: REAL_PLANE() });
   });
 
@@ -136,5 +140,35 @@ describe('readListingTerrainSnapshot — ADR-920 §14.11 Ζ2 (περίγραμμ
     ring[0] = Infinity;
     const raw: ListingTerrainSnapshot = { ...REAL_PLANE(), plotOutline: { ...OUTLINE, ring }, plotOutlineOmission: null };
     expect(readListingTerrainSnapshot(raw)).toEqual({ ok: false, reason: 'non-finite' });
+  });
+});
+
+describe('readListingTerrainSnapshot — ADR-920 §14.12 Α (γεωαναφορά, v2 → v3)', () => {
+  const GEOREFERENCE = { centre: { lat: 37.9755, lng: 23.7348 }, gridConvergenceDeg: -0.1632 } as const;
+
+  it('ένα δημοσιευμένο v2 (χωρίς τα πεδία) διαβάζεται ως v3 ΧΩΡΙΣ θέση — και το περίγραμμά του μένει', () => {
+    const OUTLINE = { ring: [-8, -8, 8, -8, 8, 8, -8, 8], areaM2: 256, coverage: 'covered', coveredFraction: 1 } as const;
+    const v2 = corrupted((c) => { c.version = 2; c.plotOutline = OUTLINE; delete c.georeference; delete c.georeferenceOmission; });
+    expect(readListingTerrainSnapshot(v2)).toEqual({ ok: true, snapshot: { ...REAL_PLANE(), plotOutline: OUTLINE } });
+  });
+
+  it('v3 χωρίς τα πεδία της γεωαναφοράς ⇒ malformed (το κενό ΔΕΝ γεμίζει)', () => {
+    expect(readListingTerrainSnapshot(corrupted((c) => { delete c.georeference; }))).toEqual({ ok: false, reason: 'malformed' });
+    expect(readListingTerrainSnapshot(corrupted((c) => { delete c.georeferenceOmission; }))).toEqual({ ok: false, reason: 'malformed' });
+  });
+
+  it('v3 με γεωαναφορά διαβάζεται αυτούσιο μετά από JSON', () => {
+    const snapshot: ListingTerrainSnapshot = { ...REAL_PLANE(), georeference: GEOREFERENCE, georeferenceOmission: null };
+    expect(readListingTerrainSnapshot(overTheWire(snapshot))).toEqual({ ok: true, snapshot });
+  });
+
+  it.each<[string, (c: Record<string, unknown>) => void]>([
+    ['πλάτος έξω από τη γη', (c) => { c.georeference = { ...GEOREFERENCE, centre: { lat: 400, lng: 23 } }; }],
+    ['μήκος έξω από τη γη', (c) => { c.georeference = { ...GEOREFERENCE, centre: { lat: 38, lng: 200 } }; }],
+    ['κέντρο χωρίς μήκος', (c) => { c.georeference = { ...GEOREFERENCE, centre: { lat: 38 } }; }],
+    ['χωρίς στροφή πλέγματος', (c) => { c.georeference = { centre: GEOREFERENCE.centre }; }],
+    ['άγνωστη αιτία παράλειψης', (c) => { c.georeferenceOmission = 'hidden-by-owner'; }],
+  ])('malformed: %s', (_label, mutate) => {
+    expect(readListingTerrainSnapshot(corrupted(mutate))).toEqual({ ok: false, reason: 'malformed' });
   });
 });

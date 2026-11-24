@@ -77,6 +77,8 @@ function snapshot(): ListingTerrainSnapshot {
     envelopeOmission: null,
     plotOutline: null,
     plotOutlineOmission: null,
+    georeference: null,
+    georeferenceOmission: null,
   };
 }
 

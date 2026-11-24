@@ -44,6 +44,9 @@ const DOOR_SOURCE = [
   'server/listing-terrain/plot-drawing-upload.server.ts',
   'server/listing-terrain/dossier-terrain.reader.ts',
   'server/listing-terrain/plot-outline-confirmation.server.ts',
+  // ADR-920 §14.12 φάση Α — το σκέλος γεωαναφοράς της ΙΔΙΑΣ πόρτας, και ο κριτής της δήλωσης που η πόρτα επιβάλλει.
+  'server/listing-terrain/terrain-georeference.server.ts',
+  'lib/terrain/publication/terrain-georeference-declaration.ts',
 ].map((file) => readFileSync(join(SRC, file), 'utf8')).join('\n');
 
 const REJECTIONS: readonly ListingTerrainRejection[] = ['insufficient-surface', 'empty-after-clip', 'too-dense'];

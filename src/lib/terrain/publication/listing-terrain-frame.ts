@@ -5,6 +5,10 @@
  * the snapshot carries in plan goes through {@link SnapshotFrame.planM}; nothing else subtracts the
  * centre or divides by 1000, so no field can leak the plot's position by taking a different road.
  *
+ * ADR-920 §14.12 phase Α: the frame still serialises NOTHING about where it is. The position leaves through ONE other
+ * road — `georeferenceOf` (`listing-terrain-georeference.ts`), which reads {@link SnapshotFrame.centreWorldMm} and is
+ * called only when the builder's input asks for it (the owner always, the public only with the owner's consent).
+ *
  * @module lib/terrain/publication/listing-terrain-frame
  */
 

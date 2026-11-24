@@ -15,7 +15,9 @@
 import React from 'react';
 
 import { usePlotDrawingImport } from '@/hooks/listings/usePlotDrawingImport';
+import { TerrainGeoreferenceCard } from '@/components/terrain/georeference/TerrainGeoreferenceCard';
 import { usePlotOutlineStatus } from '@/hooks/listings/usePlotOutlineStatus';
+import { useTerrainGeoreference } from '@/hooks/listings/useTerrainGeoreference';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { OwnerTerrainTarget } from '@/services/listings/plot-outline.client';
 
@@ -34,12 +36,16 @@ export function PlotOutlineTab({ target, listingAreaM2 }: PlotOutlineTabProps) {
   const status = usePlotOutlineStatus(target);
   // `refresh` είναι σταθερή (useCallback ανά αγγελία) ⇒ καμία νέα συνάρτηση ανά απόδοση στο hook της αποστολής.
   const drawing = usePlotDrawingImport(target, listingAreaM2, status.refresh);
+  // Η κατάσταση του περιγράμματος ξαναδιαβάζεται μετά από κάθε πράξη στον φάκελο ⇒ ξαναδιαβάζεται και η γεωαναφορά.
+  const georeference = useTerrainGeoreference(target, status.view);
   return (
     <section className="flex flex-col gap-4" data-plot-outline-tab="">
       <p className="m-0 text-sm text-muted-foreground">{t('terrain-survey:plotOutline.intro')}</p>
       <PlotOutlineStatusCard api={status} />
       {/* Ζ5 — ο χάρτης του ιδιοκτήτη, ακριβώς κάτω από το κουτάκι Π9: βλέπει τι εγκρίνει πριν το εγκρίνει. */}
       <PlotOutlineOnRelief target={target} status={status.view.kind === 'ready' ? status.view.status : null} />
+      {/* ADR-920 §14.12 φάση Α — κάτω από το ανάγλυφο, και ΧΩΡΙΣ περίγραμμα: η θέση είναι άλλη ερώτηση από το σχήμα. */}
+      <TerrainGeoreferenceCard api={georeference} />
       <PlotDrawingImport api={drawing} />
     </section>
   );

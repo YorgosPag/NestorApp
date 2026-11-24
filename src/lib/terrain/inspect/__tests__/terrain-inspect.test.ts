@@ -45,6 +45,8 @@ function gridSnapshot(z: (x: number, y: number) => number, extra: Partial<Listin
     envelopeOmission: null,
     plotOutline: null,
     plotOutlineOmission: null,
+    georeference: null,
+    georeferenceOmission: null,
     ...extra,
   };
 }

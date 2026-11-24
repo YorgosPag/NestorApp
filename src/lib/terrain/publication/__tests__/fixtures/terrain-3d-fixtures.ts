@@ -61,6 +61,8 @@ export function syntheticSnapshot(
     envelopeOmission: null,
     plotOutline: null,
     plotOutlineOmission: null,
+    georeference: null,
+    georeferenceOmission: null,
   };
 }
 

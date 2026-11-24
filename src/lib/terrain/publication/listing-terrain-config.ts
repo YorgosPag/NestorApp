@@ -59,6 +59,22 @@ export const LISTING_TERRAIN_MAX_TRIANGLES = 60_000;
 /** Plan / elevation rounding of everything published: centimetres. */
 export const LISTING_TERRAIN_DECIMALS = 2;
 
+/**
+ * ADR-920 §14.12 phase Α — rounding of the published georeference. 1e-7° is about a centimetre on the ground (the
+ * survey's own precision, and the spelling the listing's `position` already uses); 1e-4° of convergence turns a 1 km
+ * plot by less than two millimetres at its edge.
+ */
+export const LISTING_TERRAIN_GEOREFERENCE_DEGREE_DECIMALS = 7;
+export const LISTING_TERRAIN_GEOREFERENCE_CONVERGENCE_DECIMALS = 4;
+
+/**
+ * ADR-920 §14.12 phase Α — the FLOOR of the cross-check between the survey's centre and the listing's public position
+ * (decision Giorgio 2026-11-24). The tolerance is the position's own uncertainty (`LISTING_UNCERTAINTY_KM`, one table)
+ * but never under this: a geocoder points at a door or a street and a human pin is not a survey, so a zero tolerance
+ * would refuse true surveys. It equals the ring the map already draws around an address-level position.
+ */
+export const LISTING_TERRAIN_GEOREFERENCE_MIN_TOLERANCE_M = 250;
+
 /** Below this mean gradient (percent) the ground has no meaningful downslope direction. */
 export const LISTING_TERRAIN_FLAT_GRADIENT_PCT = 0.5;
 

@@ -76,6 +76,9 @@ export function surveySourceOf(points: readonly TopoPoint[]): ListingTerrainSour
     boundary: null,
     envelope: null,
     plotOutline: null,
+    // ADR-920 §14.12 φάση Α — τα λέει ο ιδιοκτήτης στην πόρτα, ποτέ το ανέβασμα: ο server τα αντικαθιστά ούτως ή άλλως.
+    coordinateSystem: null,
+    showLocationInListing: false,
   };
 }
 

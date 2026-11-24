@@ -121,6 +121,11 @@
       "TERRAIN_PLOT_OUTLINE_AMENDMENT_INVALID": "The outline change is not valid — reload the page and try again",
       "TERRAIN_PLOT_OUTLINE_NO_RELIEF": "No relief has been published yet — the outline will apply when you upload the contours",
       "TERRAIN_PLOT_OUTLINE_NONE": "The relief has no plot outline — confirm one from the survey drawing first",
+      "TERRAIN_GEOREFERENCE_NO_RELIEF": "No relief has been published yet — upload the contours first",
+      "TERRAIN_GEOREFERENCE_OUTSIDE_AREA_OF_USE": "The survey coordinates fall outside the area of the Greek Grid (GGRS87) — they cannot be declared as Greek Grid",
+      "TERRAIN_GEOREFERENCE_FAR_FROM_LISTING": "Read as Greek Grid (GGRS87), the survey falls far from the position the listing declares — check the coordinate system or the listing's position",
+      "TERRAIN_GEOREFERENCE_LISTING_POSITION_UNKNOWN": "The listing declares no position, so the survey cannot be cross-checked — declare the property's position on the listing first",
+      "TERRAIN_GEOREFERENCE_NOT_DECLARED": "Declare first that the coordinates are Greek Grid (GGRS87) — without a system there is no position to show",
       "network": "We do not know whether the upload arrived — check your connection and press again; it will not be published twice.",
       "rejected": "The server refused the survey for a reason we do not recognise — try again or contact us."
     },
@@ -260,6 +265,33 @@
       },
       "updating": "The map is updating…",
       "retry": "Try again"
+    }
+  },
+  "georeference": {
+    "heading": "Position on the map",
+    "loading": "Reading the survey's position…",
+    "reading": {
+      "agrees": "Read as Greek Grid (GGRS87), the survey falls {distance} m from the position the listing declares (tolerance {tolerance} m).",
+      "far-from-listing": "Read as Greek Grid (GGRS87), the survey falls {distance} m from the position the listing declares — beyond the {tolerance} m tolerance. Check the coordinate system or the listing's position.",
+      "outside-area-of-use": "The survey coordinates fall outside the area of the Greek Grid (GGRS87).",
+      "listing-position-unknown": "The listing declares no position, so the survey cannot be cross-checked. Declare the property's position on the listing first."
+    },
+    "system": {
+      "question": "Which system are the survey coordinates in?",
+      "greekGrid": "Greek Grid GGRS87 (EPSG:2100)",
+      "local": "Local coordinates — no position on the map",
+      "suggestion": {
+        "greekGrid": "Every point falls inside the area of the Greek Grid. You confirm it — we do not assume it.",
+        "local": "No point falls inside the area of the Greek Grid — these look like local coordinates."
+      }
+    },
+    "showLocationInListing": {
+      "label": "Show the plot on the listing's map, at its measured position",
+      "hint": "Adds to the public listing the plot's position as the surveyor measured it. If you leave it unticked, only you see the measured position; the position you already declared on the listing does not change."
+    },
+    "done": {
+      "changed": "The change was saved and the listing was updated.",
+      "unchanged": "It already was — nothing changed."
     }
   }
 }

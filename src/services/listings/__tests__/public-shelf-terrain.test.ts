@@ -11,6 +11,7 @@ import { gunzipSync } from 'node:zlib';
 import {
   encodeListingTerrainSource,
   parseListingTerrainSource,
+  withGeoreferenceChoice,
   withPlotOutline,
 } from '@/lib/terrain/publication/listing-terrain-source';
 import {
@@ -149,7 +150,7 @@ describe('bakeListingTerrain — ο ψήστης', () => {
     if (!baked.ok) throw new Error(baked.failure);
     const snapshot = JSON.parse(baked.json.toString('utf8')) as { version: number; points?: unknown; mesh: { positions: number[] } };
 
-    expect(snapshot.version).toBe(2);
+    expect(snapshot.version).toBe(3);
     expect(snapshot).not.toHaveProperty('points');
     expect(snapshot.mesh.positions.every((n) => Math.abs(n) < 100_000)).toBe(true);
     expect(gunzipSync(baked.gzipped).equals(baked.json)).toBe(true);
@@ -170,6 +171,28 @@ describe('bakeListingTerrain — ο ψήστης', () => {
 
     expect(bakedWith(false)).toMatchObject({ plotOutline: null, plotOutlineOmission: null });
     expect(bakedWith(true)).toMatchObject({ plotOutline: { areaM2: 256, coverage: 'covered' }, plotOutlineOmission: null });
+  });
+
+  it('🔴 ADR-920 §14.12 Α — ΘΕΣΗ στο ΔΗΜΟΣΙΟ στιγμιότυπο ΜΟΝΟ με δηλωμένο ΕΓΣΑ\'87 ΚΑΙ το κουτάκι του ιδιοκτήτη', () => {
+    const bakedWith = (system: 'EPSG:2100' | 'local' | null, consent: boolean) => {
+      const base = parseListingTerrainSource(JSON.parse(sourceBytes().toString('utf8')))!;
+      const source = withGeoreferenceChoice(base, { coordinateSystem: system, showLocationInListing: consent });
+      const baked = bakeListingTerrain(Buffer.from(encodeListingTerrainSource(source!), 'utf8'), DECLARATION);
+      if (!baked.ok) throw new Error(baked.failure);
+      return JSON.parse(baked.json.toString('utf8')) as { georeference: { centre: { lat: number; lng: number } } | null; georeferenceOmission: unknown };
+    };
+
+    // Δηλωμένο σύστημα ΧΩΡΙΣ το κουτάκι: ούτε θέση, ούτε σημείωση ότι υπάρχει — τίποτα να «κρυφτεί».
+    expect(bakedWith('EPSG:2100', false)).toMatchObject({ georeference: null, georeferenceOmission: null });
+    expect(bakedWith(null, false)).toMatchObject({ georeference: null, georeferenceOmission: null });
+
+    const shown = bakedWith('EPSG:2100', true);
+    expect(shown.georeferenceOmission).toBeNull();
+    // Το fixture είναι στην Πελοπόννησο (E 400 km · N 4 200 km): η θέση πέφτει μέσα στην Ελλάδα, όχι στον Ατλαντικό.
+    expect(shown.georeference?.centre.lat).toBeGreaterThan(37);
+    expect(shown.georeference?.centre.lat).toBeLessThan(39);
+    expect(shown.georeference?.centre.lng).toBeGreaterThan(22);
+    expect(shown.georeference?.centre.lng).toBeLessThan(24);
   });
 
   it('ντετερμινιστικό: ίδια πηγή ⇒ ίδια bytes (άρα ίδιο κλειδί)', () => {
@@ -258,10 +281,10 @@ describe('reconcilePublicTerrainShelf — η συμφιλίωση', () => {
 
   it('Β6.9 Β — η αναθεώρηση του builder είναι στη συνταγή, χωριστά από την έκδοση ΣΧΗΜΑΤΟΣ', () => {
     expect(shelfRecipe(LISTING_TERRAIN_SHELF.encoding)).toBe(
-      `json:terrain-s2-w2-b${LISTING_TERRAIN_SHELF.encoding.builderRevision}`,
+      `json:terrain-s3-w3-b${LISTING_TERRAIN_SHELF.encoding.builderRevision}`,
     );
-    expect(LISTING_TERRAIN_SHELF.encoding.snapshotVersion).toBe(2);
-    expect(LISTING_TERRAIN_SHELF.encoding.builderRevision).toBe(3);
+    expect(LISTING_TERRAIN_SHELF.encoding.snapshotVersion).toBe(3);
+    expect(LISTING_TERRAIN_SHELF.encoding.builderRevision).toBe(4);
   });
 
   it('🏆 Β6.9 Β — ΙΔΙΑ bytes με ΠΑΛΙΑ συνταγή: ανανεώνεται η εγγραφή, όχι τα bytes · μετά, cache hit', async () => {
