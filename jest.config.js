@@ -55,6 +55,12 @@ const config = {
     // =================================================================
     '^server-only$': '<rootDir>/src/services/ai-pipeline/tools/__tests__/test-utils/server-only-mock.ts',
     // =================================================================
+    // MapLibre 6 — ESM-only (ADR-920 §14.12)
+    // =================================================================
+    // Το `exports` της 6.x έχει ΜΟΝΟ συνθήκη `import` (καμία `require`/`default`), οπότε ο resolver του jest δεν
+    // βρίσκει είσοδο. Δείχνουμε ρητά το ίδιο αρχείο που παίρνει ο bundler· το μετασχηματίζει το swc (βλ. πιο κάτω).
+    '^maplibre-gl$': '<rootDir>/node_modules/maplibre-gl/dist/maplibre-gl.mjs',
+    // =================================================================
     // Asset mocks
     // =================================================================
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/cssModuleStub.js',
@@ -161,8 +167,10 @@ const config = {
   // `@mapbox/vector-tile@2` + η εξάρτησή του `@mapbox/point-geometry@1` + `pbf@4` είναι ESM-only (`"type": "module"`,
   // κανένα CJS build) — ο αποκωδικοποιητής πλακιδίων του δικού μας αρχείου OSM (ADR-777, `lib/geo/osm/osm-archive-tile.ts`).
   // Το `pbf/index.js` δεν εισάγει τίποτα· το `pmtiles` και το `polygon-clipping` έχουν CJS build (μετρημένο 2026-11-19).
+  // `maplibre-gl@6` είναι ESM-only (`dist/maplibre-gl.mjs`, αυτάρκες — καμία εξωτερική εισαγωγή, μετρημένο 2026-11-24).
+  // Το φτάνει κάθε σουίτα που εισάγει το σύνορο `lib/maps/maplibre.ts` χωρίς mock (ADR-920 §14.12).
   transformIgnorePatterns: [
-    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates|parse5|entities|pdfjs-dist|@mapbox/vector-tile|@mapbox/point-geometry|pbf)/)'
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph|delaunator|robust-predicates|parse5|entities|pdfjs-dist|@mapbox/vector-tile|@mapbox/point-geometry|pbf|maplibre-gl)/)'
   ],
   moduleDirectories: ['node_modules', '<rootDir>'],
   // 🔴 ΟΡΙΟ ΠΟΡΩΝ ΤΟΠΙΚΑ (2026-07-31) — ΜΗΝ το αφαιρέσεις.

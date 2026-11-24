@@ -9,7 +9,7 @@
  * `_updateStyleComponents ← setProps ← layout effect`, πιασμένο από ErrorBoundary.
  *
  * 🔑 **Η αλυσίδα, δύο κρίκοι σε δύο ξένες βιβλιοθήκες**:
- * 1. Η MapLibre 5.x, στον χειριστή `webglcontextlost`, **καταστρέφει το στυλ και γράφει
+ * 1. Η MapLibre (5.x, και ακόμη στην 6.19.0), στον χειριστή `webglcontextlost`, **καταστρέφει το στυλ και γράφει
  *    `this.style = null`** ώσπου να επανέλθει το context. Είναι το **μόνο** σημείο όπου το στυλ
  *    γίνεται `null` (το `remove()` το κάνει `undefined`) — άρα το μήνυμα ονομάζει την αιτία.
  * 2. Το περιτύλιγμα React (`@vis.gl/react-maplibre` 8.1.0) διάβαζε `map.style._loaded` **χωρίς
@@ -47,10 +47,6 @@ class FakeEngine {
   static readonly instances: FakeEngine[] = [];
 
   style: FakeStyle | null | undefined = { _loaded: true };
-  readonly transform = {
-    center: new FakeLngLat(0, 0), zoom: 0, pitch: 0, bearing: 0,
-    padding: { top: 0, bottom: 0, left: 0, right: 0 }, width: 0, height: 0,
-  };
   transformCameraUpdate: unknown = null;
   private readonly canvas = document.createElement('canvas');
 
@@ -63,11 +59,18 @@ class FakeEngine {
   once(): this { return this; }
   getCanvas(): HTMLCanvasElement { return this.canvas; }
   isMoving(): boolean { return false; }
+  // 🔑 MapLibre 6: το `map.transform` αφαιρέθηκε· το περιτύλιγμα 8.1.3 διαβάζει την κάμερα από τους δημόσιους getters.
+  getCenter(): FakeLngLat { return new FakeLngLat(0, 0); }
+  getZoom(): number { return 0; }
+  getBearing(): number { return 0; }
+  getPitch(): number { return 0; }
+  getCenterElevation(): number { return 0; }
+  getPadding(): { top: number; bottom: number; left: number; right: number } { return { top: 0, bottom: 0, left: 0, right: 0 }; }
   jumpTo(): void {}
   resize(): void {}
   remove(): void { this.style = undefined; }
 
-  /** Ό,τι κάνει ο χειριστής `webglcontextlost` της MapLibre 5.x στο στυλ (βλ. «προκείμενη»). */
+  /** Ό,τι κάνει ο χειριστής `webglcontextlost` της MapLibre στο στυλ (βλ. «προκείμενη»). */
   loseContext(): void { this.style = null; }
 }
 
@@ -136,8 +139,9 @@ describe('σύνορο χάρτη — απώλεια WebGL context', () => {
 });
 
 describe('προκείμενη — η εγκατεστημένη MapLibre κάνει ό,τι μιμείται η ψεύτικη μηχανή', () => {
-  const source = readFileSync(require.resolve('maplibre-gl/dist/maplibre-gl-dev.js'), 'utf8');
-  const handler = /this\._contextLost = \(event\) => \{([\s\S]*?)\n {8}\};/.exec(source)?.[1] ?? null;
+  // MapLibre 6: ESM-only — το ανάπτυγμα είναι `.mjs` και στοιχίζεται με tabs (η 5.x ήταν `.js` με 8 κενά).
+  const source = readFileSync(require.resolve('maplibre-gl/dist/maplibre-gl-dev.mjs'), 'utf8');
+  const handler = /this\._contextLost = \(event\) => \{([\s\S]*?)\n\t\t\};/.exec(source)?.[1] ?? null;
 
   it('ο χειριστής `webglcontextlost` υπάρχει και μηδενίζει το στυλ', () => {
     expect(handler).not.toBeNull();

@@ -32,6 +32,7 @@ jest.mock('maplibre-gl', () => ({
   setNow: jest.fn(),
   restoreNow: jest.fn(),
   addProtocol: jest.fn(),
+  setWorkerUrl: jest.fn(),
 }));
 
 jest.mock('react-map-gl/maplibre', () => {

@@ -83,13 +83,20 @@ export function useLayerOrderBelow(map: MapInstance | undefined, ownLayers: read
   }, [map, ownLayers, targets]);
 }
 
-/** Το μοτίβο στο στυλ — και ξανά όταν το ζητήσει ο χάρτης (η αλλαγή στυλ σβήνει τις εικόνες που προστέθηκαν). */
+/**
+ * Το μοτίβο στο στυλ — και ξανά όταν το ζητήσει ο χάρτης (η αλλαγή στυλ σβήνει τις εικόνες που προστέθηκαν).
+ *
+ * 🔑 **MapLibre 6:** ο ακροατής `styleimagemissing` είναι πλέον **μόνο ειδοποίηση** — ένα `addImage` μέσα του **δεν**
+ * λύνει το τρέχον αίτημα. Η εικόνα δίνεται από τον **resolver** του χάρτη, που είναι **μία θέση ανά χάρτη**: δεύτερος
+ * καταναλωτής στον ίδιο χάρτη θα αντικαθιστούσε τον πρώτο. Σήμερα κάθε χάρτης έχει **έναν** (`PriceMapLayer` ή
+ * `AreaChildPriceLayer`)· αν γίνουν δύο, θέλει συνθέτη εδώ.
+ */
 export function useHatchImage(map: MapInstance | undefined, scheme: BasemapScheme): void {
   useEffect(() => {
     if (map === undefined) return;
     const ensure = () => ensurePriceMapHatch(map, scheme);
     ensure();
-    map.on('styleimagemissing', ensure);
-    return () => { map.off('styleimagemissing', ensure); };
+    map.setMissingStyleImageResolver(ensure);
+    return () => { map.setMissingStyleImageResolver(null); };
   }, [map, scheme]);
 }

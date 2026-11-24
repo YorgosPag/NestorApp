@@ -73,7 +73,7 @@
  */
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-import { addProtocol } from 'maplibre-gl';
+import { addProtocol, setWorkerUrl } from 'maplibre-gl';
 import { createElement, forwardRef } from 'react';
 import {
   Map as ReactMapLibreMap,
@@ -85,7 +85,16 @@ import {
 } from 'react-map-gl/maplibre';
 import { withMapRequestSentinel } from './basemap-request-sentinel';
 import { MapAttributionText, useMapAttribution } from './map-attribution-view';
+import { maplibreWorkerUrl } from './maplibre-worker-url';
 import { ensurePmtilesProtocol } from './pmtiles-protocol';
+
+/**
+ * 🔑 **Ο WORKER ΤΗΣ MAPLIBRE 6 ΔΗΛΩΝΕΤΑΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ** (ADR-920 §14.12). Η 6.x είναι ESM-only και μέσα σε
+ * bundler **δεν** βρίσκει μόνη της το αρχείο του worker — χωρίς αυτή τη γραμμή ο χάρτης δεν φορτώνει πλακίδια.
+ * Αφού **κάθε** χάρτης περνά από αυτό το module (CHECK 3.75), κανένας καταναλωτής δεν χρειάζεται να το θυμηθεί.
+ * Πρέπει να τρέξει **πριν** κατασκευαστεί ο πρώτος χάρτης· στον server δεν υπάρχει worker.
+ */
+if (typeof window !== 'undefined') setWorkerUrl(maplibreWorkerUrl());
 
 /**
  * 🔑 **ΤΟ ΠΡΩΤΟΚΟΛΛΟ `pmtiles://` ΚΑΤΑΧΩΡΙΖΕΤΑΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ** (ADR-891 §9). Το `addProtocol` είναι καθολικό·
