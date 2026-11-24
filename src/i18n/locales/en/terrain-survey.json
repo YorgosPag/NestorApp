@@ -170,6 +170,8 @@
       "count": "{count, plural, one {Found # closed line that may be the plot.} other {Found # closed lines that may be the plot.}}",
       "none": "No closed line was found that could be the plot outline.",
       "proposed": "Suggested",
+      "onDrawing": "On the plan",
+      "sameShape": "Same shape as: {others} — on the plan it is the same line.",
       "noProposal": {
         "tie": "Two or more candidates have the same evidence — choose the right one yourself.",
         "no-evidence": "No candidate has evidence in its favour — choose the right one yourself.",
@@ -204,6 +206,7 @@
     "view": {
       "label": "The plan with the candidate outlines",
       "ringLabel": "The outline from the coordinate table",
+      "peeked": "Highlighted on the plan: {candidate}",
       "candidate": "Candidate {area} m²"
     },
     "corroboration": {

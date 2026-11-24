@@ -24,6 +24,7 @@ import { PLOT_DRAWING_ACCEPT } from '@/lib/terrain/plot-outline/plot-drawing-rea
 import { TERRAIN_REFUSAL_MESSAGE_LIMITS } from '@/lib/terrain/publication/terrain-publication-contract';
 
 import { PlotCandidateList } from './PlotCandidateList';
+import { PlotCandidateStatusLine } from './PlotCandidateStatusLine';
 import { PlotDxfDrawingView } from './PlotDxfDrawingView';
 import { PlotOutlineVisibilityCheckbox } from './PlotOutlineVisibilityCheckbox';
 import { PlotPdfDrawingView } from './PlotPdfDrawingView';
@@ -84,9 +85,16 @@ function DrawingView({ api }: { readonly api: PlotDrawingImportApi }) {
     return <PlotPdfDrawingView file={file} pages={read.pages} selected={selected} />;
   }
   if (candidates === null || candidates.scaleToMm === null) return null;
+  // Κολλημένη πάνω από τη λίστα (Zillow: ο χάρτης μένει, οι κάρτες κυλούν) ⇒ η αμφίδρομη επισήμανση φαίνεται πάντα, όσο
+  // βαθιά κι αν είναι η κάρτα. Το `sticky` ζει μέσα στο ΚΟΙΝΟ τμήμα σχεδίου + λίστας ⇒ ξεκολλά όταν τελειώσει η λίστα.
+  // Μόνο για DXF: η σελίδα PDF είναι ψηλή και η λίστα του πίνακα κοντή.
   return (
-    <PlotDxfDrawingView fileKey={`${file.name}:${file.size}:${file.lastModified}`} drawing={read.drawing}
-      scaleToMm={candidates.scaleToMm} ranking={candidates.ranking} selectedId={selectedId} onSelect={api.select} />
+    <div className="sticky top-0">
+      <PlotDxfDrawingView fileKey={`${file.name}:${file.size}:${file.lastModified}`} drawing={read.drawing}
+        scaleToMm={candidates.scaleToMm} ranking={candidates.ranking} selectedId={selectedId} peekedId={api.peekedId}
+        onSelect={api.selectOnDrawing} onPeek={api.peek} />
+      <PlotCandidateStatusLine peeked={candidates.ranking.ranked.find((entry) => entry.candidate.id === api.peekedId)?.candidate ?? null} />
+    </div>
   );
 }
 
@@ -132,14 +140,15 @@ export function PlotDrawingImport({ api }: { readonly api: PlotDrawingImportApi 
     <section className="flex flex-col gap-3">
       <DrawingPicker api={api} />
       <Blocker api={api} />
-      <DrawingView api={api} />
-      {candidates !== null && (
-        <>
-          <PlotCandidateList ranking={candidates.ranking} selectedId={api.selectedId} rejectedCount={candidates.rejectedCount}
-            disabled={sending} onSelect={api.select} />
-          {candidates.ranking.ranked.length > 0 && <ConfirmControls api={api} />}
-        </>
-      )}
+      <section className="flex flex-col gap-3">
+        <DrawingView api={api} />
+        {candidates !== null && (
+          <PlotCandidateList ranking={candidates.ranking} selectedId={api.selectedId} peekedId={api.peekedId}
+            revealRequest={api.revealRequest} rejectedCount={candidates.rejectedCount} disabled={sending}
+            onSelect={api.select} onPeek={api.peek} />
+        )}
+      </section>
+      {candidates !== null && candidates.ranking.ranked.length > 0 && <ConfirmControls api={api} />}
     </section>
   );
 }

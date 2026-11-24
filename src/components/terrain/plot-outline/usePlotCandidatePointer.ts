@@ -12,9 +12,11 @@
  *    ανοχή μένει σταθερή σε **css px** (στόχος 24 px, WCAG 2.5.8) σε κάθε ζουμ — όπως το pick box του CAD.
  * 🖱️ Ποντίκι/γραφίδα: η κίνηση προ-τονίζει ό,τι ΘΑ διάλεγε το κλικ (Revit pre-highlight). 👆 Αφή: δεν υπάρχει hover· το άγγιγμα διαλέγει.
  * ⌨️ Το πληκτρολόγιο ΔΕΝ περνά από εδώ: κάθε σχήμα είναι κουμπί με δικό του Enter/Space (`PlotDxfDrawingView`).
+ * 🔗 **Ο προ-τονισμός ΔΕΝ ζει εδώ** (§14.11 «Ζ4 — αμφίδρομη επισήμανση»): το hook τον ΓΡΑΦΕΙ (`onPeek`) στον έναν ιδιοκτήτη
+ *    (`usePlotDrawingImport.peekedId`), ώστε η κάρτα της λίστας να ανάβει μαζί με τη γραμμή — και το αντίστροφο.
  */
 
-import { useCallback, useState, type MouseEvent, type PointerEvent, type RefObject } from 'react';
+import { useCallback, type MouseEvent, type PointerEvent, type RefObject } from 'react';
 
 import { TERRAIN_PLOT_OUTLINE_STROKE_PX } from '@/components/listing-detail/terrain/terrain-map-palette';
 import { pickPlotCandidate, plotCandidatesAt, type PlotCandidateHit } from '@/lib/terrain/plot-outline/plot-candidate-pick';
@@ -46,11 +48,11 @@ export interface PlotCandidatePointerInput {
   readonly candidates: readonly PlotOutlineCandidate[];
   readonly selectedId: string | null;
   readonly onSelect: (candidateId: string) => void;
+  /** Το υποψήφιο που θα διάλεγε ένα κλικ ΤΩΡΑ (`null` = τίποτα κάτω από τον δείκτη) — προς τον ιδιοκτήτη της εστίασης. */
+  readonly onPeek: (candidateId: string | null) => void;
 }
 
 export interface PlotCandidatePointer {
-  /** Το υποψήφιο που θα διάλεγε ένα κλικ ΤΩΡΑ (`null` = τίποτα κάτω από τον δείκτη). */
-  readonly hoveredId: string | null;
   readonly handlers: {
     readonly onClick: (event: MouseEvent<SVGSVGElement>) => void;
     readonly onPointerMove: (event: PointerEvent<SVGSVGElement>) => void;
@@ -58,8 +60,7 @@ export interface PlotCandidatePointer {
   };
 }
 
-export function usePlotCandidatePointer({ svgRef, box, candidates, selectedId, onSelect }: PlotCandidatePointerInput): PlotCandidatePointer {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+export function usePlotCandidatePointer({ svgRef, box, candidates, selectedId, onSelect, onPeek }: PlotCandidatePointerInput): PlotCandidatePointer {
   const hitsAt = useCallback((x: number, y: number) => {
     const svg = svgRef.current;
     return svg === null || box === null ? [] : hitsAtClient(svg, box, candidates, x, y);
@@ -73,15 +74,15 @@ export function usePlotCandidatePointer({ svgRef, box, candidates, selectedId, o
     if (picked === null) return;
     if (picked !== selectedId) onSelect(picked);
     // Ο προ-τονισμός δείχνει ήδη το ΕΠΟΜΕΝΟ του κύκλου — ο άνθρωπος βλέπει ότι ένα ακόμη κλικ αλλάζει κάτι.
-    setHoveredId(pickPlotCandidate(hits, picked));
-  }, [hitsAt, selectedId, onSelect]);
+    onPeek(pickPlotCandidate(hits, picked));
+  }, [hitsAt, selectedId, onSelect, onPeek]);
 
   const onPointerMove = useCallback((event: PointerEvent<SVGSVGElement>) => {
     if (event.pointerType === 'touch') return;
-    setHoveredId(pickPlotCandidate(hitsAt(event.clientX, event.clientY), selectedId));
-  }, [hitsAt, selectedId]);
+    onPeek(pickPlotCandidate(hitsAt(event.clientX, event.clientY), selectedId));
+  }, [hitsAt, selectedId, onPeek]);
 
-  const onPointerLeave = useCallback(() => setHoveredId(null), []);
+  const onPointerLeave = useCallback(() => onPeek(null), [onPeek]);
 
-  return { hoveredId, handlers: { onClick, onPointerMove, onPointerLeave } };
+  return { handlers: { onClick, onPointerMove, onPointerLeave } };
 }

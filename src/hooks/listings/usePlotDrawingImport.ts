@@ -15,6 +15,10 @@
  *
  * ⚠️ **Μηδέν αγώνας δρόμου**: δεύτερο αρχείο πριν διαβαστεί το πρώτο ⇒ μετρά μόνο το τελευταίο (μετρητής, όπως `useSurveyFile`).
  * ⚠️ **Καμία μπαγιάτικη επιβεβαίωση**: αλλάζει αρχείο, μονάδα, επιλογή ή Π9 ⇒ η έκβαση σβήνει (ανήκε σε άλλη πρόθεση).
+ * 🔗 **Αμφίδρομη επισήμανση κάρτας ↔ περιγράμματος** (§14.11 «Ζ4 — αμφίδρομη επισήμανση»): το εφήμερο `peekedId` ζει ΕΔΩ,
+ *    ώστε σχέδιο και λίστα να διαβάζουν την ΙΔΙΑ απάντηση — το λεξιλόγιο του ADR-777 (`lib/listings/listing-focus`):
+ *    εφήμερο ≠ επίμονο, η επιλογή σβήνει το εφήμερο (αφή: δεν υπάρχει «φεύγω»), και μόνο το ΚΛΙΚ στο σχέδιο ζητά να
+ *    φανεί η κάρτα — το πέρασμα του δείκτη δεν κυλά ποτέ τη σελίδα.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -48,6 +52,12 @@ export interface PlotDrawingCandidates {
   readonly rejectedCount: number;
 }
 
+/** «Φέρε την κάρτα αυτού του υποψηφίου στα μάτια του» — ένα αίτημα ανά κλικ στο σχέδιο (`seq` ⇒ και το ίδιο υποψήφιο ξανά). */
+export interface PlotCandidateRevealRequest {
+  readonly candidateId: string;
+  readonly seq: number;
+}
+
 export type PlotOutlineSubmission =
   | { readonly kind: 'idle' }
   | { readonly kind: 'sending' }
@@ -65,12 +75,19 @@ export interface PlotDrawingImportApi {
   readonly unit: TopoUnit | null;
   readonly candidates: PlotDrawingCandidates | null;
   readonly selectedId: string | null;
+  /** **Εφήμερο** — το υποψήφιο κάτω από τον δείκτη ή την εστίαση, σε σχέδιο Ή λίστα. Ποτέ δεν αγγίζει την επιλογή. */
+  readonly peekedId: string | null;
+  /** Το τελευταίο κλικ πάνω στο σχέδιο — η λίστα φέρνει την κάρτα του στο οπτικό πεδίο. */
+  readonly revealRequest: PlotCandidateRevealRequest | null;
   readonly showInListing: boolean;
   readonly submission: PlotOutlineSubmission;
   readonly canConfirm: boolean;
   readonly loadFile: (file: File) => Promise<void>;
   readonly setUnit: (unit: TopoUnit) => void;
   readonly select: (candidateId: string) => void;
+  /** Επιλογή ΑΠΟ ΤΟ ΣΧΕΔΙΟ: η ίδια επιλογή + αίτημα να φανεί η κάρτα (σκόπιμη πράξη ⇒ επιτρέπεται κύλιση). */
+  readonly selectOnDrawing: (candidateId: string) => void;
+  readonly peek: (candidateId: string | null) => void;
   readonly setShowInListing: (show: boolean) => void;
   readonly confirm: () => Promise<void>;
   readonly reset: () => void;
@@ -130,6 +147,25 @@ function effectiveSelection(chosen: string | null, candidates: PlotDrawingCandid
   return candidates.ranking.proposedId;
 }
 
+/**
+ * Η επιλογή του ανθρώπου + η εστίαση των υποψηφίων (εφήμερο `peeked` + αίτημα αποκάλυψης). Οι μεταβάσεις γράφονται ΜΙΑ φορά
+ * (μάθημα `useListingFocus`)· κάθε αλλαγή επιλογής σβήνει την έκβαση (`forget`).
+ */
+function useCandidateChoice(forget: () => void) {
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [peekedId, setPeekedId] = useState<string | null>(null);
+  const [revealRequest, setRevealRequest] = useState<PlotCandidateRevealRequest | null>(null);
+  const peek = useCallback((id: string | null) => setPeekedId(id), []);
+  // 🔴 Η επιλογή σβήνει το εφήμερο: στην αφή δεν υπάρχει «ο δείκτης έφυγε», θα κολλούσε στο τελευταίο πατημένο.
+  const select = useCallback((id: string) => { setPeekedId(null); setChosen(id); forget(); }, [forget]);
+  const selectOnDrawing = useCallback((id: string) => {
+    select(id);
+    setRevealRequest((previous) => ({ candidateId: id, seq: (previous?.seq ?? 0) + 1 }));
+  }, [select]);
+  const clear = useCallback(() => { setChosen(null); setPeekedId(null); setRevealRequest(null); }, []);
+  return { chosen, peekedId, revealRequest, peek, select, selectOnDrawing, clear };
+}
+
 /** Η αποστολή — ένα κλειδί ανά πρόθεση, η έκβαση ανήκει στην πρόθεση που έφυγε. */
 function useConfirmation(target: OwnerTerrainTarget | null, onConfirmed: () => void) {
   const [submission, setSubmission] = useState<PlotOutlineSubmission>(IDLE);
@@ -165,25 +201,21 @@ export function usePlotDrawingImport(
   onConfirmed: () => void,
 ): PlotDrawingImportApi {
   const [unit, setUnitState] = useState<TopoUnit | null>(null);
-  const [chosen, setChosen] = useState<string | null>(null);
   const [showInListing, setShowState] = useState(false);
   const confirmation = useConfirmation(target, onConfirmed);
   const { forget } = confirmation;
-  const onRead = useCallback(() => {
-    setUnitState(null);
-    setChosen(null);
-    forget();
-  }, [forget]);
+  const focus = useCandidateChoice(forget);
+  const clearChoice = focus.clear;
+  const onRead = useCallback(() => { setUnitState(null); clearChoice(); forget(); }, [forget, clearChoice]);
   const drawing = useDrawingFile(onRead);
 
   const candidates = useMemo(() => candidatesOf(drawing.read, unit, listingAreaM2), [drawing.read, unit, listingAreaM2]);
-  const selectedId = effectiveSelection(chosen, candidates);
+  const selectedId = effectiveSelection(focus.chosen, candidates);
   const asksUnit = drawing.read?.kind === 'dxf' && !dxfDeclaresUnit(drawing.read.drawing);
   const needsUnit = asksUnit && unit === null;
   const drawingUnit = asksUnit ? unit : null;
 
-  const setUnit = useCallback((next: TopoUnit) => { setUnitState(next); setChosen(null); forget(); }, [forget]);
-  const select = useCallback((id: string) => { setChosen(id); forget(); }, [forget]);
+  const setUnit = useCallback((next: TopoUnit) => { setUnitState(next); clearChoice(); forget(); }, [forget, clearChoice]);
   const setShowInListing = useCallback((show: boolean) => { setShowState(show); forget(); }, [forget]);
   const reset = useCallback(() => { drawing.clear(); onRead(); }, [drawing, onRead]);
 
@@ -196,7 +228,8 @@ export function usePlotDrawingImport(
 
   return {
     file: drawing.file, reading: drawing.reading, read: drawing.read, asksUnit, needsUnit, unit, candidates, selectedId,
-    showInListing, submission: confirmation.submission, canConfirm,
-    loadFile: drawing.load, setUnit, select, setShowInListing, confirm, reset,
+    peekedId: focus.peekedId, revealRequest: focus.revealRequest, showInListing, submission: confirmation.submission, canConfirm,
+    loadFile: drawing.load, setUnit, select: focus.select, selectOnDrawing: focus.selectOnDrawing, peek: focus.peek,
+    setShowInListing, confirm, reset,
   };
 }
