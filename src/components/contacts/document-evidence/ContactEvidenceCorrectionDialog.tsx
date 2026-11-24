@@ -27,7 +27,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DoyPicker } from '@/components/ui/doy-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useVatUniqueness } from '@/hooks/useVatUniqueness';
+import { VatDuplicateNotice } from '@/components/contacts/fields/VatDuplicateNotice';
+import { useVatDuplicateDecision } from '@/hooks/useVatUniqueness';
+import type { ContactType } from '@/types/contacts';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EvidenceFollowUp } from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
@@ -41,7 +43,6 @@ import {
 import {
   CONTACT_EVIDENCE_CORRECTION_KEYS as KEYS,
   CONTACT_EVIDENCE_FOLLOW_UP_KEYS as FOLLOW_UP,
-  CONTACT_EVIDENCE_KEYS as EVIDENCE,
   CONTACT_EVIDENCE_STATE_KEYS as STATES,
   correctionFieldLabelKey,
 } from './contact-evidence-labels';
@@ -59,6 +60,8 @@ interface ContactEvidenceCorrectionDialogProps {
   readonly purpose: string;
   /** Η επαφή του πίνακα — εξαιρείται από τον έλεγχο «το ΑΦΜ το έχει ήδη άλλη επαφή» (ADR-950 §12). */
   readonly contactId: string;
+  /** Ο τύπος της — από αυτόν εξαρτάται αν το διπλό ΑΦΜ απαγορεύεται ή θέλει επιβεβαίωση (ADR-944 §9). */
+  readonly contactType: ContactType;
   readonly fields: readonly EvidenceCorrectionField[];
   /** Υπάρχει ήδη διόρθωση ⇒ προσφέρεται η αναίρεσή της. */
   readonly corrected: boolean;
@@ -164,18 +167,18 @@ function CorrectionFooter({ canSave, followUp, followUpBusy, onCancel, onSave }:
 }
 
 export function ContactEvidenceCorrectionDialog({
-  row, rowLabel, purpose, contactId, fields, corrected, outcomeOf, followUpBusy, onSave, onClear, onClose,
+  row, rowLabel, purpose, contactId, contactType, fields, corrected, outcomeOf, followUpBusy, onSave, onClear, onClose,
 }: ContactEvidenceCorrectionDialogProps) {
   const { t } = useTranslation('contacts-form');
   const [draft, setDraft] = useState<Draft>(() => initialDraft(fields, corrected));
   const check = checkEvidenceCorrection(purpose, row, draft);
   const outcome = check.ok ? outcomeOf(check.values) : null;
-  // ADR-950 §12 — ο ίδιος έλεγχος μοναδικότητας με το πεδίο ΑΦΜ της φόρμας, πάνω σε ό,τι γράφει τώρα ο άνθρωπος.
-  // «Καταχώριση» με το ίδιο πάτημα δεν προσφέρεται για ΑΦΜ άλλης επαφής· όσο τρέχει ο έλεγχος, περιμένει.
-  const vat = useVatUniqueness(draft.vatNumber, contactId);
-  const vatTaken = vat.result !== null && !vat.result.isUnique ? vat.result.existingContact : null;
-  const registers = outcome?.followUp === 'register';
-  const followUp = registers && vatTaken !== null ? null : outcome?.followUp ?? null;
+  // ADR-944 §9 — η ίδια απόφαση με το πεδίο ΑΦΜ της φόρμας και τον φρουρό αποθήκευσης, πάνω σε ό,τι γράφει τώρα ο
+  // άνθρωπος. `block` (δύο φυσικά πρόσωπα) ⇒ καμία πράξη πάνω στην επαφή με το ίδιο πάτημα — ούτε «καταχώριση» ούτε
+  // «αποδοχή»· `confirm` ⇒ η πράξη προσφέρεται και η επιβεβαίωση ζητείται στην αποθήκευση. Όσο τρέχει ο έλεγχος, περιμένει.
+  const vat = useVatDuplicateDecision(draft.vatNumber, contactType, contactId);
+  const writesVat = outcome?.followUp === 'register' || outcome?.followUp === 'accept';
+  const followUp = writesVat && vat.decision === 'block' ? null : outcome?.followUp ?? null;
   const labelOf = (field: EvidenceCorrectionField) => (fields.length === 1 ? rowLabel : t(correctionFieldLabelKey(field.key)));
   const save = (followUp: EvidenceFollowUp | null) => {
     onSave(check.values, followUp);
@@ -200,15 +203,11 @@ export function ContactEvidenceCorrectionDialog({
           ))}
         </ul>
         <CorrectionOutcome outcome={outcome} />
-        {vatTaken !== null && (
-          <p role="alert" className="m-0 text-xs font-medium text-destructive">
-            {t(EVIDENCE.vatTaken, { vatNumber: draft.vatNumber ?? '', contactName: vatTaken.name })}
-          </p>
-        )}
+        <VatDuplicateNotice vatNumber={draft.vatNumber ?? ''} decision={vat.decision} holders={vat.holders} />
         {corrected && (
           <Button type="button" variant="ghost" size="sm" className="self-start" onClick={clear}>{t(KEYS.clear)}</Button>
         )}
-        <CorrectionFooter canSave={check.ok} followUp={followUp} followUpBusy={followUpBusy || (registers && vat.isChecking)}
+        <CorrectionFooter canSave={check.ok} followUp={followUp} followUpBusy={followUpBusy || (writesVat && vat.isChecking)}
           onCancel={onClose} onSave={save} />
       </DialogContent>
     </Dialog>

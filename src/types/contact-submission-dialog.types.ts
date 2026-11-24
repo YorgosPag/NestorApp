@@ -1,6 +1,9 @@
 import type { IdentityFieldChange } from '@/utils/contactForm/company-identity-guard';
 import type { CommunicationFieldChange } from '@/utils/contactForm/communication-impact-guard';
 
+/** State for the duplicate VAT / email dialog (ADR-944 §9) — ο ιδιοκτήτης του σχήματος είναι ο φρουρός. */
+export type { IdentifierDuplicateDialogState } from '@/utils/contactForm/identifier-duplicate-guard';
+
 /** State for the name cascade confirmation dialog (ADR-249) */
 export interface NameCascadeDialogState {
   oldName: string;

@@ -24,7 +24,9 @@ import { detectCompanyIdentityChanges } from './company-identity-guard';
 import { detectCommunicationChanges } from './communication-impact-guard';
 import type { CommunicationImpactPreview, CommunicationImpactPreviewRequest } from '@/types/communication-impact-preview';
 
-import type { NameCascadeDialogState, AddressImpactDialogState, CompanyIdentityDialogState, CommunicationImpactDialogState } from '@/types/contact-submission-dialog.types';
+import { detectIdentifierDuplicates } from './identifier-duplicate-guard';
+
+import type { NameCascadeDialogState, AddressImpactDialogState, CompanyIdentityDialogState, CommunicationImpactDialogState, IdentifierDuplicateDialogState } from '@/types/contact-submission-dialog.types';
 
 const logger = createModuleLogger('SubmissionGuardChain');
 
@@ -34,8 +36,12 @@ const logger = createModuleLogger('SubmissionGuardChain');
 
 export type GuardResult =
   | { blocked: false; deferred: false }
-  | { blocked: true; errorKey: string }
-  | { blocked: false; deferred: true; guardType: 'nameCascade' | 'addressImpact' | 'companyIdentity' | 'communicationImpact' };
+  /** `announced` ⇒ ο φρουρός άνοιξε ήδη δικό του διάλογο· ο καλών ΔΕΝ δείχνει δεύτερο μήνυμα. */
+  | { blocked: true; errorKey: string; announced?: true }
+  | { blocked: false; deferred: true; guardType: 'identifierDuplicate' | 'nameCascade' | 'addressImpact' | 'companyIdentity' | 'communicationImpact' };
+
+/** Συνέχεια μετά από επιβεβαίωση διπλοτύπου: `true` ⇒ η επαφή γράφτηκε· `false` ⇒ ανέλαβε άλλος φρουρός. */
+export type IdentifierDuplicateResume = () => Promise<boolean>;
 
 type GuardFailureKey =
   | 'contacts-lifecycle.identityImpact.messages.unavailable'
@@ -53,6 +59,11 @@ interface GuardChainDeps {
   // (close form, reset editing state, refresh list) runs exactly once,
   // regardless of which path (immediate vs. deferred) completes the save.
   action: () => Promise<void>;
+
+  // Διπλό ΑΦΜ / email (ADR-944 §9) — ο ΠΡΩΤΟΣ φρουρός· η συνέχειά του ξανατρέχει την αλυσίδα.
+  identifierDuplicateConfirmedRef: React.MutableRefObject<boolean>;
+  identifierDuplicateResumeRef: React.MutableRefObject<IdentifierDuplicateResume | null>;
+  setIdentifierDuplicateDialog: (state: IdentifierDuplicateDialogState | null) => void;
 
   // Confirmed refs (skip guard if already confirmed)
   nameCascadeConfirmedRef: React.MutableRefObject<boolean>;
@@ -135,16 +146,55 @@ async function runCommunicationGuard(deps: GuardChainDeps): Promise<GuardResult 
   }
 }
 
+/**
+ * Μετά το «Αποθήκευση παρ' όλα αυτά»: η αλυσίδα **ξανατρέχει** με τον φρουρό 0 περασμένο, ώστε οι υπόλοιποι φρουροί
+ * (επιπτώσεις ονόματος · έδρας · ταυτότητας · επικοινωνίας) να ρωτηθούν κανονικά. Η επιβεβαίωση ενός διπλοτύπου δεν
+ * είναι άδεια να παρακαμφθεί, π.χ., ο φραγμός αφαίρεσης email-άγκυρας.
+ */
+async function resumeAfterDuplicateConfirm(deps: GuardChainDeps): Promise<boolean> {
+  deps.identifierDuplicateConfirmedRef.current = true;
+  const rest = await runGuardChain(deps);
+  if (rest.blocked) {
+    if (rest.announced !== true) deps.notifications.error(rest.errorKey);
+    return false;
+  }
+  if (rest.deferred) return false;
+  await deps.action();
+  return true;
+}
+
+/**
+ * Guard 0 — διπλό ΑΦΜ / email (ADR-944 §9). **Πρώτος**, ώστε καμία επιβεβαίωση άλλου φρουρού να μην τον προσπερνά.
+ * `block` ⇒ διάλογος χωρίς «συνέχεια» (ο άνθρωπος βλέπει ποια επαφή έχει το ΑΦΜ)· `confirm` ⇒ διάλογος με συνέχεια.
+ */
+async function runIdentifierDuplicateGuard(deps: GuardChainDeps): Promise<GuardResult | null> {
+  const duplicates = await detectIdentifierDuplicates(deps.editContact, deps.formData);
+  if (duplicates === null) return null;
+  deps.setIdentifierDuplicateDialog(duplicates);
+  if (duplicates.decision === 'block') {
+    return { blocked: true, errorKey: 'contacts-form:validation.identifierDuplicate.blockTitle', announced: true };
+  }
+  deps.identifierDuplicateResumeRef.current = () => resumeAfterDuplicateConfirm(deps);
+  return { blocked: false, deferred: true, guardType: 'identifierDuplicate' };
+}
+
 // ============================================================================
 // GUARD CHAIN
 // ============================================================================
 
 /**
- * Run all 4 guards sequentially. Returns as soon as one blocks or defers.
+ * Run all guards sequentially. Returns as soon as one blocks or defers.
  * If all pass, returns { blocked: false, deferred: false }.
  */
 export async function runGuardChain(deps: GuardChainDeps): Promise<GuardResult> {
   const { editContact, editContactId, contactData, formData } = deps;
+
+  // --- Guard 0: Duplicate VAT / email (ADR-944 §9) ---
+  if (!deps.identifierDuplicateConfirmedRef.current) {
+    const duplicateResult = await runIdentifierDuplicateGuard(deps);
+    if (duplicateResult !== null) return duplicateResult;
+  }
+  deps.identifierDuplicateConfirmedRef.current = false;
 
   // --- Guard 1: Name Cascade (ADR-249) ---
   if (!deps.nameCascadeConfirmedRef.current) {

@@ -24,7 +24,13 @@ jest.mock('@/components/ui/doy-picker', () => ({
 }));
 
 const mockVat = jest.fn();
-jest.mock('@/hooks/useVatUniqueness', () => ({ useVatUniqueness: (...args: unknown[]) => mockVat(...args) }));
+jest.mock('@/hooks/useVatUniqueness', () => ({ useVatDuplicateDecision: (...args: unknown[]) => mockVat(...args) }));
+
+// Η γραμμή «το ΑΦΜ το έχει ήδη…» έχει δικό της αρχείο (σύνδεσμοι χώρου, εικονίδια)· εδώ φτάνει ο ρόλος και τα ονόματα.
+jest.mock('@/components/contacts/fields/VatDuplicateNotice', () => ({
+  VatDuplicateNotice: ({ decision, holders }: { decision: string; holders: readonly { name: string }[] }) =>
+    decision === 'allow' ? null : <p role={decision === 'block' ? 'alert' : 'status'}>{holders.map((h) => h.name).join(', ')}</p>,
+}));
 
 import type { EvidenceFollowUp } from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceComparisonState, EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
@@ -54,6 +60,7 @@ function setup(options: {
       rowLabel="ΑΦΜ"
       purpose="stamp-signature"
       contactId="cont_self"
+      contactType="individual"
       fields={options.fields ?? [VAT_FIELD]}
       corrected={options.corrected ?? false}
       outcomeOf={options.outcome ?? (() => null)}
@@ -70,7 +77,7 @@ function setup(options: {
 
 beforeEach(() => {
   mockVat.mockReset();
-  mockVat.mockReturnValue({ isChecking: false, result: null });
+  mockVat.mockReturnValue({ isChecking: false, holders: [], decision: 'allow' });
 });
 
 describe('ο ελεγκτής κρατά το κουμπί — ίδιος με του διακομιστή', () => {
@@ -144,17 +151,22 @@ describe('η κρίση ΠΡΙΝ από την αποθήκευση, και η �
   });
 });
 
-describe('το ΑΦΜ το έχει ήδη άλλη επαφή (ADR-950 §12)', () => {
+describe('το ΑΦΜ το έχει ήδη άλλη επαφή (ADR-950 §12 · ADR-944 §9)', () => {
   const missing = () => ({ row: rowWith('missing'), followUp: 'register' as const });
-  const taken = { isChecking: false, result: { isUnique: false, existingContact: { id: 'cont_other', name: 'Άλλη Επαφή', type: 'individual' } } };
+  const accepting = () => ({ row: rowWith('missing'), followUp: 'accept' as const });
+  const holders = [{ id: 'cont_other', name: 'Άλλη Επαφή', type: 'individual' }];
+  /** Δύο φυσικά πρόσωπα ⇒ απαγόρευση. */
+  const taken = { isChecking: false, holders, decision: 'block' };
+  /** Φυσικό πρόσωπο + εταιρεία ⇒ επιτρέπεται με επιβεβαίωση στην αποθήκευση. */
+  const shared = { isChecking: false, holders: [{ id: 'cont_co', name: 'Ατομική ΙΚΕ', type: 'company' }], decision: 'confirm' };
 
-  it('ρωτά για ό,τι γράφει ο άνθρωπος, εξαιρώντας την ίδια την επαφή', () => {
+  it('ρωτά για ό,τι γράφει ο άνθρωπος, με τον τύπο της επαφής, εξαιρώντας την ίδια', () => {
     const { type } = setup({ outcome: missing });
     type(VALID_VAT);
-    expect(mockVat).toHaveBeenLastCalledWith(VALID_VAT, 'cont_self');
+    expect(mockVat).toHaveBeenLastCalledWith(VALID_VAT, 'individual', 'cont_self');
   });
 
-  it('διπλό ⇒ προειδοποίηση με το όνομα, ΚΑΜΙΑ «καταχώριση» — μόνο αποθήκευση της διόρθωσης', () => {
+  it('απαγόρευση ⇒ προειδοποίηση με το όνομα, ΚΑΜΙΑ «καταχώριση» — μόνο αποθήκευση της διόρθωσης', () => {
     mockVat.mockReturnValue(taken);
     const { type, button, onSave } = setup({ outcome: missing });
     type(VALID_VAT);
@@ -166,18 +178,32 @@ describe('το ΑΦΜ το έχει ήδη άλλη επαφή (ADR-950 §12)', 
   });
 
   it('όσο τρέχει ο έλεγχος, η καταχώριση περιμένει· η σκέτη διόρθωση όχι', () => {
-    mockVat.mockReturnValue({ isChecking: true, result: null });
+    mockVat.mockReturnValue({ isChecking: true, holders: [], decision: 'allow' });
     const { type, button } = setup({ outcome: missing });
     type(VALID_VAT);
     expect(button(`${P}.followUp.register`)?.disabled).toBe(true);
     expect(button(`${P}.saveOnly`)?.disabled).toBe(false);
   });
 
-  it('διπλό σε επεξεργασία ⇒ η «αποδοχή» μένει (η φόρμα προειδοποιεί μόνη της)', () => {
+  it('απαγόρευση σε επεξεργασία ⇒ ούτε «αποδοχή» — το μήνυμα και το κουμπί δεν αντιφάσκουν πια', () => {
     mockVat.mockReturnValue(taken);
-    const { type, button } = setup({ outcome: () => ({ row: rowWith('missing'), followUp: 'accept' }) });
+    const { type, button, onSave } = setup({ outcome: accepting });
     type(VALID_VAT);
-    expect(button(`${P}.followUp.accept`)?.disabled).toBe(false);
+    expect(screen.getByRole('alert').textContent).toContain('Άλλη Επαφή');
+    expect(button(`${P}.followUp.accept`)).toBeNull();
+    fireEvent.click(button(`${P}.save`) as HTMLButtonElement);
+    expect(onSave).toHaveBeenCalledWith({ vatNumber: VALID_VAT }, null);
+  });
+
+  it('επιτρεπτή συνύπαρξη (εταιρεία) ⇒ η πράξη προσφέρεται, με ειδοποίηση· η επιβεβαίωση ζητείται στην αποθήκευση', () => {
+    mockVat.mockReturnValue(shared);
+    const { type, button, onSave } = setup({ outcome: missing });
+    type(VALID_VAT);
+    // Δύο `status` στον διάλογο (η κρίση «Μετά τη διόρθωση» και η ειδοποίηση) — ψάχνουμε αυτό με το όνομα.
+    expect(screen.getAllByRole('status').some((el) => el.textContent?.includes('Ατομική ΙΚΕ'))).toBe(true);
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(button(`${P}.followUp.register`) as HTMLButtonElement);
+    expect(onSave).toHaveBeenCalledWith({ vatNumber: VALID_VAT }, 'register');
   });
 });
 

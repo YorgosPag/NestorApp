@@ -12,8 +12,10 @@ import {
   runGuardedAction,
   type GuardResult,
 } from '@/hooks/impact-guard/guard-result';
-import { runGuardChain } from '@/utils/contactForm/submission-guard-chain';
+import { runGuardChain, type IdentifierDuplicateResume } from '@/utils/contactForm/submission-guard-chain';
 import { createGuardHandlers } from '@/utils/contactForm/guard-confirm-factory';
+import { getErrorMessage } from '@/lib/error-utils';
+import { IdentifierDuplicateDialog } from '@/components/contacts/dialogs/IdentifierDuplicateDialog';
 import { NameChangeCascadeDialog } from '@/components/contacts/dialogs/NameChangeCascadeDialog';
 import { AddressImpactDialog } from '@/components/contacts/dialogs/AddressImpactDialog';
 import { CompanyIdentityImpactDialog } from '@/components/contacts/dialogs/CompanyIdentityImpactDialog';
@@ -23,6 +25,7 @@ import type {
   AddressImpactDialogState,
   CompanyIdentityDialogState,
   CommunicationImpactDialogState,
+  IdentifierDuplicateDialogState,
 } from '@/types/contact-submission-dialog.types';
 
 interface NotificationApi {
@@ -67,6 +70,33 @@ export function useContactUpdateGuards({
   const deferredAddressSubmitRef = useRef<(() => Promise<void>) | null>(null);
   const deferredIdentitySubmitRef = useRef<(() => Promise<void>) | null>(null);
   const deferredCommunicationSubmitRef = useRef<(() => Promise<void>) | null>(null);
+
+  // ADR-944 §9 — διπλό ΑΦΜ / email. Δικοί του χειριστές (όχι `createGuardHandlers`): η συνέχειά του ξανατρέχει την
+  // αλυσίδα και μπορεί να παραδώσει σε άλλον φρουρό, οπότε «επιτυχία» λέγεται μόνο όταν η επαφή όντως γράφτηκε.
+  const [identifierDuplicateDialog, setIdentifierDuplicateDialog] = useState<IdentifierDuplicateDialogState | null>(null);
+  const identifierDuplicateConfirmedRef = useRef(false);
+  const identifierDuplicateResumeRef = useRef<IdentifierDuplicateResume | null>(null);
+
+  const dismissIdentifierDuplicate = (): void => {
+    setIdentifierDuplicateDialog(null);
+    identifierDuplicateResumeRef.current = null;
+    identifierDuplicateConfirmedRef.current = false;
+  };
+
+  const confirmIdentifierDuplicate = async (): Promise<void> => {
+    const resume = identifierDuplicateResumeRef.current;
+    identifierDuplicateResumeRef.current = null;
+    setIdentifierDuplicateDialog(null);
+    if (resume === null) return;
+    setLoading(true);
+    try {
+      if (await resume()) onUpdateSucceeded();
+    } catch (error) {
+      notifications.error(getErrorMessage(error, 'contacts-form.submission.updateError'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const {
     previewBeforeMutate: previewContactMutationImpactBeforeMutate,
@@ -130,6 +160,9 @@ export function useContactUpdateGuards({
         contactData,
         formData,
         action,
+        identifierDuplicateConfirmedRef,
+        identifierDuplicateResumeRef,
+        setIdentifierDuplicateDialog,
         nameCascadeConfirmedRef,
         addressImpactConfirmedRef,
         companyIdentityConfirmedRef,
@@ -146,8 +179,8 @@ export function useContactUpdateGuards({
       });
 
       if (guardResult.blocked) {
-        const errorKey = 'errorKey' in guardResult ? guardResult.errorKey : 'contacts-form.submission.updateError';
-        notifications.error(errorKey);
+        // `announced` ⇒ ο φρουρός άνοιξε ήδη δικό του διάλογο (διπλό ΑΦΜ) — όχι δεύτερο μήνυμα.
+        if (guardResult.announced !== true) notifications.error(guardResult.errorKey);
         chainOutcome = 'blocked';
         return;
       }
@@ -170,6 +203,14 @@ export function useContactUpdateGuards({
 
   const GuardDialogs = useMemo(() => (
     <>
+      {identifierDuplicateDialog && (
+        <IdentifierDuplicateDialog
+          state={identifierDuplicateDialog}
+          onConfirm={confirmIdentifierDuplicate}
+          onDismiss={dismissIdentifierDuplicate}
+        />
+      )}
+
       {nameCascadeDialog && (
         <NameChangeCascadeDialog
           open={!!nameCascadeDialog}
@@ -241,6 +282,10 @@ export function useContactUpdateGuards({
     confirmCompanyIdentity,
     confirmNameCascade,
     contactMutationImpactDialogs,
+    // Οι δύο χειριστές του διπλοτύπου ξαναφτιάχνονται σε κάθε render (όπως και οι υπόλοιποι παραπάνω).
+    confirmIdentifierDuplicate,
+    dismissIdentifierDuplicate,
+    identifierDuplicateDialog,
     nameCascadeDialog,
   ]);
 

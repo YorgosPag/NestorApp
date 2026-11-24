@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Contact, ContactType } from '@/types/contacts';
+import type { IdentifierHolder } from '@/lib/contacts/contact-identifier-duplicate-policy';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { GREEK_VAT_REGEX, normalizeVat } from '@/lib/validation/greek-vat-number';
 
@@ -73,10 +74,51 @@ export interface VatUniquenessResult {
 import { COLLECTIONS } from '@/config/firestore-collections';
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
+/** Ως 5 κάτοχοι + ενδεχομένως η ίδια η επαφή (εξαιρείται) — αρκετό για να κριθεί «υπάρχει φυσικό πρόσωπο;». */
+const VAT_HOLDER_LIMIT = 6;
+
+/**
+ * **Όλες** οι άλλες επαφές του χώρου που έχουν αυτό το ΑΦΜ (ADR-944 §9) — όχι μόνο η πρώτη: η απόφαση
+ * «απαγόρευση ή επιβεβαίωση» (`decideVatDuplicate`) εξαρτάται από το αν **κάποια** είναι φυσικό πρόσωπο.
+ *
+ * Ερώτημα χωρίς φίλτρο τύπου (φυσικά πρόσωπα και εταιρείες γράφουν το ΑΦΜ στο `vatNumber`).
+ * 🔑 **Fail-open**: αποτυχία ερωτήματος ⇒ κανένας κάτοχος — ο έλεγχος δεν κλειδώνει ποτέ τη φόρμα.
+ *
+ * @param vatNumber - Το ΑΦΜ (9 ψηφία· αλλιώς καμία ερώτηση)
+ * @param companyId - Ο χώρος (απομόνωση μισθωτή)
+ * @param excludeContactId - Η επαφή που επεξεργάζεται — δεν είναι κάτοχος του εαυτού της
+ */
+export async function findVatHolders(
+  vatNumber: string,
+  companyId: string,
+  excludeContactId?: string
+): Promise<readonly IdentifierHolder[]> {
+  const normalized = normalizeVat(vatNumber);
+  if (!GREEK_VAT_REGEX.test(normalized)) return [];
+
+  try {
+    const colRef = collection(db, CONTACTS_COLLECTION).withConverter(contactConverter);
+    const snapshot = await getDocs(query(
+      colRef,
+      where('companyId', '==', companyId),
+      where('vatNumber', '==', normalized),
+      limit(VAT_HOLDER_LIMIT)
+    ));
+    return snapshot.docs
+      .filter((doc) => doc.id !== excludeContactId)
+      .map((doc) => {
+        const contact = doc.data();
+        return { id: doc.id, name: getContactDisplayName(contact), type: contact.type };
+      });
+  } catch (error) {
+    console.error('[vat-validation] findVatHolders error:', error);
+    return [];
+  }
+}
+
 /**
  * Check if a VAT number is already used by another contact within the same company.
- * Performs a CROSS-TYPE query (no type filter) to catch duplicates
- * across individual, company, and service contacts.
+ * Λεπτό περιτύλιγμα του {@link findVatHolders}: ο **πρώτος** άλλος κάτοχος, για όσους ρωτούν μόνο «υπάρχει;».
  *
  * @param vatNumber - The VAT number to check (must be 9 digits)
  * @param companyId - Tenant company identifier (required for tenant isolation)
@@ -88,54 +130,15 @@ export async function checkVatUniqueness(
   companyId: string,
   excludeContactId?: string
 ): Promise<VatUniquenessResult> {
-  const normalized = normalizeVat(vatNumber);
+  return vatUniquenessOf(await findVatHolders(vatNumber, companyId, excludeContactId));
+}
 
-  // Only check valid 9-digit VAT numbers
-  if (!GREEK_VAT_REGEX.test(normalized)) {
-    return { isUnique: true, existingContact: null };
-  }
-
-  try {
-    const colRef = collection(db, CONTACTS_COLLECTION).withConverter(contactConverter);
-
-    // Cross-type query: NO type filter — catches ALL contact types within tenant
-    const q = query(
-      colRef,
-      where('companyId', '==', companyId),
-      where('vatNumber', '==', normalized),
-      limit(2) // Get up to 2 to handle self-exclusion
-    );
-
-    const snapshot = await getDocs(q);
-
-    for (const doc of snapshot.docs) {
-      const contact = doc.data();
-      const contactId = doc.id;
-
-      // Skip self (during edit)
-      if (excludeContactId && contactId === excludeContactId) {
-        continue;
-      }
-
-      // Build display name based on contact type
-      const displayName = getContactDisplayName(contact);
-
-      return {
-        isUnique: false,
-        existingContact: {
-          id: contactId,
-          name: displayName,
-          type: contact.type,
-        },
-      };
-    }
-
-    return { isUnique: true, existingContact: null };
-  } catch (error) {
-    // Fail-open: if Firestore query fails, don't block the user
-    console.error('[vat-validation] checkVatUniqueness error:', error);
-    return { isUnique: true, existingContact: null };
-  }
+/** Οι κάτοχοι στο παλιό σχήμα «υπάρχει; ποιος;» — ο **πρώτος**. Ένα σημείο για τη συνάρτηση και το hook. */
+export function vatUniquenessOf(holders: readonly IdentifierHolder[]): VatUniquenessResult {
+  const [first] = holders;
+  return first === undefined
+    ? { isUnique: true, existingContact: null }
+    : { isUnique: false, existingContact: { id: first.id, name: first.name, type: first.type } };
 }
 
 /**

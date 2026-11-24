@@ -6,8 +6,8 @@ import '@/lib/design-system';
  * @module VatNumberField
  * @description Reusable VAT (ΑΦΜ) input field with real-time uniqueness checking.
  *
- * Shows a warning message below the input when the VAT number is already
- * used by another contact (cross-type: individual, company, service).
+ * Below the input: who already holds the VAT number and what the save will do —
+ * `block` (two individuals) or `confirm` (any other pair). ADR-944 §9.
  *
  * Used as a customRenderer in IndividualFormRenderer / CompanyFormRenderer
  * via the UnifiedContactTabbedSection customRenderers mechanism.
@@ -16,8 +16,10 @@ import '@/lib/design-system';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
-import { useVatUniqueness } from '@/hooks/useVatUniqueness';
+import { useVatDuplicateDecision } from '@/hooks/useVatUniqueness';
 import type { IndividualFieldConfig } from '@/config/individual-config';
+import type { ContactType } from '@/types/contacts';
+import { VatDuplicateNotice } from './VatDuplicateNotice';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +33,8 @@ interface VatNumberFieldProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   disabled: boolean;
   excludeContactId?: string;
+  /** Ο τύπος της επαφής που γράφεται — από αυτόν εξαρτάται αν το διπλό ΑΦΜ απαγορεύεται ή θέλει επιβεβαίωση. */
+  contactType: ContactType;
 }
 
 // ============================================================================
@@ -43,12 +47,11 @@ export function VatNumberField({
   onChange,
   disabled,
   excludeContactId,
+  contactType,
 }: VatNumberFieldProps) {
   const { t } = useTranslation('contacts');
   const colors = useSemanticColors();
-  const { isChecking, result } = useVatUniqueness(value, excludeContactId);
-
-  const showWarning = result && !result.isUnique && result.existingContact;
+  const { isChecking, decision, holders } = useVatDuplicateDecision(value, contactType, excludeContactId);
 
   return (
     <div className="w-full">
@@ -72,17 +75,8 @@ export function VatNumberField({
         </p>
       )}
 
-      {/* Duplicate warning */}
-      {showWarning && result.existingContact && (
-        <p className="mt-1 text-xs text-destructive font-medium" role="alert">
-          {t('validation.vatDuplicate', {
-            vatNumber: value,
-            contactName: result.existingContact.name,
-          })
-            .replace('{{vatNumber}}', value)
-            .replace('{{contactName}}', result.existingContact.name)}
-        </p>
-      )}
+      {/* Διπλό ΑΦΜ — η ίδια απόφαση που θα πάρει ο φρουρός στην αποθήκευση (ADR-944 §9) */}
+      <VatDuplicateNotice vatNumber={value} decision={decision} holders={holders} />
     </div>
   );
 }

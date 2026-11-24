@@ -22,6 +22,7 @@ import { db } from '@/lib/firebase';
 import type { Contact, ContactType } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { createModuleLogger } from '@/lib/telemetry';
+import { assertIndividualVatFree } from './individual-vat-guard';
 
 const logger = createModuleLogger('DuplicatePreventionService');
 
@@ -140,6 +141,9 @@ export class DuplicatePreventionService {
     config: Partial<DuplicateDetectionConfig> = {}
   ): Promise<DuplicateDetectionResult> {
     const finalConfig = this.buildConfig(candidateContact.type, config);
+
+    // ADR-944 §9 — δύο φυσικά πρόσωπα δεν έχουν το ίδιο ΑΦΜ. Έξω από το `try`: η άρνηση ΔΕΝ είναι αποτυχία ανίχνευσης.
+    await assertIndividualVatFree(candidateContact);
 
     try {
       // 🔍 Phase 1: Exact Match Detection

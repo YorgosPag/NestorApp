@@ -231,8 +231,20 @@
     "phone": {
       "invalidFormat": "Phone number may have invalid format"
     },
-    "vatDuplicate": "VAT {vatNumber} is already used by: {contactName}",
     "vatChecking": "Checking VAT...",
+    "identifierDuplicate": {
+      "vatRegion": "VAT number already held by another contact",
+      "vatBlockHint": "Two individuals cannot share a VAT number — the contact will not be saved with it.",
+      "vatConfirmHint": "Allowed (e.g. a sole proprietorship, a branch) — you will be asked to confirm when saving.",
+      "holdersLabel": "Contacts holding the same value",
+      "vatHeading": "VAT number {vatNumber} is already held by:",
+      "blockTitle": "This VAT number belongs to another individual",
+      "blockBody": "A VAT number is personal and another individual contact already holds it. The contact was not saved. Open the other contact to check whether it is the same person.",
+      "blockClose": "Got it",
+      "confirmTitle": "Details already held by another contact",
+      "confirmBody": "Check that this is not the same person or the same business. If it is correct (e.g. a sole proprietorship, a branch, a shared mailbox), continue.",
+      "confirmSave": "Save anyway"
+    },
     "emailDuplicate": {
       "region": "Emails already used by other contacts",
       "heading": "{email} is already used by:",
@@ -426,8 +438,7 @@
       "dismissFailed": "The ignore was not saved. Please try again.",
       "restoreFailed": "The undo was not saved. Please try again.",
       "correctionFailed": "The correction was not saved. Check the value and try again.",
-      "correctionClearFailed": "Undoing the correction was not saved. Try again.",
-      "vatTaken": "VAT number {vatNumber} is already used by: {contactName}. It is not registered in one click — if it is correct, enter it from the contact's edit form."
+      "correctionClearFailed": "Undoing the correction was not saved. Try again."
     }
   },
   "licences": {

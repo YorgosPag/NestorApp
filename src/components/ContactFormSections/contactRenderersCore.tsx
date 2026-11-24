@@ -157,6 +157,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
         onChange={fieldOnChange}
         disabled={fieldDisabled ?? disabled}
         excludeContactId={formData.id}
+        contactType={contactType}
       />
     ),
 

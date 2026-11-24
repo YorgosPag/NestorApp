@@ -39,8 +39,6 @@ export const CONTACT_EVIDENCE_KEYS = {
   reread: 'contacts-form:documentEvidence.actions.reread',
   dismissFailed: 'contacts-form:documentEvidence.errors.dismissFailed',
   restoreFailed: 'contacts-form:documentEvidence.errors.restoreFailed',
-  /** ADR-950 §12 — το ΑΦΜ το έχει ήδη άλλη επαφή: καμία καταχώριση με ένα πάτημα. */
-  vatTaken: 'contacts-form:documentEvidence.errors.vatTaken',
 } as const;
 
 export const CONTACT_EVIDENCE_COLUMN_KEYS = {

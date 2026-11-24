@@ -4,7 +4,7 @@
  * @fileoverview Οι πράξεις μιας γραμμής «Το έγγραφο λέει / Η επαφή λέει» (ADR-950 §4.5 · §9).
  * @module components/contacts/document-evidence/use-contact-evidence-actions
  *
- * - **Αποδοχή** (επεξεργασία) — μόνο η φόρμα (`acceptEvidence`)· η εγγραφή περνά από την υπάρχουσα αποθήκευση και τους 4 φρουρούς.
+ * - **Αποδοχή** (επεξεργασία) — μόνο η φόρμα (`acceptEvidence`)· η εγγραφή περνά από την υπάρχουσα αποθήκευση και τους φρουρούς της.
  * - **Καταχώριση** (προβολή) — η ίδια αλλαγή, σταλμένη **αμέσως** στην ίδια φυλαγμένη αποθήκευση (`host.onRegister`).
  * - **Πρόταση διεύθυνσης** — στον ιδιοκτήτη της έδρας (`proposeHqAddress`), ποτέ απευθείας εγγραφή. Από την προβολή
  *   η ίδια πράξη **ανοίγει πρώτα την επεξεργασία** (`host.onStartEdit`, ADR-950 §11) — ένα πάτημα, ο ίδιος editor.
@@ -15,7 +15,6 @@ import { useCallback } from 'react';
 
 import type { EvidenceDismissReason } from '@/config/contact-document-evidence';
 import { proposeHqAddress } from '@/components/contacts/dynamic/hq-address-proposal-store';
-import { useCompanyId } from '@/hooks/useCompanyId';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   acceptEvidence,
@@ -26,11 +25,9 @@ import {
 } from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
 import { nowISO } from '@/lib/date-local';
-import { checkVatUniqueness } from '@/lib/validation/vat-validation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { dismissEvidenceWithPolicy, restoreEvidenceWithPolicy } from '@/services/filesystem/file-mutation-gateway';
-import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileRecord } from '@/types/file-record';
 
 import { useContactEvidenceHost } from './ContactEvidenceContext';
@@ -84,16 +81,8 @@ function useEvidenceDecisions(fileId: string): Pick<ContactEvidenceActions, 'dis
   return { dismiss, restore };
 }
 
-/** Το ΑΦΜ που πάει να γραφτεί — σε όποιο πεδίο φόρμας το κρατά ο τύπος της επαφής. */
-function writtenVat(changes: Partial<ContactFormData>): string | undefined {
-  return changes.vatNumber ?? changes.companyVatNumber ?? changes.serviceVatNumber;
-}
-
 export function useContactEvidenceActions(file: FileRecord, fileName: string): ContactEvidenceActions | null {
   const host = useContactEvidenceHost();
-  const companyId = useCompanyId()?.companyId;
-  const { t } = useTranslation('contacts-form');
-  const { error } = useNotifications();
   const { dismiss, restore } = useEvidenceDecisions(file.id);
 
   const accept = useCallback((row: EvidenceRow) => {
@@ -122,18 +111,11 @@ export function useContactEvidenceActions(file: FileRecord, fileName: string): C
     if (host === null || !canRegister || host.onRegister === undefined) return;
     const next = acceptEvidenceBatch(host.formData, rows.filter(canRegisterEvidence), host.contactType);
     const changes = formDataChanges(host.formData, next);
-    // ADR-950 §12 — ένα πάτημα ΔΕΝ γράφει ποτέ σιωπηλά ΑΦΜ που έχει ήδη άλλη επαφή· ο ίδιος έλεγχος με τη φόρμα
-    // (`checkVatUniqueness`), τη στιγμή της πράξης. Σκόπιμο διπλό ΑΦΜ γράφεται από την επεξεργασία, όπου φαίνεται.
-    const vat = writtenVat(changes);
-    if (vat !== undefined && vat !== '' && companyId !== undefined) {
-      const taken = (await checkVatUniqueness(vat, companyId, host.contactId)).existingContact;
-      if (taken !== null) {
-        error(t(KEYS.vatTaken, { vatNumber: vat, contactName: taken.name }));
-        return;
-      }
-    }
+    // ADR-944 §9 (αντικαθιστά τον τοπικό έλεγχο του ADR-950 §12) — το διπλό ΑΦΜ κρίνεται στο ΕΝΑ σημείο επιβολής, τον
+    // φρουρό αποθήκευσης (`runGuardChain` → `detectIdentifierDuplicates`), από όπου περνά και το `onRegister`:
+    // απαγόρευση ή ρητή επιβεβαίωση, με διάλογο που ονομάζει την άλλη επαφή. Ένα πάτημα δεν γράφει ποτέ σιωπηλά.
     await host.onRegister(next, changes);
-  }, [host, canRegister, companyId, error, t]);
+  }, [host, canRegister]);
 
   const register = useCallback((row: EvidenceRow) => void registerRows([row]), [registerRows]);
 
