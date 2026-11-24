@@ -259,6 +259,7 @@ export function ContactEvidencePanel({ file }: { readonly file: FileRecord }) {
           row={correctingRow.key}
           rowLabel={labelOf(correctingRow)}
           purpose={corrections.purpose}
+          contactId={host.contactId}
           fields={corrections.fieldsOf(correctingRow.key)}
           corrected={correctingRow.correction !== undefined}
           outcomeOf={(values) => {

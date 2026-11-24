@@ -23,6 +23,9 @@ jest.mock('@/components/ui/doy-picker', () => ({
   ),
 }));
 
+const mockVat = jest.fn();
+jest.mock('@/hooks/useVatUniqueness', () => ({ useVatUniqueness: (...args: unknown[]) => mockVat(...args) }));
+
 import type { EvidenceFollowUp } from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceComparisonState, EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
 import type { EvidenceCorrectionField, EvidenceCorrectionValues } from '@/lib/contacts/contact-evidence-corrections';
@@ -50,6 +53,7 @@ function setup(options: {
       row="vatNumber"
       rowLabel="ΑΦΜ"
       purpose="stamp-signature"
+      contactId="cont_self"
       fields={options.fields ?? [VAT_FIELD]}
       corrected={options.corrected ?? false}
       outcomeOf={options.outcome ?? (() => null)}
@@ -63,6 +67,11 @@ function setup(options: {
   const button = (key: string) => screen.queryByRole('button', { name: key }) as HTMLButtonElement | null;
   return { onSave, onClear, onClose, type, button };
 }
+
+beforeEach(() => {
+  mockVat.mockReset();
+  mockVat.mockReturnValue({ isChecking: false, result: null });
+});
 
 describe('ο ελεγκτής κρατά το κουμπί — ίδιος με του διακομιστή', () => {
   it('ξεκινά με ό,τι διάβασε η μηχανή· δεν περνά ⇒ αποθήκευση σβηστή και μήνυμα', () => {
@@ -132,6 +141,43 @@ describe('η κρίση ΠΡΙΝ από την αποθήκευση, και η �
     type(VALID_VAT);
     expect(button(`${P}.followUp.register`)?.disabled).toBe(true);
     expect(button(`${P}.saveOnly`)?.disabled).toBe(false);
+  });
+});
+
+describe('το ΑΦΜ το έχει ήδη άλλη επαφή (ADR-950 §12)', () => {
+  const missing = () => ({ row: rowWith('missing'), followUp: 'register' as const });
+  const taken = { isChecking: false, result: { isUnique: false, existingContact: { id: 'cont_other', name: 'Άλλη Επαφή', type: 'individual' } } };
+
+  it('ρωτά για ό,τι γράφει ο άνθρωπος, εξαιρώντας την ίδια την επαφή', () => {
+    const { type } = setup({ outcome: missing });
+    type(VALID_VAT);
+    expect(mockVat).toHaveBeenLastCalledWith(VALID_VAT, 'cont_self');
+  });
+
+  it('διπλό ⇒ προειδοποίηση με το όνομα, ΚΑΜΙΑ «καταχώριση» — μόνο αποθήκευση της διόρθωσης', () => {
+    mockVat.mockReturnValue(taken);
+    const { type, button, onSave } = setup({ outcome: missing });
+    type(VALID_VAT);
+    expect(screen.getByRole('alert').textContent).toContain('Άλλη Επαφή');
+    expect(button(`${P}.followUp.register`)).toBeNull();
+    expect(button(`${P}.saveOnly`)).toBeNull();
+    fireEvent.click(button(`${P}.save`) as HTMLButtonElement);
+    expect(onSave).toHaveBeenCalledWith({ vatNumber: VALID_VAT }, null);
+  });
+
+  it('όσο τρέχει ο έλεγχος, η καταχώριση περιμένει· η σκέτη διόρθωση όχι', () => {
+    mockVat.mockReturnValue({ isChecking: true, result: null });
+    const { type, button } = setup({ outcome: missing });
+    type(VALID_VAT);
+    expect(button(`${P}.followUp.register`)?.disabled).toBe(true);
+    expect(button(`${P}.saveOnly`)?.disabled).toBe(false);
+  });
+
+  it('διπλό σε επεξεργασία ⇒ η «αποδοχή» μένει (η φόρμα προειδοποιεί μόνη της)', () => {
+    mockVat.mockReturnValue(taken);
+    const { type, button } = setup({ outcome: () => ({ row: rowWith('missing'), followUp: 'accept' }) });
+    type(VALID_VAT);
+    expect(button(`${P}.followUp.accept`)?.disabled).toBe(false);
   });
 });
 

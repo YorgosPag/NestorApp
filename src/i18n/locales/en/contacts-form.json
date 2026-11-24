@@ -426,7 +426,8 @@
       "dismissFailed": "The ignore was not saved. Please try again.",
       "restoreFailed": "The undo was not saved. Please try again.",
       "correctionFailed": "The correction was not saved. Check the value and try again.",
-      "correctionClearFailed": "Undoing the correction was not saved. Try again."
+      "correctionClearFailed": "Undoing the correction was not saved. Try again.",
+      "vatTaken": "VAT number {vatNumber} is already used by: {contactName}. It is not registered in one click — if it is correct, enter it from the contact's edit form."
     }
   },
   "licences": {

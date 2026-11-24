@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DoyPicker } from '@/components/ui/doy-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useVatUniqueness } from '@/hooks/useVatUniqueness';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EvidenceFollowUp } from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
@@ -40,6 +41,7 @@ import {
 import {
   CONTACT_EVIDENCE_CORRECTION_KEYS as KEYS,
   CONTACT_EVIDENCE_FOLLOW_UP_KEYS as FOLLOW_UP,
+  CONTACT_EVIDENCE_KEYS as EVIDENCE,
   CONTACT_EVIDENCE_STATE_KEYS as STATES,
   correctionFieldLabelKey,
 } from './contact-evidence-labels';
@@ -55,6 +57,8 @@ interface ContactEvidenceCorrectionDialogProps {
   /** Η ετικέτα της γραμμής — ίδια με του πίνακα (επωνυμία ⇄ ονοματεπώνυμο). */
   readonly rowLabel: string;
   readonly purpose: string;
+  /** Η επαφή του πίνακα — εξαιρείται από τον έλεγχο «το ΑΦΜ το έχει ήδη άλλη επαφή» (ADR-950 §12). */
+  readonly contactId: string;
   readonly fields: readonly EvidenceCorrectionField[];
   /** Υπάρχει ήδη διόρθωση ⇒ προσφέρεται η αναίρεσή της. */
   readonly corrected: boolean;
@@ -160,12 +164,18 @@ function CorrectionFooter({ canSave, followUp, followUpBusy, onCancel, onSave }:
 }
 
 export function ContactEvidenceCorrectionDialog({
-  row, rowLabel, purpose, fields, corrected, outcomeOf, followUpBusy, onSave, onClear, onClose,
+  row, rowLabel, purpose, contactId, fields, corrected, outcomeOf, followUpBusy, onSave, onClear, onClose,
 }: ContactEvidenceCorrectionDialogProps) {
   const { t } = useTranslation('contacts-form');
   const [draft, setDraft] = useState<Draft>(() => initialDraft(fields, corrected));
   const check = checkEvidenceCorrection(purpose, row, draft);
   const outcome = check.ok ? outcomeOf(check.values) : null;
+  // ADR-950 §12 — ο ίδιος έλεγχος μοναδικότητας με το πεδίο ΑΦΜ της φόρμας, πάνω σε ό,τι γράφει τώρα ο άνθρωπος.
+  // «Καταχώριση» με το ίδιο πάτημα δεν προσφέρεται για ΑΦΜ άλλης επαφής· όσο τρέχει ο έλεγχος, περιμένει.
+  const vat = useVatUniqueness(draft.vatNumber, contactId);
+  const vatTaken = vat.result !== null && !vat.result.isUnique ? vat.result.existingContact : null;
+  const registers = outcome?.followUp === 'register';
+  const followUp = registers && vatTaken !== null ? null : outcome?.followUp ?? null;
   const labelOf = (field: EvidenceCorrectionField) => (fields.length === 1 ? rowLabel : t(correctionFieldLabelKey(field.key)));
   const save = (followUp: EvidenceFollowUp | null) => {
     onSave(check.values, followUp);
@@ -190,10 +200,15 @@ export function ContactEvidenceCorrectionDialog({
           ))}
         </ul>
         <CorrectionOutcome outcome={outcome} />
+        {vatTaken !== null && (
+          <p role="alert" className="m-0 text-xs font-medium text-destructive">
+            {t(EVIDENCE.vatTaken, { vatNumber: draft.vatNumber ?? '', contactName: vatTaken.name })}
+          </p>
+        )}
         {corrected && (
           <Button type="button" variant="ghost" size="sm" className="self-start" onClick={clear}>{t(KEYS.clear)}</Button>
         )}
-        <CorrectionFooter canSave={check.ok} followUp={outcome?.followUp ?? null} followUpBusy={followUpBusy}
+        <CorrectionFooter canSave={check.ok} followUp={followUp} followUpBusy={followUpBusy || (registers && vat.isChecking)}
           onCancel={onClose} onSave={save} />
       </DialogContent>
     </Dialog>
