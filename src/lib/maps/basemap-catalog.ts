@@ -127,10 +127,25 @@ export function basemapArchiveFileName(build: string): string {
   return `greece-${build}.pmtiles`;
 }
 
+/**
+ * Η έκδοση του **Mapterhorn** από την οποία κόπηκε το αρχείο υψομέτρου (`download_urls.json` → `version`).
+ * Το upstream `planet.pmtiles` **δεν** φέρει έκδοση στο όνομά του ⇒ ο γεννήτορας καρφώνει και το md5 του
+ * (`scripts/lib/basemap/elevation-archive.ts`) και αρνείται να κόψει από άλλο αρχείο. ADR-920 §14.12 Β1.
+ */
+export const ELEVATION_ARCHIVE_BUILD = '0.0.13';
+
+/** Το όνομα του αρχείου υψομέτρου μέσα στο bundle (`0.0.13` → `greece-elevation-0.0.13.pmtiles`). */
+export function elevationArchiveFileName(build: string): string {
+  return `greece-elevation-${build}.pmtiles`;
+}
+
 /** Διαδρομές **μέσα** στο bundle — τις ίδιες γράφει ο γεννήτορας και ζητά ο χάρτης. */
 export const BASEMAP_BUNDLE_PATHS = {
   archive: basemapArchiveFileName(BASEMAP_ARCHIVE_BUILD),
   assets: `assets/${BASEMAP_ASSETS_REVISION.slice(0, 12)}-e${BASEMAP_ASSETS_EDITION}`,
+  elevation: elevationArchiveFileName(ELEVATION_ARCHIVE_BUILD),
+  /** Η άδεια των υψομέτρων ταξιδεύει **δίπλα** στο αρχείο (άρθρο 6 της άδειας Copernicus WorldDEM-30). */
+  elevationLicense: `${elevationArchiveFileName(ELEVATION_ARCHIVE_BUILD)}.LICENSE.pdf`,
 } as const;
 
 // ── ΓΡΑΜΜΑΤΟΣΕΙΡΕΣ ΧΑΡΤΗ (ADR-891 §9.5) ─────────────────────────────────────────────────────────────────────────
@@ -462,6 +477,90 @@ export function basemapStyle(id: StaticBasemapSourceId): string | StyleSpecifica
 // ============================================================================
 // 4. ΔΙΑΚΟΜΙΣΤΕΣ — τι δικαιούται να ζητήσει ένας χάρτης
 // ============================================================================
+
+// ============================================================================
+// 3. ΠΗΓΕΣ ΥΨΟΜΕΤΡΟΥ — το ανάγλυφο του γύρω χώρου (ADR-920 §14.12 Β1)
+// ============================================================================
+
+/**
+ * **Η υποχρεωτική σημείωση της άδειας Copernicus WorldDEM-30, άρθρο 6(β)** — αυτούσια, για δεδομένα «adapted or
+ * modified» (τα πλακίδια Mapterhorn είναι αναδειγματοληψία του GLO-30 σε Terrarium). Διαβάστηκε στο ίδιο το PDF
+ * της άδειας 2026-11-24· **δεν μεταφράζεται και δεν συντομεύεται** — το κείμενο το ορίζει η άδεια.
+ */
+export const COPERNICUS_DEM_NOTICE =
+  'produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 ' +
+  'provided under COPERNICUS by the European Union and ESA; all rights reserved';
+
+/**
+ * **Άρθρο 6(γ)**: η πρόταση αυτή (ή μετάφρασή της) πρέπει να υπάρχει σε «licence or any legal warning or notice»
+ * που καλύπτει τη διανομή μας. Ζει εδώ ώστε η όψη που δείχνει τα υψόμετρα να τη διαβάζει από **ένα** σημείο.
+ */
+export const COPERNICUS_DEM_LIABILITY_NOTICE =
+  'The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability ' +
+  'for any use of the Copernicus WorldDEM-30';
+
+/** Πώς είναι γραμμένο το ύψος μέσα στα pixels. Η MapLibre το ζητά ως `encoding` της πηγής `raster-dem`. */
+export type ElevationEncoding = 'terrarium';
+
+/**
+ * **Ονομαστική ακρίβεια — ΠΕΔΙΟ, όχι πρόζα**: το υπόμνημα «ενδεικτικό» (ADR-920 §14.12 Β-5) τη διαβάζει από εδώ.
+ * Τιμές του Copernicus DEM GLO-30 (προδιαγραφή προϊόντος: απόλυτη κατακόρυφη ακρίβεια < 4 m, 90 % γραμμικό σφάλμα).
+ * `surface: 'dsm'` = μοντέλο **επιφάνειας**: περιέχει δέντρα και κτίρια, δεν είναι γυμνό έδαφος.
+ */
+export interface ElevationNominalAccuracy {
+  readonly dataset: string;
+  readonly groundSampleM: number;
+  readonly verticalLe90M: number;
+  readonly surface: 'dsm' | 'dtm';
+}
+
+/**
+ * Αρχείο PMTiles με πλακίδια **υψομέτρου** (`raster-dem`). Χωριστός τύπος από τα υπόβαθρα **επίτηδες**: ένα
+ * αρχείο υψομέτρου δεν είναι φόντο που διαλέγει ο χρήστης, άρα δεν ανήκει στο `BasemapSourceId`.
+ * Η απόδοση είναι του **συνόλου δεδομένων** — όχι του παρόχου που το σερβίρει (εκείνος είναι ο `nestor`).
+ */
+export interface ElevationArchiveSource {
+  readonly format: 'elevation-archive';
+  readonly provider: BasemapProviderId;
+  /** `pmtiles://https://…` — το πρωτόκολλο το λύνει σε αιτήματα Range. */
+  readonly archiveUrl: string;
+  readonly encoding: ElevationEncoding;
+  readonly tileSizePx: number;
+  /** Το βαθύτερο επίπεδο του αρχείου· πέρα από αυτό η MapLibre υπερμεγεθύνει. */
+  readonly maxZoom: number;
+  readonly nominal: ElevationNominalAccuracy;
+  readonly attribution: readonly MapAttributionSegment[];
+  readonly licenseUrl: string;
+}
+
+const ELEVATION_SOURCE_TABLE = {
+  'mapterhorn-greece': {
+    format: 'elevation-archive',
+    provider: 'nestor',
+    archiveUrl: `${PMTILES_URL_SCHEME}${BASEMAP_BUNDLE_ORIGIN}/${BASEMAP_BUNDLE_PATHS.elevation}`,
+    encoding: 'terrarium',
+    tileSizePx: 512,
+    maxZoom: 12,
+    nominal: { dataset: 'Copernicus DEM GLO-30', groundSampleM: 30, verticalLe90M: 4, surface: 'dsm' },
+    attribution: [
+      { text: 'Mapterhorn', href: 'https://mapterhorn.com/attribution' },
+      { text: ` — ${COPERNICUS_DEM_NOTICE}` },
+    ],
+    licenseUrl: `${BASEMAP_BUNDLE_ORIGIN}/${BASEMAP_BUNDLE_PATHS.elevationLicense}`,
+  },
+} as const satisfies Record<string, ElevationArchiveSource>;
+
+export type ElevationSourceId = keyof typeof ELEVATION_SOURCE_TABLE;
+
+/** Ο πίνακας, με τον φαρδύ τύπο — για όποιον περπατά όλες τις πηγές υψομέτρου. */
+export const ELEVATION_SOURCES: Readonly<Record<ElevationSourceId, ElevationArchiveSource>> = ELEVATION_SOURCE_TABLE;
+
+/** Το ανάγλυφο του γύρω χώρου με το οποίο ανοίγει κάθε όψη εδάφους πάνω σε χάρτη. */
+export const DEFAULT_ELEVATION_SOURCE_ID: ElevationSourceId = 'mapterhorn-greece';
+
+export function elevationSource(id: ElevationSourceId): ElevationArchiveSource {
+  return ELEVATION_SOURCE_TABLE[id];
+}
 
 function hostMatches(hostname: string, pattern: string): boolean {
   return pattern.startsWith('*.') ? hostname.endsWith(pattern.slice(1)) : hostname === pattern;

@@ -12,6 +12,8 @@
  *
  * **Εκτέλεση**: `npm run build:basemap` · επιλογές `--build=YYYYMMDD` (καρφωμένο build) · `--dry-run` (μόνο μέτρηση)
  * · `--assets-only` (μόνο γραμματοσειρές/sprites, χωρίς να ξαναχτιστεί το αρχείο)
+ * · `--elevation-only` (μόνο το αρχείο **υψομέτρου** από το Mapterhorn — ADR-920 §14.12 Β1· συνδυάζεται με `--dry-run`).
+ *   Το πλήρες build **δεν** το ξαναχτίζει: έχει δικό του upstream και δική του καρφωμένη έκδοση.
  *
  * 🔴 **Η ΕΞΟΔΟΣ ΔΕΝ ΜΠΑΙΝΕΙ ΣΤΟ `public/`.** Το `Dockerfile` αντιγράφει **ολόκληρο** το `public/` στην εικόνα:
  * ~600 MB θα ταξίδευαν σε **κάθε** deploy και θα έμπαιναν στο git. Η έξοδος ζει στην cache εκτός git·
@@ -38,6 +40,7 @@ import {
 import { BASEMAP_ARCHIVE_BUILD, basemapArchiveFileName } from '../src/lib/maps/basemap-catalog';
 import { writeBasemapAssets } from './lib/basemap/basemap-assets';
 import { BASEMAP_BUNDLE_DIR, BASEMAP_CACHE_DIR } from './lib/basemap/basemap-paths';
+import { buildElevationArchive } from './lib/basemap/elevation-archive';
 import { PMTILES_CLI_VERSION, capture, ensurePmtilesCli, run } from './lib/basemap/pmtiles-cli';
 import { buildUrl, fetchBuildsIndex, selectBuild, type ProtomapsBuild } from './lib/basemap/protomaps-builds';
 
@@ -76,11 +79,11 @@ interface TierResult {
   readonly seconds: number;
 }
 
-function parseArgs(argv: readonly string[]): { build: string | null; dryRun: boolean; assetsOnly: boolean } {
+function parseArgs(argv: readonly string[]): { build: string | null; dryRun: boolean; assetsOnly: boolean; elevationOnly: boolean } {
   const arg = argv.find((a) => a.startsWith('--build='));
   const build = arg === undefined ? null : arg.slice('--build='.length);
   if (build !== null && !/^\d{8}$/.test(build)) throw new Error(`--build=${build}: αναμενόταν YYYYMMDD`);
-  return { build, dryRun: argv.includes('--dry-run'), assetsOnly: argv.includes('--assets-only') };
+  return { build, dryRun: argv.includes('--dry-run'), assetsOnly: argv.includes('--assets-only'), elevationOnly: argv.includes('--elevation-only') };
 }
 
 /** Γραμματοσειρές + sprites + άδειες στο bundle (ADR-891 §9). */
@@ -90,6 +93,17 @@ async function buildAssets(): Promise<void> {
   const added = Object.entries(assets.supplement.addedByStack).map(([stack, n]) => `${stack} +${n}`).join(' · ');
   console.log(`➕ Noto Sans Math: ${added}`);
   console.log(`🧾 κάλυψη γλυφών → ${assets.coverageFile} (στο git — ADR-891 §9.5)`);
+}
+
+/** Το αρχείο υψομέτρου του γύρω χώρου (ADR-920 §14.12 Β1) — ίδιο εργαλείο, ίδια επικράτεια, άλλο upstream. */
+async function buildElevation(dryRun: boolean): Promise<void> {
+  const cli = await ensurePmtilesCli(CACHE_DIR);
+  const result = await buildElevationArchive({ cli, cacheDir: CACHE_DIR, bundleDir: BUNDLE_DIR, leaves: loadTerritory(), dryRun });
+  if (result.output === null) {
+    console.log('\n✅ dry-run — κανένα αρχείο δεν γράφτηκε');
+    return;
+  }
+  console.log(`✅ ${(statSync(result.output).size / 1e6).toFixed(1)} MB σε ${result.seconds}s → ${result.output}`);
 }
 
 /** Ο κατάλογος ζητά **ένα** build· αν χτίσαμε άλλο, ο χάρτης θα ζητούσε αρχείο που δεν ανεβάσαμε. */
@@ -198,6 +212,10 @@ async function main(): Promise<void> {
   mkdirSync(PARTS_DIR, { recursive: true });
   if (args.assetsOnly) {
     await buildAssets();
+    return;
+  }
+  if (args.elevationOnly) {
+    await buildElevation(args.dryRun);
     return;
   }
 

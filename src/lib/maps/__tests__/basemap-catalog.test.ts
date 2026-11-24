@@ -12,6 +12,13 @@ import {
   BASEMAP_BUNDLE_PATHS,
   BASEMAP_PROVIDERS,
   BASEMAP_SOURCES,
+  COPERNICUS_DEM_LIABILITY_NOTICE,
+  COPERNICUS_DEM_NOTICE,
+  DEFAULT_ELEVATION_SOURCE_ID,
+  ELEVATION_ARCHIVE_BUILD,
+  ELEVATION_SOURCES,
+  elevationArchiveFileName,
+  elevationSource,
   attributionHtml,
   basemapArchiveFileName,
   basemapProviderOf,
@@ -116,6 +123,58 @@ describe('Ζ — ο δικός μας χάρτης (ADR-891 §9)', () => {
   it('pmtiles://https://x → https://x · οτιδήποτε άλλο μένει ίδιο', () => {
     expect(unwrapArchiveUrl('pmtiles://https://a.b/c')).toBe('https://a.b/c');
     expect(unwrapArchiveUrl('https://a.b/c')).toBe('https://a.b/c');
+  });
+});
+
+describe('Η — η πηγή υψομέτρου του γύρω χώρου (ADR-920 §14.12 Β1)', () => {
+  const source = elevationSource('mapterhorn-greece');
+
+  it('σερβίρεται από τον ΔΙΚΟ μας διακομιστή, με την έκδοση Mapterhorn στο όνομα — immutable χωρίς ψέματα', () => {
+    expect(source.archiveUrl).toBe('pmtiles://https://maps.nestorconstruct.gr/greece-elevation-0.0.13.pmtiles');
+    expect(BASEMAP_BUNDLE_PATHS.elevation).toBe(elevationArchiveFileName(ELEVATION_ARCHIVE_BUILD));
+    expect(source.provider).toBe('nestor');
+    expect(DEFAULT_ELEVATION_SOURCE_ID).toBe('mapterhorn-greece');
+  });
+
+  it('κωδικοποίηση, μέγεθος πλακιδίου και βάθος όπως τα δημοσιεύει το Mapterhorn (Terrarium · 512 px · z12)', () => {
+    expect([source.encoding, source.tileSizePx, source.maxZoom]).toEqual(['terrarium', 512, 12]);
+  });
+
+  it('η ονομαστική ακρίβεια είναι ΠΕΔΙΟ: GLO-30, 30 m, ±4 m, μοντέλο ΕΠΙΦΑΝΕΙΑΣ — το υπόμνημα τη διαβάζει από εδώ', () => {
+    expect(source.nominal).toEqual({ dataset: 'Copernicus DEM GLO-30', groundSampleM: 30, verticalLe90M: 4, surface: 'dsm' });
+  });
+
+  // ΔΕΥΤΕΡΗ ΦΩΝΗ: το κείμενο του άρθρου 6(β) και 6(γ) της άδειας, ξαναγραμμένο με το χέρι από το PDF (2026-11-24).
+  it('η σημείωση του άρθρου 6(β) της άδειας Copernicus είναι αυτούσια', () => {
+    expect(COPERNICUS_DEM_NOTICE).toBe(
+      'produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved',
+    );
+  });
+
+  it('η πρόταση ευθύνης του άρθρου 6(γ) είναι αυτούσια', () => {
+    expect(COPERNICUS_DEM_LIABILITY_NOTICE).toBe(
+      'The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30',
+    );
+  });
+
+  it('η απόδοση που βγάζει ο χάρτης περιέχει ΟΛΟΚΛΗΡΗ τη σημείωση και σύνδεσμο στις πηγές του Mapterhorn', () => {
+    const html = attributionHtml(source.attribution);
+    expect(html).toContain(COPERNICUS_DEM_NOTICE);
+    expect(html).toContain('<a href="https://mapterhorn.com/attribution">Mapterhorn</a>');
+  });
+
+  it('η άδεια ταξιδεύει δίπλα στο αρχείο', () => {
+    expect(source.licenseUrl).toBe('https://maps.nestorconstruct.gr/greece-elevation-0.0.13.pmtiles.LICENSE.pdf');
+  });
+
+  it('ο διακομιστής της είναι δηλωμένος πάροχος — ο φύλακας αιτημάτων δεν την καταγγέλλει', () => {
+    const host = new URL(unwrapArchiveUrl(source.archiveUrl)).hostname;
+    expect(basemapProviderOfHost(host)?.id).toBe('nestor');
+  });
+
+  it('πηγή υψομέτρου ΔΕΝ είναι υπόβαθρο: κανένα κοινό αναγνωριστικό με τον πίνακα των φόντων', () => {
+    const shared = Object.keys(ELEVATION_SOURCES).filter((id) => id in BASEMAP_SOURCES);
+    expect(shared).toEqual([]);
   });
 });
 
