@@ -1,4 +1,7 @@
 {
+  "companySettings": {
+    "title": "Company Settings"
+  },
   "orgStructure": {
     "title": "Organisation Structure",
     "subtitle": "Departments and responsible persons",

@@ -1,138 +1,105 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+/**
+ * @fileoverview **Η σελίδα «Ρυθμίσεις Εταιρείας»** — τίτλος η ίδια η σελίδα, καρτέλα στη διεύθυνση (ADR-ACC-018 §17.4).
+ * @module components/settings/company/CompanySettingsPageContent
+ *
+ * 🔑 Η σελίδα γεννήθηκε ως «Δομή Οργανισμού» και οι άλλες καρτέλες μπήκαν μετά: ο τίτλος έμενε «Δομή Οργανισμού» σε
+ *    κάθε καρτέλα, άνοιγε πάντα στη Δομή, και κάθε καρτέλα περίμενε το οργανόγραμμα. Τώρα (Stripe/GitHub Settings):
+ *    - η καρτέλα ζει στο `?tab=` (`useActiveUrlTab`) ⇒ ο σύνδεσμος του λογοτύπου, η ανανέωση και το «πίσω» την κρατούν·
+ *    - οι καρτέλες και ο builder συνδέσμων είναι ΜΙΑ δήλωση (`company-settings-urls`)·
+ *    - το οργανόγραμμα φορτώνεται μόνο για τις καρτέλες που το χρειάζονται.
+ */
+
+import type { ReactNode } from 'react';
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { API_ROUTES } from '@/config/domain-constants';
-// 🔑 ADR-787 §5.3 ζ (όριο 1) — ΕΝΑΣ δρόμος προς το API, άρα ΕΝΑΣ συγγραφέας της δήλωσης
-//    χώρου. Εδώ ζούσε **δεύτερος**: χειροποίητο `getAuthHeaders` που έγραφε μόνος του την
-//    κεφαλίδα του super-admin (και **μόνο** για super-admin, οπότε ένα απλό μέλος πολλών
-//    γραφείων στο `/o/<Β>` έβλεπε το οργανόγραμμα της εταιρείας του **claim**).
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { useActiveUrlTab } from '@/hooks/useUrlTabParam';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  COMPANY_SETTINGS_TAB_PARAM,
+  COMPANY_SETTINGS_TABS,
+  type CompanySettingsTab,
+} from '@/lib/navigation/company-settings-urls';
 import { CompanyInfoTab } from './CompanyInfoTab';
 import { TaxSettingsTab } from './TaxSettingsTab';
 import { OrgStructureTab } from './OrgStructureTab';
 import { RoutingEventsTab } from './RoutingEventsTab';
 import { BOQCategoriesTab } from './BOQCategoriesTab';
 import { AiProcessingTab } from './AiProcessingTab';
-import type { OrgStructure } from '@/types/org/org-structure';
+import { useOrgStructureSettings, type OrgStructureSettings } from './useOrgStructureSettings';
 
-interface OrgStructureState {
-  orgStructure: OrgStructure | null;
-  loading: boolean;
-  saving: boolean;
-  error: string | null;
+const TAB_LABEL_KEYS: Readonly<Record<CompanySettingsTab, string>> = {
+  info: 'orgStructure.tabs.info',
+  tax: 'orgStructure.tabs.tax',
+  org: 'orgStructure.tabs.orgChart',
+  routing: 'orgStructure.tabs.routing',
+  boqCats: 'orgStructure.tabs.boqCategories',
+  ai: 'orgStructure.tabs.ai',
+};
+
+/** Οι καρτέλες που δουλεύουν πάνω στο οργανόγραμμα — μόνο αυτές το φορτώνουν. */
+const ORG_STRUCTURE_TABS: ReadonlySet<CompanySettingsTab> = new Set<CompanySettingsTab>(['org', 'routing']);
+
+const isCompanySettingsTab = (tab: string): tab is CompanySettingsTab =>
+  (COMPANY_SETTINGS_TABS as readonly string[]).includes(tab);
+
+interface OrgStructureGateProps {
+  readonly org: OrgStructureSettings;
+  readonly children: (org: OrgStructureSettings) => ReactNode;
+}
+
+/** Φόρτωση · σφάλμα · επεξεργαστής. Ο επεξεργαστής ΔΕΝ δείχνεται χωρίς επιτυχή ανάγνωση (δες `useOrgStructureSettings`). */
+function OrgStructureGate({ org, children }: OrgStructureGateProps) {
+  const { t } = useTranslation('org-structure');
+  return (
+    <>
+      {org.error && (
+        <p role="alert" className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {org.error}
+        </p>
+      )}
+      {org.load === 'ready' ? children(org) : null}
+      {org.load === 'loading' || org.load === 'idle' ? (
+        <p role="status" className="py-20 text-center text-sm text-muted-foreground">
+          {t('orgStructure.subtitle')}…
+        </p>
+      ) : null}
+    </>
+  );
 }
 
 export function CompanySettingsPageContent() {
   const { t } = useTranslation('org-structure');
-
-  const [state, setState] = useState<OrgStructureState>({
-    orgStructure: null,
-    loading: true,
-    saving: false,
-    error: null,
-  });
-
-  // ⚠️ ΚΑΝΕΝΑΣ έλεγχος `if (!user) return;` εδώ (ADR-929 §1 εύρημα, 2026-11-05): η αρχική
-  //    κατάσταση είναι `loading: true`, οπότε η πρόωρη επιστροφή **δεν** την έκλεινε ποτέ —
-  //    με `user === null` η σελίδα έμενε για πάντα στη φόρτωση. Την αναμονή ταυτότητας την
-  //    κατέχει ο `apiClient` (`waitForAuthReady`)· ο αποσυνδεδεμένος παίρνει γρήγορο 401 → σφάλμα.
-  const fetchOrgStructure = useCallback(async () => {
-    setState((s) => ({ ...s, loading: true, error: null }));
-    try {
-      const data = await apiClient.get<{ orgStructure: OrgStructure | null }>(
-        API_ROUTES.ORG_STRUCTURE,
-      );
-      setState((s) => ({ ...s, orgStructure: data.orgStructure, loading: false }));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'error';
-      setState((s) => ({ ...s, error: msg, loading: false }));
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchOrgStructure();
-  }, [fetchOrgStructure]);
-
-  const handleSave = useCallback(async (updated: OrgStructure) => {
-    setState((s) => ({ ...s, saving: true, error: null }));
-    try {
-      // 🔴 Ο ΠΑΛΙΟΣ ΚΩΔΙΚΑΣ ΔΙΑΒΑΖΕ ΤΟ ΣΩΜΑ **ΔΥΟ ΦΟΡΕΣ** (`res.json()` στον κλάδο
-      //    σφάλματος **και** μετά για τα δεδομένα): το stream καταναλώνεται **μία** φορά,
-      //    άρα κάθε αποτυχία έσκαγε με `body stream already read` αντί να δείξει τον λόγο
-      //    του διακομιστή. Ο `apiClient` κρατά το σώμα **μία** φορά (ADR-834 §6.5.ε).
-      const data = await apiClient.put<{ orgStructure: OrgStructure }>(
-        API_ROUTES.ORG_STRUCTURE,
-        updated,
-      );
-      setState((s) => ({ ...s, orgStructure: data.orgStructure, saving: false }));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'error';
-      setState((s) => ({ ...s, error: msg, saving: false }));
-    }
-  }, []);
-
-  if (state.loading) {
-    return (
-      <div className="flex items-center justify-center py-20 text-sm text-muted-foreground">
-        {t('orgStructure.subtitle')}…
-      </div>
-    );
-  }
+  const { activeTab, setActiveTab } = useActiveUrlTab(COMPANY_SETTINGS_TAB_PARAM, COMPANY_SETTINGS_TABS, { heal: true });
+  const org = useOrgStructureSettings(isCompanySettingsTab(activeTab) && ORG_STRUCTURE_TABS.has(activeTab));
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
-      <h1 className="text-xl font-semibold mb-6">{t('orgStructure.title')}</h1>
+    <section className="max-w-5xl mx-auto px-4 py-6">
+      <h1 className="text-xl font-semibold mb-6">{t('companySettings.title')}</h1>
 
-      {state.error && (
-        <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {state.error}
-        </div>
-      )}
-
-      <Tabs defaultValue="org">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
-          <TabsTrigger value="info">{t('orgStructure.tabs.info')}</TabsTrigger>
-          <TabsTrigger value="tax">{t('orgStructure.tabs.tax')}</TabsTrigger>
-          <TabsTrigger value="org">{t('orgStructure.tabs.orgChart')}</TabsTrigger>
-          <TabsTrigger value="routing">{t('orgStructure.tabs.routing')}</TabsTrigger>
-          <TabsTrigger value="boqCats">{t('orgStructure.tabs.boqCategories')}</TabsTrigger>
-          <TabsTrigger value="ai">{t('orgStructure.tabs.ai')}</TabsTrigger>
+          {COMPANY_SETTINGS_TABS.map((tab) => (
+            <TabsTrigger key={tab} value={tab}>{t(TAB_LABEL_KEYS[tab])}</TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="info">
-          <CompanyInfoTab />
-        </TabsContent>
-
-        <TabsContent value="tax">
-          <TaxSettingsTab />
-        </TabsContent>
-
+        <TabsContent value="info"><CompanyInfoTab /></TabsContent>
+        <TabsContent value="tax"><TaxSettingsTab /></TabsContent>
         <TabsContent value="org">
-          <OrgStructureTab
-            orgStructure={state.orgStructure}
-            saving={state.saving}
-            onSave={handleSave}
-          />
+          <OrgStructureGate org={org}>
+            {(o) => <OrgStructureTab orgStructure={o.orgStructure} saving={o.saving} onSave={o.save} />}
+          </OrgStructureGate>
         </TabsContent>
-
         <TabsContent value="routing">
-          <RoutingEventsTab
-            orgStructure={state.orgStructure}
-            saving={state.saving}
-            onSave={handleSave}
-          />
+          <OrgStructureGate org={org}>
+            {(o) => <RoutingEventsTab orgStructure={o.orgStructure} saving={o.saving} onSave={o.save} />}
+          </OrgStructureGate>
         </TabsContent>
-
-        <TabsContent value="boqCats">
-          <BOQCategoriesTab />
-        </TabsContent>
-
-        <TabsContent value="ai">
-          <AiProcessingTab />
-        </TabsContent>
+        <TabsContent value="boqCats"><BOQCategoriesTab /></TabsContent>
+        <TabsContent value="ai"><AiProcessingTab /></TabsContent>
       </Tabs>
-    </div>
+    </section>
   );
 }

@@ -13,9 +13,8 @@
 import { useCompanyBrandLogo } from '@/components/settings/company/brand/useCompanyBrandLogo';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { fileDisplayUrl } from '@/lib/files/file-display-url';
+import { getCompanySettingsUrl } from '@/lib/navigation/company-settings-urls';
 import { Link } from '@/lib/workspace/navigation';
-
-const COMPANY_SETTINGS_PATH = '/settings/company';
 
 export function CompanyBrandLogoSummary() {
   const { t } = useTranslation('accounting');
@@ -35,7 +34,7 @@ export function CompanyBrandLogoSummary() {
         {state.loading ? null : (
           <span className="block text-muted-foreground">
             {url ? null : `${t('setup.brandLogo.empty')} `}
-            <Link href={COMPANY_SETTINGS_PATH} className="underline underline-offset-2">
+            <Link href={getCompanySettingsUrl('info')} className="underline underline-offset-2">
               {t('setup.brandLogo.manage')}
             </Link>
           </span>

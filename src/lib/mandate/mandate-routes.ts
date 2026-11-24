@@ -143,5 +143,6 @@ export const AGENCY_SHOWCASE_LICENCES_ROUTE = `${AGENCY_SHOWCASE_ROUTE}/licences
  * ακόμη διεύθυνση και κανάλια, αντί να του ζητήσει να τα γράψει δεύτερη φορά.
  *
  * ⚠️ Χωρίς πρόθεμα χώρου — το βάζει ο `Link` του `@/lib/workspace/navigation` (CHECK 3.61).
+ * 🔑 Η ΜΙΑ δήλωση ζει στο `company-settings-urls` (ADR-ACC-018 §17.4)· εδώ μόνο επανεξάγεται.
  */
-export const COMPANY_SETTINGS_ROUTE = '/settings/company' as const;
+export { COMPANY_SETTINGS_ROUTE } from '@/lib/navigation/company-settings-urls';

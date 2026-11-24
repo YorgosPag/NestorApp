@@ -3,15 +3,18 @@
  */
 
 /**
- * ⚓ ADR-929 §1 εύρημα (2026-11-05) — **η σελίδα Ρυθμίσεων εταιρείας δεν κολλά στη φόρτωση**.
+ * ⚓ Η σελίδα «Ρυθμίσεις Εταιρείας» (ADR-ACC-018 §17.4 · ADR-929 §1 εύρημα).
  *
- * Παλιά: αρχική κατάσταση `loading: true` + `if (!user) return;` στη φόρτωση ⇒ με
- * `useAuth().user === null` η φόρτωση δεν έκλεινε ΠΟΤΕ («Τμήματα και υπεύθυνοι…» για πάντα).
- * Η αναμονή ταυτότητας ανήκει στον `apiClient`. Το `@/hooks/useAuth` μοκάρεται εδώ με
- * `user: null` **επίτηδες**: αν ο έλεγχος ξαναμπεί, αυτά τα tests κοκκινίζουν.
+ * Καρφώνει:
+ * - τίτλος = η σελίδα, όχι η καρτέλα «Δομή Οργανισμού»·
+ * - η καρτέλα ζει στο `?tab=` (άγνωστη τιμή ⇒ «Στοιχεία»)·
+ * - το οργανόγραμμα φορτώνεται **μόνο** για τις καρτέλες που το χρειάζονται, **μία** φορά·
+ * - με `useAuth().user === null` η φόρτωση **κλείνει** (το `@/hooks/useAuth` μοκάρεται έτσι επίτηδες: αν ξαναμπεί
+ *   ο έλεγχος `if (!user) return;`, κοκκινίζουν)·
+ * - αποτυχία ανάγνωσης ⇒ ο επεξεργαστής **δεν** δείχνεται (αλλιώς «Αποθήκευση» θα έγραφε κενή δομή).
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const get = jest.fn();
 
@@ -20,30 +23,68 @@ jest.mock('@/lib/api/enterprise-api-client', () => ({
 }));
 jest.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: null, loading: false }) }));
 jest.mock('@/i18n/hooks/useTranslation', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-jest.mock('../CompanyInfoTab', () => ({ CompanyInfoTab: () => null }));
+jest.mock('../CompanyInfoTab', () => ({ CompanyInfoTab: () => <p>info-tab</p> }));
 jest.mock('../TaxSettingsTab', () => ({ TaxSettingsTab: () => null }));
-jest.mock('../OrgStructureTab', () => ({ OrgStructureTab: () => null }));
-jest.mock('../RoutingEventsTab', () => ({ RoutingEventsTab: () => null }));
+jest.mock('../OrgStructureTab', () => ({ OrgStructureTab: () => <p>org-editor</p> }));
+jest.mock('../RoutingEventsTab', () => ({ RoutingEventsTab: () => <p>routing-editor</p> }));
 jest.mock('../AiProcessingTab', () => ({ AiProcessingTab: () => null }));
 
 import { CompanySettingsPageContent } from '../CompanySettingsPageContent';
 import { BOQCategoriesTab } from '../BOQCategoriesTab';
 
-beforeEach(() => jest.clearAllMocks());
+function startAt(url: string): void {
+  window.history.replaceState(null, '', url);
+}
 
-describe('CompanySettingsPageContent — φόρτωση χωρίς εξάρτηση από το useAuth', () => {
-  it('φορτώνει το οργανόγραμμα ακόμη κι αν το useAuth λέει user=null', async () => {
+beforeEach(() => {
+  jest.clearAllMocks();
+  startAt('/settings/company');
+});
+
+describe('CompanySettingsPageContent — τίτλος και καρτέλα στη διεύθυνση', () => {
+  it('ανοίγει στα «Στοιχεία» με τίτλο τη σελίδα — και ΔΕΝ διαβάζει το οργανόγραμμα', async () => {
+    render(<CompanySettingsPageContent />);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('companySettings.title');
+    expect(screen.getByText('info-tab')).toBeTruthy();
+    await act(async () => { await Promise.resolve(); });
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('άγνωστη καρτέλα στη διεύθυνση ⇒ «Στοιχεία», και η διεύθυνση διορθώνεται', async () => {
+    startAt('/settings/company?tab=xyz');
+    render(<CompanySettingsPageContent />);
+    expect(screen.getByText('info-tab')).toBeTruthy();
+    await waitFor(() => expect(window.location.search).toBe(''));
+  });
+
+  it('`?tab=org` ⇒ ΜΙΑ ανάγνωση, και η φόρτωση κλείνει ακόμη κι αν το useAuth λέει user=null', async () => {
+    startAt('/settings/company?tab=org');
     get.mockResolvedValue({ orgStructure: null });
     render(<CompanySettingsPageContent />);
-    await waitFor(() => expect(screen.getByText('orgStructure.title')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('org-editor')).toBeTruthy());
     expect(get).toHaveBeenCalledTimes(1);
   });
 
-  it('🔴 αποσυνδεδεμένος (401) ⇒ η φόρτωση ΚΛΕΙΝΕΙ και το σφάλμα φαίνεται', async () => {
+  it('Δομή → Routing ⇒ ΚΑΜΙΑ δεύτερη ανάγνωση', async () => {
+    startAt('/settings/company?tab=org');
+    get.mockResolvedValue({ orgStructure: null });
+    render(<CompanySettingsPageContent />);
+    await waitFor(() => expect(screen.getByText('org-editor')).toBeTruthy());
+    const routing = screen.getByRole('tab', { name: 'orgStructure.tabs.routing' });
+    fireEvent.mouseDown(routing);
+    fireEvent.click(routing);
+    await waitFor(() => expect(screen.getByText('routing-editor')).toBeTruthy());
+    expect(new URLSearchParams(window.location.search).get('tab')).toBe('routing');
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔴 αποσυνδεδεμένος (401) ⇒ η φόρτωση ΚΛΕΙΝΕΙ, το σφάλμα φαίνεται, ο επεξεργαστής ΔΕΝ δείχνεται', async () => {
+    startAt('/settings/company?tab=org');
     get.mockRejectedValue(new Error('User not authenticated'));
     render(<CompanySettingsPageContent />);
     await waitFor(() => expect(screen.getByText('User not authenticated')).toBeTruthy());
-    expect(screen.queryByText('orgStructure.subtitle…')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText('org-editor')).toBeNull();
   });
 });
 
