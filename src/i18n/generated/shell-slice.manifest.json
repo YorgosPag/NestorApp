@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/lazy-route-namespaces.json": "a2bb9538fff4acd0f14466b28ab9d8b8afc627558e5f0d71f27d1dddf0f44dca",
+    "src/i18n/generated/lazy-route-namespaces.json": "a648089c19b025e39af7cdad97360164f37caa4ca21b0c74e8acaa6f3dba695b",
     "src/i18n/generated/routes/area__id.el.json": "f106788944901e33ca37a741bad7fde9ee19ecf6a4b23b7b13a19e0fb03cbc8e",
     "src/i18n/generated/routes/attendance__check-in__token.el.json": "af686715d4e95402e34557c4f76aee9febb17dad10fe1fd6ec35f36bf58b1d31",
     "src/i18n/generated/routes/auth__action.el.json": "43a49dcb69050c49113a98b2a32eef16dcb6a4ed4f843ee9401ee65ab7ab5c00",
@@ -33,7 +33,7 @@
     "src/i18n/generated/routes/legal-notice.el.json": "5a606df1478ca8886ee00c31c28c13432bb95ca7d8818c9f5c16f8cd0e3b7087",
     "src/i18n/generated/routes/listing__id.el.json": "06a18795437d6f6021c0f98952b06d071881f0713356a7d6a8e9075b1f711cc4",
     "src/i18n/generated/routes/listing__id__floorplan.el.json": "40faa0a4a561d7e7c6ea0aa7c630472ec585301f9b4b3c5a774aa2c0aaa17387",
-    "src/i18n/generated/routes/listing__id__photos.el.json": "e2e890622901136988e87242709b1a6040982e385d55a80fe48096084eb90116",
+    "src/i18n/generated/routes/listing__id__photos.el.json": "9431084ded325033411a8df40088ca198abdadb0517dfda4b4967b3dadd91228",
     "src/i18n/generated/routes/listing__id__tour.el.json": "289ecb4a6197a553aae1d0b04480f282603f0834920ae61273804e0ec09ade17",
     "src/i18n/generated/routes/login.el.json": "e1c3737dcc27e550c037d28aa9593d32efbebb8c5416df34268105eba65b4e77",
     "src/i18n/generated/routes/mandate__token.el.json": "8f964d1e521a28640ad5bee71fccf8e89541697902528a2db4bf3dca4dfea96a",
@@ -55,7 +55,7 @@
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "768cc68db26da5c90050a76b3ada7e1001bf1db279b6c0efdee0e451901b7bcf",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
-    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "7f6e3c296608f5682b3c8ada1ea8153b86b533dd6b808f4d9e4d7f3d9cb9fa91",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "662d5e0fe2aeea873ef2caa5fb26000f691d3d76630fabc5223741832a887176",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__procurement.el.json": "d5d58fa34feb73a2fdfc6e96648fbdedcaa3359341aa24c30ebbed729f489ef3",
@@ -91,8 +91,8 @@
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
-    "src/i18n/generated/routes/offers__new.el.json": "73fda44762c96c57da71ce042617e5b51ecea89deb30ef26d920e64beaa6d5bf",
-    "src/i18n/generated/routes/offers__offerId.el.json": "e683a6cbea3f2469b0778bd4e714b6516299271d7fc1789fb405c16457aa0a2c",
+    "src/i18n/generated/routes/offers__new.el.json": "c83e97b266a94397190b4933525723d82fa9b8c6a8d47978f04a8dd10a8175be",
+    "src/i18n/generated/routes/offers__offerId.el.json": "4019ff47a9c332e2c3eedff318ce8e37aec36cf9d6ae63ee06d2520973710a7c",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "7be238b7d50fa7841cd27afc4b07bd3e114d147bb3b036e76ac6cbde9ef081be",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -138,7 +138,7 @@
       "keyConstants": "db6b5eab44ffe652bbc9ca7d3aafb873bdac2ed339eaca29eeb35744177c6be7",
       "languages": "afe30b1f6e4e52b9eee8baf27b28a75ced4d23a86538e022f9e2d9708d2c51af",
       "lazyRouteOpaqueNamespaces": "ea809d3dd5036454f9723797b38acf84a96410a2cf8d926571c41a507acb0063",
-      "lazyRouteRegistries": "ed8b8dc1cb3e92341b1305a5f40dc9518f2354875d0ca7a814a5f1f4043e7f29",
+      "lazyRouteRegistries": "77e0868b345b2dd14f012c56a91d19ccdaae047b3d17fe36faf269e7828c3dac",
       "localesDir": "a7045bc6e57a2ccd3b4834f975b27f55d6b1b2ace4e9df3ac06ebeced4b9590d",
       "outputDir": "3912195b17692b5eaf099bb5accb2bcf870fd0f9f4bd626e02929a8fa741d7ba",
       "routeSlices": "3463fd9666b61d2a3e504b0560c1e2c1bd9a491651a34eb68fd035adda7836af",
@@ -150,7 +150,7 @@
     },
     "lazyRoutes": {
       "compatNamespaces": "d7374cc4cc25adc3ae5ab1e4f74812d0f003be9b57b1ce1a9e39ae68e76de7f5",
-      "registries": "7d1189341a244d51b2646544dc0751a24980cbfe9e1347da23532ba42826b946",
+      "registries": "533b5192403ef77f2a303e1d18bcad84831d51d86a2bd00d98be0c4440b4838f",
       "supportedNamespaces": "b3dec606cde1f3d914e3206109aa7c4447c6c17882103a096a8fe306e756a38f"
     },
     "namespaceBundles": {
@@ -165,7 +165,7 @@
       "scripts/lib/gate-trap.js": "fb3dee19dd96ed85be2b1c2233e0d6e39ee8d39eeafa26be299a17c5ca709b77",
       "scripts/lib/git-index-snapshot.js": "4d7aea351f65ad8b1ecf40ed8e6c2d55991cb260154053bf8908319daad8c7c9",
       "scripts/lib/i18n-namespace-extract.js": "6d98ca31338ee20e8f830df7ab806a0c2eb50a219b9c4412c80881860015baf8",
-      "scripts/lib/i18n-shell-slice/config.js": "d8725667987b4427f9bc6c3e630ddee2b5b729c562048f9328de7341155ff86f",
+      "scripts/lib/i18n-shell-slice/config.js": "a0ee96dccf282ed37841d2c68e84b8869648f2a248cfccd21286d0a042f0c81c",
       "scripts/lib/i18n-shell-slice/constant-resolution.js": "48ea41bcc60262e92a0f02c29b6e487af01ef41621b7ed08bcaad7b88d13e48c",
       "scripts/lib/i18n-shell-slice/global-inputs.js": "32900f30571b332116a434afe36f4ec7b2bf71f7b818fa37f8e4ba39b453816d",
       "scripts/lib/i18n-shell-slice/key-extract.js": "302abf827ed96c1595c2facb1a755ed855123418e9d910ee86ccb80e1f73e71c",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "15714330c2e2314121121ddb25ae8d80febe2d1297dad52da90e8831a652becd",
+  "inputsSha256": "adddbdbab5be36586e411aa71f1a2bd4032c28297a71d78f8a4a8aa96774610f",
   "languages": [
     "el"
   ],
@@ -4874,6 +4874,7 @@
         "listing-detail": {
           "keys": [
             "media.backToListing",
+            "media.photosPage.documentsHeading",
             "media.photosPage.heading",
             "media.photosPage.openLabel",
             "media.tabs.floorplan",
@@ -14495,6 +14496,10 @@
             "offer.pets.maxPetsLabel",
             "offer.placeAnswer.help",
             "offer.placeAnswer.label",
+            "photoCaption.stateNone",
+            "photoCaption.stateSet",
+            "photoCaption.trigger",
+            "photoCaption.triggerAria",
             "photoCaptureSpots.needsFloorplan",
             "photoCaptureSpots.needsPhotos",
             "photoCaptureSpots.progress",
@@ -36624,6 +36629,10 @@
             "offer.pets.maxPetsLabel",
             "offer.placeAnswer.help",
             "offer.placeAnswer.label",
+            "photoCaption.stateNone",
+            "photoCaption.stateSet",
+            "photoCaption.trigger",
+            "photoCaption.triggerAria",
             "photoCaptureSpots.needsFloorplan",
             "photoCaptureSpots.needsPhotos",
             "photoCaptureSpots.progress",
@@ -37160,6 +37169,10 @@
             "offer.sections.overview.views",
             "offer.stayCalendar.open",
             "offer.tour.open",
+            "photoCaption.stateNone",
+            "photoCaption.stateSet",
+            "photoCaption.trigger",
+            "photoCaption.triggerAria",
             "photoCaptureSpots.needsFloorplan",
             "photoCaptureSpots.needsPhotos",
             "photoCaptureSpots.progress",
@@ -41252,7 +41265,7 @@
   ],
   "stats": {
     "matchedKeys": 281,
-    "sliceBytes": 1376731
+    "sliceBytes": 1377368
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

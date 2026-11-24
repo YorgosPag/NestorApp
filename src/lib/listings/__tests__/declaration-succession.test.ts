@@ -130,6 +130,7 @@ describe('Α3γ — τα όρια της μεταφοράς', () => {
       publishedMediaFocalPoints: { [OLD]: { x: 0.2, y: 0.8 } },
       publishedPhotoCaptureSpots: { [OLD]: SPOT },
       publishedFloorplanNorth: { [OLD]: 1.57 },
+      publishedPhotoCaptions: { [OLD]: { subject: 'plot', text: null } },
     };
     // Κάθε γραμμή της λίστας έχει δείγμα εδώ — νέο πεδίο χωρίς δείγμα κοκκινίζει ΑΥΤΗ τη γραμμή.
     expect(Object.keys(property).sort()).toEqual([...fields].sort());
@@ -144,6 +145,7 @@ describe('Α3γ — τα όρια της μεταφοράς', () => {
     expect(declared.focalPoints?.has(NEW)).toBe(true);
     expect(declared.captureSpots?.has(NEW)).toBe(true);
     expect(declared.floorplanNorth?.has(NEW)).toBe(true);
+    expect(declared.captions?.has(NEW)).toBe(true);
     expect(JSON.stringify([...(declared.focalPoints ?? [])]) + JSON.stringify(declared.order)).not.toContain(OLD);
   });
 });

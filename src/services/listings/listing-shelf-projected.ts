@@ -41,6 +41,8 @@ export function toProjectedImage(image: PublicShelfImage<ListingMaterial>): Proj
     // 📍 ADR-897 — αυτούσια· η ταυτότητα γίνεται δείκτης **μόνο** στο `withPublishedGallery`.
     sourceFileId: image.sourceFileId,
     declaredCaptureSpot: image.declaredCaptureSpot,
+    // 🏷️ Η λεζάντα — αυτούσια· γράφεται στο έγγραφο **μόνο** από το `withPublishedGallery`.
+    declaredCaption: image.declaredCaption,
     declaredNorthRad: image.declaredNorthRad,
   };
 }

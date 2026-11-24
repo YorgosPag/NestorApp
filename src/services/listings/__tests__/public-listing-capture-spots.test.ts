@@ -38,7 +38,7 @@ function photo(id: string, captureSpot: PhotoCaptureSpot | null): ProjectedShelf
   shelfHash += 1;
   return {
     url: `https://shelf/${shelfHash.toString(16).padStart(64, '0')}.webp`, width: 1600, height: 1200, sources: [], material: PHOTO_MATERIAL,
-    declaredFocalPoint: null, detectedFocalPoint: null, sourceFileId: id, declaredCaptureSpot: captureSpot, declaredNorthRad: null,
+    declaredFocalPoint: null, detectedFocalPoint: null, sourceFileId: id, declaredCaptureSpot: captureSpot, declaredCaption: null, declaredNorthRad: null,
   };
 }
 

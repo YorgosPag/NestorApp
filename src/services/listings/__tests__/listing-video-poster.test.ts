@@ -66,7 +66,7 @@ function shelfImage(material: ListingMaterial, sourceFileId: string | null, tag:
     focalPoint: null,
     declaredFocalPoint: null,
     sourceFileId,
-    declaredCaptureSpot: null,
+    declaredCaptureSpot: null, declaredCaption: null,
     declaredNorthRad: null,
   };
 }

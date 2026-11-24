@@ -77,7 +77,7 @@ function shelfReport(count: number): PublicShelfReport {
     //    του άγκυρα (`lib/listings/__tests__/listing-floorplan-separation`).
     material: { kind: 'photo' as const },
     sourceFileId: null,
-    declaredCaptureSpot: null,
+    declaredCaptureSpot: null, declaredCaption: null,
     declaredNorthRad: null,
   });
   return {

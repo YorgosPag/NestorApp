@@ -13,10 +13,12 @@
 import { useMemo } from 'react';
 
 import { useListingFloorplanAlt } from '@/components/listing-detail/ListingFloorplanFigure';
+import { usePhotoCaptionText } from '@/components/shared/media/photo-caption-labels';
 import { PhotoLightbox, type LightboxPhoto } from '@/components/shared/media/PhotoLightbox';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { toFloorplanSpotsEntry, type ListingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
 import { listingImageSrcSet } from '@/lib/listings/listing-images';
+import { readPhotoCaption } from '@/lib/listings/photo-caption';
 import type { ListingImage } from '@/types/public-listing';
 
 export interface ListingPhotoLightboxProps {
@@ -30,6 +32,8 @@ export function ListingPhotoLightbox({ images, floorplans, openIndex, onNavigate
   const { t } = useTranslation(['search-results', 'listing-detail']);
   const altOf = useListingFloorplanAlt();
   const total = images.length;
+  // 🏷️ Αυτό το component ζει ήδη πίσω από `next/dynamic`, άρα οι ετικέτες είδους δεν βαραίνουν το slice της διαδρομής.
+  const captionText = usePhotoCaptionText();
   const photos = useMemo<readonly LightboxPhoto[]>(() => images.map((image, index) => ({
     key: image.url,
     src: image.url,
@@ -37,7 +41,8 @@ export function ListingPhotoLightbox({ images, floorplans, openIndex, onNavigate
     alt: t(image.altKey, { index: index + 1, total }),
     width: image.width,
     height: image.height,
-  })), [images, t, total]);
+    caption: captionText(readPhotoCaption(image.caption)) ?? undefined,
+  })), [images, t, total, captionText]);
   const entries = useMemo(
     () => floorplans.map((entry) => toFloorplanSpotsEntry(entry, altOf(entry.floorplan))),
     [floorplans, altOf],

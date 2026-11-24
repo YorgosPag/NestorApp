@@ -61,6 +61,7 @@ import { mediaOf, type OwnerProperty, type OwnerPropertyPlace } from '@/types/ow
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { readDeclaredFocalPoints } from '@/lib/listings/photo-focal-point';
 import { readDeclaredCaptureSpots } from '@/lib/listings/photo-capture-spot';
+import { readDeclaredCaptions } from '@/lib/listings/photo-caption';
 import { readDeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 import { normalizeUnitNumber } from '@/lib/geo/unit-number';
 import { isFloorKind } from '@/utils/floor-naming';
@@ -129,6 +130,7 @@ export function readStoredOwnerProperty(
     publishedFileFocalPoints: _rawFocalPoints,
     publishedFileCaptureSpots: _rawCaptureSpots,
     publishedFileFloorplanNorth: _rawFloorplanNorth,
+    publishedFileCaptions: _rawCaptions,
     ...rest
   } = stored;
 
@@ -191,7 +193,8 @@ function dossierLinkOf(
   stored: Readonly<Record<string, unknown>>,
 ): Pick<
   OwnerProperty,
-  'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots' | 'publishedFileFloorplanNorth'
+  | 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots' | 'publishedFileFloorplanNorth'
+  | 'publishedFileCaptions'
 > {
   // 🔴 **Κλειδί που ΛΕΙΠΕΙ, ποτέ `dossierId: undefined`**: το Admin SDK δεν έχει `ignoreUndefinedProperties`
   //    ⇒ το `set` της επόμενης αποθήκευσης θα έσκαγε (`lib/audit/tracked-field-def.ts`).
@@ -212,6 +215,10 @@ function dossierLinkOf(
     // 🧭 ADR-897 Φ5.2 — ίδια πειθαρχία.
     ...(stored.publishedFileFloorplanNorth !== undefined
       ? { publishedFileFloorplanNorth: Object.fromEntries(readDeclaredFloorplanNorth(stored.publishedFileFloorplanNorth)) }
+      : {}),
+    // 🏷️ Λεζάντες — ίδια πειθαρχία.
+    ...(stored.publishedFileCaptions !== undefined
+      ? { publishedFileCaptions: Object.fromEntries(readDeclaredCaptions(stored.publishedFileCaptions)) }
       : {}),
   };
 }

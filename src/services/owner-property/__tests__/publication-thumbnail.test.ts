@@ -35,7 +35,7 @@ const ONE_PHOTO_REPORT = {
       material: { kind: 'photo' },
       // Boy Scout (ADR-920 Β3β): η αναφορά του ραφιού έχει ΠΑΝΤΑ σημείο λήψης (ADR-897) — `null` = κανένα. Χωρίς αυτό
       //    το fixture έπεφτε στο `toListingCaptureSpot(undefined)` και το test ήταν κόκκινο από το `9bdc2cc8`.
-      declaredCaptureSpot: null,
+      declaredCaptureSpot: null, declaredCaption: null,
     },
   ],
   removed: 0,

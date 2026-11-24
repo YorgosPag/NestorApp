@@ -66,6 +66,8 @@ export interface LightboxPhoto {
   readonly srcSet?: string;
   /** Ήδη μεταφρασμένο/συντεθειμένο από τον καλούντα. */
   readonly alt: string;
+  /** 🏷️ Η λεζάντα, **ήδη συντεθειμένη** από τον καλούντα (`usePhotoCaptionText`)· απούσα ⇒ καμία γραμμή. */
+  readonly caption?: string;
   /** Εγγενείς διαστάσεις, αν είναι γνωστές (κράτηση χώρου)· αλλιώς `undefined`. */
   readonly width?: number;
   readonly height?: number;
@@ -124,6 +126,11 @@ function PhotoStage({ photo, index, total, onStep }: StageProps) {
         aria-disabled={index === total - 1 || undefined} onClick={() => onStep(1)} aria-label={t('listing-detail:media.capture.next')}>
         <ChevronRight aria-hidden />
       </Button>
+      {photo.caption !== undefined && (
+        <p className="absolute bottom-10 left-1/2 max-w-[90%] -translate-x-1/2 rounded bg-background/80 px-2 py-0.5 text-center text-sm">
+          {photo.caption}
+        </p>
+      )}
       <output aria-live="polite" className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded bg-background/80 px-2 py-0.5 text-xs tabular-nums">
         {t('listing-detail:media.capture.counter', { index: index + 1, total })}
       </output>

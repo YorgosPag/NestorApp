@@ -41,6 +41,7 @@ import { dxfPublishRasterPathOf } from '@/services/floorplans/dxf-publish-raster
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import type { PhotoCaption } from '@/lib/listings/photo-caption';
 import type { DeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 import {
   PUBLISHED_MEDIA_LIMIT,
@@ -62,6 +63,8 @@ export interface DossierMediaDeclaration {
   readonly focalPoints?: ReadonlyMap<string, PhotoFocalPoint>;
   /** 📍 ADR-897 — σημείο λήψης ανά φωτογραφία. */
   readonly captureSpots?: ReadonlyMap<string, PhotoCaptureSpot>;
+  /** 🏷️ Λεζάντα ανά φωτογραφία (`lib/listings/photo-caption`). */
+  readonly captions?: ReadonlyMap<string, PhotoCaption>;
   /** 🧭 ADR-897 Φ5.2 — βορράς ανά κάτοψη. */
   readonly floorplanNorth?: DeclaredFloorplanNorth;
 }
@@ -213,6 +216,8 @@ export function publishedDossierMediaSources(
     // 📍 ADR-897 — ταυτότητα + σημείο λήψης, δεμένα στο **αρχείο** όπως το σημείο εστίασης.
     sourceFileId: file.id,
     captureSpot: declaration.captureSpots?.get(file.id) ?? null,
+    // 🏷️ Η λεζάντα, δεμένη στο **αρχείο**· αν το αρχείο δεν είναι φωτογραφία, ο γραφέας απλώς δεν τη ρωτά.
+    caption: declaration.captions?.get(file.id) ?? null,
     // 🧭 ADR-897 Φ5.2 — ο βορράς της **κάτοψης**· για φωτογραφία απλώς απών.
     northRad: declaration.floorplanNorth?.get(file.id) ?? null,
   }));

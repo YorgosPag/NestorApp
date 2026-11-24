@@ -44,6 +44,7 @@ import { useDxfPublishRasterRequests } from '@/hooks/owner-property/useDxfPublis
 
 import { OwnerPropertyDossierItem } from './OwnerPropertyDossierItem';
 import { useDossierFocalPointSlot } from './use-dossier-focal-point-slot';
+import { useDossierCaptionSlot } from './use-dossier-caption-slot';
 import { OwnerPropertyDossierCaptureSpots } from './OwnerPropertyDossierCaptureSpots';
 
 const NS = 'property-market';
@@ -135,6 +136,7 @@ export function OwnerPropertyDossierPanel({
   }
 
   const focalPointSlot = useDossierFocalPointSlot();
+  const captionSlot = useDossierCaptionSlot();
 
   function handleMakeFirst(fileId: string): void {
     declare(withDeclaredFirst(declaredFileIds(form.getValues('publishedFileIds')), fileId));
@@ -203,6 +205,7 @@ export function OwnerPropertyDossierPanel({
                   onTogglePublished={handleTogglePublished}
                   onMakeFirst={handleMakeFirst}
                   focalPointSlot={focalPointSlot(file, tab)}
+                  captionSlot={captionSlot(file, tab)}
                 />
               );
             })}

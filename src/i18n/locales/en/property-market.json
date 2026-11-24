@@ -2677,6 +2677,28 @@
     "imageLoading": "Loading the photo…",
     "imageLoadFailed": "The photo could not be loaded."
   },
+  "photoCaption": {
+    "trigger": "Caption",
+    "triggerAria": "Caption for “{name}”",
+    "stateNone": "None",
+    "stateSet": "Set",
+    "title": "What does this image show?",
+    "description": "Choose what the image shows and, if you like, write a short caption. It appears under the image in the listing.",
+    "subjectLabel": "Image type",
+    "subjectNone": "No type",
+    "groupSite": "The property and its setting",
+    "groupInterior": "Interior spaces",
+    "groupDocuments": "Drawings and maps",
+    "textLabel": "Caption (optional)",
+    "textPlaceholder": "e.g. The plot seen from the south side",
+    "textHint": "Shown as written, not translated. {used} / {max} characters.",
+    "previewLabel": "How it will look",
+    "previewEmpty": "No caption",
+    "remove": "No caption",
+    "apply": "Apply",
+    "imageLoading": "Loading the image…",
+    "imageLoadFailed": "The image did not load."
+  },
   "photoCaptureSpots": {
     "trigger": "Shot positions",
     "progress": "{placed}/{total}",

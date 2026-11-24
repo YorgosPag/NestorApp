@@ -137,6 +137,7 @@
     "backToListing": "Πίσω στην αγγελία",
     "photosPage": {
       "heading": "Φωτογραφίες",
+      "documentsHeading": "Σχέδια και χάρτες",
       "openLabel": "Άνοιγμα φωτογραφίας {index} από {total}",
       "imageTitle": "Φωτογραφία {index} από {total}",
       "keyboardHint": "Με τα βέλη ← → αλλάζετε φωτογραφία.",
@@ -159,6 +160,37 @@
       "counter": "{index} / {total}",
       "northGlyph": "Β",
       "northLabel": "Βέλος βορρά: ο βορράς είναι {degrees}° δεξιόστροφα από το πάνω μέρος της κάτοψης"
+    },
+    "caption": {
+      "joined": "{subject} — {text}",
+      "subject": {
+        "exterior": "Εξωτερική όψη",
+        "plot": "Οικόπεδο",
+        "street": "Δρόμος",
+        "surroundings": "Γύρω περιοχή",
+        "view": "Θέα",
+        "aerial": "Αεροφωτογραφία",
+        "entrance": "Είσοδος",
+        "garden": "Κήπος",
+        "balcony": "Μπαλκόνι / βεράντα",
+        "parking": "Στάθμευση",
+        "pool": "Πισίνα",
+        "commonAreas": "Κοινόχρηστοι χώροι",
+        "livingRoom": "Σαλόνι",
+        "kitchen": "Κουζίνα",
+        "diningRoom": "Τραπεζαρία",
+        "bedroom": "Υπνοδωμάτιο",
+        "bathroom": "Μπάνιο",
+        "office": "Γραφείο",
+        "hallway": "Χολ / διάδρομος",
+        "storage": "Αποθήκη",
+        "interior": "Εσωτερικός χώρος",
+        "survey": "Τοπογραφικό διάγραμμα",
+        "cityPlan": "Απόσπασμα ρυμοτομικού σχεδίου",
+        "implementationAct": "Διάγραμμα πράξης εφαρμογής",
+        "locationMap": "Χάρτης θέσης",
+        "drawing": "Σχέδιο"
+      }
     }
   },
   "commonCharges": {

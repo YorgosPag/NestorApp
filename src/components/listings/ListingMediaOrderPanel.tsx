@@ -39,6 +39,8 @@ import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { useListingMediaOrder } from '@/hooks/listings/useListingMediaOrder';
 import { useListingFocalPoints, type ListingFocalPoints } from '@/hooks/listings/useListingFocalPoints';
 import { PhotoFocalPointControl } from './focal-point/PhotoFocalPointControl';
+import { useListingCaptions, type ListingCaptions } from '@/hooks/listings/useListingCaptions';
+import { PhotoCaptionControl } from './photo-caption/PhotoCaptionControl';
 import { useListingCaptureSurvey } from '@/hooks/listings/useListingCaptureSpots';
 import { CaptureSpotControl } from './capture-spots/CaptureSpotControl';
 import { captureSpotMaterialOf } from './capture-spots/capture-spot-material';
@@ -76,6 +78,8 @@ export interface ListingMediaOrderPanelProps {
   readonly storedCaptureSpots: unknown;
   /** 🧭 ADR-897 Φ5.2 — ωμό πεδίο εγγράφου· η μία ανάγνωση είναι το `readDeclaredFloorplanNorth`. */
   readonly storedFloorplanNorth: unknown;
+  /** 🏷️ Λεζάντες — ωμό πεδίο εγγράφου· η μία ανάγνωση είναι το `readDeclaredCaptions`. */
+  readonly storedCaptions: unknown;
 }
 
 interface ListingMediaOrderRowProps {
@@ -85,10 +89,11 @@ interface ListingMediaOrderRowProps {
   readonly saving: boolean;
   readonly onMakeFirst: (fileId: string) => Promise<void>;
   readonly focalPoints: ListingFocalPoints;
+  readonly captions: ListingCaptions;
 }
 
 /** **Μία γραμμή της σειράς** — εστίαση (μόνο φωτογραφία) + «1η» ή «να μπει πρώτη». */
-function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints }: ListingMediaOrderRowProps) {
+function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints, captions }: ListingMediaOrderRowProps) {
   const { t } = useTranslation([NS]);
   // 🗄️ ADR-329 §3.9 — αποσυρμένο ακίνητο: η σειρά και η εστίαση φαίνονται όπως έμειναν, δεν αλλάζουν.
   const locked = useRetiredKind() !== null;
@@ -109,6 +114,16 @@ function ListingMediaOrderRow({ file, first, saving, onMakeFirst, focalPoints }:
           declared={focalPoints.pointOf(file.id)}
           onApply={(next) => void focalPoints.setPoint(file.id, next)}
           disabled={focalPoints.saving || locked}
+        />
+      )}
+      {/* 🏷️ Λεζάντα — **μόνο φωτογραφία**, ίδιο διαμέρισμα (εταιρείας) με την εστίαση. */}
+      {file.category === FILE_CATEGORIES.PHOTOS && (
+        <PhotoCaptionControl
+          name={file.displayName}
+          photo={{ kind: 'file', fileId: file.id, custody: 'company' }}
+          declared={captions.captionOf(file.id)}
+          onApply={(next) => void captions.setCaption(file.id, next)}
+          disabled={captions.saving || locked}
         />
       )}
       {/*
@@ -149,6 +164,7 @@ export function ListingMediaOrderPanel({
   storedFocalPoints,
   storedCaptureSpots,
   storedFloorplanNorth,
+  storedCaptions,
 }: ListingMediaOrderPanelProps) {
   const { t } = useTranslation([NS]);
   const locked = useRetiredKind() !== null;
@@ -173,6 +189,7 @@ export function ListingMediaOrderPanel({
   );
 
   const focalPoints = useListingFocalPoints(propertyId, storedFocalPoints);
+  const captions = useListingCaptions(propertyId, storedCaptions);
   // 🧭 ADR-897 Φ5.2 — σημεία λήψης **και** βορράς σε **ένα** PATCH (ποτέ δύο εγγραφές που αγωνίζονται για το κλείδωμα).
   const captureSpots = useListingCaptureSurvey(propertyId, storedCaptureSpots, storedFloorplanNorth);
   // 📍 ADR-897 — **μόνο ό,τι φεύγει** (`items`): σημείο σε φωτογραφία ή κάτοψη που δεν δημοσιεύεται δεν έχει νόημα.
@@ -191,7 +208,7 @@ export function ListingMediaOrderPanel({
       title={t(`${K}.title`)}
       help={t(`${K}.help`)}
       empty={t(`${K}.empty`)}
-      failure={failed || focalPoints.failed || captureSpots.failed ? t(`${K}.saveFailed`) : null}
+      failure={failed || focalPoints.failed || captureSpots.failed || captions.failed ? t(`${K}.saveFailed`) : null}
       isEmpty={items.length === 0}
     >
       <CaptureSpotControl
@@ -211,6 +228,7 @@ export function ListingMediaOrderPanel({
             saving={saving}
             onMakeFirst={makeFirst}
             focalPoints={focalPoints}
+            captions={captions}
           />
         ))}
       </ol>

@@ -3,6 +3,7 @@
     "media": {
       "backToListing": "Πίσω στην αγγελία",
       "photosPage": {
+        "documentsHeading": "Σχέδια και χάρτες",
         "heading": "Φωτογραφίες",
         "openLabel": "Άνοιγμα φωτογραφίας {index} από {total}"
       },

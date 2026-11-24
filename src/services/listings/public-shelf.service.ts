@@ -60,6 +60,7 @@ import { fileRecordBucket } from '@/server/files/file-record-bucket';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import type { PhotoCaption } from '@/lib/listings/photo-caption';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 import {
   isRasterShelfKind,
@@ -154,6 +155,8 @@ export interface PublicShelfImage<M> {
   readonly sourceFileId: string | null;
   /** 📍 Το σημείο λήψης που **δήλωσε** ο άνθρωπος — κουβαλιέται αδιαφανώς, όπως το {@link declaredFocalPoint}. */
   readonly declaredCaptureSpot: PhotoCaptureSpot | null;
+  /** 🏷️ Η λεζάντα που **δήλωσε** ο άνθρωπος — κουβαλιέται αδιαφανώς, όπως το {@link declaredCaptureSpot}. */
+  readonly declaredCaption: PhotoCaption | null;
   /** 🧭 Ο βορράς που **δήλωσε** ο άνθρωπος για την κάτοψη — κουβαλιέται αδιαφανώς (ADR-897 Φ5.2). */
   readonly declaredNorthRad: number | null;
 }
@@ -164,7 +167,7 @@ export interface PublicShelfImage<M> {
  */
 type CarriedFacts<M> = Pick<
   PublicShelfImage<M>,
-  'material' | 'declaredFocalPoint' | 'sourceFileId' | 'declaredCaptureSpot' | 'declaredNorthRad'
+  'material' | 'declaredFocalPoint' | 'sourceFileId' | 'declaredCaptureSpot' | 'declaredCaption' | 'declaredNorthRad'
 >;
 
 /** Τι έκανε η συμφιλίωση — ρητά, ώστε ο καλών να **μετρήσει**. */
@@ -201,6 +204,7 @@ function toPublishedImage<M>(image: AddressedImage<M>): PublicShelfImage<M> {
     declaredFocalPoint: image.declaredFocalPoint,
     sourceFileId: image.sourceFileId,
     declaredCaptureSpot: image.declaredCaptureSpot,
+    declaredCaption: image.declaredCaption,
     declaredNorthRad: image.declaredNorthRad,
   };
 }
@@ -212,6 +216,7 @@ function carriedFactsOf<M>(source: PublicShelfSource<M>): CarriedFacts<M> {
     declaredFocalPoint: source.focalPoint ?? null,
     sourceFileId: source.sourceFileId ?? null,
     declaredCaptureSpot: source.captureSpot ?? null,
+    declaredCaption: source.caption ?? null,
     declaredNorthRad: source.northRad ?? null,
   };
 }

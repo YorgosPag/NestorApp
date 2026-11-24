@@ -17,6 +17,7 @@ import { MARKETING_AUDIENCES } from '@/constants/marketing-audiences';
 import { photoFocalPointSchema, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { declaredCaptureSpotsSchema, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
+import { declaredCaptionsSchema, type PhotoCaption } from '@/lib/listings/photo-caption';
 import { orientationProposalSchema, type OrientationProposal } from '@/lib/property/orientation-proposal';
 import { parseLegacyFloor } from '@/lib/floor/floor-ref';
 import { RETIRED_STATUSES } from '@/lib/firestore/trashed-status';
@@ -128,6 +129,12 @@ export const PropertyPatchSchema = z.object({
    */
   publishedFloorplanNorth: declaredFloorplanNorthSchema(PUBLISHED_MEDIA_LIMIT).optional(),
   /**
+   * 🏷️ **Οι λεζάντες των φωτογραφιών του γραφείου** — `FileRecord.id` → είδος και/ή κείμενο (`lib/listings/photo-caption`).
+   * Ρητό για τον ίδιο λόγο με το `publishedMediaFocalPoints` (το σχήμα είναι `.passthrough()`), με το **ίδιο** όριο.
+   * Όπως εκείνο, **δεν δημοσιεύει τίποτα** — λέει μόνο τι γράφει κάτω από ό,τι ήδη φεύγει.
+   */
+  publishedPhotoCaptions: declaredCaptionsSchema(PUBLISHED_MEDIA_LIMIT).optional(),
+  /**
    * 🧭 **Η πρόταση προσανατολισμού** (ADR-937) — από την κάτοψη ή τον χάρτη. Ρητό επειδή το σχήμα είναι
    * `.passthrough()`. **Δεν** αγγίζει το `orientations` (το δηλωμένο)· `null` = απόρριψη της πρότασης.
    */
@@ -214,6 +221,8 @@ export interface PropertyPatchPayload extends Record<string, unknown> {
   publishedPhotoCaptureSpots?: Record<string, PhotoCaptureSpot>;
   /** ADR-897 Φ5.2 — ο δηλωμένος βορράς ανά κάτοψη. */
   publishedFloorplanNorth?: Record<string, number>;
+  /** Οι δηλωμένες λεζάντες των φωτογραφιών της αγγελίας (`lib/listings/photo-caption`). */
+  publishedPhotoCaptions?: Record<string, PhotoCaption>;
   /** ADR-937 — η πρόταση προσανατολισμού (κάτοψη/χάρτης)· `null` = απόρριψη. */
   orientationProposal?: OrientationProposal | null;
 }

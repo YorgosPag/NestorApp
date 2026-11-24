@@ -1285,6 +1285,23 @@
     "properties-enums",
     "search-results"
   ],
+  "PhotoCaptionDialog": [
+    "common",
+    "common-account",
+    "common-actions",
+    "common-empty-states",
+    "common-navigation",
+    "common-photos",
+    "common-sales",
+    "common-shared",
+    "common-status",
+    "common-validation",
+    "listing-detail",
+    "property-market"
+  ],
+  "PhotoCaptionLine": [
+    "listing-detail"
+  ],
   "PhotoShare": [
     "common",
     "common-account",

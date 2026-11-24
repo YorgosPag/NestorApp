@@ -99,6 +99,8 @@ export function publishedAgencyMediaSources(
       sourceFileId: file.id,
       captureSpot,
       northRad,
+      // 🏷️ Η λεζάντα, δεμένη στο **αρχείο** όπως το σημείο εστίασης.
+      caption: declaration.captions?.get(file.id) ?? null,
     }];
   });
 }

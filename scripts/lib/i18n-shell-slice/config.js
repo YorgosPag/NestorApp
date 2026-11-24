@@ -206,6 +206,9 @@ const DEFAULTS = Object.freeze({
     // ADR-920 Β6.6 — ο θεατής 3Δ του εδάφους στη σελίδα αγγελίας: μόνο μετά το «Προβολή σε 3Δ», με το `listing-detail`
     // στο chunk — αλλιώς chunk και κείμενα είναι δύο αιτήματα και η σελίδα δεν περιμένει τα κείμενα (χρέος εισδοχής).
     'src/components/listing-detail/terrain/terrain-surfaces.tsx',
+    // Λεζάντα φωτογραφίας αγγελίας — η γραμμή του κοινού (μόνο όταν δηλώθηκε λεζάντα) και ο διάλογος του ανθρώπου (μόνο
+    // με κλικ): οι 26 ετικέτες είδους του `listing-detail` στο chunk, όχι στο slice κάθε σελίδας με φωτογραφίες.
+    'src/components/shared/media/photo-caption-surfaces.tsx',
   ],
 
   /**

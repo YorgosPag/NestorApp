@@ -212,6 +212,12 @@
         "label": "Πού βρίσκεται;"
       }
     },
+    "photoCaption": {
+      "stateNone": "Καμία",
+      "stateSet": "Ορισμένη",
+      "trigger": "Λεζάντα",
+      "triggerAria": "Λεζάντα για «{name}»"
+    },
     "photoCaptureSpots": {
       "needsFloorplan": "Δηλώστε πρώτα μια κάτοψη για την αγγελία.",
       "needsPhotos": "Δεν υπάρχουν φωτογραφίες για τοποθέτηση.",

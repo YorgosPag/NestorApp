@@ -25,6 +25,7 @@ import { mediaOf, type OwnerProperty, type OwnerPropertyMedia } from '@/types/ow
 import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { readDeclaredFocalPoints, readPhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { readDeclaredCaptureSpots } from '@/lib/listings/photo-capture-spot';
+import { readDeclaredCaptions } from '@/lib/listings/photo-caption';
 import { readDeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
 import {
   dossierTerrainSource,
@@ -216,7 +217,7 @@ export function ownerListingMediaSources(
   listing: Pick<
     OwnerProperty,
     | 'type' | 'media' | 'dossierId' | 'publishedFileIds' | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots'
-    | 'publishedFileFloorplanNorth'
+    | 'publishedFileFloorplanNorth' | 'publishedFileCaptions'
   >,
   dossierMedia: DossierMediaRead | null,
 ): readonly PublicShelfSource[] {
@@ -232,6 +233,8 @@ export function ownerListingMediaSources(
       captureSpots: readDeclaredCaptureSpots(listing.publishedFileCaptureSpots),
       // 🧭 Φ5.2 — ο βορράς ανά κάτοψη, ίδιος διακόπτης.
       floorplanNorth: readDeclaredFloorplanNorth(listing.publishedFileFloorplanNorth),
+      // 🏷️ Λεζάντες — ίδιος διακόπτης (μόνο με φάκελο).
+      captions: readDeclaredCaptions(listing.publishedFileCaptions),
     },
   );
   const terrain = isLandProperty(listing.type) ? dossierTerrainSource(dossierMedia.dossier, dossierMedia.files) : null;

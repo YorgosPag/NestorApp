@@ -23,6 +23,9 @@ import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
 import { hasListedTour } from '@/lib/listings/listing-spatial-media';
 import { useListingPhotoParam } from '@/hooks/listings/useListingPhotoParam';
 import { listingFloorplanSpots } from '@/lib/listings/listing-capture-spots';
+import { isDocumentCaption, readPhotoCaption } from '@/lib/listings/photo-caption';
+// 🏷️ Τεμπέλικη επιφάνεια (ADR-744 §27): κώδικας + ετικέτες είδους έρχονται ΜΟΝΟ όταν υπάρχει δηλωμένη λεζάντα.
+import { LazyPhotoCaptionLine } from '@/components/shared/media/photo-caption-surfaces';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 
 import { ListingMediaPageBody, MediaPageHeader } from './ListingMediaPageChrome';
@@ -90,35 +93,89 @@ function PhotosGrid({
     return <p className="text-sm text-muted-foreground">{t('search-results:detail.media.absent')}</p>;
   }
 
+  // 🏷️ **Ο χωρισμός κρατά τη ΘΕΣΗ κάθε εικόνας στη συλλογή**: το `?photo=N` και το lightbox μετρούν πάνω στη σειρά του
+  //    ανθρώπου, άρα μια ομάδα είναι μόνο **πού ζωγραφίζεται** η μικρογραφία — ποτέ δεύτερη αρίθμηση.
+  const entries = images.map((image, index) => ({ image, index, document: isDocumentCaption(readPhotoCaption(image.caption)) }));
+  const documents = entries.filter((entry) => entry.document);
+  const photos = entries.filter((entry) => !entry.document);
+
+  // Μία ομάδα ⇒ καμία επικεφαλίδα: «Σχέδια και χάρτες» πάνω από **όλη** τη συλλογή δεν χωρίζει τίποτα.
+  if (documents.length === 0 || photos.length === 0) {
+    return <PhotoList entries={entries} total={images.length} onOpen={onOpen} />;
+  }
+
+  return (
+    <>
+      <PhotoList entries={photos} total={images.length} onOpen={onOpen} />
+      <section aria-labelledby={DOCUMENTS_HEADING_ID} className="mt-6">
+        <h2 id={DOCUMENTS_HEADING_ID} className="mb-2 text-sm font-medium text-foreground">
+          {t('listing-detail:media.photosPage.documentsHeading')}
+        </h2>
+        <PhotoList entries={documents} total={images.length} onOpen={onOpen} />
+      </section>
+    </>
+  );
+}
+
+const DOCUMENTS_HEADING_ID = 'listing-photos-documents-heading';
+
+interface PhotoListProps {
+  /** Κάθε εικόνα **με τη θέση της στη συλλογή** — η ομάδα δεν ξαναριθμεί. */
+  readonly entries: readonly { readonly image: ListingImage; readonly index: number }[];
+  readonly total: number;
+  readonly onOpen: (index: number) => void;
+}
+
+function PhotoList({ entries, total, onOpen }: PhotoListProps) {
   return (
     <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-      {images.map((image, index) => (
-        <li key={image.url}>
-          <button
-            type="button"
-            onClick={() => onOpen(index)}
-            aria-label={t('listing-detail:media.photosPage.openLabel', { index: index + 1, total: images.length })}
-            className="block w-full overflow-hidden rounded-lg border border-border"
-          >
-            {/*
-              eslint-disable-next-line @next/next/no-img-element -- η πηγή είναι το δημόσιο
-              ράφι (content-addressed, εκτός optimizer)· βλ. ADR-777 §8.11 και ADR-841 Α12.
-            */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={image.url}
-              srcSet={listingImageSrcSet(image)}
-              sizes={GRID_SIZES}
-              width={image.width}
-              height={image.height}
-              alt={t(image.altKey, { index: index + 1, total: images.length })}
-              loading={index === 0 ? 'eager' : 'lazy'}
-              decoding="async"
-              className="aspect-[4/3] w-full object-cover"
-            />
-          </button>
-        </li>
+      {entries.map(({ image, index }) => (
+        <GridPhoto key={image.url} image={image} index={index} total={total} onOpen={onOpen} />
       ))}
     </ul>
+  );
+}
+
+interface GridPhotoProps {
+  readonly image: ListingImage;
+  readonly index: number;
+  readonly total: number;
+  readonly onOpen: (index: number) => void;
+}
+
+/** Μία φωτογραφία του πλέγματος — `<figure>`, ώστε η λεζάντα (όταν δηλώθηκε) να είναι **δική της** `<figcaption>`. */
+function GridPhoto({ image, index, total, onOpen }: GridPhotoProps) {
+  const { t } = useTranslation(['search-results', 'listing-detail']);
+  const caption = readPhotoCaption(image.caption);
+
+  return (
+    <li>
+      <figure className="m-0">
+        <button
+          type="button"
+          onClick={() => onOpen(index)}
+          aria-label={t('listing-detail:media.photosPage.openLabel', { index: index + 1, total })}
+          className="block w-full overflow-hidden rounded-lg border border-border"
+        >
+          {/*
+            eslint-disable-next-line @next/next/no-img-element -- η πηγή είναι το δημόσιο
+            ράφι (content-addressed, εκτός optimizer)· βλ. ADR-777 §8.11 και ADR-841 Α12.
+          */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={image.url}
+            srcSet={listingImageSrcSet(image)}
+            sizes={GRID_SIZES}
+            width={image.width}
+            height={image.height}
+            alt={t(image.altKey, { index: index + 1, total })}
+            loading={index === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            className="aspect-[4/3] w-full object-cover"
+          />
+        </button>
+        {caption !== null && <LazyPhotoCaptionLine caption={caption} />}
+      </figure>
+    </li>
   );
 }

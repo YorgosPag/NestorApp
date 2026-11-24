@@ -89,6 +89,7 @@ export function PhotosTab({
         storedFocalPoints={selectedProperty.publishedMediaFocalPoints}
         storedCaptureSpots={selectedProperty.publishedPhotoCaptureSpots}
         storedFloorplanNorth={selectedProperty.publishedFloorplanNorth}
+        storedCaptions={selectedProperty.publishedPhotoCaptions}
       />
     </>
   );

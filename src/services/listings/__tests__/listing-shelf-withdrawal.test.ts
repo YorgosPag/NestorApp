@@ -222,7 +222,7 @@ describe('ΚΟ-4 (καλωδίωση) — Η ΚΑΤΟΨΗ ΟΡΟΦΟΥ ΠΕΡΝ�
     const face = { key: 'k', url, width: 2560, height: 1829 };
     return {
       canonical: face, variants: [face], material, focalPoint: null, declaredFocalPoint: null,
-      sourceFileId: null, declaredCaptureSpot: null, declaredNorthRad: null,
+      sourceFileId: null, declaredCaptureSpot: null, declaredCaption: null, declaredNorthRad: null,
     };
   }
 

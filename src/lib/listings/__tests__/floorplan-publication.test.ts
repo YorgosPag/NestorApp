@@ -75,7 +75,7 @@ function bornFloorplan(levelId = LEVEL): AgencyMediaCandidate {
 function shelfImage(over: Partial<ProjectedShelfImage>): ProjectedShelfImage {
   return {
     url: 'https://shelf/plan.webp', width: 1280, height: 960, sources: [], material: { kind: 'photo' },
-    declaredFocalPoint: null, detectedFocalPoint: null, sourceFileId: null, declaredCaptureSpot: null,
+    declaredFocalPoint: null, detectedFocalPoint: null, sourceFileId: null, declaredCaptureSpot: null, declaredCaption: null,
     declaredNorthRad: null, ...over,
   };
 }

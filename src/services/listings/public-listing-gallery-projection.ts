@@ -24,6 +24,7 @@ import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import { resolvePhotoFocalPoint, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { toListingCaptureSpot, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import type { PhotoCaption } from '@/lib/listings/photo-caption';
 import type {
   ListingFloorplan,
   ListingImage,
@@ -64,6 +65,8 @@ export interface ProjectedShelfImage {
   readonly sourceFileId: string | null;
   /** 📍 Ό,τι **δήλωσε** ο άνθρωπος για τη θέση της κάμερας — δες `PublicShelfImage.declaredCaptureSpot`. */
   readonly declaredCaptureSpot: PhotoCaptureSpot | null;
+  /** 🏷️ Η λεζάντα που **δήλωσε** ο άνθρωπος — δες `PublicShelfImage.declaredCaption`. */
+  readonly declaredCaption: PhotoCaption | null;
   /** 🧭 Ο βορράς που **δήλωσε** ο άνθρωπος — δες `PublicShelfImage.declaredNorthRad` (ADR-897 Φ5.2). */
   readonly declaredNorthRad: number | null;
 }
@@ -102,7 +105,9 @@ function toListingFloorplanImage(image: ProjectedShelfImage, altKey: string): Li
  */
 function toListingPhoto(image: ProjectedShelfImage, altKey: string): ListingImage {
   const focalPoint = resolvePhotoFocalPoint(image.declaredFocalPoint, image.detectedFocalPoint);
-  return { ...toListingImage(image, altKey), focalPoint };
+  const photo = { ...toListingImage(image, altKey), focalPoint };
+  // 🏷️ Η λεζάντα γράφεται **μόνο όταν δηλώθηκε**: χωρίς δήλωση η φωτογραφία μένει byte-προς-byte ίδια με πριν.
+  return image.declaredCaption === null ? photo : { ...photo, caption: image.declaredCaption };
 }
 
 /**

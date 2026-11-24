@@ -2677,6 +2677,28 @@
     "imageLoading": "Φόρτωση της φωτογραφίας…",
     "imageLoadFailed": "Η φωτογραφία δεν φορτώθηκε."
   },
+  "photoCaption": {
+    "trigger": "Λεζάντα",
+    "triggerAria": "Λεζάντα για «{name}»",
+    "stateNone": "Καμία",
+    "stateSet": "Ορισμένη",
+    "title": "Τι δείχνει αυτή η εικόνα;",
+    "description": "Διαλέξτε το είδος της εικόνας και, αν θέλετε, γράψτε μια σύντομη λεζάντα. Εμφανίζεται κάτω από την εικόνα στην αγγελία.",
+    "subjectLabel": "Είδος εικόνας",
+    "subjectNone": "Χωρίς είδος",
+    "groupSite": "Το ακίνητο και ο τόπος του",
+    "groupInterior": "Εσωτερικοί χώροι",
+    "groupDocuments": "Σχέδια και χάρτες",
+    "textLabel": "Λεζάντα (προαιρετική)",
+    "textPlaceholder": "π.χ. Το οικόπεδο από τη νότια πλευρά",
+    "textHint": "Γράφεται όπως είναι, χωρίς μετάφραση. {used} / {max} χαρακτήρες.",
+    "previewLabel": "Έτσι θα φαίνεται",
+    "previewEmpty": "Χωρίς λεζάντα",
+    "remove": "Χωρίς λεζάντα",
+    "apply": "Εφαρμογή",
+    "imageLoading": "Φόρτωση της εικόνας…",
+    "imageLoadFailed": "Η εικόνα δεν φορτώθηκε."
+  },
   "photoCaptureSpots": {
     "trigger": "Θέσεις λήψης",
     "progress": "{placed}/{total}",

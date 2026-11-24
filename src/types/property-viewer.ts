@@ -148,6 +148,11 @@ export interface Property {
      */
     publishedPhotoCaptureSpots?: unknown;
     /**
+     * 🏷️ **Οι λεζάντες που ΔΗΛΩΣΕ το γραφείο** — `FileRecord.id` φωτογραφίας → είδος και/ή κείμενο.
+     * ⚠️ `unknown` για τον ίδιο λόγο — ωμό spread εγγράφου· η μία ανάγνωση είναι το `readDeclaredCaptions`.
+     */
+    publishedPhotoCaptions?: unknown;
+    /**
      * 🧭 **Ο βορράς ανά κάτοψη που ΔΗΛΩΣΕ το γραφείο** (ADR-897 Φ5.2) — `FileRecord.id` κάτοψης → γωνία (χώρος εικόνας).
      * ⚠️ `unknown` για τον ίδιο λόγο — η μία ανάγνωση είναι το `readDeclaredFloorplanNorth`.
      */

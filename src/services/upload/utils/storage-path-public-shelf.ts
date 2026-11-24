@@ -60,6 +60,7 @@
 import type { ListingMaterial } from '@/lib/listings/listing-material';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import type { PhotoCaption } from '@/lib/listings/photo-caption';
 import type { FileStoragePlacement } from '@/lib/files/file-storage-placement';
 import type { AnyPublicShelfKind } from './public-shelf-kinds';
 import type {
@@ -264,6 +265,8 @@ export interface PublicShelfSource<M = ListingMaterial> {
   readonly sourceFileId?: string;
   /** 📍 **Το σημείο λήψης που ΔΗΛΩΣΕ ο άνθρωπος** (ADR-897) — κουβαλιέται, δεν ερμηνεύεται από το ράφι. */
   readonly captureSpot?: PhotoCaptureSpot | null;
+  /** 🏷️ **Η λεζάντα που ΔΗΛΩΣΕ ο άνθρωπος** (`lib/listings/photo-caption`) — κουβαλιέται, δεν ερμηνεύεται από το ράφι. */
+  readonly caption?: PhotoCaption | null;
   /**
    * 🧭 **Ο βορράς που ΔΗΛΩΣΕ ο άνθρωπος για ΑΥΤΗ την κάτοψη** (ADR-897 Φ5.2) — `[0, 2π)`, χώρος εικόνας.
    * Κουβαλιέται, δεν ερμηνεύεται· το αν είναι κάτοψη το κρίνει **μόνο** το `withPublishedGallery`.

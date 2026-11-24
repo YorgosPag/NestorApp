@@ -34,6 +34,7 @@ import { declaredFileIds, type DeclaredFileIds } from '@/lib/listings/declared-f
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { DeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
+import type { PhotoCaption } from '@/lib/listings/photo-caption';
 
 const logger = createModuleLogger('useDeclaredFileIds');
 
@@ -52,6 +53,8 @@ export interface PropertyDeclarationValues {
   readonly publishedPhotoCaptureSpots: ReadonlyMap<string, PhotoCaptureSpot>;
   /** ADR-897 Φ5.2 — ο βορράς ανά κάτοψη· γράφεται **μαζί** με τα σημεία λήψης (ένα PATCH, `usePropertyDeclarationPatch`). */
   readonly publishedFloorplanNorth: DeclaredFloorplanNorth;
+  /** 🏷️ Η λεζάντα ανά φωτογραφία — ίδιος κύκλος ζωής με το σημείο εστίασης (`useListingCaptions`). */
+  readonly publishedPhotoCaptions: ReadonlyMap<string, PhotoCaption>;
 }
 
 export type PropertyDeclarationField = keyof PropertyDeclarationValues;

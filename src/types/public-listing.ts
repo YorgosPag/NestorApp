@@ -66,6 +66,7 @@ import type { LegalitySignal } from '@/lib/legality/legality-signal';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { FloorPlateState } from '@/lib/listings/floor-plate/floor-plate-state';
 import type { ListingCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import type { PhotoCaption } from '@/lib/listings/photo-caption';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { ListingObjectiveValueDeclarations } from '@/lib/objective-value/objective-value-declarations';
 import type { CommonCharges } from '@/lib/common-charges/common-charges';
@@ -262,6 +263,14 @@ export interface ListingImage {
    * που ελέγχει **και** ότι ο δείκτης δείχνει σε κάτοψη που υπάρχει.
    */
   readonly captureSpot?: ListingCaptureSpot | null;
+  /**
+   * 🏷️ **ΤΙ ΔΕΙΧΝΕΙ** — η λεζάντα που δήλωσε ο άνθρωπος: είδος από κλειστό λεξιλόγιο και/ή σύντομο δικό του κείμενο
+   * (`lib/listings/photo-caption`). Μόνο στις φωτογραφίες του `gallery`.
+   *
+   * ⚠️ **Προαιρετικό, ίδιο σκεπτικό με το {@link focalPoint}**: απόν ⇒ «δεν δηλώθηκε» ⇒ η οθόνη **σιωπά**, και κανένας
+   * κρίκος μετανάστευσης. ⛔ Μην το διαβάσεις απευθείας — η μία ανάγνωση είναι το `readPhotoCaption`.
+   */
+  readonly caption?: PhotoCaption | null;
   /**
    * 🧭 **ΠΟΥ ΕΙΝΑΙ Ο ΒΟΡΡΑΣ** (ADR-897 Φ5.2) — μόνο στις **κατόψεις** (`floorplans[].value`): γωνία στο `[0, 2π)`, χώρος
    * εικόνας (0 = πάνω, δεξιόστροφα — μοντέλο Revit «Project → True North»). Απόν ⇒ «δεν δηλώθηκε» ⇒ **κανένα** βέλος.

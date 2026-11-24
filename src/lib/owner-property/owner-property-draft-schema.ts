@@ -58,6 +58,7 @@ import { FloorKindSchema } from '@/app/api/floors/floors.schemas';
 import { OWNER_DECLARABLE_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 import { photoFocalPointSchema } from '@/lib/listings/photo-focal-point';
 import { declaredCaptureSpotsSchema } from '@/lib/listings/photo-capture-spot';
+import { declaredCaptionsSchema } from '@/lib/listings/photo-caption';
 import { declaredFloorplanNorthSchema } from '@/lib/listings/floorplan-north';
 
 import { propertyTypeSchema } from '@/lib/property/property-type-schema';
@@ -320,6 +321,8 @@ export const ownerPropertyDraftSchema = z.object({
   publishedFileCaptureSpots: declaredCaptureSpotsSchema(PUBLISHED_MEDIA_LIMIT).optional(),
   /** 🧭 **Ο βορράς ανά δηλωμένη κάτοψη του φακέλου** (ADR-897 Φ5.2) — ίδιο όριο, ίδια επιβίωση με τα σημεία λήψης. */
   publishedFileFloorplanNorth: declaredFloorplanNorthSchema(PUBLISHED_MEDIA_LIMIT).optional(),
+  /** 🏷️ **Οι λεζάντες των δηλωμένων φωτογραφιών του φακέλου** — ίδιο όριο, ίδιο σκεπτικό με τα σημεία εστίασης. */
+  publishedFileCaptions: declaredCaptionsSchema(PUBLISHED_MEDIA_LIMIT).optional(),
 }).superRefine(floorUnitRule);
 
 /**

@@ -92,6 +92,7 @@ import type { OwnerDeclarableMaterialKind } from '@/lib/listings/listing-materia
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
+import type { PhotoCaption } from '@/lib/listings/photo-caption';
 import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
 import type { PublishOutcome } from '@/services/listings/listing-publish-outcome.types';
 import {
@@ -500,6 +501,13 @@ export interface OwnerProperty {
   readonly publishedFileCaptureSpots?: Readonly<Record<string, PhotoCaptureSpot>>;
 
   /**
+   * 🏷️ **Τι δείχνει κάθε δηλωμένη φωτογραφία του φακέλου** — `FileRecord.id` → λεζάντα (`lib/listings/photo-caption`).
+   * Ίδιο σκεπτικό με το {@link publishedFileFocalPoints}: ζει δίπλα στη δήλωση (η ίδια φωτογραφία λέγεται αλλιώς στην
+   * πώληση και αλλιώς στην ενοικίαση), δεν δημοσιεύει τίποτα. ⛔ **Όχι** το `FileRecord.description` — ιδιωτική σημείωση.
+   */
+  readonly publishedFileCaptions?: Readonly<Record<string, PhotoCaption>>;
+
+  /**
    * 🧭 **Πού είναι ο βορράς σε κάθε δηλωμένη κάτοψη του φακέλου** — `FileRecord.id` κάτοψης → `[0, 2π)`, χώρος εικόνας
    * (ADR-897 Φ5.2). Ίδιο σκεπτικό με το {@link publishedFileCaptureSpots}, και ταξιδεύει **μαζί** του.
    */
@@ -852,6 +860,7 @@ export type OwnerPropertyDraft = Pick<
   | 'type' | 'areaSqm' | 'offers' | 'place' | 'floor' | 'floorKind' | 'unitNumber' | 'bedrooms' | 'media' | 'title'
   | 'publishedFileIds'
   | 'publishedFileFocalPoints' | 'publishedFileCaptureSpots' | 'publishedFileFloorplanNorth'
+  | 'publishedFileCaptions'
 >;
 
 // =============================================================================

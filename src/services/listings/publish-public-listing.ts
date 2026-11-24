@@ -135,6 +135,8 @@ export type ListingSourceProperty = ProjectableProperty & {
   readonly publishedPhotoCaptureSpots?: unknown;
   /** 🧭 Ο βορράς ανά κάτοψη που ΔΗΛΩΣΕ το γραφείο (ADR-897 Φ5.2) — ωμό `unknown`, η ανάγνωση είναι το `agencyMediaDeclaration`. */
   readonly publishedFloorplanNorth?: unknown;
+  /** 🏷️ Οι λεζάντες που ΔΗΛΩΣΕ το γραφείο — ωμό `unknown`, η ανάγνωση είναι το `agencyMediaDeclaration`. */
+  readonly publishedPhotoCaptions?: unknown;
   /** 🏢 Ο όροφος της μονάδας (ADR-907 §11.7) — ωμό `unknown`· το διαβάζει **αποκλειστικά** ο `floor-plate.reader`. */
   readonly floorId?: unknown;
 };

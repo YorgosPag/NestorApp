@@ -48,6 +48,7 @@ import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitive
 import { OWNER_DECLARABLE_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 import { photoFocalPointSchema } from '@/lib/listings/photo-focal-point';
 import { photoCaptureSpotSchema } from '@/lib/listings/photo-capture-spot';
+import { photoCaptionSchema } from '@/lib/listings/photo-caption';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import { isLandProperty } from '@/constants/property-classification';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
@@ -215,6 +216,8 @@ export const ownerPropertyFormSchema = z.object({
   publishedFileCaptureSpots: z.record(z.string(), photoCaptureSpotSchema).optional(),
   /** 🧭 ADR-897 Φ5.2 — ίδιος διακόπτης· γράφεται από τον χώρο εργασίας **μαζί** με τα σημεία λήψης. */
   publishedFileFloorplanNorth: z.record(z.string(), z.number()).optional(),
+  /** 🏷️ Λεζάντες — ίδιος διακόπτης με το σημείο εστίασης (μόνο φόρμα με φάκελο). */
+  publishedFileCaptions: z.record(z.string(), photoCaptionSchema).optional(),
 });
 
 export type OwnerPropertyFormValues = z.input<typeof ownerPropertyFormSchema>;
@@ -369,6 +372,8 @@ export function ownerPropertyDraftFrom(
     ...(values.publishedFileIds ? { publishedFileCaptureSpots: { ...(values.publishedFileCaptureSpots ?? {}) } } : {}),
     // 🧭 Φ5.2 — ίδιος διακόπτης, ίδιο `{}` για απόσυρση του τελευταίου βορρά.
     ...(values.publishedFileIds ? { publishedFileFloorplanNorth: { ...(values.publishedFileFloorplanNorth ?? {}) } } : {}),
+    // 🏷️ Λεζάντες — ίδιος διακόπτης, ίδιο `{}` για απόσυρση της τελευταίας λεζάντας.
+    ...(values.publishedFileIds ? { publishedFileCaptions: { ...(values.publishedFileCaptions ?? {}) } } : {}),
   };
 }
 
@@ -439,6 +444,7 @@ export function ownerPropertyFormFrom(
     publishedFileFocalPoints: { ...(property.publishedFileFocalPoints ?? {}) },
     publishedFileCaptureSpots: { ...(property.publishedFileCaptureSpots ?? {}) },
     publishedFileFloorplanNorth: { ...(property.publishedFileFloorplanNorth ?? {}) },
+    publishedFileCaptions: { ...(property.publishedFileCaptions ?? {}) },
   };
 }
 

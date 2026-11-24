@@ -137,6 +137,7 @@
     "backToListing": "Back to the listing",
     "photosPage": {
       "heading": "Photos",
+      "documentsHeading": "Drawings and maps",
       "openLabel": "Open photo {index} of {total}",
       "imageTitle": "Photo {index} of {total}",
       "keyboardHint": "Use the ← → arrow keys to change photo.",
@@ -159,6 +160,37 @@
       "counter": "{index} / {total}",
       "northGlyph": "N",
       "northLabel": "North arrow: north is {degrees}° clockwise from the top of the floor plan"
+    },
+    "caption": {
+      "joined": "{subject} — {text}",
+      "subject": {
+        "exterior": "Exterior",
+        "plot": "Plot",
+        "street": "Street",
+        "surroundings": "Surroundings",
+        "view": "View",
+        "aerial": "Aerial photo",
+        "entrance": "Entrance",
+        "garden": "Garden",
+        "balcony": "Balcony / terrace",
+        "parking": "Parking",
+        "pool": "Pool",
+        "commonAreas": "Common areas",
+        "livingRoom": "Living room",
+        "kitchen": "Kitchen",
+        "diningRoom": "Dining room",
+        "bedroom": "Bedroom",
+        "bathroom": "Bathroom",
+        "office": "Office",
+        "hallway": "Hall / corridor",
+        "storage": "Storage",
+        "interior": "Interior",
+        "survey": "Topographic survey",
+        "cityPlan": "City plan extract",
+        "implementationAct": "Implementation act diagram",
+        "locationMap": "Location map",
+        "drawing": "Drawing"
+      }
     }
   },
   "commonCharges": {

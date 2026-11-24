@@ -87,7 +87,7 @@ function agencyFile(over: Partial<AgencyMediaCandidate> = {}): AgencyMediaCandid
 function shelfImage(url: string, over: Partial<ProjectedShelfImage> = {}): ProjectedShelfImage {
   return {
     url, width: 1280, height: 960, sources: [], material: PHOTO_MATERIAL,
-    declaredFocalPoint: null, detectedFocalPoint: null, sourceFileId: null, declaredCaptureSpot: null, declaredNorthRad: null, ...over,
+    declaredFocalPoint: null, detectedFocalPoint: null, sourceFileId: null, declaredCaptureSpot: null, declaredCaption: null, declaredNorthRad: null, ...over,
   };
 }
 

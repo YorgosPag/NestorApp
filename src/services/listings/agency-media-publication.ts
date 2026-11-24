@@ -56,6 +56,7 @@ import type { FileRecord } from '@/types/file-record';
 import { readDeclaredFocalPoints, type PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import { readDeclaredCaptureSpots, type PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import { readDeclaredFloorplanNorth, type DeclaredFloorplanNorth } from '@/lib/listings/floorplan-north';
+import { readDeclaredCaptions, type PhotoCaption } from '@/lib/listings/photo-caption';
 import type { AgencyDeclarationSource } from '@/lib/listings/declaration-succession';
 
 /**
@@ -310,6 +311,7 @@ export function compareAgencyMediaForPublication(
  * | `focalPoints` | *«πού είναι το θέμα κάθε φωτογραφίας;»* (ADR-880) — **ποτέ** «ποια;» | `properties/{id}.publishedMediaFocalPoints` |
  * | `captureSpots` | *«από πού τραβήχτηκε κάθε φωτογραφία;»* (ADR-897) | `properties/{id}.publishedPhotoCaptureSpots` |
  * | `floorplanNorth` | *«πού είναι ο βορράς σε κάθε κάτοψη;»* (ADR-897 Φ5.2) | `properties/{id}.publishedFloorplanNorth` |
+ * | `captions` | *«τι δείχνει κάθε φωτογραφία;»* (`photo-caption`) | `properties/{id}.publishedPhotoCaptions` |
  *
  * 🔴 **ΟΙ ΔΥΟ ΔΕΝ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΕΙΔΟΣ ΔΗΛΩΣΗΣ, ΚΑΙ Η ΔΙΑΦΟΡΑ ΕΙΝΑΙ Η ΑΣΦΑΛΕΙΑ.**
  * Η `order` **δεν μπορεί να δημοσιεύσει τίποτα** — μόνο να τακτοποιήσει ό,τι ήδη φεύγει *(Α14.7.2)*.
@@ -335,6 +337,8 @@ export interface AgencyMediaDeclaration {
   readonly captureSpots?: ReadonlyMap<string, PhotoCaptureSpot>;
   /** 🧭 Ο βορράς ανά `FileRecord.id` **κάτοψης** (ADR-897 Φ5.2) — δεν δημοσιεύει τίποτα· λέει μόνο πού δείχνει το βέλος. */
   readonly floorplanNorth?: DeclaredFloorplanNorth;
+  /** 🏷️ Η λεζάντα ανά `FileRecord.id` φωτογραφίας — δεν δημοσιεύει τίποτα· λέει μόνο τι γράφει κάτω από ό,τι φεύγει. */
+  readonly captions?: ReadonlyMap<string, PhotoCaption>;
 }
 
 /** Καμία δήλωση — μοιράζεται, γιατί είναι αμετάβλητη και κενή. */
@@ -364,5 +368,6 @@ export function agencyMediaDeclaration(source: AgencyDeclarationSource): AgencyM
     focalPoints: readDeclaredFocalPoints(source.publishedMediaFocalPoints),
     captureSpots: readDeclaredCaptureSpots(source.publishedPhotoCaptureSpots),
     floorplanNorth: readDeclaredFloorplanNorth(source.publishedFloorplanNorth),
+    captions: readDeclaredCaptions(source.publishedPhotoCaptions),
   };
 }

@@ -54,6 +54,7 @@ export const AGENCY_DECLARATION_FIELDS = {
   publishedMediaFocalPoints: 'by-file',
   publishedPhotoCaptureSpots: 'by-file-on-floorplan',
   publishedFloorplanNorth: 'by-file',
+  publishedPhotoCaptions: 'by-file',
 } as const satisfies Readonly<Record<string, AgencyDeclarationKind>>;
 
 export type AgencyDeclarationField = keyof typeof AGENCY_DECLARATION_FIELDS;
