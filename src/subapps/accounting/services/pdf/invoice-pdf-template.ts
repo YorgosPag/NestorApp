@@ -28,6 +28,7 @@ import {
 } from './invoice-pdf-sections';
 import { invoicePayableAmount } from '../payments/invoice-payment-instructions';
 import { drawVatExemptionSection } from './invoice-pdf-vat-exemption';
+import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 
 // Re-export section renderers for direct use
 export { drawHeader, drawCustomerSection } from './invoice-pdf-parties';
@@ -76,12 +77,8 @@ export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promis
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  // Register Roboto font for Greek character support
-  const { ROBOTO_REGULAR_BASE64 } = await import('@/services/gantt-export/roboto-font-data');
-  pdf.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64);
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal', undefined, 'Identity-H');
-  pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'bold', undefined, 'Identity-H');
-  pdf.setFont('Roboto', 'normal');
+  // Roboto Regular + real Roboto Bold (Greek, Identity-H) — SSoT registration (ADR-947 §11)
+  await registerGreekFont(pdf);
 
   // Render sections sequentially
   let y = LAYOUT.marginTop;

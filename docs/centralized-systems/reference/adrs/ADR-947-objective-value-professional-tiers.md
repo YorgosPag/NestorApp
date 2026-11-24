@@ -381,6 +381,13 @@ PDF στη συσκευή, που διαβάζει το συνημμένο με 
 
 ## Changelog
 
+- **2026-11-24** — **Πραγματικό έντονο και στα τιμολόγια λογιστηρίου** (εντολή Giorgio). Το
+  `src/subapps/accounting/services/pdf/invoice-pdf-template.ts` έκανε **δική του** εγγραφή γραμματοσειράς και δήλωνε το
+  `'bold'` στο Regular TTF ⇒ τα τιμολόγια δεν έβγαζαν ποτέ έντονα, και η διόρθωση της προηγούμενης εγγραφής δεν τα
+  έφτανε. Πλέον καλεί `await registerGreekFont(pdf)` (`@/services/pdf/greek-font-loader`, η μία πηγή)· το
+  `renderInvoicePDF` ήταν ήδη `async`, κανένας καλών δεν άλλαξε. Τα ποσά (`formatAccountingCurrency`, el-GR) χρησιμοποιούν
+  U+00A0, όχι U+202F. Tests/ζωντανή επαλήθευση: **δεν** έτρεξαν (αναμένουν έγκριση Giorgio).
+
 - **2026-11-24** — **Πραγματικό έντονο στο PDF** (εντολή Giorgio, επιλογή 1). Στη ζωντανή επαλήθευση το «Nestor App», ο
   τίτλος και το ποσό φαίνονταν **κανονικά**: το `registerGreekFont` δήλωνε το `'bold'` στο **ίδιο** Regular TTF. Πλέον
   `'bold'` = Roboto Bold v2.137 (`roboto-bold-font-data.ts`, Apache-2.0) — η διόρθωση είναι στο κοινό σημείο, άρα ισχύει
