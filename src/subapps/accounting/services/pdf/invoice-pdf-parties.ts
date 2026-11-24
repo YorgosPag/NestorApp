@@ -22,7 +22,7 @@ import { countryLabelIn } from '@/utils/address/country-label-text';
 import { drawPdfLogo } from './pdf-logo';
 import {
   COLORS, LAYOUT, LOGO, LABELS, INVOICE_TITLES,
-  ensureSpace, drawHR, setColor, drawWrappedLines, type RGB,
+  ensureSpace, drawHR, setColor, setWeight, drawWrappedLines, type RGB, type FontWeight,
 } from './invoice-pdf-constants';
 
 /** Απόσταση ανάμεσα στις δύο στήλες της κεφαλίδας (mm). */
@@ -40,28 +40,37 @@ interface RightLine {
   readonly fontSize: number;
   readonly color: RGB;
   readonly advance: number;
+  readonly weight: FontWeight;
+}
+
+/** Μέγεθος + βάρος μιας γραμμής: το ΙΔΙΟ για τη μέτρηση και για τη σχεδίαση, ώστε ο προϋπολογισμός στηλών να ισχύει. */
+function applyLineFont(pdf: jsPDF, line: RightLine): void {
+  pdf.setFontSize(line.fontSize);
+  setWeight(pdf, line.weight);
 }
 
 function rightBlockLines(invoice: Invoice): RightLine[] {
   const title = INVOICE_TITLES[invoice.type];
   const lines: RightLine[] = [
-    { text: title.el, fontSize: 12, color: COLORS.navy, advance: 5 },
-    { text: title.en, fontSize: 8, color: COLORS.grayLight, advance: 5 },
-    { text: `${invoice.series}-${invoice.number}`, fontSize: 10, color: COLORS.navy, advance: 7 },
-    { text: `${LABELS.invoiceDate}: ${formatAccountingDate(invoice.issueDate)}`, fontSize: 8, color: COLORS.gray, advance: 6 },
+    { text: title.el, fontSize: 12, color: COLORS.navy, advance: 5, weight: 'bold' },
+    { text: title.en, fontSize: 8, color: COLORS.grayLight, advance: 5, weight: 'normal' },
+    { text: `${invoice.series}-${invoice.number}`, fontSize: 10, color: COLORS.navy, advance: 7, weight: 'bold' },
+    { text: `${LABELS.invoiceDate}: ${formatAccountingDate(invoice.issueDate)}`, fontSize: 8, color: COLORS.gray, advance: 6, weight: 'normal' },
   ];
   if (invoice.dueDate) {
-    lines.push({ text: `${LABELS.dueDate}: ${formatAccountingDate(invoice.dueDate)}`, fontSize: 8, color: COLORS.gray, advance: 4 });
+    lines.push({ text: `${LABELS.dueDate}: ${formatAccountingDate(invoice.dueDate)}`, fontSize: 8, color: COLORS.gray, advance: 4, weight: 'normal' });
   }
   return lines;
 }
 
 /** Το πλάτος της φαρδύτερης γραμμής της δεξιάς στήλης, στο μέγεθος της καθεμιάς. */
 function widestLine(pdf: jsPDF, lines: readonly RightLine[]): number {
-  return lines.reduce((widest, line) => {
-    pdf.setFontSize(line.fontSize);
-    return Math.max(widest, pdf.getTextWidth(line.text));
+  const widest = lines.reduce((acc, line) => {
+    applyLineFont(pdf, line);
+    return Math.max(acc, pdf.getTextWidth(line.text));
   }, 0);
+  setWeight(pdf, 'normal');
+  return widest;
 }
 
 /** Σχεδιάζει τη δεξιά στήλη· επιστρέφει το y της επόμενης γραμμής. */
@@ -69,10 +78,11 @@ function drawRightBlock(pdf: jsPDF, lines: readonly RightLine[], x: number, star
   let y = startY;
   for (const line of lines) {
     y += line.advance;
-    pdf.setFontSize(line.fontSize);
+    applyLineFont(pdf, line);
     setColor(pdf, line.color);
     pdf.text(line.text, x, y, { align: 'right' });
   }
+  setWeight(pdf, 'normal');
   return y + LINE_STEP;
 }
 
@@ -96,7 +106,9 @@ function issuerDetailText(invoice: Invoice): string {
 function drawIssuerBlock(pdf: jsPDF, invoice: Invoice, x: number, startY: number, maxWidth: number): number {
   setColor(pdf, COLORS.navy);
   pdf.setFontSize(11);
+  setWeight(pdf, 'bold'); // πριν την αναδίπλωση: μετρά με το πλάτος του Bold
   const afterName = drawWrappedLines(pdf, invoice.issuer.name, startY + 5, { x, maxWidth, lineStep: 5 });
+  setWeight(pdf, 'normal');
   pdf.setFontSize(8);
   setColor(pdf, COLORS.gray);
   return drawWrappedLines(pdf, issuerDetailText(invoice), afterName, { x, maxWidth, lineStep: LINE_STEP });

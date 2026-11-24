@@ -7,6 +7,7 @@
 import type jsPDF from 'jspdf';
 import type { InvoiceType, PaymentMethod } from '../../types';
 import type { HumanLanguage } from '@/i18n/languages';
+import { FONTS, FONT_STYLES } from '@/services/pdf/layout';
 
 // ============================================================================
 // CONSTANTS — Brand Colors & Layout
@@ -148,6 +149,18 @@ export function drawHR(pdf: jsPDF, y: number, color: RGB = COLORS.grayBorder): n
 /** Set text color from RGB tuple. */
 export function setColor(pdf: jsPDF, color: readonly [number, number, number]): void {
   pdf.setTextColor(color[0], color[1], color[2]);
+}
+
+/** Βάρος του Roboto: `normal` | `bold`. */
+export type FontWeight = (typeof FONT_STYLES)[keyof typeof FONT_STYLES];
+
+/**
+ * Ορίζει το βάρος του Roboto (ADR-947 §11). Το `bold` είναι πραγματικό Roboto Bold μόνο επειδή η γραμματοσειρά
+ * γράφεται από το `registerGreekFont`. Όποιος μετρά πλάτος (`getTextWidth`) το καλεί ΠΡΙΝ μετρήσει: το Bold είναι
+ * φαρδύτερο. Κάθε έντονο κομμάτι επιστρέφει σε `normal` αμέσως μετά.
+ */
+export function setWeight(pdf: jsPDF, weight: FontWeight): void {
+  pdf.setFont(FONTS.UNICODE, weight);
 }
 
 /** Οριζόντια οριοθέτηση: αυτό που χρειάζεται η αναδίπλωση για να ξέρει **πού** γράφει και **πόσο** χωράει. */

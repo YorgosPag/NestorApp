@@ -19,7 +19,7 @@ import {
 } from './invoice-pdf-payment-qr';
 import {
   COLORS, LAYOUT, LABELS, PAYMENT_METHOD_LABELS, INVOICE_DOCUMENT_LANGUAGE,
-  ensureSpace, drawHR, setColor,
+  ensureSpace, drawHR, setColor, setWeight,
   drawPaymentStamp, buildColumnStyles
 } from './invoice-pdf-constants';
 import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
@@ -108,8 +108,10 @@ export function drawTotalsSection(pdf: jsPDF, invoice: Invoice, startY: number, 
 
   setColor(pdf, COLORS.navy);
   pdf.setFontSize(9);
+  setWeight(pdf, 'bold');
   pdf.text(LABELS.grossTotal, labelX, y);
   pdf.text(formatAccountingCurrency(invoice.totalGrossAmount), valueX, y, { align: 'right' });
+  setWeight(pdf, 'normal');
   y += 5;
 
   if (withholdingAmount > 0) {
@@ -124,8 +126,10 @@ export function drawTotalsSection(pdf: jsPDF, invoice: Invoice, startY: number, 
   y = drawHR(pdf, y, COLORS.navy);
   setColor(pdf, COLORS.navy);
   pdf.setFontSize(11);
+  setWeight(pdf, 'bold');
   pdf.text(LABELS.payable, labelX, y + 3);
   pdf.text(formatAccountingCurrency(payable), valueX, y + 3, { align: 'right' });
+  setWeight(pdf, 'normal');
   y += 8;
 
   return y + 3;

@@ -35,6 +35,7 @@ function fakePdf() {
   });
   const pdf = {
     setFontSize: (size: number) => { fontSize = size; },
+    setFont: () => undefined,
     getTextWidth: width,
     splitTextToSize: wrap,
     text: (text: string, x: number, y: number, opts?: { align?: string }) => {
