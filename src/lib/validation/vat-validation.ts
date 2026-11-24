@@ -22,6 +22,7 @@ import { db } from '@/lib/firebase';
 import type { Contact, ContactType } from '@/types/contacts';
 import type { IdentifierHolder } from '@/lib/contacts/contact-identifier-duplicate-policy';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
+import { liveIdentifierHolders } from '@/lib/contacts/live-identifier-holders';
 import { GREEK_VAT_REGEX, normalizeVat } from '@/lib/validation/greek-vat-number';
 
 // ============================================================================
@@ -104,12 +105,7 @@ export async function findVatHolders(
       where('vatNumber', '==', normalized),
       limit(VAT_HOLDER_LIMIT)
     ));
-    return snapshot.docs
-      .filter((doc) => doc.id !== excludeContactId)
-      .map((doc) => {
-        const contact = doc.data();
-        return { id: doc.id, name: getContactDisplayName(contact), type: contact.type };
-      });
+    return liveIdentifierHolders(snapshot.docs, excludeContactId, getContactDisplayName);
   } catch (error) {
     console.error('[vat-validation] findVatHolders error:', error);
     return [];

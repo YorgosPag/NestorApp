@@ -17,6 +17,7 @@ import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
+import { liveIdentifierHolders } from '@/lib/contacts/live-identifier-holders';
 import { CONTACT_EMAIL_KEYS_FIELD, emailKeyOf } from '@/lib/contacts/contact-email-keys';
 import { isValidEmail } from '@/lib/validation/email-validation';
 import type { Contact, ContactType } from '@/types/contacts';
@@ -70,12 +71,7 @@ export async function findContactsWithEmail(
       where(CONTACT_EMAIL_KEYS_FIELD, 'array-contains', key),
       limit(MATCH_LIMIT),
     ));
-    return snapshot.docs
-      .filter((doc) => doc.id !== excludeContactId)
-      .map((doc) => {
-        const contact = doc.data();
-        return { id: doc.id, name: displayNameOf(contact), type: contact.type };
-      });
+    return liveIdentifierHolders(snapshot.docs, excludeContactId, displayNameOf);
   } catch (error) {
     logger.warn('Ο έλεγχος διπλού email απέτυχε — καμία προειδοποίηση (fail-open)', {
       error: error instanceof Error ? error.message : String(error),
