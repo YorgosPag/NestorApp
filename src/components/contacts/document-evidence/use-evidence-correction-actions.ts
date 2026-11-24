@@ -36,7 +36,8 @@ export interface EvidenceCorrectionActions {
   readonly purpose: string;
   /** Τα πεδία του διαλόγου για μια γραμμή — με ό,τι είπε η μηχανή, η δεύτερη ανάγνωση και η τυχόν διόρθωση. */
   readonly fieldsOf: (row: EvidenceRowKey) => readonly EvidenceCorrectionField[];
-  readonly correct: (row: EvidenceRowKey, values: EvidenceCorrectionValues) => void;
+  /** Αληθές όταν ο διακομιστής **έγραψε** τη διόρθωση — ό,τι ακολουθεί (καταχώριση · πρόταση) περιμένει αυτό. */
+  readonly correct: (row: EvidenceRowKey, values: EvidenceCorrectionValues) => Promise<boolean>;
   readonly clear: (row: EvidenceRowKey) => void;
 }
 
@@ -56,15 +57,16 @@ export function useEvidenceCorrectionActions(file: FileRecord): EvidenceCorrecti
   }, [machine, corrections]);
 
   const correct = useCallback((row: EvidenceRowKey, values: EvidenceCorrectionValues) => {
-    if (setPending === undefined || machine === null) return;
+    if (setPending === undefined || machine === null) return Promise.resolve(false);
     // Αισιόδοξα: ίδιο αποτύπωμα μηχανής με αυτό που θα υπολογίσει ο διακομιστής. Το `correctedBy` μένει κενό **μόνο**
     // στην εκκρεμή τιμή — την αυθεντική τη γράφει ο διακομιστής από την ταυτότητα του αιτήματος.
     const machineReadingAtCorrection = machineReadingSignature(machine.reading, evidenceRowFieldSpecs(machine.purpose, row));
     setPending(fileId, row, { row, values, machineReadingAtCorrection, correctedBy: '', correctedAt: nowISO() });
-    correctEvidenceWithPolicy(fileId, row, values).catch((cause: unknown) => {
+    return correctEvidenceWithPolicy(fileId, row, values).then(() => true, (cause: unknown) => {
       logger.error('Evidence correction failed', { fileId, row, cause });
       setPending(fileId, row, undefined);
       error(t(KEYS.saveFailed));
+      return false;
     });
   }, [setPending, machine, fileId, error, t]);
 

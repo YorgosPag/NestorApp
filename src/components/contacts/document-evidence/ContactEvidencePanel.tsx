@@ -21,7 +21,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { fillableEvidenceRows, fillableEvidenceSeat } from '@/lib/contacts/contact-evidence-acceptance';
+import {
+  evidenceFollowUp,
+  fillableEvidenceRows,
+  fillableEvidenceSeat,
+  type EvidenceFollowUp,
+} from '@/lib/contacts/contact-evidence-acceptance';
+import type { EvidenceCorrectionValues } from '@/lib/contacts/contact-evidence-corrections';
 import type { EvidenceRowKey } from '@/config/contact-document-evidence';
 import type { EvidenceComparisonState, EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
@@ -31,7 +37,7 @@ import { GroundedEvidenceValue } from './ContactEvidenceDocumentValue';
 import { ContactEvidenceCorrectionDialog } from './ContactEvidenceCorrectionDialog';
 import { ContactEvidenceFillDialog } from './ContactEvidenceFillDialog';
 import { ContactEvidenceRowActions } from './ContactEvidenceRowActions';
-import { useContactEvidenceHost, useContactEvidenceRows } from './ContactEvidenceContext';
+import { useContactEvidenceComparison, useContactEvidenceHost, type EvidenceCorrectionPreview } from './ContactEvidenceContext';
 import {
   CONTACT_EVIDENCE_COLUMN_KEYS as COLUMNS,
   CONTACT_EVIDENCE_CORRECTION_KEYS as CORRECTION,
@@ -45,7 +51,7 @@ import {
   ungroundedLabelKey,
 } from './contact-evidence-labels';
 import { useContactEvidenceActions, type ContactEvidenceActions } from './use-contact-evidence-actions';
-import { useEvidenceCorrectionActions } from './use-evidence-correction-actions';
+import { useEvidenceCorrectionActions, type EvidenceCorrectionActions } from './use-evidence-correction-actions';
 
 const STATE_ICON: Readonly<Record<EvidenceComparisonState, LucideIcon>> = {
   match: CheckCircle2,
@@ -161,18 +167,51 @@ function PanelActions({ file, rows, actions, labelOf }: {
   );
 }
 
+/**
+ * ADR-950 §11 — **διόρθωση και, με το ίδιο πάτημα, η πράξη που ακολουθεί**. Η πράξη τρέχει πάνω στη γραμμή όπως **θα**
+ * είναι (`preview`), μέσα από τα **υπάρχοντα** `register` / `accept` / `proposeAddress` — κανένας δεύτερος δρόμος.
+ *
+ * 🔑 Σειρά: στην **προβολή** η πράξη γράφει στην επαφή (ή ανοίγει επεξεργασία) ⇒ περιμένει να **γραφτεί** πρώτα η
+ *    διόρθωση· αποτυχία ⇒ τίποτα δεν ακολουθεί. Στην **επεξεργασία** η πράξη αλλάζει μόνο τη φόρμα ⇒ γίνεται αμέσως,
+ *    πάνω στη φόρμα της στιγμής του πατήματος (καμία μπαγιάτικη εικόνα μετά από αναμονή).
+ */
+function useCorrectionWithFollowUp(
+  corrections: EvidenceCorrectionActions | null,
+  actions: ContactEvidenceActions | null,
+  preview: EvidenceCorrectionPreview | undefined,
+  canEdit: boolean,
+) {
+  return (rowKey: EvidenceRowKey, values: EvidenceCorrectionValues, followUp: EvidenceFollowUp | null): void => {
+    if (corrections === null) return;
+    const next = followUp === null || actions === null ? null : preview?.(rowKey, values) ?? null;
+    const run = (): void => {
+      if (next === null || actions === null) return;
+      if (followUp === 'register') actions.register(next);
+      else if (followUp === 'accept') actions.accept(next);
+      else if (followUp === 'propose-address') actions.proposeAddress(next);
+    };
+    if (canEdit) run();
+    void corrections.correct(rowKey, values).then((saved) => {
+      if (saved && !canEdit) run();
+    });
+  };
+}
+
 export function ContactEvidencePanel({ file }: { readonly file: FileRecord }) {
   const { t } = useTranslation('contacts-form');
   const translateDisplayName = useFileDisplayName();
   const host = useContactEvidenceHost();
-  const rows = useContactEvidenceRows(file);
+  const comparison = useContactEvidenceComparison(file);
+  const rows = comparison?.rows ?? null;
   const actions = useContactEvidenceActions(file, translateDisplayName(file));
   const corrections = useEvidenceCorrectionActions(file);
   // Αποσυρμένη επαφή ⇒ καμία νέα απόφαση πάνω στα στοιχεία της (ίδιος κανόνας με τη «Νέα ανάγνωση»).
   const parentIsLive = useRetiredKind() === null;
   const [correcting, setCorrecting] = useState<EvidenceRowKey | null>(null);
-  if (host === null || rows === null || actions === null) return null;
+  const saveCorrection = useCorrectionWithFollowUp(corrections, actions, comparison?.preview, host?.canEdit ?? false);
+  if (host === null || comparison === null || rows === null || actions === null) return null;
   const canCorrect = corrections !== null && parentIsLive;
+  const abilities = { canEdit: host.canEdit, canRegister: actions.canRegister, canProposeAddress: actions.canProposeAddress };
   const correctingRow = canCorrect ? rows.find((row) => row.key === correcting) ?? null : null;
   const titleId = `contact-evidence-${file.id}`;
   const labelOf = (row: EvidenceRow) => t(rowLabelKey(row, host.contactType === 'individual'));
@@ -222,7 +261,12 @@ export function ContactEvidencePanel({ file }: { readonly file: FileRecord }) {
           purpose={corrections.purpose}
           fields={corrections.fieldsOf(correctingRow.key)}
           corrected={correctingRow.correction !== undefined}
-          onSave={(values) => corrections.correct(correctingRow.key, values)}
+          outcomeOf={(values) => {
+            const next = comparison.preview(correctingRow.key, values);
+            return next === null ? null : { row: next, followUp: evidenceFollowUp(next, abilities) };
+          }}
+          followUpBusy={actions.isRegistering}
+          onSave={(values, followUp) => saveCorrection(correctingRow.key, values, followUp)}
           onClear={() => corrections.clear(correctingRow.key)}
           onClose={() => setCorrecting(null)}
         />

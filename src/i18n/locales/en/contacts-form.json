@@ -384,6 +384,14 @@
       "machineAbsent": "The machine did not find it in the document",
       "stale": "The machine's new reading says something else — review the correction",
       "addressPending": "The location is confirmed on the map on acceptance",
+      "outcome": "After the correction: {state}",
+      "contactSays": "The contact says: {value}",
+      "saveOnly": "Correction only",
+      "followUp": {
+        "register": "Save and register",
+        "accept": "Save and accept",
+        "proposeAddress": "Save and propose address"
+      },
       "fields": {
         "addressStreet": "Street",
         "addressNumber": "Number",

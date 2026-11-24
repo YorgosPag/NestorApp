@@ -4,6 +4,7 @@ import {
   acceptEvidence,
   acceptEvidenceBatch,
   canRegisterEvidence,
+  evidenceFollowUp,
   fillableEvidenceRows,
   fillableEvidenceSeat,
   formDataChanges,
@@ -126,5 +127,38 @@ describe('«Καταχώριση» με ένα πάτημα (ADR-950 §9)', () =
     const tee = acceptEvidence(EMPTY, rowOf(rowsOf(EMPTY), 'teeRegistryNumber'), 'individual');
     expect(Object.keys(formDataChanges(EMPTY, tee)).sort()).toEqual(['activePersonas', 'personaData']);
     expect(formDataChanges(EMPTY, EMPTY)).toEqual({});
+  });
+});
+
+describe('η πράξη που ακολουθεί τη διόρθωση, με το ίδιο πάτημα (ADR-950 §11)', () => {
+  const VIEW = { canEdit: false, canRegister: true, canProposeAddress: true };
+  const EDIT = { canEdit: true, canRegister: false, canProposeAddress: true };
+  const LOCKED = { canEdit: false, canRegister: false, canProposeAddress: false };
+
+  it('προβολή + κενό πεδίο ⇒ καταχώριση · επεξεργασία ⇒ αποδοχή', () => {
+    const vat = rowOf(rowsOf(EMPTY), 'vatNumber');
+    expect(evidenceFollowUp(vat, VIEW)).toBe('register');
+    expect(evidenceFollowUp(vat, EDIT)).toBe('accept');
+  });
+
+  it('προβολή + τιμή που διαφέρει ⇒ καμία πράξη (ποτέ αντικατάσταση με ένα πάτημα)', () => {
+    const filled: ContactFormData = { ...EMPTY, vatNumber: '123456789' };
+    const vat = rowOf(rowsOf(filled), 'vatNumber');
+    expect(evidenceFollowUp(vat, VIEW)).toBeNull();
+    expect(evidenceFollowUp(vat, EDIT)).toBe('accept');
+  });
+
+  it('διεύθυνση ⇒ ΠΑΝΤΑ πρόταση προς τον editor έδρας, ποτέ καταχώριση', () => {
+    const address = rowOf(rowsOf(EMPTY), 'address');
+    expect(evidenceFollowUp(address, VIEW)).toBe('propose-address');
+    expect(evidenceFollowUp(address, EDIT)).toBe('propose-address');
+    expect(evidenceFollowUp(address, { ...VIEW, canProposeAddress: false })).toBeNull();
+  });
+
+  it('ό,τι ήδη ταιριάζει, και οθόνη χωρίς δικαίωμα ⇒ καμία πράξη', () => {
+    const matching: ContactFormData = { ...EMPTY, vatNumber: '094063140' };
+    expect(evidenceFollowUp(rowOf(rowsOf(matching), 'vatNumber'), VIEW)).toBeNull();
+    expect(evidenceFollowUp(rowOf(rowsOf(matching), 'vatNumber'), EDIT)).toBeNull();
+    expect(evidenceFollowUp(rowOf(rowsOf(EMPTY), 'vatNumber'), LOCKED)).toBeNull();
   });
 });

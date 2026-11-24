@@ -68,6 +68,8 @@ export interface RendererContext {
   /** ADR-950 §9 — «Καταχώριση» στοιχείου εγγράφου από την προβολή (μόνο η καρτέλα υπάρχουσας επαφής το δίνει). */
   onRegisterFormData?: (next: ContactFormData, changes: Partial<ContactFormData>) => Promise<void>;
   isRegisteringFormData?: boolean;
+  /** ADR-950 §11 — ανοίγει την επεξεργασία από την προβολή (η «Πρόταση διεύθυνσης» φτάνει στον editor έδρας με ένα πάτημα). */
+  onStartEdit?: () => void;
 }
 
 export type RendererFn = (
@@ -215,6 +217,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
             onOpenAddresses={ctx.onActiveTabChange ? () => ctx.onActiveTabChange?.(addressSectionIdFor(contactType)) : undefined}
             onRegister={ctx.isContactTrashed ? undefined : ctx.onRegisterFormData}
             isRegistering={ctx.isRegisteringFormData}
+            onStartEdit={ctx.isContactTrashed || !ctx.disabled ? undefined : ctx.onStartEdit}
           >
           <EntityFilesManager
             entityType={ENTITY_TYPES.CONTACT}

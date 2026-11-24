@@ -115,6 +115,7 @@ export function ContactDetails({
           onFieldBlur={isEditing ? handleFieldBlur : undefined}
           onRegisterFormData={readOnly ? undefined : handleRegister}
           isRegisteringFormData={isSaving}
+          onStartEdit={readOnly || isEditing ? undefined : handleStartEdit}
         />
       </DetailsContainer>
 

@@ -7,7 +7,8 @@
  * Κάθε κουμπί εμφανίζεται **μόνο** όταν η πράξη του είναι δυνατή· όταν δεν είναι, λέμε **γιατί** (προβολή αντί για
  * επεξεργασία · πεδίο που διορθώνεται από τη φόρμα). Προβολή + κενό πεδίο ⇒ **«Καταχώριση»** με ένα πάτημα (ADR-950 §9).
  * Η «Αγνόηση» ζητά **αιτία** (GitHub code scanning). Η **«Διόρθωση»** (ADR-950 §10) υπάρχει σε **κάθε** γραμμή: ό,τι
- * διάβασε η μηχανή διορθώνεται επιτόπου — καμία γραμμή-αδιέξοδο.
+ * διάβασε η μηχανή διορθώνεται επιτόπου — καμία γραμμή-αδιέξοδο. Η **«Πρόταση διεύθυνσης»** δουλεύει και από την
+ * προβολή (ADR-950 §11): ανοίγει την επεξεργασία και παραδίδει την πρόταση στον editor έδρας.
  */
 
 import React from 'react';
@@ -41,10 +42,10 @@ interface ContactEvidenceRowActionsProps {
 }
 
 /** Γιατί **δεν** υπάρχει κουμπί αποδοχής/καταχώρισης — ή `null` όταν υπάρχει (ή δεν χρειάζεται). */
-function acceptBlockedKey(row: EvidenceRow, canEdit: boolean, canRegister: boolean): string | null {
+function acceptBlockedKey(row: EvidenceRow, canEdit: boolean, offered: boolean): string | null {
   if (!isEvidenceActionable(row) || row.documentDisplay === null) return null;
   if (row.acceptance === 'compare-only') return KEYS.compareOnly;
-  return canEdit || canRegister ? null : KEYS.editToAccept;
+  return canEdit || offered ? null : KEYS.editToAccept;
 }
 
 function DismissMenu({ row, actions }: { readonly row: EvidenceRow; readonly actions: ContactEvidenceActions }) {
@@ -70,9 +71,10 @@ export function ContactEvidenceRowActions({ row, canEdit, actions, onCorrect }: 
   const { t } = useTranslation('contacts-form');
   // Προβολή: «Καταχώριση» **μόνο** για κενό πεδίο με ελεγμένη τιμή (ADR-950 §9)· ό,τι αντικαθιστά τιμή θέλει επεξεργασία.
   const canRegister = actions.canRegister && canRegisterEvidence(row);
-  const blocked = acceptBlockedKey(row, canEdit, canRegister);
   const canAccept = canEdit && canAcceptEvidence(row);
-  const canPropose = canEdit && canProposeEvidenceSeat(row);
+  // Διεύθυνση: και από την προβολή — το πάτημα ανοίγει την επεξεργασία με την πρόταση έτοιμη (ADR-950 §11).
+  const canPropose = actions.canProposeAddress && canProposeEvidenceSeat(row);
+  const blocked = acceptBlockedKey(row, canEdit, canRegister || canPropose);
   return (
     <span className="flex flex-wrap items-center justify-end gap-1">
       {canRegister && (

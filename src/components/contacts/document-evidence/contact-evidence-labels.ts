@@ -15,6 +15,7 @@ import type {
   EvidenceRowKey,
 } from '@/config/contact-document-evidence';
 import type { UngroundedReason } from '@/lib/contacts/contact-evidence-grounding';
+import type { EvidenceFollowUp } from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceComparisonState } from '@/lib/contacts/contact-evidence-comparison';
 
 export const CONTACT_EVIDENCE_KEYS = {
@@ -137,6 +138,10 @@ export const CONTACT_EVIDENCE_CORRECTION_KEYS = {
   machineAbsent: 'contacts-form:documentEvidence.correction.machineAbsent',
   stale: 'contacts-form:documentEvidence.correction.stale',
   addressPending: 'contacts-form:documentEvidence.correction.addressPending',
+  /** ADR-950 §11 — η κρίση που **θα** βγει μετά την αποθήκευση, και η πράξη που ακολουθεί με το ίδιο πάτημα. */
+  outcome: 'contacts-form:documentEvidence.correction.outcome',
+  contactSays: 'contacts-form:documentEvidence.correction.contactSays',
+  saveOnly: 'contacts-form:documentEvidence.correction.saveOnly',
   saveFailed: 'contacts-form:documentEvidence.errors.correctionFailed',
   clearFailed: 'contacts-form:documentEvidence.errors.correctionClearFailed',
 } as const;
@@ -170,4 +175,11 @@ export const CONTACT_EVIDENCE_REASON_KEYS: Readonly<Record<EvidenceDismissReason
   'outdated-document': 'contacts-form:documentEvidence.reasons.outdatedDocument',
   misread: 'contacts-form:documentEvidence.reasons.misread',
   other: 'contacts-form:documentEvidence.reasons.other',
+};
+
+/** ADR-950 §11 — το κύριο κουμπί του διαλόγου όταν η διόρθωση συνεχίζει σε πράξη πάνω στην επαφή. */
+export const CONTACT_EVIDENCE_FOLLOW_UP_KEYS: Readonly<Record<EvidenceFollowUp, string>> = {
+  register: 'contacts-form:documentEvidence.correction.followUp.register',
+  accept: 'contacts-form:documentEvidence.correction.followUp.accept',
+  'propose-address': 'contacts-form:documentEvidence.correction.followUp.proposeAddress',
 };

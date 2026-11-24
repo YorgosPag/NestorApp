@@ -14,6 +14,7 @@ import {
   evidenceRowFieldSpecs,
   machineReadingSignature,
   preferredReading,
+  previewEvidenceCorrection,
   readEvidenceCorrections,
   withEvidenceCorrection,
   withoutEvidenceCorrection,
@@ -202,5 +203,60 @@ describe('το μητρώο διορθώσεων', () => {
     const raw = [first, { ...first, row: 'addressStreet' }, { ...first, values: { nope: 'x' } }, { ...first, values: {} }, { ...first, correctedBy: '' }, null];
     expect(readEvidenceCorrections(raw)).toEqual([first]);
     expect(readEvidenceCorrections(undefined)).toEqual([]);
+  });
+});
+
+describe('η προεπισκόπηση — η κρίση ΠΡΙΝ από την αποθήκευση (ADR-950 §11)', () => {
+  const input = (form: ContactFormData, corrections: readonly EvidenceCorrection[] = []) =>
+    ({ reading: READING, purpose: PURPOSE, formData: form, contactType: 'individual' as const, dismissals: [], corrections });
+
+  it('λέει ό,τι θα πει ο πίνακας μετά την αποθήκευση — ίδια γραμμή, ίδια κρίση', () => {
+    const values = { vatNumber: VALID_VAT };
+    const preview = previewEvidenceCorrection(input(formData), 'vatNumber', values);
+    expect(preview).toEqual(row(rowsOf([{ ...correctionOf('vatNumber', values), correctedBy: '', correctedAt: '' }]), 'vatNumber'));
+    expect(preview).toMatchObject({ state: 'missing', documentDisplay: VALID_VAT });
+  });
+
+  it('η επαφή έχει ήδη την τιμή ⇒ «Ταιριάζει» · άλλη τιμή ⇒ «Διαφέρει», ποτέ καταχώριση', () => {
+    const same = previewEvidenceCorrection(input({ ...formData, vatNumber: VALID_VAT }), 'vatNumber', { vatNumber: VALID_VAT });
+    expect(same?.state).toBe('match');
+    const other = previewEvidenceCorrection(input({ ...formData, vatNumber: '094063140' }), 'vatNumber', { vatNumber: VALID_VAT });
+    expect(other?.state).toBe('differs');
+    expect(other === null ? null : canRegisterEvidence(other)).toBe(false);
+  });
+
+  it('αντικαθιστά υποθετικά την υπάρχουσα διόρθωση της ίδιας γραμμής — δεν αγγίζει το μητρώο', () => {
+    const stored = [correctionOf('phone', { phone: '2310 55 95 96' })];
+    const preview = previewEvidenceCorrection(input(formData, stored), 'phone', { phone: '2310 55 95 95' });
+    expect(preview?.documentDisplay).toBe('+302310559595');
+    expect(stored).toHaveLength(1);
+    expect(stored[0].values).toEqual({ phone: '2310 55 95 96' });
+  });
+
+  it('γραμμή εκτός είδους εγγράφου ή χωρίς τιμές ⇒ καμία κρίση', () => {
+    expect(previewEvidenceCorrection(input(formData), 'documentNumber', { documentNumber: 'ΑΚ 123456' })).toBeNull();
+    expect(previewEvidenceCorrection(input(formData), 'vatNumber', {})).toBeNull();
+  });
+});
+
+describe('ΔΟΥ στον διάλογο — ξεκινά από τον ΚΩΔΙΚΟ που έλυσε η μηχανή (ADR-950 §11)', () => {
+  const resolved: EvidenceReading = { ...READING, addressVerification: { verdict: 'confirmed', places: ['Θεσσαλονίκη'], verifiedAt: AT } };
+
+  it('η αρχική τιμή είναι ό,τι δείχνει ήδη ο πίνακας ως γειωμένη τιμή — όχι το τυπωμένο όνομα', () => {
+    const [office] = evidenceCorrectionFields(resolved, PURPOSE, 'taxOffice', null);
+    const shown = row(rowsOf([], resolved), 'taxOffice').documentDisplay;
+    expect(shown).not.toBeNull();
+    expect(office.initial).toBe(shown);
+    expect(office.initial).not.toBe(office.machine);
+    expect(checkEvidenceCorrection(PURPOSE, 'taxOffice', { taxOffice: office.initial }).ok).toBe(true);
+  });
+
+  it('χωρίς δεύτερη ανάγνωση δεν «προτιμάται» τίποτα — ισχύει η αρχική τιμή', () => {
+    expect(preferredReading(evidenceCorrectionFields(resolved, PURPOSE, 'taxOffice', null)[0])).toBeNull();
+  });
+
+  it('όνομα που δεν λύνεται σε μία ΔΟΥ ⇒ μένει το τυπωμένο, και ο άνθρωπος διαλέγει', () => {
+    const unknown: EvidenceReading = { ...READING, fields: READING.fields.map((f) => (f.field === 'taxOffice' ? { ...f, printed: 'Δ.Ο.Υ. Ανύπαρκτη' } : f)) };
+    expect(evidenceCorrectionFields(unknown, PURPOSE, 'taxOffice', null)[0].initial).toBe('Δ.Ο.Υ. Ανύπαρκτη');
   });
 });

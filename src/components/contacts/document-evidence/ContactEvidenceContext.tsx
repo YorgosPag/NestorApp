@@ -17,8 +17,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import type { EvidenceRowKey } from '@/config/contact-document-evidence';
-import type { EvidenceReading, EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
-import { compareEvidenceWithCorrections, readEvidenceCorrections } from '@/lib/contacts/contact-evidence-corrections';
+import type { EvidenceComparisonInput, EvidenceReading, EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
+import {
+  compareEvidenceWithCorrections,
+  previewEvidenceCorrection,
+  readEvidenceCorrections,
+  type EvidenceCorrectionValues,
+} from '@/lib/contacts/contact-evidence-corrections';
 import { isEvidenceRowKey, readEvidenceDismissals } from '@/lib/contacts/contact-evidence-dismissals';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -39,6 +44,11 @@ export interface ContactEvidenceHost {
   readonly onRegister?: (next: ContactFormData, changes: Partial<ContactFormData>) => Promise<void>;
   /** Τρέχει αποθήκευση της καρτέλας — τα κουμπιά καταχώρισης κλειδώνουν (`disabled` + `aria-busy`). */
   readonly isRegistering?: boolean;
+  /**
+   * ADR-950 §11 — βάζει την καρτέλα σε **επεξεργασία** από την προβολή, ώστε η «Πρόταση διεύθυνσης» να φτάνει στον editor
+   * έδρας με **ένα** πάτημα. `undefined` ⇒ δεν προσφέρεται (ήδη επεξεργασία · αποσυρμένη επαφή · φόρμα δημιουργίας).
+   */
+  readonly onStartEdit?: () => void;
 }
 
 /** Εκκρεμείς αποφάσεις ανά αρχείο και γραμμή: `null` = «αναιρέθηκε» · τιμή = «ισχύει» · απουσία = καμία εκκρεμής. */
@@ -79,15 +89,16 @@ export function ContactEvidenceProvider({
   onOpenAddresses,
   onRegister,
   isRegistering,
+  onStartEdit,
 }: ContactEvidenceHost & { readonly children: React.ReactNode }) {
   const [pending, setPending] = usePendingDecisions<EvidenceDismissal>();
   const [pendingCorrections, setPendingCorrection] = usePendingDecisions<EvidenceCorrection>();
   const value = useMemo(
     () => ({
-      contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering,
+      contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, onStartEdit,
       pending, setPending, pendingCorrections, setPendingCorrection,
     }),
-    [contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering,
+    [contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, onStartEdit,
       pending, setPending, pendingCorrections, setPendingCorrection],
   );
   return <ContactEvidenceContext.Provider value={value}>{children}</ContactEvidenceContext.Provider>;
@@ -172,11 +183,14 @@ export function useContactEvidenceCorrections(file: FileRecord): readonly Eviden
   return useMemo(() => mergePending(stored, pendingForFile), [stored, pendingForFile]);
 }
 
+type CorrectedComparisonInput = EvidenceComparisonInput & { readonly corrections: readonly EvidenceCorrection[] };
+
 /**
- * **Οι γραμμές του πίνακα για ένα αρχείο** — `null` όταν δεν υπάρχει context, ανάγνωση ή χάρτης πεδίων.
- * Ζωντανή πάνω στη φόρμα: αλλάζει η φόρμα ⇒ αλλάζει η κρίση. Οι διορθώσεις του ανθρώπου μπαίνουν **πάνω** από τη μηχανή.
+ * **Η ΜΙΑ είσοδος της σύγκρισης για ένα αρχείο** — ανάγνωση της μηχανής · φόρμα · «Αγνοήσεις» · διορθώσεις (δίσκος +
+ * εκκρεμείς). `null` όταν δεν υπάρχει context ή ανάγνωση. Την τρώνε ο πίνακας **και** η προεπισκόπηση της διόρθωσης,
+ * ώστε να κρίνουν με τα ίδια δεδομένα.
  */
-export function useContactEvidenceRows(file: FileRecord): readonly EvidenceRow[] | null {
+function useEvidenceComparisonInput(file: FileRecord): CorrectedComparisonInput | null {
   const host = useContactEvidenceHost();
   const analysis = file.ingestion?.analysis;
   const machine = useMemo(() => machineReadingOf(analysis), [analysis]);
@@ -184,16 +198,47 @@ export function useContactEvidenceRows(file: FileRecord): readonly EvidenceRow[]
   const pendingForFile = host?.pending[file.id];
   const corrections = useContactEvidenceCorrections(file);
   useSettlePending(file.id, stored, pendingForFile, host?.setPending, dismissalSettled);
+  const formData = host?.formData;
+  const contactType = host?.contactType;
 
   return useMemo(() => {
-    if (host === null || machine === null) return null;
-    return compareEvidenceWithCorrections({
+    if (formData === undefined || contactType === undefined || machine === null) return null;
+    return {
       reading: machine.reading,
       purpose: machine.purpose,
-      formData: host.formData,
-      contactType: host.contactType,
+      formData,
+      contactType,
       dismissals: mergePending(stored, pendingForFile),
       corrections,
-    });
-  }, [host, machine, stored, pendingForFile, corrections]);
+    };
+  }, [formData, contactType, machine, stored, pendingForFile, corrections]);
+}
+
+/** Η γραμμή όπως **θα** είναι με αυτές τις τιμές — `null` όταν δεν κρίνεται (ADR-950 §11). */
+export type EvidenceCorrectionPreview = (row: EvidenceRowKey, values: EvidenceCorrectionValues) => EvidenceRow | null;
+
+export interface ContactEvidenceComparison {
+  readonly rows: readonly EvidenceRow[];
+  readonly preview: EvidenceCorrectionPreview;
+}
+
+/**
+ * **Οι γραμμές του πίνακα για ένα αρχείο, και η προεπισκόπηση μιας διόρθωσης** — `null` όταν δεν υπάρχει context,
+ * ανάγνωση ή χάρτης πεδίων. Ζωντανή πάνω στη φόρμα: αλλάζει η φόρμα ⇒ αλλάζει η κρίση. Οι διορθώσεις του ανθρώπου
+ * μπαίνουν **πάνω** από τη μηχανή.
+ */
+export function useContactEvidenceComparison(file: FileRecord): ContactEvidenceComparison | null {
+  const input = useEvidenceComparisonInput(file);
+  return useMemo(() => {
+    if (input === null) return null;
+    return {
+      rows: compareEvidenceWithCorrections(input),
+      preview: (row, values) => previewEvidenceCorrection(input, row, values),
+    };
+  }, [input]);
+}
+
+/** Μόνο οι γραμμές — για το σήμα της λίστας, που δεν διορθώνει τίποτα. */
+export function useContactEvidenceRows(file: FileRecord): readonly EvidenceRow[] | null {
+  return useContactEvidenceComparison(file)?.rows ?? null;
 }

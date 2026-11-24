@@ -113,6 +113,32 @@ export function canRegisterEvidence(row: EvidenceRow): boolean {
   return row.state === 'missing' && canAcceptEvidence(row);
 }
 
+// ============================================================================
+// ADR-950 §11 — Η ΠΡΑΞΗ ΠΟΥ ΑΚΟΛΟΥΘΕΙ ΜΙΑ ΔΙΟΡΘΩΣΗ, ΜΕ ΤΟ ΙΔΙΟ ΠΑΤΗΜΑ
+// ============================================================================
+
+/** Τι μπορεί να κάνει η οθόνη **τώρα**: επεξεργασία · καταχώριση από την προβολή · πρόταση προς τον editor έδρας. */
+export interface EvidenceFollowUpAbilities {
+  readonly canEdit: boolean;
+  readonly canRegister: boolean;
+  readonly canProposeAddress: boolean;
+}
+
+export type EvidenceFollowUp = 'register' | 'accept' | 'propose-address';
+
+/**
+ * **Η ΜΙΑ πράξη που αξίζει να ακολουθήσει τη διόρθωση** μιας γραμμής — ή `null` όταν καμία δεν είναι δυνατή. Κανένας
+ * νέος κανόνας: ρωτά τους **ίδιους** κριτές με τα κουμπιά του πίνακα (`canRegisterEvidence` · `canAcceptEvidence` ·
+ * `canProposeEvidenceSeat`). Άρα από την προβολή: μόνο **κενό** πεδίο καταχωρίζεται· τιμή που **διαφέρει** δεν
+ * αντικαθίσταται ποτέ με ένα πάτημα (θέλει το μάτι του ανθρώπου πάνω στη φόρμα)· η διεύθυνση πηγαίνει **πάντα** ως
+ * πρόταση στον editor έδρας (ADR-948), ποτέ απευθείας εγγραφή.
+ */
+export function evidenceFollowUp(row: EvidenceRow, abilities: EvidenceFollowUpAbilities): EvidenceFollowUp | null {
+  if (canProposeEvidenceSeat(row)) return abilities.canProposeAddress ? 'propose-address' : null;
+  if (abilities.canEdit) return canAcceptEvidence(row) ? 'accept' : null;
+  return abilities.canRegister && canRegisterEvidence(row) ? 'register' : null;
+}
+
 /**
  * Η διαφορά δύο εικόνων της φόρμας — **μόνο** τα πεδία πρώτου επιπέδου που άλλαξαν αναφορά. Είναι ό,τι στέλνει η
  * «Καταχώριση» στην αποθήκευση (ADR-323: οι φρουροί βλέπουν ολόκληρη τη φόρμα, η εγγραφή μόνο το «βρώμικο» κομμάτι).

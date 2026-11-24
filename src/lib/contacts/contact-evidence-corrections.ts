@@ -36,7 +36,7 @@ import {
   type EvidenceRow,
 } from '@/lib/contacts/contact-evidence-comparison';
 import { isEvidenceRowKey } from '@/lib/contacts/contact-evidence-dismissals';
-import { evidenceReadingKey } from '@/lib/contacts/contact-evidence-grounding';
+import { evidenceReadingKey, groundEvidence } from '@/lib/contacts/contact-evidence-grounding';
 import { isNonEmptyString, isOneOf, isPlainRecord } from '@/lib/type-guards';
 import type { EvidenceCorrection } from '@/types/file-record';
 
@@ -201,6 +201,31 @@ export function compareEvidenceWithCorrections(
   });
 }
 
+/**
+ * **Η γραμμή όπως ΘΑ είναι** αν ο άνθρωπος αποθηκεύσει αυτές τις τιμές — πριν γραφτεί οτιδήποτε. Η ίδια σύγκριση, με
+ * τη διόρθωση υποθετικά στο μητρώο: ο διάλογος λέει **από πριν** την κρίση («Λείπει» · «Ταιριάζει» · «Διαφέρει») και
+ * προσφέρει μόνο την πράξη που θα είναι όντως δυνατή μετά. `null` ⇒ η γραμμή δεν ανήκει σε αυτό το είδος εγγράφου.
+ *
+ * 🔑 Καμία δεύτερη λογική: ό,τι δείχνει η προεπισκόπηση είναι ό,τι θα δείξει ο πίνακας μετά την αποθήκευση.
+ */
+export function previewEvidenceCorrection(
+  input: EvidenceComparisonInput & { readonly corrections: readonly EvidenceCorrection[] },
+  row: EvidenceRowKey,
+  values: EvidenceCorrectionValues,
+): EvidenceRow | null {
+  const specs = evidenceRowFieldSpecs(input.purpose, row);
+  if (specs.length === 0 || Object.keys(values).length === 0) return null;
+  const hypothetical: EvidenceCorrection = {
+    row,
+    values,
+    machineReadingAtCorrection: machineReadingSignature(input.reading, specs),
+    correctedBy: '',
+    correctedAt: '',
+  };
+  const corrections = withEvidenceCorrection(input.corrections, hypothetical);
+  return compareEvidenceWithCorrections({ ...input, corrections }).find((candidate) => candidate.key === row) ?? null;
+}
+
 // ============================================================================
 // ΤΑ ΠΕΔΙΑ ΤΟΥ ΔΙΑΛΟΓΟΥ ΔΙΟΡΘΩΣΗΣ
 // ============================================================================
@@ -212,8 +237,20 @@ export interface EvidenceCorrectionField {
   readonly machine: string | null;
   /** Ό,τι είπε η **δεύτερη** ανάγνωση όταν διαφώνησε (ADR-950 §8.3) — επιλογή με ένα πάτημα. */
   readonly alternate: string | null;
-  /** Η αρχική τιμή του πεδίου στον διάλογο: η διόρθωση, αλλιώς η μηχανή. */
+  /** Η αρχική τιμή του πεδίου στον διάλογο: η διόρθωση, αλλιώς η μηχανή (ΔΟΥ: ο **κωδικός** που έλυσε η μηχανή). */
   readonly initial: string;
+}
+
+/**
+ * Από πού ξεκινά το πεδίο όταν δεν υπάρχει διόρθωση. ΔΟΥ: ο **κωδικός** του καταλόγου που έλυσε ήδη η μηχανή (με τους
+ * τόπους του χάρτη, όπως στη σύγκριση) — ο κατάλογος του διαλόγου (`DoyPicker`) μιλά κωδικούς, όχι τυπωμένα ονόματα·
+ * διφορούμενο όνομα ⇒ το τυπωμένο, και ο άνθρωπος διαλέγει. Κάθε άλλο είδος: ό,τι τύπωσε η μηχανή.
+ */
+function machineInitial(reading: EvidenceReading, spec: EvidenceFieldSpec, machine: string | null): string {
+  if (machine === null) return '';
+  if (spec.kind !== 'taxOffice') return machine;
+  const grounded = groundEvidence(spec.kind, machine, HUMAN_CONFIDENCE, 0, { places: reading.addressVerification?.places });
+  return grounded.ok ? grounded.display : machine;
 }
 
 /** Τα πεδία που δείχνει ο διάλογος για μια γραμμή — με ό,τι ξέρουμε ήδη για το καθένα. */
@@ -227,7 +264,7 @@ export function evidenceCorrectionFields(
     const machine = machinePrintedOf(reading, spec.key);
     const dispute = reading.fieldConsensus?.find((entry) => entry.field === spec.key && entry.state === 'disputed');
     // Διόρθωση που υπάρχει ⇒ ό,τι άφησε κενό ο άνθρωπος μένει κενό (δεν «ξαναγεμίζει» από τη μηχανή).
-    const initial = correction === null ? machine ?? '' : correction.values[spec.key] ?? '';
+    const initial = correction === null ? machineInitial(reading, spec, machine) : correction.values[spec.key] ?? '';
     return { key: spec.key, kind: spec.kind, machine, alternate: present(dispute?.alternate ?? null), initial };
   });
 }
@@ -237,6 +274,8 @@ export function evidenceCorrectionFields(
  * σωστή. `null` ⇒ καμία ή και οι δύο (ο άνθρωπος διαλέγει κοιτώντας την εικόνα — ποτέ μαντεψιά).
  */
 export function preferredReading(field: EvidenceCorrectionField): string | null {
+  // Χωρίς δεύτερη ανάγνωση δεν υπάρχει τίποτα να προτιμηθεί — ισχύει η αρχική τιμή του πεδίου.
+  if (field.alternate === null) return null;
   const valid = [field.machine, field.alternate].filter((value): value is string => value !== null && evidenceReadingKey(field.kind, value) !== null);
   return valid.length === 1 ? valid[0] : null;
 }

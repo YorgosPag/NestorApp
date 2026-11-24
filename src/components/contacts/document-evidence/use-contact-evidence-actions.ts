@@ -6,7 +6,8 @@
  *
  * - **Αποδοχή** (επεξεργασία) — μόνο η φόρμα (`acceptEvidence`)· η εγγραφή περνά από την υπάρχουσα αποθήκευση και τους 4 φρουρούς.
  * - **Καταχώριση** (προβολή) — η ίδια αλλαγή, σταλμένη **αμέσως** στην ίδια φυλαγμένη αποθήκευση (`host.onRegister`).
- * - **Πρόταση διεύθυνσης** — στον ιδιοκτήτη της έδρας (`proposeHqAddress`), ποτέ απευθείας εγγραφή.
+ * - **Πρόταση διεύθυνσης** — στον ιδιοκτήτη της έδρας (`proposeHqAddress`), ποτέ απευθείας εγγραφή. Από την προβολή
+ *   η ίδια πράξη **ανοίγει πρώτα την επεξεργασία** (`host.onStartEdit`, ADR-950 §11) — ένα πάτημα, ο ίδιος editor.
  * - **Αγνόηση / Αναίρεση** — διακομιστής (ο ΕΝΑΣ γραφέας), **αισιόδοξα**: φαίνεται αμέσως, επαναφορά σε αποτυχία.
  */
 
@@ -37,6 +38,8 @@ const logger = createModuleLogger('ContactEvidenceActions');
 export interface ContactEvidenceActions {
   readonly accept: (row: EvidenceRow) => void;
   readonly proposeAddress: (row: EvidenceRow) => void;
+  /** Φτάνει η «Πρόταση διεύθυνσης» στον editor έδρας από εδώ; (επεξεργασία, ή προβολή που μπορεί να την ανοίξει) */
+  readonly canProposeAddress: boolean;
   readonly fillEmpty: (rows: readonly EvidenceRow[], seat: EvidenceRow | null) => void;
   /** ADR-950 §9 — «Καταχώριση» μίας γραμμής από την προβολή (φυλαγμένη αποθήκευση, ένα πάτημα). */
   readonly register: (row: EvidenceRow) => void;
@@ -93,11 +96,15 @@ export function useContactEvidenceActions(file: FileRecord, fileName: string): C
   const proposeAddress = useCallback((row: EvidenceRow) => {
     const proposal = evidenceSeatProposal(row);
     if (host === null || proposal === null) return;
+    if (!host.canEdit && host.onStartEdit === undefined) return;
+    // Προβολή ⇒ πρώτα επεξεργασία: ο editor έδρας παραλαμβάνει πρόταση **μόνο** όταν μπορεί να γράψει (ADR-948).
+    if (!host.canEdit) host.onStartEdit?.();
     proposeHqAddress({ contactId: host.contactId, origin: { kind: 'document', fileId: file.id, fileName }, observedAt, ...proposal });
     host.onOpenAddresses?.();
   }, [host, file.id, observedAt, fileName]);
 
   const canRegister = host !== null && !host.canEdit && host.onRegister !== undefined;
+  const canProposeAddress = host !== null && (host.canEdit || host.onStartEdit !== undefined);
 
   /** Από την προβολή: η **ίδια** `acceptEvidenceBatch`, και στην αποθήκευση φεύγει μόνο ό,τι άλλαξε (ADR-950 §9). */
   const registerRows = useCallback((rows: readonly EvidenceRow[]) => {
@@ -124,7 +131,7 @@ export function useContactEvidenceActions(file: FileRecord, fileName: string): C
   }, [host, proposeAddress, registerRows]);
 
   if (host === null) return null;
-  return { accept, proposeAddress, fillEmpty, register, canRegister, isRegistering: host.isRegistering ?? false, dismiss, restore };
+  return { accept, proposeAddress, canProposeAddress, fillEmpty, register, canRegister, isRegistering: host.isRegistering ?? false, dismiss, restore };
 }
 
 /** Πότε διαβάστηκε — η σφραγίδα του διακομιστή· χωρίς αυτήν, «τώρα» (ποτέ ημερομηνία από το LLM). */
