@@ -9,6 +9,7 @@
  *   (`non-scaling-stroke`) — ο χάρτης μεγαλώνει με το κουτί του, οι γραμμές μένουν γραμμές.
  * 🖨️ **Χαρτί**: λευκό ορθογώνιο κάτω από όλα, στα δύο θέματα — το ΙΔΙΟ SVG πάει στο PDF του showcase.
  * 🧱 **Σειρά στρωμάτων** (z = σειρά στο DOM): χαρτί → κλάσεις → αραιή περιοχή → έκταση / όριο → δευτερεύουσες → κύριες →
+ *   περίγραμμα οικοπέδου (§14.11 Ζ5) →
  *   ετικέτες → σημάνσεις → βορράς · κλίμακα. Οι ετικέτες πάνω από τις γραμμές, με άλω (`paint-order: stroke`) αντί για
  *   κομμένη γραμμή· οι σημάνσεις πάνω από όλα, γιατί είναι ο λόγος που ο ιδιοκτήτης κοιτάζει.
  * ♿ `role="img"` + `<title>` / `<desc>` (`aria-labelledby`)· το περιεχόμενο ως κείμενο ζει στον πίνακα του `<figure>`.
@@ -167,6 +168,7 @@ function MapLayers({ model, words, fill, sparseId }: Omit<TerrainMapSvgProps, 'i
       {model.boundaryPathData !== null && <TerrainLine kind="boundary" d={model.boundaryPathData} />}
       {model.minorContoursPathData.length > 0 && <TerrainLine kind="contourMinor" d={model.minorContoursPathData} />}
       {model.majorContoursPathData.length > 0 && <TerrainLine kind="contourMajor" d={model.majorContoursPathData} />}
+      {model.plotOutline !== null && <TerrainLine kind="plotOutline" d={model.plotOutline.pathData} />}
       <ContourLabels model={model} levelOf={words.levelOf} />
       <Marks model={model} />
     </>

@@ -9,6 +9,7 @@
  *   επισκέπτη, οι κορυφές μένουν όσες είναι και δεν χρειάζεται καν πίνακας καθέτων.
  * 🔑 **Οι ισοϋψείς ποτέ «μέσα» στο έδαφος**: `polygonOffset` σπρώχνει την επιφάνεια και το χώμα ελάχιστα πίσω στο βάθος,
  *   οπότε η γραμμή στο ακριβές `levelM` κερδίζει χωρίς να «αιωρείται».
+ * 🔑 **Το περίγραμμα οικοπέδου** (§14.11 Ζ5): ο ίδιος τύπος γραμμής με τις ισοϋψείς, ήδη «ντυμένο» στο έδαφος από το lib.
  * 🔑 **Κάθε πόρος έχει κάτοχο**: `replace` απελευθερώνει τις παλιές γεωμετρίες, `dispose` τα πάντα.
  */
 
@@ -26,6 +27,10 @@ import {
   TERRAIN_3D_CONTOUR_MINOR_WIDTH_PX,
   TERRAIN_3D_GROUND_COLOR,
   TERRAIN_3D_HEMI_INTENSITY,
+  TERRAIN_3D_PLOT_OUTLINE_COLOR,
+  TERRAIN_3D_PLOT_OUTLINE_DASH_FRACTION,
+  TERRAIN_3D_PLOT_OUTLINE_GAP_FRACTION,
+  TERRAIN_3D_PLOT_OUTLINE_WIDTH_PX,
   TERRAIN_3D_SKY_COLOR,
   TERRAIN_3D_SOIL_COLOR,
   TERRAIN_3D_SUN_ALTITUDE_DEG,
@@ -49,6 +54,8 @@ export interface Terrain3dObjects {
   readonly soil: THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>;
   readonly major: LineSegments2;
   readonly minor: LineSegments2;
+  /** ADR-920 §14.11 Ζ5 — το περίγραμμα οικοπέδου πάνω στο έδαφος· κρυφό όταν το στιγμιότυπο δεν έχει. */
+  readonly plotOutline: LineSegments2;
 }
 
 /** Μετατόπιση βάθους των στερεών, ώστε η ισοϋψής στο ίδιο ύψος να βγαίνει πάντα μπροστά. */
@@ -69,10 +76,25 @@ function contourGeometry(pairs: Float32Array): LineSegmentsGeometry {
   return geometry;
 }
 
-function contourLine(color: number, widthPx: number): LineSegments2 {
-  const line = new LineSegments2(new LineSegmentsGeometry(), new LineMaterial({ color, linewidth: widthPx }));
+function contourLine(color: number, widthPx: number, dashed = false): LineSegments2 {
+  const line = new LineSegments2(new LineSegmentsGeometry(), new LineMaterial({ color, linewidth: widthPx, dashed }));
   line.renderOrder = 1;
   return line;
+}
+
+/**
+ * Το περίγραμμα οικοπέδου: νέα τμήματα, και παύλες στο μέγεθος της σκηνής. Οι αποστάσεις μετριούνται πάνω στη γραμμή
+ * (`computeLineDistances`), άρα ξαναϋπολογίζονται σε κάθε αλλαγή υπερβολής.
+ */
+function fillPlotOutline(line: LineSegments2, geometry: Terrain3dGeometry): void {
+  swapGeometry(line, contourGeometry(geometry.plotOutline));
+  line.visible = geometry.plotOutline.length > 0;
+  if (!line.visible) return;
+  const { minX, maxX, minZ, maxZ } = geometry.bounds;
+  const side = Math.max(maxX - minX, maxZ - minZ);
+  line.computeLineDistances();
+  line.material.dashSize = side * TERRAIN_3D_PLOT_OUTLINE_DASH_FRACTION;
+  line.material.gapSize = side * TERRAIN_3D_PLOT_OUTLINE_GAP_FRACTION;
 }
 
 /** Γεμίζει (ή ξαναγεμίζει) τα αντικείμενα από τη γεωμετρία· οι προηγούμενες γεωμετρίες απελευθερώνονται. */
@@ -84,6 +106,7 @@ function fill(objects: Terrain3dObjects, geometry: Terrain3dGeometry): void {
   swapGeometry(objects.minor, contourGeometry(contours.minor));
   objects.major.visible = contours.major.length > 0;
   objects.minor.visible = contours.minor.length > 0;
+  fillPlotOutline(objects.plotOutline, geometry);
 }
 
 function swapGeometry<G extends THREE.BufferGeometry>(object: { geometry: G }, next: G): void {
@@ -103,6 +126,7 @@ function createObjects(): Terrain3dObjects {
     ),
     major: contourLine(TERRAIN_3D_CONTOUR_MAJOR_COLOR, TERRAIN_3D_CONTOUR_MAJOR_WIDTH_PX),
     minor: contourLine(TERRAIN_3D_CONTOUR_MINOR_COLOR, TERRAIN_3D_CONTOUR_MINOR_WIDTH_PX),
+    plotOutline: contourLine(TERRAIN_3D_PLOT_OUTLINE_COLOR, TERRAIN_3D_PLOT_OUTLINE_WIDTH_PX, true),
   };
 }
 
@@ -122,7 +146,7 @@ export function createTerrain3dScene(geometry: Terrain3dGeometry): Terrain3dScen
   const scene = new THREE.Scene();
   const objects = createObjects();
   fill(objects, geometry);
-  scene.add(objects.surface, objects.soil, objects.major, objects.minor, ...createLights());
+  scene.add(objects.surface, objects.soil, objects.major, objects.minor, objects.plotOutline, ...createLights());
   return {
     scene,
     objects,
@@ -130,9 +154,10 @@ export function createTerrain3dScene(geometry: Terrain3dGeometry): Terrain3dScen
     setLineResolution: (widthCss, heightCss) => {
       objects.major.material.resolution.set(widthCss, heightCss);
       objects.minor.material.resolution.set(widthCss, heightCss);
+      objects.plotOutline.material.resolution.set(widthCss, heightCss);
     },
     dispose: () => {
-      for (const object of [objects.surface, objects.soil, objects.major, objects.minor]) {
+      for (const object of [objects.surface, objects.soil, objects.major, objects.minor, objects.plotOutline]) {
         object.geometry.dispose();
         object.material.dispose();
       }

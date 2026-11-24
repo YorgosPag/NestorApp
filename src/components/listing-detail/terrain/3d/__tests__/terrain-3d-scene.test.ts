@@ -75,3 +75,29 @@ describe('createTerrain3dScene', () => {
     expect(terrain.objects.minor.material.resolution.toArray()).toEqual([390, 292]);
   });
 });
+
+describe('createTerrain3dScene — περίγραμμα οικοπέδου (ADR-920 §14.11 Ζ5)', () => {
+  const OUTLINED: ListingTerrainSnapshot = {
+    ...REAL_PLANE(), plotOutline: { ring: [-5, -5, 5, -5, 5, 5, -5, 5], areaM2: 100, coverage: 'covered', coveredFraction: 1 },
+  };
+
+  it('χωρίς περίγραμμα ⇒ η γραμμή είναι στη σκηνή αλλά κρυφή', () => {
+    const { objects, scene } = createTerrain3dScene(geometryOf(REAL_PLANE()));
+    expect(scene.children).toContain(objects.plotOutline);
+    expect(objects.plotOutline.visible).toBe(false);
+  });
+
+  it('με περίγραμμα ⇒ ορατή, διακεκομμένη (ποτέ μόνο χρώμα), με παύλες στο μέγεθος της σκηνής', () => {
+    const { objects } = createTerrain3dScene(geometryOf(OUTLINED));
+    expect(objects.plotOutline.visible).toBe(true);
+    expect(objects.plotOutline.material.dashed).toBe(true);
+    expect(objects.plotOutline.material.dashSize).toBeCloseTo(20 / 40, 6);
+    expect(objects.plotOutline.material.gapSize).toBeCloseTo(20 / 100, 6);
+  });
+
+  it('replace σε στιγμιότυπο χωρίς περίγραμμα ⇒ κρύβεται ξανά', () => {
+    const terrain = createTerrain3dScene(geometryOf(OUTLINED));
+    terrain.replace(geometryOf(REAL_PLANE()));
+    expect(terrain.objects.plotOutline.visible).toBe(false);
+  });
+});

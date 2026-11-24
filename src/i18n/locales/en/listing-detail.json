@@ -320,6 +320,8 @@
         "major": "Index contour every {major}, labelled",
         "extent": "Survey extent",
         "boundary": "Plot boundary",
+        "plotOutline": "Plot outline, from the survey drawing",
+        "plotOutlinePartial": "Plot outline, from the survey drawing · the relief covers {share} of it",
         "sparse": "Sparse area: interpolated, not measured",
         "conflicting": "Same position, different elevation",
         "coincident": "Repeated point"

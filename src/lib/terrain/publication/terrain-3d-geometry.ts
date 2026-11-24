@@ -16,13 +16,19 @@
  *     The bottom is the surface's own triangles at the base level, reversed: exactly the footprint, no retriangulation.
  *   - **Contours**: segment pairs (for `LineSegments2`) at `levelM`, index and minor apart. No lift: the viewer keeps
  *     them on top with `polygonOffset` on the surface, so a contour never floats above the ground it describes.
+ *   - **Plot outline** (§14.11 Π7): the ring draped on the surface, cut at every triangle edge — it follows the ground
+ *     instead of floating over a slope. What lies off the relief is not drawn.
  *
  * Pure — zero DOM / React / three.
  *
  * @module lib/terrain/publication/terrain-3d-geometry
  */
 
+import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
+
 import { writeTerrainElevationColor } from '../elevation-ramp';
+import { terrainInspectIndexOf } from '../inspect/terrain-inspect-index';
+import { drapePlotOutline } from '../plot-outline/plot-outline-drape';
 import { tinBoundaryEdges } from '../tin-boundary-loops';
 import {
   LISTING_TERRAIN_3D_BASE_DEPTH_FRACTION,
@@ -50,6 +56,11 @@ export interface Terrain3dGeometry {
   readonly soil: Terrain3dBuffers;
   /** Segment pairs `[x0,y0,z0, x1,y1,z1, …]`. */
   readonly contours: { readonly major: Float32Array; readonly minor: Float32Array };
+  /**
+   * ADR-920 §14.11 Π7 · Ζ5 — the plot outline DRAPED on the surface, as segment pairs (empty when the snapshot carries
+   * none). Stretches off the relief are not drawn: no invented height.
+   */
+  readonly plotOutline: Float32Array;
   /** Axis-aligned box of the whole block (for framing the camera). */
   readonly bounds: {
     readonly minX: number; readonly maxX: number;
@@ -194,6 +205,29 @@ function contourBuffers(contours: readonly ListingTerrainContour[], v: Vertical)
   return { major: Float32Array.from(major), minor: Float32Array.from(minor) };
 }
 
+/** Flat `[x, y, …]` ring of the snapshot → plan points. */
+function ringPoints(flat: readonly number[]): PlanarPoint[] {
+  return Array.from({ length: flat.length / 2 }, (_, i) => ({ x: flat[2 * i], y: flat[2 * i + 1] }));
+}
+
+/**
+ * ADR-920 §14.11 Π7 — the outline on the ground: draped on the SAME published surface (`drapePlotOutline`, heights
+ * from the triangles themselves), then lifted through the SAME vertical mapping as everything else in the scene.
+ */
+function plotOutlineBuffers(snapshot: ListingTerrainSnapshot, v: Terrain3dVertical): Float32Array {
+  const outline = snapshot.plotOutline;
+  if (outline === null) return new Float32Array(0);
+  const { runs } = drapePlotOutline(terrainInspectIndexOf(snapshot), ringPoints(outline.ring));
+  const parts = runs.map((run) => terrain3dPolylinePairs(run, v));
+  const out = new Float32Array(parts.reduce((sum, part) => sum + part.length, 0));
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
+}
+
 /** Depth of the soil block under the lowest point — independent of the exaggeration. */
 function baseDepthM(extent: ReturnType<typeof planExtent>): number {
   const larger = Math.max(extent.maxX - extent.minX, extent.maxY - extent.minY);
@@ -219,6 +253,7 @@ export function buildTerrain3dGeometry(
       surface: surfaceBuffers(snapshot.mesh, v),
       soil: soilBuffers(snapshot.mesh, v, baseY),
       contours: contourBuffers(snapshot.contours, v),
+      plotOutline: plotOutlineBuffers(snapshot, v),
       bounds: {
         minX: extent.minX, maxX: extent.maxX,
         minZ: -extent.maxY, maxZ: -extent.minY,

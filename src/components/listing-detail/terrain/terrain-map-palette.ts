@@ -155,6 +155,8 @@ export const TERRAIN_PLOT_OUTLINE_STROKE_PX = {
   drawing: 0.75,
   candidate: 1.5,
   outline: 2.5,
+  /** Το λευκό περίβλημα του περιγράμματος πάνω στο ανάγλυφο (Ζ5): γραμμή + 1 px από κάθε πλευρά, όπως οι ισοϋψείς. */
+  outlineCasing: 4.5,
   /** Ο στόχος κλικ γύρω από τη γραμμή — αρκετός για δάχτυλο (WCAG 2.5.8: στόχος ≥ 24 px). Τον εφαρμόζει ο κριτής επιλογής ως ανοχή (`usePlotCandidatePointer`), όχι αόρατη γραμμή. */
   hitArea: 24,
 } as const;

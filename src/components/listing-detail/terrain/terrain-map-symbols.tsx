@@ -18,20 +18,26 @@ import type { TerrainMapMark } from '@/lib/terrain/publication/terrain-map-model
 
 import {
   TERRAIN_BOUNDARY_CLASS, TERRAIN_CONTOUR_CASING_CLASS, TERRAIN_CONTOUR_MAJOR_CLASS, TERRAIN_CONTOUR_MINOR_CLASS,
-  TERRAIN_EXTENT_CLASS, TERRAIN_MARK_CLASS, TERRAIN_PAPER_CLASS, TERRAIN_SPARSE_HATCH_CLASS, TERRAIN_STROKE_PX,
+  TERRAIN_EXTENT_CLASS, TERRAIN_MARK_CLASS, TERRAIN_PAPER_CLASS, TERRAIN_PLOT_OUTLINE_CLASS, TERRAIN_PLOT_OUTLINE_STROKE_PX,
+  TERRAIN_SPARSE_HATCH_CLASS, TERRAIN_STROKE_PX,
 } from './terrain-map-palette';
 
 /** Λεπτότητα γραμμής ανεξάρτητη από την κλίμακα του σχεδίου. */
 export const NON_SCALING = { vectorEffect: 'non-scaling-stroke' } as const;
 
 /** Οι γραμμές του χάρτη που έχουν δείγμα στο υπόμνημα. */
-export type TerrainLineKind = 'contourMinor' | 'contourMajor' | 'extent' | 'boundary';
+export type TerrainLineKind = 'contourMinor' | 'contourMajor' | 'extent' | 'boundary' | 'plotOutline';
 
 const LINE_STYLE: Readonly<Record<TerrainLineKind, { readonly ink: string; readonly width: number; readonly casing?: number }>> = {
   contourMinor: { ink: TERRAIN_CONTOUR_MINOR_CLASS, width: TERRAIN_STROKE_PX.contourMinor, casing: TERRAIN_STROKE_PX.casingMinor },
   contourMajor: { ink: TERRAIN_CONTOUR_MAJOR_CLASS, width: TERRAIN_STROKE_PX.contourMajor, casing: TERRAIN_STROKE_PX.casingMajor },
   extent: { ink: TERRAIN_EXTENT_CLASS, width: TERRAIN_STROKE_PX.extent },
   boundary: { ink: TERRAIN_BOUNDARY_CLASS, width: TERRAIN_STROKE_PX.boundary },
+  // §14.11 Ζ5 — πάνω από ισοϋψείς και χρώμα: λευκό περίβλημα, όπως οι ισοϋψείς, για να διαβάζεται σε κάθε ζώνη.
+  plotOutline: {
+    ink: TERRAIN_PLOT_OUTLINE_CLASS.outline, width: TERRAIN_PLOT_OUTLINE_STROKE_PX.outline,
+    casing: TERRAIN_PLOT_OUTLINE_STROKE_PX.outlineCasing,
+  },
 };
 
 /**

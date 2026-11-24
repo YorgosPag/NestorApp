@@ -31,7 +31,7 @@ import type { TerrainInspectLayerWords } from './TerrainInspectLayer';
 import { TerrainMapSvg, type TerrainMapFill, type TerrainMapSvgWords } from './TerrainMapSvg';
 import { TerrainSlopeTable } from './TerrainSlopeTable';
 import { MarkSwatch, SparseSwatch, TerrainLineSwatch } from './terrain-map-symbols';
-import { TERRAIN_MAP_WORD_NAMESPACES, lengthLabel, metresOf } from './terrain-map-words';
+import { TERRAIN_MAP_WORD_NAMESPACES, coveredShareLabel, lengthLabel, metresOf } from './terrain-map-words';
 
 type T = ReturnType<typeof useTranslation>['t'];
 
@@ -68,6 +68,15 @@ function svgWordsOf(t: T, model: TerrainMapModel, fill: TerrainMapFill): Terrain
   };
 }
 
+/**
+ * ADR-920 §14.11 Π6 · Ζ5 — το περίγραμμα στο υπόμνημα. Όταν το ανάγλυφο καλύπτει μόνο μέρος του οικοπέδου, το λέει με
+ * ποσοστό: ο χάρτης δεν αφήνει να εννοηθεί έδαφος που δεν αποτυπώθηκε.
+ */
+function plotOutlineLabel(t: T, outline: NonNullable<TerrainMapModel['plotOutline']>): string {
+  if (outline.coverage === 'covered') return t(`${NS}.legend.plotOutline`);
+  return t(`${NS}.legend.plotOutlinePartial`, { share: coveredShareLabel(outline.coveredFraction) });
+}
+
 /** Τα σύμβολα που υπάρχουν σε ΑΥΤΟΝ τον χάρτη — ένα όριο που δεν σχεδιάστηκε δεν μπαίνει στο υπόμνημα. */
 function legendItemsOf(t: T, model: TerrainMapModel, sparsePatternId: string): MapLegendItem[] {
   const items: MapLegendItem[] = [];
@@ -84,6 +93,7 @@ function legendItemsOf(t: T, model: TerrainMapModel, sparsePatternId: string): M
   }
   add('extent', <TerrainLineSwatch kind="extent" />, t(`${NS}.legend.extent`));
   if (model.boundaryPathData !== null) add('boundary', <TerrainLineSwatch kind="boundary" />, t(`${NS}.legend.boundary`));
+  if (model.plotOutline !== null) add('plotOutline', <TerrainLineSwatch kind="plotOutline" />, plotOutlineLabel(t, model.plotOutline));
   if (model.sparsePathData !== null) add('sparse', <SparseSwatch patternId={sparsePatternId} />, t(`${NS}.legend.sparse`));
   for (const kind of MARK_KINDS) {
     if (model.marks.some((mark) => mark.kind === kind)) add(kind, <MarkSwatch kind={kind} />, t(`${NS}.legend.${kind}`));

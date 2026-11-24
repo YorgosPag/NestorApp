@@ -7,6 +7,7 @@
  *             ├─ terrain-map-elevation-bands ─▶ hypsometric bands on drawn levels, never one per line (Β6.2 · Β6.8)
  *             └─ terrain-map-furniture ─▶ view box + margin · north arrow · 1-2-5 scale bar
  *   (+ the owner's preview only) survey marks ─▶ the same SVG space
+ *   (+ when the snapshot carries one) the plot outline ─▶ drawn OVER the relief, cutting nothing (§14.11 Ζ5)
  *
  * The same model feeds the screen, the screen-reader table and the PDF of the showcase: one SVG, a fixed «paper»
  * surface in both themes (the view's business). Numbers stay numbers here; the view formats them for the locale.
@@ -22,7 +23,7 @@ import { legibleDrawingTextSize } from '@/lib/media/legible-screen-text';
 import { LISTING_TERRAIN_MAP_LABEL_FRACTION, LISTING_TERRAIN_MAP_WIDTH_CLASSES_PX } from './listing-terrain-config';
 import { roundPublished } from './listing-terrain-frame';
 import type { SurveyPointMark } from '../survey-import/survey-upload-preparation';
-import type { ListingTerrainSnapshot } from './listing-terrain-types';
+import type { ListingTerrainPlotOutline, ListingTerrainSnapshot } from './listing-terrain-types';
 import { contourLabelsOf, contourPathData, type TerrainMapContourLabel } from './terrain-map-contours';
 import { mapPxPerM } from './terrain-contour-density';
 import { thinMinorContours, type TerrainMapMinorShown, type ThinnedMinorContours } from './terrain-map-contour-thinning';
@@ -55,12 +56,25 @@ export interface TerrainMapMark extends SvgPoint {
   readonly kind: SurveyPointMark['kind'];
 }
 
+/**
+ * ADR-920 §14.11 Ζ5 — the plot outline as the map draws it. `coverage` / `coveredFraction` are the builder's (Π6): the
+ * legend says so when the relief covers only part of the plot — the map never implies ground that was not surveyed.
+ */
+export interface TerrainMapPlotOutline extends Pick<ListingTerrainPlotOutline, 'coverage' | 'coveredFraction'> {
+  readonly pathData: string;
+}
+
 export interface TerrainMapModel {
   readonly viewBox: TerrainMapViewBox;
   /** Outline of the published surface — «survey extent», NOT «plot boundary» (that one is `boundaryPathData`). */
   readonly extentPathData: string;
   /** The plot boundary, when the surface was clipped to one; `null` otherwise (Β4: points-only sources). */
   readonly boundaryPathData: string | null;
+  /**
+   * ADR-920 §14.11 Ζ5 — the plot outline from the surveyor's drawing, DRAWN on the relief (it cuts nothing — a different
+   * idea from `boundaryPathData`). `null` when the snapshot carries none (none confirmed, or kept private — Π9).
+   */
+  readonly plotOutline: TerrainMapPlotOutline | null;
   /** Every slope class, flattest first — empty classes included, so the legend shows the full scale. */
   readonly slopeRegions: readonly TerrainMapSlopeRegion[];
   /** ADR-920 Β6.2 — hypsometric bands between the drawn contour levels, lowest first (bands without ground omitted). */
@@ -94,7 +108,18 @@ function contentPoints(snapshot: ListingTerrainSnapshot): SvgPoint[] {
   const vertexCount = snapshot.mesh.positions.length / 3;
   const points = Array.from({ length: vertexCount }, (_, i) => meshSvgPoint(snapshot.mesh.positions, i));
   if (snapshot.boundary) points.push(...flatSvgPoints(snapshot.boundary));
+  // Ζ5: a partly covered outline reaches beyond the relief — the sheet shows all of it, never a clipped plot.
+  if (snapshot.plotOutline) points.push(...flatSvgPoints(snapshot.plotOutline.ring));
   return points;
+}
+
+function plotOutlineOf(outline: ListingTerrainPlotOutline | null): TerrainMapPlotOutline | null {
+  if (outline === null) return null;
+  return {
+    pathData: polylinePathData(flatSvgPoints(outline.ring), true),
+    coverage: outline.coverage,
+    coveredFraction: outline.coveredFraction,
+  };
 }
 
 /** Where the map is shown on a SCREEN: its width class (`terrainMapWidthClassOf`). Absent = paper / PDF / not measured. */
@@ -174,6 +199,7 @@ export function terrainMapModelOf(
     viewBox,
     extentPathData: regionPathData(snapshot.mesh, triangles),
     boundaryPathData: snapshot.boundary ? polylinePathData(flatSvgPoints(snapshot.boundary), true) : null,
+    plotOutline: plotOutlineOf(snapshot.plotOutline),
     slopeRegions: slopeRegionsOf(snapshot.mesh, triangles, snapshot.slopeBandsPct),
     elevationBands: elevationBandsOf(snapshot.mesh, triangles, bandLevels, min, max),
     elevationRangeM: { min, max },

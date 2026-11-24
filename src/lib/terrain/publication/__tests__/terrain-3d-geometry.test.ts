@@ -145,3 +145,34 @@ describe('buildTerrain3dGeometry — ισοϋψείς', () => {
     expect(target[2]).toBeCloseTo(-first.points[1], 4);
   });
 });
+
+describe('buildTerrain3dGeometry — περίγραμμα οικοπέδου ντυμένο στο έδαφος (ADR-920 §14.11 Π7 · Ζ5)', () => {
+  const withOutline = (ring: number[]): ListingTerrainSnapshot =>
+    ({ ...REAL_PLANE(), plotOutline: { ring, areaM2: 100, coverage: 'covered', coveredFraction: 1 } });
+
+  it('χωρίς περίγραμμα ⇒ κανένα τμήμα', () => {
+    expect(geometryOf(REAL_PLANE()).plotOutline.length).toBe(0);
+  });
+
+  it('κάθε σημείο πατά στο έδαφος: Y = ύψος της επιφάνειας εκεί × υπερβολή (επίπεδο 10 % προς ανατολή)', () => {
+    const g = geometryOf(withOutline([-5, -5, 5, -5, 5, 5, -5, 5]), 2);
+    expect(g.plotOutline.length).toBeGreaterThan(0);
+    expect(g.plotOutline.length % 6).toBe(0);
+    for (let i = 0; i < g.plotOutline.length; i += 3) {
+      const [x, y, z] = [g.plotOutline[i], g.plotOutline[i + 1], g.plotOutline[i + 2]];
+      expect(y).toBeCloseTo(0.1 * (x + 10) * 2, 4);
+      expect(Math.max(Math.abs(x), Math.abs(z))).toBeCloseTo(5, 4);
+    }
+  });
+
+  it('κλείνει: το τελευταίο σημείο είναι το πρώτο', () => {
+    const p = geometryOf(withOutline([-5, -5, 5, -5, 5, 5, -5, 5])).plotOutline;
+    expect([p[p.length - 3], p[p.length - 2], p[p.length - 1]]).toEqual([p[0], p[1], p[2]]);
+  });
+
+  it('ό,τι πέφτει έξω από το ανάγλυφο ΔΕΝ σχεδιάζεται — κανένα επινοημένο υψόμετρο', () => {
+    const p = geometryOf(withOutline([0, -5, 30, -5, 30, 5, 0, 5])).plotOutline;
+    expect(p.length).toBeGreaterThan(0);
+    for (let i = 0; i < p.length; i += 3) expect(p[i]).toBeLessThanOrEqual(10 + 1e-6);
+  });
+});

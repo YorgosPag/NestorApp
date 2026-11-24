@@ -48,6 +48,11 @@ export function lengthLabel(t: T, valueM: number, stepM: number = valueM): strin
 
 const pct = (value: number): string => formatPercentage(value, { maximumFractionDigits: 0 });
 
+/** ADR-920 §14.11 Π6 — το μέρος του οικοπέδου που καλύπτει το ανάγλυφο (`0..1`): «85 %». */
+export function coveredShareLabel(fraction: number): string {
+  return pct(fraction * 100);
+}
+
 /** Το εύρος μιας κλάσης κλίσης: «5 % – 15 %» · η τελευταία, ανοιχτή: «25 % και άνω». */
 export function slopeRangeLabel(t: T, region: Pick<TerrainMapSlopeRegion, 'fromPct' | 'toPct'>): string {
   if (region.toPct === null) return t(`${NS}.slope.rangeOpen`, { from: pct(region.fromPct) });

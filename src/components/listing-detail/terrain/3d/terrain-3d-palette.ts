@@ -38,6 +38,16 @@ export const TERRAIN_3D_INSPECT_CONTOUR_WIDTH_PX = 3.2;
 export const TERRAIN_3D_WATER_WIDTH_PX = 3.2;
 export const TERRAIN_3D_INK_WIDTH_PX = 2;
 
+/**
+ * ADR-920 §14.11 Π7 · Ζ5 — **το περίγραμμα οικοπέδου σε 3Δ**: το ΙΔΙΟ κόκκινο με την κάτοψη (`--terrain-plot-outline`
+ * #b91c1c) και **διακεκομμένο** — ποτέ μόνο χρώμα (CHECK 3.41). Το `LineMaterial` έχει μία παύλα και ένα κενό, όχι
+ * σημειο-παύλα· το μήκος τους είναι κλάσμα της μεγαλύτερης πλευράς της σκηνής, ώστε να διαβάζεται σε κάθε οικόπεδο.
+ */
+export const TERRAIN_3D_PLOT_OUTLINE_COLOR = 0xb91c1c;
+export const TERRAIN_3D_PLOT_OUTLINE_WIDTH_PX = 2.5;
+export const TERRAIN_3D_PLOT_OUTLINE_DASH_FRACTION = 1 / 40;
+export const TERRAIN_3D_PLOT_OUTLINE_GAP_FRACTION = 1 / 100;
+
 /** Ημισφαιρικό: ουρανός / έδαφος. */
 export const TERRAIN_3D_SKY_COLOR = 0xffffff;
 export const TERRAIN_3D_GROUND_COLOR = 0x8a7f72;

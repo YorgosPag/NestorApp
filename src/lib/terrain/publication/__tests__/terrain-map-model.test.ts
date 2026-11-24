@@ -187,3 +187,32 @@ describe('on a screen — labels in screen pixels (§13.8 decision 4, Β4.8 5γ)
     expect(terrainMapModelOf(PLANE, [], { widthPx: 960 })).toEqual(terrainMapModelOf(PLANE));
   });
 });
+
+describe('terrainMapModelOf — περίγραμμα οικοπέδου (ADR-920 §14.11 Ζ5)', () => {
+  const outline = (ring: number[], coveredFraction = 1) =>
+    ({ ring, areaM2: 100, coverage: coveredFraction < 1 ? ('partial' as const) : ('covered' as const), coveredFraction });
+
+  it('στιγμιότυπο χωρίς περίγραμμα ⇒ ο χάρτης δεν σχεδιάζει κανένα', () => {
+    expect(terrainMapModelOf(PLANE).plotOutline).toBeNull();
+  });
+
+  it('ο δακτύλιος γίνεται ΕΝΑ κλειστό path, με τον βορρά προς τα πάνω (y ανάποδα)', () => {
+    const model = terrainMapModelOf({ ...PLANE, plotOutline: outline([-5, -5, 5, -5, 5, 5, -5, 5]) });
+    expect(model.plotOutline?.pathData).toBe('M-5 5 L5 5 L5 -5 L-5 -5 Z');
+    expect(model.plotOutline?.coverage).toBe('covered');
+  });
+
+  it('δεν αγγίζει το ανάγλυφο: έκταση, ισοϋψείς και φύλλο ίδια με πριν (Π1)', () => {
+    const plain = terrainMapModelOf(PLANE);
+    const drawn = terrainMapModelOf({ ...PLANE, plotOutline: outline([-5, -5, 5, -5, 5, 5, -5, 5]) });
+    expect(drawn.extentPathData).toBe(plain.extentPathData);
+    expect(drawn.majorContoursPathData).toBe(plain.majorContoursPathData);
+    expect(drawn.viewBox).toEqual(plain.viewBox);
+  });
+
+  it('περίγραμμα που βγαίνει έξω από το ανάγλυφο ⇒ το φύλλο μεγαλώνει για να το δείξει ολόκληρο, με το ποσοστό κάλυψης', () => {
+    const model = terrainMapModelOf({ ...PLANE, plotOutline: outline([0, -5, 30, -5, 30, 5, 0, 5], 0.33) });
+    expect(model.viewBox.minX + model.viewBox.width).toBeGreaterThanOrEqual(30);
+    expect(model.plotOutline).toMatchObject({ coverage: 'partial', coveredFraction: 0.33 });
+  });
+});
