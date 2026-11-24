@@ -72,9 +72,9 @@ describe('διεύθυνση — ο χάρτης κρίνει', () => {
     expect(row(rowsOf({ fields: FIELDS }), 'address')).toMatchObject({ ungrounded: 'unverified', documentDisplay: null, documentKey: null });
   });
 
-  it('`unavailable` ⇒ το ίδιο: καμία κρίση = καμία πρόταση', () => {
+  it('`unavailable` ⇒ καμία πρόταση, και λέει «ο χάρτης δεν απάντησε» — όχι «δεν επιβεβαιώθηκε» (§8.16)', () => {
     const reading = { fields: FIELDS, addressVerification: { verdict: 'unavailable' as const, verifiedAt: AT } };
-    expect(row(rowsOf(reading), 'address').documentKey).toBeNull();
+    expect(row(rowsOf(reading), 'address')).toMatchObject({ ungrounded: 'map-unavailable', documentKey: null });
   });
 
   it('`corrected` ⇒ «Μήπως: Σαμοθράκης» με Τ.Κ., και το τυπωμένο δίπλα', () => {

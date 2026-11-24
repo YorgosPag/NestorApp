@@ -27,7 +27,10 @@ import Pbf from 'pbf';
 import { lngLatToWorldPixel, MAPLIBRE_TILE_SIZE_PX, worldPixelToLngLat } from '@/lib/maps/metric-size';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
-import { isProtomapsBuildingKind, PROTOMAPS_BUILDINGS_SOURCE_LAYER } from './protomaps-osm-identity';
+import { isProtomapsBuildingKind, PROTOMAPS_BUILDINGS_SOURCE_LAYER, PROTOMAPS_ROADS_SOURCE_LAYER } from './protomaps-osm-identity';
+
+/** Οι ιδιότητες ονόματος ενός δρόμου — το τοπικό (`name`) και το ελληνικό (`name:el`), όπου διαφέρουν. */
+const ROAD_NAME_PROPERTIES = ['name', 'name:el'] as const;
 
 /** Οι μονάδες του πλέγματος ανά πλακίδιο — το σύνηθες `extent` του MVT· άλλο `extent` κλιμακώνεται σε αυτό. */
 export const GRID_UNITS_PER_TILE = 4096;
@@ -155,4 +158,22 @@ export function decodeBuildingFragments(bytes: Uint8Array, tile: ArchiveTileAddr
     });
   }
   return fragments;
+}
+
+/**
+ * **Τα ονόματα οδών ενός πλακιδίου** (ήδη αποσυμπιεσμένου) — ADR-950 §8.13, «Μήπως εννοείτε…».
+ * Μόνο το **όνομα**: καμία γεωμετρία, τίποτα δεν αποθηκεύεται (ODbL §13.4).
+ */
+export function decodeRoadNames(bytes: Uint8Array): string[] {
+  const layer = new VectorTile(new Pbf(bytes)).layers[PROTOMAPS_ROADS_SOURCE_LAYER];
+  if (layer === undefined) return [];
+  const names = new Set<string>();
+  for (let i = 0; i < layer.length; i += 1) {
+    const properties = layer.feature(i).properties;
+    for (const key of ROAD_NAME_PROPERTIES) {
+      const name = properties[key];
+      if (typeof name === 'string' && name.trim() !== '') names.add(name.trim());
+    }
+  }
+  return [...names];
 }

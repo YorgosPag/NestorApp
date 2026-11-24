@@ -26,11 +26,13 @@ import { getErrorMessage } from '@/lib/error-utils';
 //    λίστα domains αυτού του δέντρου (ADR-862 Φ0 Β8).
 import { storageObjectFromUrl } from '@/lib/storage/storage-object-url';
 import { classifyInBackground } from './classify-background';
+import { fileResource } from '../_shared/file-ownership';
 import { nowISO } from '@/lib/date-local';
 import {
   isAIClassifiable as isClassifiableSSoT,
   getMediaDocumentType as getMediaDocumentTypeSSoT,
 } from '@/config/file-types/classification-registry';
+import { CLASSIFICATION_STUCK_AFTER_MS } from '@/config/file-types/classification-lifecycle';
 
 const logger = createModuleLogger('FileClassifyRoute');
 
@@ -112,16 +114,18 @@ async function handlePost(
 
     const { fileId, force = false } = body;
 
-    // 1. Read FileRecord from Firestore
-    const fileDoc = await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).get();
-    if (!fileDoc.exists) {
-      return NextResponse.json(
-        { success: false, fileId, error: 'File not found' },
-        { status: 404 },
-      );
-    }
+    // 1. Read FileRecord — μέσα από τον PEP του μισθωτή (ADR-950 §8.18): υπάρχει; **δικό μου;** Ξένος μισθωτής και
+    //    γνήσια απουσία δίνουν το ΙΔΙΟ 404 (ADR-742 §7.1). Πριν: ωμή ανάγνωση Admin SDK από το `fileId` — οποιοσδήποτε
+    //    συνδεδεμένος μπορούσε να ξεκινήσει ανάγνωση AI σε αρχείο άλλου μισθωτή και να πάρει τύπο/εμπιστοσύνη.
+    const owned = await fileResource.load({
+      docId: fileId,
+      caller: ctx,
+      action: 'classify',
+      refusal: () => NextResponse.json<ClassifyResponse>({ success: false, fileId, error: 'File not found' }, { status: 404 }),
+    });
+    if (owned.refusal) return owned.refusal;
 
-    const fileData = fileDoc.data();
+    const fileData = owned.doc.data;
     if (!fileData) {
       return NextResponse.json(
         { success: false, fileId, error: 'File data is empty' },
@@ -149,7 +153,7 @@ async function handlePost(
     if (currentState === 'classifying') {
       // If stuck for >3 minutes, reset and re-classify
       const stateChangedAt = fileData.ingestion?.stateChangedAt as string | undefined;
-      const isStuck = !stateChangedAt || (Date.now() - new Date(stateChangedAt).getTime() > 3 * 60 * 1000);
+      const isStuck = !stateChangedAt || (Date.now() - new Date(stateChangedAt).getTime() > CLASSIFICATION_STUCK_AFTER_MS);
       if (!isStuck) {
         return NextResponse.json({
           success: true,

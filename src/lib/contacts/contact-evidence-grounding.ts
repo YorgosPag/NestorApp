@@ -32,10 +32,12 @@ import { foldLatinWord, normalizeForLabelMatch, stripAccents } from '@/utils/gre
 /**
  * Γιατί μια ανάγνωση **δεν** συγκρίνεται.
  * - `disputed` — η δεύτερη, ανεξάρτητη ανάγνωση είπε **άλλο** (ADR-950 §8.3)·
- * - `unverified` — η διεύθυνση δεν επιβεβαιώθηκε στον χάρτη (ADR-950 §8.2)·
+ * - `unverified` — ο χάρτης απάντησε, η διεύθυνση δεν επιβεβαιώθηκε (ADR-950 §8.2)·
+ * - `map-unavailable` — ο χάρτης **δεν απάντησε** (ADR-950 §8.16): «δεν ξέρω», ποτέ «δεν υπάρχει»·
  * - `issuer-missing` — αριθμός μητρώου αρχής με παραρτήματα **χωρίς** αναγνώσιμο εκδότη (ADR-950 §9 · ADR-841 Α9.1).
  */
-export type UngroundedReason = 'absent' | 'low-confidence' | 'failed-check' | 'disputed' | 'unverified' | 'issuer-missing';
+export type UngroundedReason =
+  | 'absent' | 'low-confidence' | 'failed-check' | 'disputed' | 'unverified' | 'map-unavailable' | 'issuer-missing';
 
 export type GroundedValue =
   | { readonly ok: true; readonly printed: string; readonly display: string; readonly key: string }

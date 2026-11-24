@@ -13,18 +13,28 @@
 import { useState, useCallback } from 'react';
 import { classifyFileWithPolicy } from '@/services/filesystem/file-mutation-gateway';
 import { isAIClassifiable as isAIClassifiableSSoT } from '@/config/file-types/classification-registry';
+import { CLASSIFICATION_STUCK_AFTER_MS, classificationPollDelayMs } from '@/config/file-types/classification-lifecycle';
+import { getFileRecord } from '@/services/file-record-queries';
 
-const POLL_DELAYS_MS = [3000, 5000, 8000];
-
+/**
+ * Περιμένει να **τελειώσει** η ανάγνωση — διαβάζοντας την ίδια την εγγραφή, ως την προθεσμία του διακομιστή (ADR-950 §8.16).
+ *
+ * 🔴 2026-11-24: πριν ρωτούσε **3 φορές σε 16 s** ξανακαλώντας το `POST /classify`, ενώ η ανάγνωση με τεκμήρια κρατά > 20 s
+ *    ⇒ το «διαβάζεται» έσβηνε νωρίς και ο καλών ανανέωνε πριν τελειώσει η ανάγνωση. Και κάθε poll ήταν **εντολή**: σε
+ *    αρχείο `classification_failed` ξεκινούσε νέα κλήση AI, και μετρούσε στο όριο HEAVY (10/λεπτό).
+ * 🔑 Τώρα το poll είναι **ανάγνωση** (το σύνορο `getFileRecord` — κανόνες μισθωτή, κανένα όριο ρυθμού, καμία πράξη):
+ *    `classified` ⇒ αποτέλεσμα · κάθε άλλη κατάσταση εκτός `classifying` ⇒ τέλος χωρίς αποτέλεσμα · προθεσμία ⇒ τέλος.
+ */
 async function pollUntilClassified(fileId: string): Promise<ClassificationResult | null> {
-  for (const delay of POLL_DELAYS_MS) {
-    await new Promise<void>((resolve) => setTimeout(resolve, delay));
+  const deadline = Date.now() + CLASSIFICATION_STUCK_AFTER_MS;
+  for (let attempt = 0; Date.now() < deadline; attempt += 1) {
+    await new Promise<void>((resolve) => setTimeout(resolve, classificationPollDelayMs(attempt)));
     try {
-      const poll = await classifyFileWithPolicy(fileId);
-      if (!poll.success) return null;
-      if (poll.status === 'already_classified' && poll.documentType && poll.confidence !== undefined) {
-        return { documentType: poll.documentType, confidence: poll.confidence, signals: poll.signals ?? [] };
-      }
+      const ingestion = (await getFileRecord(fileId))?.ingestion;
+      if (ingestion?.state === 'classifying') continue;
+      const analysis = ingestion?.state === 'classified' ? ingestion.analysis : undefined;
+      if (analysis === undefined) return null;
+      return { documentType: analysis.documentType, confidence: analysis.confidence, signals: [...(analysis.signals ?? [])] };
     } catch {
       return null;
     }

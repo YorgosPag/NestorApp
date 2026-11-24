@@ -16,6 +16,7 @@
  * **Layering**: καθαρή.
  */
 
+import { editDistance } from '@/lib/string/edit-distance';
 import { normalizeGreekText } from '@/utils/greek-text';
 
 /** Τάξεις μορφής (πεζά, χωρίς τόνους) — ο πρώτος χαρακτήρας κάθε τάξης είναι ο εκπρόσωπός της. */
@@ -37,8 +38,43 @@ function ocrGlyphFold(text: string): string {
   return [...normalized].map((char) => REPRESENTATIVE.get(char) ?? char).join('');
 }
 
-/** Ίδια ανάγνωση με διαφορά **μόνο** σε οπτικά συγχεόμενα γράμματα; */
-export function sameUnderOcrConfusion(a: string, b: string): boolean {
-  const left = ocrGlyphFold(a);
-  return left !== '' && left === ocrGlyphFold(b);
+/**
+ * Πόσα **πραγματικά** λάθη ανεχόμαστε για λέξη αυτού του μήκους — το `fuzziness: AUTO` του Elasticsearch
+ * (0 ως 2 γράμματα · 1 ως 5 · 2 πάνω από 5). Οι οπτικές συγχύσεις **δεν** μετρούν: έχουν ήδη διπλωθεί.
+ */
+function allowedErrors(length: number): number {
+  if (length <= 2) return 0;
+  return length <= 5 ? 1 : 2;
+}
+
+/**
+ * **«Μήπως εννοείτε…»** — η **μία** υπαρκτή ονομασία που απέχει λιγότερο από την ανάγνωση (ADR-950 §8.13), ή `null`.
+ *
+ * 🔴 2026-11-24 (ζωντανός έλεγχος): η σφραγίδα «ΣΑΜΟΘΡΑΚΗΣ» διαβάστηκε «ΣΑΜΟΓΡΑΦΗΣ» — γραμμές υπογραφής **πάνω** στο
+ *    «ΘΡΑΚ». Δεν είναι πια μόνο οπτική σύγχυση (Θ/Φ), είναι **κρυμμένα** γράμματα: η ταύτιση τάξεων δεν το πιάνει.
+ *
+ * Πρότυπο: spell-correction με **περιορισμένο λεξικό** (Google «Did you mean», Elasticsearch `fuzzy`): ο υποψήφιος
+ * είναι **μόνο** υπαρκτή ονομασία της γειτονιάς — ποτέ ελεύθερο κείμενο. Η απόσταση μετρά **μετά** το δίπλωμα των τάξεων
+ * μορφής, άρα «Θ→Φ» κοστίζει 0 και κάθε άλλη αλλαγή 1 (Damerau/OSA, ο ΕΝΑΣ `editDistance`).
+ * 🔑 Μοναδικότητα: ο νικητής πρέπει να απέχει **αυστηρά λιγότερο** από κάθε άλλον — ισοπαλία ⇒ καμία πρόταση.
+ *    Η πρόταση μένει πρόταση: τη βλέπει άνθρωπος, με το τυπωμένο από κάτω, και την αποδέχεται ή όχι.
+ */
+export function closestUnderOcrConfusion(printed: string, names: readonly string[]): string | null {
+  const target = ocrGlyphFold(printed);
+  if (target === '') return null;
+  const max = allowedErrors(target.length);
+  let best: string | null = null;
+  let bestDistance = max + 1;
+  let tied = false;
+  for (const name of new Set(names)) {
+    const distance = editDistance(target, ocrGlyphFold(name), { transpositions: true, max });
+    if (distance < bestDistance) {
+      best = name;
+      bestDistance = distance;
+      tied = false;
+    } else if (distance === bestDistance && distance <= max && ocrGlyphFold(name) !== ocrGlyphFold(best ?? '')) {
+      tied = true;
+    }
+  }
+  return best === null || tied ? null : best;
 }

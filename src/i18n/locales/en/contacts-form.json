@@ -349,7 +349,8 @@
       "failedCheckVat": "Possibly obscured — fill it in from the form",
       "disputed": "Uncertain — the second reading disagrees",
       "unverified": "Not confirmed on the map — re-read the document or check the address",
-      "issuerMissing": "The issuing association could not be read — fill it in from “Professional”"
+      "issuerMissing": "The issuing association could not be read — fill it in from “Professional”",
+      "mapUnavailable": "The map did not respond — try “Read again” later"
     },
     "corroboration": {
       "alternate": "Second reading: {value}",

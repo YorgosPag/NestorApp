@@ -28,6 +28,12 @@ import type { OsmElementType } from '@/types/geo/public-place';
 export const PROTOMAPS_BUILDINGS_SOURCE_LAYER = 'buildings';
 
 /**
+ * Η στρώση **μέσα στο πλακίδιο** που κρατά τους δρόμους — με `name` (και `name:el` όπου υπάρχει), ADR-950 §8.13.
+ * 📏 ΜΕΤΡΗΜΕΝΟ (2026-11-24, `greece-20260926.pmtiles`, z15, 3×3 γύρω από τον Τ.Κ. 563 34): **329** διακριτά ονόματα οδών.
+ */
+export const PROTOMAPS_ROADS_SOURCE_LAYER = 'roads';
+
+/**
  * Το `id` της **στρώσης στυλ** (`@protomaps/basemaps`) που ζωγραφίζει τα κτίρια.
  *
  * ⚠️ **Άλλη έννοια από το {@link PROTOMAPS_BUILDINGS_SOURCE_LAYER}**, ας λένε σήμερα την ίδια λέξη: το ένα ονομάζει

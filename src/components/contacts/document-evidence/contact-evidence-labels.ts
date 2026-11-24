@@ -78,6 +78,7 @@ const CONTACT_EVIDENCE_UNGROUNDED_KEYS: Readonly<Record<UngroundedReason, string
   disputed: 'contacts-form:documentEvidence.ungrounded.disputed',
   unverified: 'contacts-form:documentEvidence.ungrounded.unverified',
   'issuer-missing': 'contacts-form:documentEvidence.ungrounded.issuerMissing',
+  'map-unavailable': 'contacts-form:documentEvidence.ungrounded.mapUnavailable',
 };
 
 /**

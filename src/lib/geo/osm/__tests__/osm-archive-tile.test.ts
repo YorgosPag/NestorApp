@@ -20,6 +20,7 @@ import { assembleArchiveBuilding, fragmentContains, fragmentsById } from '../osm
 import {
   archiveTileOf,
   decodeBuildingFragments,
+  decodeRoadNames,
   geoPointOfGrid,
   gridPairOf,
   neighbourTilesFor,
@@ -89,5 +90,19 @@ describe('Α5 — μία προβολή', () => {
     const back = geoPointOfGrid(gridPairOf(POINT, Z), Z);
     expect(back.lat).toBeCloseTo(POINT.lat, 7);
     expect(back.lng).toBeCloseTo(POINT.lng, 7);
+  });
+});
+
+describe('Α6 — ονόματα οδών από τη στρώση `roads` (ADR-950 §8.13, «Μήπως εννοείτε…»)', () => {
+  const names = decodeRoadNames(fixture(CENTRE));
+
+  it('🔴 34 διακριτά ονόματα (43 δρόμοι, 4 ανώνυμοι — μετρημένο 2026-11-24)', () => {
+    expect(names).toHaveLength(34);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('🔑 πραγματικές οδοί της Θέρμης, χωρίς κενά', () => {
+    expect(names).toEqual(expect.arrayContaining(['Πανοράματος', 'Θερμοπυλών', 'Ανδρέα Κάλβου']));
+    expect(names.every((name) => name.trim() === name && name !== '')).toBe(true);
   });
 });

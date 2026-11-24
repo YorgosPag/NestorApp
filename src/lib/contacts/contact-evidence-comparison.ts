@@ -341,9 +341,12 @@ function groundParts(specs: readonly AddressSpec[], reading: EvidenceReading) {
   return { printed, key, disputed, printedAny };
 }
 
-/** Ο χάρτης κρίνει: καμία επαλήθευση (παλιά ανάγνωση · χάρτης εκτός) ή «δεν βρέθηκε» ⇒ `unverified`. */
-function mapVerdict(verification: EvidenceAddressVerification | undefined): 'confirmed' | 'corrected' | 'unverified' {
-  if (verification?.verdict === 'confirmed') return 'confirmed';
+/**
+ * Ο χάρτης κρίνει: «δεν βρέθηκε» ή καμία επαλήθευση (παλιά ανάγνωση) ⇒ `unverified` · ο χάρτης **δεν απάντησε** ⇒
+ * `unavailable` (ADR-950 §8.16 — «δεν ξέρω» ≠ «δεν υπάρχει»· και τα δύο χωρίς πρόταση).
+ */
+function mapVerdict(verification: EvidenceAddressVerification | undefined): 'confirmed' | 'corrected' | 'unverified' | 'unavailable' {
+  if (verification?.verdict === 'confirmed' || verification?.verdict === 'unavailable') return verification.verdict;
   return verification?.verdict === 'corrected' && verification.correctedStreet !== undefined ? 'corrected' : 'unverified';
 }
 
@@ -356,6 +359,7 @@ function groundAddress(specs: readonly AddressSpec[], reading: EvidenceReading):
   if (disputed) return failed('disputed');
   const verdict = mapVerdict(reading.addressVerification);
   if (verdict === 'unverified') return failed('unverified');
+  if (verdict === 'unavailable') return failed('map-unavailable');
   const corrected = verdict === 'corrected' ? reading.addressVerification?.correctedStreet ?? null : null;
   const document: SeatFields = corrected === null ? printed : { ...printed, street: corrected };
   const streetKey = corrected === null ? key('street') : contactValueKey('addressPart', corrected);

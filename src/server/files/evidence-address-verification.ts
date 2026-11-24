@@ -7,12 +7,17 @@
  * μόνο **ο κόσμος**: υπάρχει τέτοια οδός σε αυτόν τον Τ.Κ.;
  *
  * Πρότυπο: Google Address Validation (`verdict` + `spellCorrected`). Εξυπνότερο σε δύο σημεία:
- * 1. η διόρθωση χρειάζεται **δύο ανεξάρτητες αποδείξεις** — υπαρκτό όνομα οδού στη γειτονιά του Τ.Κ. (Overpass) **και**
+ * 1. η διόρθωση χρειάζεται **δύο ανεξάρτητες αποδείξεις** — υπαρκτό όνομα οδού στη γειτονιά του Τ.Κ. **και**
  *    επιβεβαίωση οδός+Τ.Κ. από τον γεωκωδικοποιητή (Nominatim) — και πρέπει να είναι **μοναδική**·
- * 2. η ομοιότητα κρίνεται με **τάξεις μορφής OCR** (Θ/Φ/Ο…), όχι με τυφλή απόσταση: «Θ→Φ» ναι, «Θ→Κ» ποτέ.
+ * 2. η ομοιότητα μετρά **μετά** το δίπλωμα των τάξεων μορφής OCR (Θ/Φ/Ο… κοστίζουν 0), με όριο λαθών AUTO
+ *    (`closestUnderOcrConfusion`, §8.13) — πιάνει και γράμματα **κρυμμένα** από υπογραφή («ΣΑΜΟΓΡΑΦΗΣ»).
  *
- * Καμία δεύτερη μηχανή: ο ΕΝΑΣ γεωκωδικοποιητής (`geocodeWithVerdict`, μνήμη + σκάλα), ο ΕΝΑΣ πελάτης Overpass,
- * η ΜΙΑ σύγκριση πεδίου (`compareAddressField`). Τρέχει στη **λωρίδα παρασκηνίου** (ρυθμός Nominatim).
+ * 🔴 §8.13 (2026-11-24): τα ονόματα οδών έρχονται **πρώτα από το δικό μας αρχείο OSM** (`findArchiveStreetNamesNear`)·
+ *    ο δημόσιος Overpass ήταν πεσμένος (502 / timeout) και το σιωπηλό `[]` του έλεγε «καμία οδός». Ο Overpass μένει
+ *    εφεδρεία φρεσκάδας, **αυστηρά**: «δεν απάντησε κανείς» ⇒ `unavailable`, ποτέ `unverified`.
+ *
+ * Καμία δεύτερη μηχανή: ο ΕΝΑΣ γεωκωδικοποιητής (`geocodeWithVerdict`, μνήμη + σκάλα), το ΕΝΑ αρχείο OSM, ο ΕΝΑΣ πελάτης
+ * Overpass, η ΜΙΑ σύγκριση πεδίου (`compareAddressField`). Τρέχει στη **λωρίδα παρασκηνίου** (ρυθμός Nominatim).
  */
 
 import 'server-only';
@@ -22,8 +27,9 @@ import { inBackgroundGeocodingLane } from '@/app/api/geocoding/nominatim-pacer';
 import { toGeocodingRequest } from '@/lib/geocoding/address-geocoding-query';
 import { compareAddressField } from '@/lib/geocoding/field-match';
 import type { GeocodingApiResponse } from '@/lib/geocoding/geocoding-types';
-import { overpassQuerySeconds, runOverpassQuery } from '@/lib/geo/osm/overpass-client';
-import { sameUnderOcrConfusion } from '@/lib/string/ocr-glyph-fold';
+import { findArchiveStreetNamesNear } from '@/lib/geo/osm/osm-archive';
+import { overpassQuerySeconds, runOverpassQueryStrict } from '@/lib/geo/osm/overpass-client';
+import { closestUnderOcrConfusion } from '@/lib/string/ocr-glyph-fold';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { EvidenceAddressVerification } from '@/schemas/ai-analysis';
@@ -64,18 +70,29 @@ function placesOf(result: GeocodingApiResponse): string[] {
   return [neighborhood, city, county, region].filter((place): place is string => typeof place === 'string' && place.trim() !== '');
 }
 
-/** Τα ονόματα οδών γύρω από ένα σημείο — ένα ερώτημα Overpass. */
-async function streetNamesAround(lat: number, lon: number): Promise<readonly string[]> {
+type StreetNames = { readonly kind: 'ok'; readonly names: readonly string[] } | { readonly kind: 'unavailable' };
+
+/** Τα ονόματα οδών γύρω από ένα σημείο από τον **Overpass** — αυστηρά: «δεν απάντησε» ≠ «καμία οδός». */
+async function overpassStreetNames(lat: number, lon: number): Promise<StreetNames> {
   const query = `[out:json][timeout:${overpassQuerySeconds()}];way["highway"]["name"](around:${STREET_SEARCH_RADIUS_METERS},${lat},${lon});out tags;`;
-  const elements = await runOverpassQuery(query);
-  const names = elements.map((element) => element.tags?.name).filter((name): name is string => typeof name === 'string');
-  return [...new Set(names)];
+  const outcome = await runOverpassQueryStrict(query);
+  if (!outcome.ok) return { kind: 'unavailable' };
+  const names = outcome.elements.map((element) => element.tags?.name).filter((name): name is string => typeof name === 'string');
+  return { kind: 'ok', names: [...new Set(names)] };
 }
 
-/** Η **μία** υπαρκτή οδός που διαφέρει από την ανάγνωση μόνο σε οπτικά συγχεόμενα γράμματα — ή `null`. */
-function uniqueLookalike(printed: string, names: readonly string[]): string | null {
-  const matches = names.filter((name) => sameUnderOcrConfusion(name, printed));
-  return matches.length === 1 ? matches[0] : null;
+/**
+ * **Ο υποψήφιος «Μήπως…»** (ADR-950 §8.13). Πρώτα το **δικό μας** αρχείο (ντετερμινιστικό, ίδιο build με τον χάρτη)·
+ * ο Overpass μόνο όταν το αρχείο δεν απάντησε ή δεν βρήκε κάτι (φρεσκάδα: οδός νεότερη από το build).
+ * `unavailable` ⇒ **καμία** πηγή δεν απάντησε — ποτέ «δεν υπάρχει».
+ */
+async function streetCandidate(printed: string, lat: number, lng: number): Promise<{ readonly kind: 'ok'; readonly street: string | null } | { readonly kind: 'unavailable' }> {
+  const archive = await findArchiveStreetNamesNear({ lat, lng });
+  const fromArchive = archive.kind === 'ok' ? closestUnderOcrConfusion(printed, archive.names) : null;
+  if (fromArchive !== null) return { kind: 'ok', street: fromArchive };
+  const overpass = await overpassStreetNames(lat, lng);
+  if (overpass.kind === 'ok') return { kind: 'ok', street: closestUnderOcrConfusion(printed, overpass.names) };
+  return archive.kind === 'ok' ? { kind: 'ok', street: null } : { kind: 'unavailable' };
 }
 
 const stamp = (verdict: EvidenceAddressVerification['verdict'], extra: Partial<EvidenceAddressVerification> = {}): EvidenceAddressVerification => ({
@@ -99,7 +116,9 @@ async function verify(reading: EvidenceAddressReading): Promise<EvidenceAddressV
   }
   const anchor = await postalAnchor(reading, first);
   if (anchor === null) return stamp('unverified');
-  const candidate = uniqueLookalike(reading.street, await streetNamesAround(anchor.lat, anchor.lng));
+  const lookup = await streetCandidate(reading.street, anchor.lat, anchor.lng);
+  if (lookup.kind === 'unavailable') return stamp('unavailable', { places: placesOf(anchor) });
+  const candidate = lookup.street;
   if (candidate === null) return stamp('unverified', { places: placesOf(anchor) });
   const second = await geocode(reading, candidate);
   if (second.kind === 'hit' && provesStreet(second.result, candidate, reading.postalCode)) {

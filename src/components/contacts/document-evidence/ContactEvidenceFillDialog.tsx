@@ -22,6 +22,7 @@ import { DialogActionFooter } from '@/components/ui/dialog-action-footer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
 
+import { GroundedEvidenceValue } from './ContactEvidenceDocumentValue';
 import { CONTACT_EVIDENCE_FILL_KEYS as FILL } from './contact-evidence-labels';
 
 interface ContactEvidenceFillDialogProps {
@@ -38,10 +39,11 @@ interface ContactEvidenceFillDialogProps {
 
 const SEAT_ID = 'address';
 
-function FillItem({ id, label, value, checked, onToggle }: {
+function FillItem({ id, label, row, checked, onToggle }: {
   readonly id: string;
   readonly label: string;
-  readonly value: string | null;
+  /** Η γραμμή — η τιμή φαίνεται με την **ίδια** προβολή με τον πίνακα (ADR-950 §8.14). */
+  readonly row: EvidenceRow;
   readonly checked: boolean;
   readonly onToggle: (id: string) => void;
 }) {
@@ -51,7 +53,7 @@ function FillItem({ id, label, value, checked, onToggle }: {
       <Checkbox id={inputId} checked={checked} onCheckedChange={() => onToggle(id)} />
       <label htmlFor={inputId} className="flex flex-col text-sm">
         <span className="font-medium">{label}</span>
-        <span className="text-muted-foreground">{value}</span>
+        <span className="text-muted-foreground"><GroundedEvidenceValue row={row} /></span>
       </label>
     </li>
   );
@@ -82,11 +84,10 @@ export function ContactEvidenceFillDialog({ open, onOpenChange, rows, seat, onAp
         </DialogHeader>
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {rows.map((row) => (
-            <FillItem key={row.key} id={row.key} label={labelOf(row)} value={row.documentPrinted ?? row.documentDisplay}
-              checked={!unchecked.has(row.key)} onToggle={toggle} />
+            <FillItem key={row.key} id={row.key} label={labelOf(row)} row={row} checked={!unchecked.has(row.key)} onToggle={toggle} />
           ))}
           {seat !== null && (
-            <FillItem id={SEAT_ID} label={t(FILL.address)} value={seat.documentDisplay} checked={!unchecked.has(SEAT_ID)} onToggle={toggle} />
+            <FillItem id={SEAT_ID} label={t(FILL.address)} row={seat} checked={!unchecked.has(SEAT_ID)} onToggle={toggle} />
           )}
         </ul>
         <DialogActionFooter

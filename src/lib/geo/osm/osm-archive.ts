@@ -50,6 +50,7 @@ import { assembleArchiveBuilding, fragmentContains, fragmentsById, type ArchiveB
 import {
   archiveTileOf,
   decodeBuildingFragments,
+  decodeRoadNames,
   neighbourTilesFor,
   type ArchiveTileAddress,
   type BuildingFragment,
@@ -187,4 +188,48 @@ export async function verifyArchiveBuilding(
   if (result.kind !== 'ok') return result;
   const building = result.value[0];
   return building === undefined ? { kind: 'absent' } : { kind: 'verified', building };
+}
+
+export type ArchiveStreetNames = { readonly kind: 'ok'; readonly names: readonly string[] } | { readonly kind: 'unavailable' };
+
+/** Το πλακίδιο και οι 8 γείτονές του (εντός ορίων) — ~2,8 km πλευρά στο z15, όσο ένας αστικός Τ.Κ. και η γειτονιά του. */
+function tileBlock(centre: ArchiveTileAddress): ArchiveTileAddress[] {
+  const last = 2 ** centre.z - 1;
+  const block: ArchiveTileAddress[] = [];
+  for (let dx = -1; dx <= 1; dx += 1) {
+    for (let dy = -1; dy <= 1; dy += 1) {
+      const x = centre.x + dx;
+      const y = centre.y + dy;
+      if (x >= 0 && y >= 0 && x <= last && y <= last) block.push({ z: centre.z, x, y });
+    }
+  }
+  return block;
+}
+
+async function roadNamesOfTile(tile: ArchiveTileAddress, deadline: Deadline): Promise<Fetched<string[]>> {
+  try {
+    const response = await archiveOf().getZxy(tile.z, tile.x, tile.y, deadline.signal);
+    return { kind: 'ok', value: response === undefined ? [] : decodeRoadNames(new Uint8Array(response.data)) };
+  } catch (error) {
+    logger.warn('Το αρχείο OSM δεν απάντησε', { data: { tile, error: getErrorMessage(error) } });
+    return { kind: 'unavailable' };
+  }
+}
+
+/**
+ * **Τα ονόματα οδών γύρω από ένα σημείο, από το ΔΙΚΟ μας αρχείο** (ADR-950 §8.13) — η πηγή του «Μήπως εννοείτε…».
+ *
+ * 🔴 2026-11-24 (ζωντανός έλεγχος): ο δημόσιος Overpass απαντούσε **502 / timeout** και στα δύο endpoints· το
+ *    `runOverpassQuery` το έκανε σιωπηλά `[]` ⇒ «καμία υπαρκτή οδός» ⇒ καμία πρόταση. Εδώ: ντετερμινιστικό, δικό μας,
+ *    ίδιο build με τον χάρτη. Ένα πλακίδιο που δεν απάντησε ⇒ `unavailable` — ποτέ το μισό ως το όλον.
+ */
+export async function findArchiveStreetNamesNear(point: GeoPoint, deadline?: Deadline): Promise<ArchiveStreetNames> {
+  return withDeadline(deadline, async (d) => {
+    const zoom = await archiveZoom();
+    if (zoom.kind !== 'ok') return { kind: 'unavailable' };
+    const tiles = await Promise.all(tileBlock(archiveTileOf(point, zoom.value)).map((tile) => roadNamesOfTile(tile, d)));
+    if (tiles.some((tile) => tile.kind !== 'ok')) return { kind: 'unavailable' };
+    const names = new Set(tiles.flatMap((tile) => (tile.kind === 'ok' ? tile.value : [])));
+    return { kind: 'ok', names: [...names] };
+  });
 }
