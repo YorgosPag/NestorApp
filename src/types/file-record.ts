@@ -35,7 +35,7 @@ import type {
   HoldType,
 } from '@/config/domain-constants';
 import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
-import type { EvidenceDismissReason, EvidenceRowKey } from '@/config/contact-document-evidence';
+import type { EvidenceDismissReason, EvidenceFieldKey, EvidenceRowKey } from '@/config/contact-document-evidence';
 
 /**
  * ADR-950 §4.5 — μία «Αγνόηση» διαφοράς «έγγραφο ↔ επαφή» (σχήμα ADR-759 `FieldReconciliation` + αιτία).
@@ -50,6 +50,21 @@ export interface EvidenceDismissal {
   readonly decidedBy: string;
   /** ISO. */
   readonly decidedAt: string;
+}
+/**
+ * ADR-950 §10 — **διόρθωση ανάγνωσης**: ο άνθρωπος διάβασε ο ίδιος το έγγραφο για **μία** γραμμή του πίνακα. Είναι
+ * δεύτερη ανάγνωση του εγγράφου, **όχι** εγγραφή στην επαφή· η ανάγνωση της μηχανής μένει ανέγγιχτη στο `ingestion`.
+ */
+export interface EvidenceCorrection {
+  readonly row: EvidenceRowKey;
+  /** Ό,τι είπε ο άνθρωπος, ανά πεδίο της γραμμής (διεύθυνση = έως 4 μέρη · μητρώο = αριθμός + εκδότης). */
+  readonly values: Readonly<Partial<Record<EvidenceFieldKey, string>>>;
+  /** Ό,τι είχε διαβάσει η **μηχανή** τη στιγμή της διόρθωσης (`machineReadingSignature`) — άλλαξε ⇒ ξανά προς κρίση. */
+  readonly machineReadingAtCorrection: string;
+  /** uid εκείνου που διόρθωσε. */
+  readonly correctedBy: string;
+  /** ISO. */
+  readonly correctedAt: string;
 }
 import type {
   DisciplineCode,
@@ -705,6 +720,13 @@ export interface FileRecord {
    * της απόφασης (σχήμα ADR-759 `FieldReconciliation`): νέα ανάγνωση με άλλη τιμή ⇒ η απόφαση **ξανανοίγει**.
    */
   evidenceDismissals?: readonly EvidenceDismissal[];
+
+  /**
+   * ADR-950 §10 — οι **διορθώσεις ανάγνωσης** του ανθρώπου. Τις γράφει **μόνο** ο διακομιστής
+   * (`/api/files/[fileId]/evidence-corrections`). Μία ανά γραμμή· η σύγκριση τις διαβάζει **πάνω** από την ανάγνωση
+   * της μηχανής, ώστε «Καταχώριση» / «Αποδοχή» να δουλεύουν με την τιμή του ανθρώπου.
+   */
+  evidenceCorrections?: readonly EvidenceCorrection[];
 
   // =========================================================================
   // 🏢 ENTERPRISE: CLASSIFICATION AUDIT (ADR-055)

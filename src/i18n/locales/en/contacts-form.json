@@ -346,10 +346,10 @@
       "absent": "Not found on the document",
       "lowConfidence": "Illegible",
       "failedCheck": "Illegible — fails the validity check",
-      "failedCheckVat": "Possibly obscured — fill it in from the form",
+      "failedCheckVat": "Possibly obscured — press “Correct” and type it",
       "disputed": "Uncertain — the second reading disagrees",
-      "unverified": "Not confirmed on the map — re-read the document or check the address",
-      "issuerMissing": "The issuing association could not be read — fill it in from “Professional”",
+      "unverified": "Not confirmed on the map — press “Correct” to type it as it is",
+      "issuerMissing": "The issuing association could not be read — press “Correct” to fill it in",
       "mapUnavailable": "The map did not respond — try “Read again” later"
     },
     "corroboration": {
@@ -367,6 +367,31 @@
       "apply": "{count, plural, one {Fill # field} other {Fill # fields}}",
       "cancel": "Cancel",
       "editToFill": "Edit to fill"
+    },
+    "correction": {
+      "action": "Correct",
+      "title": "Correct the reading — {field}",
+      "description": "Type what the document says. The correction is saved on the file and keeps what the machine had read; the contact changes only when you press “Register” or “Accept”.",
+      "descriptionAddress": "Type the address as the document states it. The correction is saved on the file; the location is confirmed on the map when you accept the address under “Addresses”.",
+      "firstReading": "First reading: {value}",
+      "secondReading": "Second reading: {value}",
+      "invalid": "The value does not pass the validity check",
+      "save": "Save correction",
+      "cancel": "Cancel",
+      "clear": "Undo correction",
+      "byHuman": "Corrected by a person",
+      "machineRead": "The machine read: {value}",
+      "machineAbsent": "The machine did not find it in the document",
+      "stale": "The machine's new reading says something else — review the correction",
+      "addressPending": "The location is confirmed on the map on acceptance",
+      "fields": {
+        "addressStreet": "Street",
+        "addressNumber": "Number",
+        "addressPostalCode": "Postal code",
+        "addressCity": "City",
+        "barAssociation": "Bar association",
+        "notaryDistrict": "Notary association"
+      }
     },
     "decision": {
       "dismissed": "Ignored: {reason}",
@@ -391,7 +416,9 @@
     },
     "errors": {
       "dismissFailed": "The ignore was not saved. Please try again.",
-      "restoreFailed": "The undo was not saved. Please try again."
+      "restoreFailed": "The undo was not saved. Please try again.",
+      "correctionFailed": "The correction was not saved. Check the value and try again.",
+      "correctionClearFailed": "Undoing the correction was not saved. Try again."
     }
   },
   "licences": {

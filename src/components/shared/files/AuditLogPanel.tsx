@@ -124,6 +124,9 @@ const ACTION_ICON_MAP: Record<FileAuditAction, LucideIcon> = {
   // ADR-950 §4.5 — «Αγνόηση» διαφοράς εγγράφου ↔ επαφής, και η αναίρεσή της.
   evidence_dismiss: EyeOff,
   evidence_restore: RotateCcw,
+  // ADR-950 §10 — διόρθωση ανάγνωσης από άνθρωπο, και η αναίρεσή της.
+  evidence_correct: Pencil,
+  evidence_correct_clear: RotateCcw,
 };
 
 const ACTION_COLOR_MAP: Record<string, string> = {
@@ -170,6 +173,8 @@ const ACTION_COLOR_MAP: Record<string, string> = {
   document_facts_record: 'text-[hsl(var(--text-info))]',
   evidence_dismiss: 'text-muted-foreground',
   evidence_restore: 'text-[hsl(var(--text-info))]',
+  evidence_correct: 'text-[hsl(var(--text-info))]',
+  evidence_correct_clear: 'text-muted-foreground',
 };
 
 // ============================================================================

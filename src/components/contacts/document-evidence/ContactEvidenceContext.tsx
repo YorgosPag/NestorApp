@@ -11,16 +11,18 @@
  * 🔑 **Αισιόδοξη «Αγνόηση»** (Gmail-style): η απόφαση φαίνεται **αμέσως** στο σήμα **και** στον πίνακα, πριν απαντήσει ο
  *    διακομιστής· αποτυχία ⇒ επαναφορά. Ζει **εδώ** (όχι στο panel) ώστε σήμα και πίνακας να λένε **το ίδιο**. Η εκκρεμής
  *    τιμή σβήνει μόνη της μόλις το αρχείο από τον δίσκο τη δείχνει (καμία δεύτερη αλήθεια που μένει για πάντα).
+ * 🔑 **Το ίδιο και η «Διόρθωση ανάγνωσης»** (ADR-950 §10): ΜΙΑ μηχανή εκκρεμών αποφάσεων (`usePendingDecisions`), δύο μητρώα.
  */
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import type { EvidenceRowKey } from '@/config/contact-document-evidence';
-import { compareEvidenceWithForm, type EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
+import type { EvidenceReading, EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
+import { compareEvidenceWithCorrections, readEvidenceCorrections } from '@/lib/contacts/contact-evidence-corrections';
 import { isEvidenceRowKey, readEvidenceDismissals } from '@/lib/contacts/contact-evidence-dismissals';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import type { EvidenceDismissal, FileRecord } from '@/types/file-record';
+import type { EvidenceCorrection, EvidenceDismissal, FileRecord } from '@/types/file-record';
 
 export interface ContactEvidenceHost {
   readonly contactId: string;
@@ -39,12 +41,30 @@ export interface ContactEvidenceHost {
   readonly isRegistering?: boolean;
 }
 
-/** `null` = «αναιρέθηκε» · τιμή = «αγνοήθηκε» · απουσία = καμία εκκρεμής απόφαση. */
-type PendingDecisions = Readonly<Record<string, Readonly<Partial<Record<EvidenceRowKey, EvidenceDismissal | null>>>>>;
+/** Εκκρεμείς αποφάσεις ανά αρχείο και γραμμή: `null` = «αναιρέθηκε» · τιμή = «ισχύει» · απουσία = καμία εκκρεμής. */
+type PendingForFile<T> = Readonly<Partial<Record<EvidenceRowKey, T | null>>>;
+type PendingDecisions<T> = Readonly<Record<string, PendingForFile<T>>>;
+type SetPending<T> = (fileId: string, row: EvidenceRowKey, value: T | null | undefined) => void;
 
 interface ContactEvidenceContextValue extends ContactEvidenceHost {
-  readonly pending: PendingDecisions;
-  readonly setPending: (fileId: string, row: EvidenceRowKey, value: EvidenceDismissal | null | undefined) => void;
+  readonly pending: PendingDecisions<EvidenceDismissal>;
+  readonly setPending: SetPending<EvidenceDismissal>;
+  /** ADR-950 §10 — εκκρεμείς διορθώσεις ανάγνωσης (ίδια μηχανή με τις «Αγνοήσεις»). */
+  readonly pendingCorrections: PendingDecisions<EvidenceCorrection>;
+  readonly setPendingCorrection: SetPending<EvidenceCorrection>;
+}
+
+function usePendingDecisions<T>(): readonly [PendingDecisions<T>, SetPending<T>] {
+  const [pending, setPendingState] = useState<PendingDecisions<T>>({});
+  const setPending = useCallback<SetPending<T>>((fileId, row, value) => {
+    setPendingState((current) => {
+      const forFile = { ...(current[fileId] ?? {}) };
+      if (value === undefined) delete forFile[row];
+      else forFile[row] = value;
+      return { ...current, [fileId]: forFile };
+    });
+  }, []);
+  return [pending, setPending];
 }
 
 const ContactEvidenceContext = createContext<ContactEvidenceContextValue | null>(null);
@@ -60,18 +80,15 @@ export function ContactEvidenceProvider({
   onRegister,
   isRegistering,
 }: ContactEvidenceHost & { readonly children: React.ReactNode }) {
-  const [pending, setPendingState] = useState<PendingDecisions>({});
-  const setPending = useCallback((fileId: string, row: EvidenceRowKey, value: EvidenceDismissal | null | undefined) => {
-    setPendingState((current) => {
-      const forFile = { ...(current[fileId] ?? {}) };
-      if (value === undefined) delete forFile[row];
-      else forFile[row] = value;
-      return { ...current, [fileId]: forFile };
-    });
-  }, []);
+  const [pending, setPending] = usePendingDecisions<EvidenceDismissal>();
+  const [pendingCorrections, setPendingCorrection] = usePendingDecisions<EvidenceCorrection>();
   const value = useMemo(
-    () => ({ contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, pending, setPending }),
-    [contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, pending, setPending],
+    () => ({
+      contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering,
+      pending, setPending, pendingCorrections, setPendingCorrection,
+    }),
+    [contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering,
+      pending, setPending, pendingCorrections, setPendingCorrection],
   );
   return <ContactEvidenceContext.Provider value={value}>{children}</ContactEvidenceContext.Provider>;
 }
@@ -82,57 +99,101 @@ export function useContactEvidenceHost(): ContactEvidenceContextValue | null {
 }
 
 /** Ο δίσκος + οι εκκρεμείς αποφάσεις αυτού του αρχείου — οι εκκρεμείς κερδίζουν. */
-function mergeDismissals(
-  stored: readonly EvidenceDismissal[],
-  pending: Readonly<Partial<Record<EvidenceRowKey, EvidenceDismissal | null>>> | undefined,
-): readonly EvidenceDismissal[] {
+function mergePending<T extends { readonly row: EvidenceRowKey }>(stored: readonly T[], pending: PendingForFile<T> | undefined): readonly T[] {
   if (pending === undefined) return stored;
   const overridden = new Set(Object.keys(pending));
   const kept = stored.filter((d) => !overridden.has(d.row));
-  const added = Object.values(pending).filter((d): d is EvidenceDismissal => d !== null && d !== undefined);
+  const added = Object.values(pending).filter((d): d is T => d !== null && d !== undefined);
   return [...kept, ...added];
 }
 
-/** Επιβεβαίωσε ο δίσκος την εκκρεμή απόφαση; (ίδια γραμμή, ίδια τιμή — ή απουσία για την αναίρεση) */
-function storedReflects(stored: readonly EvidenceDismissal[], row: EvidenceRowKey, value: EvidenceDismissal | null): boolean {
-  const onDisk = stored.find((d) => d.row === row) ?? null;
+/** Επιβεβαίωσε ο δίσκος την εκκρεμή «Αγνόηση»; (ίδια γραμμή, ίδια τιμή — ή απουσία για την αναίρεση) */
+function dismissalSettled(onDisk: EvidenceDismissal | null, value: EvidenceDismissal | null): boolean {
   if (value === null) return onDisk === null;
   return onDisk !== null && onDisk.documentValueAtDecision === value.documentValueAtDecision && onDisk.reason === value.reason;
 }
 
+/** Επιβεβαίωσε ο δίσκος την εκκρεμή διόρθωση; (ίδιες τιμές ανά πεδίο — ή απουσία για την αναίρεση) */
+function correctionSettled(onDisk: EvidenceCorrection | null, value: EvidenceCorrection | null): boolean {
+  if (value === null) return onDisk === null;
+  if (onDisk === null) return false;
+  const disk = Object.entries(onDisk.values);
+  const wanted = new Map(Object.entries(value.values));
+  return disk.length === wanted.size && disk.every(([key, text]) => wanted.get(key) === text);
+}
+
+/** Σβήνει κάθε εκκρεμή απόφαση που ο δίσκος δείχνει πλέον — καμία δεύτερη αλήθεια που μένει για πάντα. */
+function useSettlePending<T extends { readonly row: EvidenceRowKey }>(
+  fileId: string,
+  stored: readonly T[],
+  pending: PendingForFile<T> | undefined,
+  setPending: SetPending<T> | undefined,
+  settled: (onDisk: T | null, value: T | null) => boolean,
+): void {
+  useEffect(() => {
+    if (setPending === undefined || pending === undefined) return;
+    for (const row of Object.keys(pending)) {
+      if (!isEvidenceRowKey(row)) continue;
+      const value = pending[row];
+      if (value !== undefined && settled(stored.find((d) => d.row === row) ?? null, value)) setPending(fileId, row, undefined);
+    }
+  }, [fileId, stored, pending, setPending, settled]);
+}
+
+/** Η ανάγνωση της **μηχανής** ενός αρχείου, με τα τεκμήρια διακομιστή (ADR-950 §8) — `null` = καμία ανάγνωση. */
+export function machineReadingOfFile(file: FileRecord): MachineReading | null {
+  return machineReadingOf(file.ingestion?.analysis);
+}
+
+interface MachineReading {
+  readonly reading: EvidenceReading;
+  readonly purpose: string;
+}
+
+function machineReadingOf(analysis: NonNullable<FileRecord['ingestion']>['analysis']): MachineReading | null {
+  if (analysis?.fields === undefined || analysis.evidencePurpose === undefined) return null;
+  return {
+    reading: {
+      fields: analysis.fields,
+      fieldConsensus: analysis.fieldConsensus,
+      addressVerification: analysis.addressVerification,
+      phoneLineType: analysis.phoneLineType,
+    },
+    purpose: analysis.evidencePurpose,
+  };
+}
+
+/** Οι διορθώσεις ανάγνωσης ενός αρχείου — δίσκος + εκκρεμείς (ADR-950 §10). `[]` έξω από φόρμα επαφής. */
+export function useContactEvidenceCorrections(file: FileRecord): readonly EvidenceCorrection[] {
+  const host = useContactEvidenceHost();
+  const stored = useMemo(() => readEvidenceCorrections(file.evidenceCorrections), [file.evidenceCorrections]);
+  const pendingForFile = host?.pendingCorrections[file.id];
+  useSettlePending(file.id, stored, pendingForFile, host?.setPendingCorrection, correctionSettled);
+  return useMemo(() => mergePending(stored, pendingForFile), [stored, pendingForFile]);
+}
+
 /**
  * **Οι γραμμές του πίνακα για ένα αρχείο** — `null` όταν δεν υπάρχει context, ανάγνωση ή χάρτης πεδίων.
- * Ζωντανή πάνω στη φόρμα: αλλάζει η φόρμα ⇒ αλλάζει η κρίση.
+ * Ζωντανή πάνω στη φόρμα: αλλάζει η φόρμα ⇒ αλλάζει η κρίση. Οι διορθώσεις του ανθρώπου μπαίνουν **πάνω** από τη μηχανή.
  */
 export function useContactEvidenceRows(file: FileRecord): readonly EvidenceRow[] | null {
   const host = useContactEvidenceHost();
   const analysis = file.ingestion?.analysis;
+  const machine = useMemo(() => machineReadingOf(analysis), [analysis]);
   const stored = useMemo(() => readEvidenceDismissals(file.evidenceDismissals), [file.evidenceDismissals]);
   const pendingForFile = host?.pending[file.id];
-
-  useEffect(() => {
-    if (host === null || pendingForFile === undefined) return;
-    for (const row of Object.keys(pendingForFile)) {
-      if (!isEvidenceRowKey(row)) continue;
-      const value = pendingForFile[row];
-      if (value !== undefined && storedReflects(stored, row, value)) host.setPending(file.id, row, undefined);
-    }
-  }, [host, pendingForFile, stored, file.id]);
+  const corrections = useContactEvidenceCorrections(file);
+  useSettlePending(file.id, stored, pendingForFile, host?.setPending, dismissalSettled);
 
   return useMemo(() => {
-    if (host === null || analysis?.fields === undefined || analysis.evidencePurpose === undefined) return null;
-    return compareEvidenceWithForm({
-      // ADR-950 §8 — η ανάγνωση **μαζί** με τα τεκμήρια του διακομιστή (consensus · χάρτης · τύπος γραμμής).
-      reading: {
-        fields: analysis.fields,
-        fieldConsensus: analysis.fieldConsensus,
-        addressVerification: analysis.addressVerification,
-        phoneLineType: analysis.phoneLineType,
-      },
-      purpose: analysis.evidencePurpose,
+    if (host === null || machine === null) return null;
+    return compareEvidenceWithCorrections({
+      reading: machine.reading,
+      purpose: machine.purpose,
       formData: host.formData,
       contactType: host.contactType,
-      dismissals: mergeDismissals(stored, pendingForFile),
+      dismissals: mergePending(stored, pendingForFile),
+      corrections,
     });
-  }, [host, analysis, stored, pendingForFile]);
+  }, [host, machine, stored, pendingForFile, corrections]);
 }

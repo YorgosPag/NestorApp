@@ -816,7 +816,9 @@
     "fileRestore": "Restore file from trash",
     "action": {
       "evidence_dismiss": "Difference with contact ignored",
-      "evidence_restore": "Ignored difference restored"
+      "evidence_restore": "Ignored difference restored",
+      "evidence_correct": "Document reading corrected",
+      "evidence_correct_clear": "Reading correction undone"
     }
   },
   "fileMutationPreview": {

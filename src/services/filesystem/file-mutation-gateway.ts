@@ -326,6 +326,22 @@ export async function restoreEvidenceWithPolicy(fileId: string, row: EvidenceRow
   });
 }
 
+/**
+ * ADR-950 §10 — διόρθωση ανάγνωσης μιας γραμμής (`values`) ή αναίρεσή της (`null`). Γράφει στο **αρχείο**, ποτέ στην
+ * επαφή· ο διακομιστής ξανακρίνει την τιμή με τους ίδιους ελεγκτές.
+ */
+export async function correctEvidenceWithPolicy(
+  fileId: string,
+  row: EvidenceRowKey,
+  values: Readonly<Record<string, string>> | null,
+): Promise<void> {
+  await mutateJson<unknown>(API_ROUTES.FILES.EVIDENCE_CORRECTIONS(fileId), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(values === null ? { act: 'clear', row } : { act: 'correct', row, values }),
+  });
+}
+
 export async function classifyFileWithPolicy(
   fileId: string,
   force = false,

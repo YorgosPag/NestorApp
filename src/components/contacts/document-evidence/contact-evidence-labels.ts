@@ -7,7 +7,13 @@
  * i18n (3.8 · 3.13) τα διαβάζουν **στατικά**.
  */
 
-import type { EvidenceDismissReason, EvidenceRowKey } from '@/config/contact-document-evidence';
+import type {
+  EvidenceAddressField,
+  EvidenceDismissReason,
+  EvidenceFieldKey,
+  EvidenceIssuerField,
+  EvidenceRowKey,
+} from '@/config/contact-document-evidence';
 import type { UngroundedReason } from '@/lib/contacts/contact-evidence-grounding';
 import type { EvidenceComparisonState } from '@/lib/contacts/contact-evidence-comparison';
 
@@ -113,6 +119,52 @@ export const CONTACT_EVIDENCE_FILL_KEYS = {
   cancel: 'contacts-form:documentEvidence.fill.cancel',
   editToFill: 'contacts-form:documentEvidence.fill.editToFill',
 } as const;
+
+/** ADR-950 §10 — «Διόρθωση ανάγνωσης»: ο άνθρωπος διαβάζει ο ίδιος τη γραμμή. */
+export const CONTACT_EVIDENCE_CORRECTION_KEYS = {
+  action: 'contacts-form:documentEvidence.correction.action',
+  title: 'contacts-form:documentEvidence.correction.title',
+  description: 'contacts-form:documentEvidence.correction.description',
+  descriptionAddress: 'contacts-form:documentEvidence.correction.descriptionAddress',
+  firstReading: 'contacts-form:documentEvidence.correction.firstReading',
+  secondReading: 'contacts-form:documentEvidence.correction.secondReading',
+  invalid: 'contacts-form:documentEvidence.correction.invalid',
+  save: 'contacts-form:documentEvidence.correction.save',
+  cancel: 'contacts-form:documentEvidence.correction.cancel',
+  clear: 'contacts-form:documentEvidence.correction.clear',
+  byHuman: 'contacts-form:documentEvidence.correction.byHuman',
+  machineRead: 'contacts-form:documentEvidence.correction.machineRead',
+  machineAbsent: 'contacts-form:documentEvidence.correction.machineAbsent',
+  stale: 'contacts-form:documentEvidence.correction.stale',
+  addressPending: 'contacts-form:documentEvidence.correction.addressPending',
+  saveFailed: 'contacts-form:documentEvidence.errors.correctionFailed',
+  clearFailed: 'contacts-form:documentEvidence.errors.correctionClearFailed',
+} as const;
+
+/** Τα πεδία που **δεν** είναι δική τους γραμμή (μέρη διεύθυνσης · εκδότες μητρώου) — ετικέτα μόνο στον διάλογο διόρθωσης. */
+const CORRECTION_PART_KEYS: Readonly<Record<EvidenceAddressField | EvidenceIssuerField, string>> = {
+  addressStreet: 'contacts-form:documentEvidence.correction.fields.addressStreet',
+  addressNumber: 'contacts-form:documentEvidence.correction.fields.addressNumber',
+  addressPostalCode: 'contacts-form:documentEvidence.correction.fields.addressPostalCode',
+  addressCity: 'contacts-form:documentEvidence.correction.fields.addressCity',
+  barAssociation: 'contacts-form:documentEvidence.correction.fields.barAssociation',
+  notaryDistrict: 'contacts-form:documentEvidence.correction.fields.notaryDistrict',
+};
+
+/** Η ετικέτα ενός πεδίου του διαλόγου: μέρος/εκδότης ⇒ δική του· αλλιώς της γραμμής του (ο αριθμός μητρώου). */
+export function correctionFieldLabelKey(key: EvidenceFieldKey): string {
+  switch (key) {
+    case 'addressStreet':
+    case 'addressNumber':
+    case 'addressPostalCode':
+    case 'addressCity':
+    case 'barAssociation':
+    case 'notaryDistrict':
+      return CORRECTION_PART_KEYS[key];
+    default:
+      return CONTACT_EVIDENCE_ROW_KEYS[key];
+  }
+}
 
 export const CONTACT_EVIDENCE_REASON_KEYS: Readonly<Record<EvidenceDismissReason, string>> = {
   'outdated-document': 'contacts-form:documentEvidence.reasons.outdatedDocument',

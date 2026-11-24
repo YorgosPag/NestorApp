@@ -12,6 +12,7 @@
  * Κανόνες (γειωμένη γραμμή):
  * - διορθωμένη οδός ⇒ «Μήπως {οδός}» + «Τυπωμένο: …»·
  * - τηλέφωνο ⇒ τυπική μορφή (libphonenumber) + «Τυπωμένο: …» — ποτέ οι τελείες της κάρτας, ποτέ το E.164 της φόρμας·
+ * - ΔΟΥ που **διόρθωσε άνθρωπος** (ADR-950 §10) ⇒ το όνομα της ΔΟΥ — η διόρθωση κρατά τον κωδικό του καταλόγου (`DoyPicker`)·
  * - αλλιώς ⇒ όπως **τυπώνεται** (όχι η μορφή της φόρμας: E.164 · κωδικός ΔΟΥ).
  */
 
@@ -20,6 +21,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
 import { readablePhone } from '@/lib/contact/channel-phone';
+import { getTaxOfficeDisplayName } from '@/subapps/accounting/data/greek-tax-offices';
 
 import { CONTACT_EVIDENCE_CORROBORATION_KEYS as CORROBORATION } from './contact-evidence-labels';
 
@@ -44,5 +46,8 @@ export function GroundedEvidenceValue({ row }: { readonly row: EvidenceRow }) {
   }
   const phone = row.key === 'phone' && row.documentDisplay !== null ? readablePhone(row.documentDisplay) : null;
   if (phone !== null) return <WithPrinted main={phone} printed={row.documentPrinted} />;
+  if (row.correction !== undefined && row.key === 'taxOffice' && row.documentPrinted !== null) {
+    return <>{getTaxOfficeDisplayName(row.documentPrinted)}</>;
+  }
   return <>{row.documentPrinted ?? row.documentDisplay}</>;
 }

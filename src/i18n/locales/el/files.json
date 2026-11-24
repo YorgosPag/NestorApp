@@ -816,7 +816,9 @@
     "fileRestore": "Επαναφορά αρχείου από κάδο",
     "action": {
       "evidence_dismiss": "Αγνόηση διαφοράς με την επαφή",
-      "evidence_restore": "Αναίρεση αγνόησης διαφοράς"
+      "evidence_restore": "Αναίρεση αγνόησης διαφοράς",
+      "evidence_correct": "Διόρθωση ανάγνωσης στοιχείου",
+      "evidence_correct_clear": "Αναίρεση διόρθωσης ανάγνωσης"
     }
   },
   "fileMutationPreview": {

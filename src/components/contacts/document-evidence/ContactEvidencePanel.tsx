@@ -22,16 +22,19 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { fillableEvidenceRows, fillableEvidenceSeat } from '@/lib/contacts/contact-evidence-acceptance';
+import type { EvidenceRowKey } from '@/config/contact-document-evidence';
 import type { EvidenceComparisonState, EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import type { FileRecord } from '@/types/file-record';
 
 import { GroundedEvidenceValue } from './ContactEvidenceDocumentValue';
+import { ContactEvidenceCorrectionDialog } from './ContactEvidenceCorrectionDialog';
 import { ContactEvidenceFillDialog } from './ContactEvidenceFillDialog';
 import { ContactEvidenceRowActions } from './ContactEvidenceRowActions';
 import { useContactEvidenceHost, useContactEvidenceRows } from './ContactEvidenceContext';
 import {
   CONTACT_EVIDENCE_COLUMN_KEYS as COLUMNS,
+  CONTACT_EVIDENCE_CORRECTION_KEYS as CORRECTION,
   CONTACT_EVIDENCE_CORROBORATION_KEYS as CORROBORATION,
   CONTACT_EVIDENCE_FILL_KEYS as FILL,
   CONTACT_EVIDENCE_KEYS as KEYS,
@@ -42,6 +45,7 @@ import {
   ungroundedLabelKey,
 } from './contact-evidence-labels';
 import { useContactEvidenceActions, type ContactEvidenceActions } from './use-contact-evidence-actions';
+import { useEvidenceCorrectionActions } from './use-evidence-correction-actions';
 
 const STATE_ICON: Readonly<Record<EvidenceComparisonState, LucideIcon>> = {
   match: CheckCircle2,
@@ -55,7 +59,35 @@ function rowLabelKey(row: EvidenceRow, isPerson: boolean): string {
   return row.key === 'fullName' && !isPerson ? CONTACT_EVIDENCE_ORGANISATION_NAME_KEY : CONTACT_EVIDENCE_ROW_KEYS[row.key];
 }
 
+/**
+ * ADR-950 §10 — η τιμή είναι **διόρθωση ανθρώπου**: το λέμε, και δείχνουμε τι είχε διαβάσει η μηχανή (ποτέ δεν σβήνεται).
+ * Νέα ανάγνωση που λέει άλλο ⇒ «ελέγξτε τη διόρθωση». Διεύθυνση: η θέση κρίνεται στον χάρτη κατά την αποδοχή.
+ */
+function CorrectionNote({ row }: { readonly row: EvidenceRow }) {
+  const { t } = useTranslation('contacts-form');
+  const correction = row.correction;
+  if (correction === undefined) return null;
+  const machine = correction.machinePrinted;
+  return (
+    <span className="flex flex-col text-xs text-muted-foreground">
+      <span>{t(CORRECTION.byHuman)}</span>
+      <span>{machine === null ? t(CORRECTION.machineAbsent) : t(CORRECTION.machineRead, { value: machine })}</span>
+      {correction.stale && <span>{t(CORRECTION.stale)}</span>}
+      {row.key === 'address' && <span>{t(CORRECTION.addressPending)}</span>}
+    </span>
+  );
+}
+
 function DocumentCell({ row }: { readonly row: EvidenceRow }) {
+  return (
+    <span className="flex flex-col">
+      <DocumentReading row={row} />
+      <CorrectionNote row={row} />
+    </span>
+  );
+}
+
+function DocumentReading({ row }: { readonly row: EvidenceRow }) {
   const { t } = useTranslation('contacts-form');
   // Γειωμένη ⇒ η ΜΙΑ προβολή, κοινή με τη «Συμπλήρωση κενών» (ADR-950 §8.14).
   if (row.ungrounded === null) return <GroundedEvidenceValue row={row} />;
@@ -135,7 +167,13 @@ export function ContactEvidencePanel({ file }: { readonly file: FileRecord }) {
   const host = useContactEvidenceHost();
   const rows = useContactEvidenceRows(file);
   const actions = useContactEvidenceActions(file, translateDisplayName(file));
+  const corrections = useEvidenceCorrectionActions(file);
+  // Αποσυρμένη επαφή ⇒ καμία νέα απόφαση πάνω στα στοιχεία της (ίδιος κανόνας με τη «Νέα ανάγνωση»).
+  const parentIsLive = useRetiredKind() === null;
+  const [correcting, setCorrecting] = useState<EvidenceRowKey | null>(null);
   if (host === null || rows === null || actions === null) return null;
+  const canCorrect = corrections !== null && parentIsLive;
+  const correctingRow = canCorrect ? rows.find((row) => row.key === correcting) ?? null : null;
   const titleId = `contact-evidence-${file.id}`;
   const labelOf = (row: EvidenceRow) => t(rowLabelKey(row, host.contactType === 'individual'));
   return (
@@ -168,12 +206,26 @@ export function ContactEvidencePanel({ file }: { readonly file: FileRecord }) {
                 <TableCell>{row.contact ?? '—'}</TableCell>
                 <TableCell><StateCell row={row} /></TableCell>
                 <TableCell>
-                  <ContactEvidenceRowActions row={row} canEdit={host.canEdit} actions={actions} />
+                  <ContactEvidenceRowActions row={row} canEdit={host.canEdit} actions={actions}
+                    onCorrect={canCorrect ? () => setCorrecting(row.key) : undefined} />
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+      )}
+      {corrections !== null && correctingRow !== null && (
+        <ContactEvidenceCorrectionDialog
+          key={correctingRow.key}
+          row={correctingRow.key}
+          rowLabel={labelOf(correctingRow)}
+          purpose={corrections.purpose}
+          fields={corrections.fieldsOf(correctingRow.key)}
+          corrected={correctingRow.correction !== undefined}
+          onSave={(values) => corrections.correct(correctingRow.key, values)}
+          onClear={() => corrections.clear(correctingRow.key)}
+          onClose={() => setCorrecting(null)}
+        />
       )}
     </section>
   );

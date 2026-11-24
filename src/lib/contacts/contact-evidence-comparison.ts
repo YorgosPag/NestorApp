@@ -73,6 +73,15 @@ export interface EvidenceCorroborationView {
 /** Η αποθηκευμένη ανάγνωση: πεδία + τεκμήρια. */
 export interface EvidenceReading extends EvidenceCorroborationView {
   readonly fields: readonly DocumentEvidenceField[];
+  /** ADR-950 §10 — γραμμές που διάβασε **άνθρωπος** (`applyEvidenceCorrections`): ο χάρτης δεν τις μπλοκάρει. */
+  readonly humanRows?: readonly EvidenceRowKey[];
+}
+
+/** ADR-950 §10 — η γραμμή φέρει διόρθωση ανθρώπου: τι λέει **τώρα** η μηχανή, και αν άλλαξε από τότε. */
+export interface EvidenceRowCorrection {
+  readonly machinePrinted: string | null;
+  /** Η μηχανή διαβάζει πλέον **άλλο** από ό,τι όταν έγινε η διόρθωση (νέα ανάγνωση) ⇒ ξανά προς κρίση. */
+  readonly stale: boolean;
 }
 
 export interface EvidenceRow {
@@ -100,6 +109,8 @@ export interface EvidenceRow {
   readonly seat: EvidenceSeat | null;
   /** Μόνο στις γραμμές μητρώου επαγγέλματος (`persona-field`). */
   readonly credential: EvidenceCredential | null;
+  /** ADR-950 §10 — μόνο όταν η τιμή του εγγράφου είναι **διόρθωση ανθρώπου** (`compareEvidenceWithCorrections`). */
+  readonly correction?: EvidenceRowCorrection;
 }
 
 export interface EvidenceSeat {
@@ -140,7 +151,10 @@ function textField(formData: ContactFormData, target: EvidenceTarget): string | 
 /** Όλα τα τηλέφωνα της επαφής σε μορφή που καταλαβαίνει το `normalisePhone` (εθνικός αριθμός + κωδικός χώρας). */
 function contactPhones(formData: ContactFormData): readonly string[] {
   const listed = (formData.phones ?? []).map((p) => (p.number.trim().startsWith('+') ? p.number : `${p.countryCode ?? ''}${p.number}`));
-  return [...listed, formData.phone].map((value) => present(value)).filter((value): value is string => value !== null);
+  const all = [...listed, formData.phone].map((value) => present(value)).filter((value): value is string => value !== null);
+  // Το επίπεδο `phone` καθρεφτίζει το κύριο της λίστας ⇒ ίδιος αριθμός **μία** φορά («+30231… · 231…», 2026-11-24).
+  const keys = all.map((value) => contactValueKey('phone', value) ?? value);
+  return all.filter((_, index) => keys.indexOf(keys[index]) === index);
 }
 
 function nameState(spec: EvidenceFieldSpec, contact: string, grounded: Extract<GroundedValue, { ok: true }>): EvidenceComparisonState {
@@ -357,7 +371,8 @@ function groundAddress(specs: readonly AddressSpec[], reading: EvidenceReading):
     ({ printed, document: printed, documentKey: null, printedAny, ungrounded, correctedFrom: null });
   if (!SEAT_PARTS.some((part) => printed[part] !== null)) return failed(printedAny ? 'failed-check' : 'absent');
   if (disputed) return failed('disputed');
-  const verdict = mapVerdict(reading.addressVerification);
+  // ADR-950 §10 — διεύθυνση που διάβασε άνθρωπος: ο χάρτης την κρίνει στον editor έδρας (πινέζα), όχι εδώ.
+  const verdict = reading.humanRows?.includes('address') ? 'confirmed' : mapVerdict(reading.addressVerification);
   if (verdict === 'unverified') return failed('unverified');
   if (verdict === 'unavailable') return failed('map-unavailable');
   const corrected = verdict === 'corrected' ? reading.addressVerification?.correctedStreet ?? null : null;

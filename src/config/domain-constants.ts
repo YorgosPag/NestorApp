@@ -1214,6 +1214,8 @@ export const API_ROUTES = {
     PROPAGATE_ENTITY_RENAME: '/api/files/propagate-entity-rename',
     /** ADR-950 §4.5 — μόνιμη «Αγνόηση» / αναίρεση διαφοράς εγγράφου ↔ επαφής (ο ΕΝΑΣ γραφέας είναι ο διακομιστής). */
     EVIDENCE_DISMISSALS: (fileId: string) => `/api/files/${encodeURIComponent(fileId)}/evidence-dismissals` as const,
+    /** ADR-950 §10 — διόρθωση ανάγνωσης (ο άνθρωπος διαβάζει ο ίδιος τη γραμμή). */
+    EVIDENCE_CORRECTIONS: (fileId: string) => `/api/files/${encodeURIComponent(fileId)}/evidence-corrections` as const,
   },
   DOWNLOAD: '/api/download',
   /**
