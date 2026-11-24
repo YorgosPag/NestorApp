@@ -20,6 +20,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { OwnerTerrainTarget } from '@/services/listings/plot-outline.client';
 
 import { PlotDrawingImport } from './PlotDrawingImport';
+import { PlotOutlineOnRelief } from './PlotOutlineOnRelief';
 import { PlotOutlineStatusCard } from './PlotOutlineStatusCard';
 
 export interface PlotOutlineTabProps {
@@ -37,6 +38,8 @@ export function PlotOutlineTab({ target, listingAreaM2 }: PlotOutlineTabProps) {
     <section className="flex flex-col gap-4" data-plot-outline-tab="">
       <p className="m-0 text-sm text-muted-foreground">{t('terrain-survey:plotOutline.intro')}</p>
       <PlotOutlineStatusCard api={status} />
+      {/* Ζ5 — ο χάρτης του ιδιοκτήτη, ακριβώς κάτω από το κουτάκι Π9: βλέπει τι εγκρίνει πριν το εγκρίνει. */}
+      <PlotOutlineOnRelief target={target} status={status.view.kind === 'ready' ? status.view.status : null} />
       <PlotDrawingImport api={drawing} />
     </section>
   );

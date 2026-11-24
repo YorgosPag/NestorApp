@@ -538,4 +538,53 @@ describe('ADR-920 §14.11 Ζ4 — κατάσταση περιγράμματος 
     callerUid = 'user_stranger';
     await expect(status()).rejects.toMatchObject({ statusCode: 404 });
   });
+
+  // ─── ADR-920 §14.11 Ζ5 — `?view=relief`: το ανάγλυφο όπως το βλέπει ο ΙΔΙΟΚΤΗΤΗΣ ─────────────────────────────────────
+  interface Relief {
+    snapshot: { plotOutline: { ring: number[]; areaM2: number; coverage: string } | null; mesh: { positions: number[] } } | null;
+  }
+  const relief = async (): Promise<Relief> => {
+    const response = await GET(
+      { url: `https://x/api/owner-properties/${LISTING}/terrain?view=relief`, nextUrl: { pathname: '/x' } } as never,
+      { params: Promise.resolve({ ownerPropertyId: LISTING }) } as never,
+    );
+    return (await (response as unknown as Response).json() as { data: Relief }).data;
+  };
+
+  it('Ρ1 — χωρίς ανάγλυφο ⇒ snapshot:null (ποτέ σφάλμα), και καμία εγγραφή', async () => {
+    siblings = [drawingFile('2026-11-20T10:00:00.000Z')];
+    expect(await relief()).toEqual({ snapshot: null });
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it('Ρ2 — 🏆 Π9 ΑΤΣΕΚΑΡΙΣΤΟ: ο ιδιοκτήτης βλέπει το περίγραμμα παρ’ όλα αυτά, και τίποτα δεν γράφεται', async () => {
+    siblings = [RELIEF_FILE];
+    publishedWith({ ring: RING_MM, showInListing: false });
+    const data = await relief();
+    expect(data.snapshot?.mesh.positions.length).toBeGreaterThan(0);
+    expect(data.snapshot?.plotOutline?.ring).toHaveLength(8);
+    expect(data.snapshot?.plotOutline?.areaM2).toBeCloseTo(100, 6);
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it('Ρ3 — σχέδιο ΝΕΟΤΕΡΟ από την πηγή (η επαναδημοσίευση δεν έφτασε): φαίνεται το περίγραμμα του ΣΧΕΔΙΟΥ (Ζ3c)', async () => {
+    siblings = [RELIEF_FILE, drawingFile('2099-01-01T10:00:00.000Z')];
+    expect((await relief()).snapshot?.plotOutline?.areaM2).toBeCloseTo(100, 6);
+  });
+
+  it('Ρ4 — ανάγλυφο χωρίς περίγραμμα ⇒ στιγμιότυπο με plotOutline:null', async () => {
+    siblings = [RELIEF_FILE];
+    const data = await relief();
+    expect(data.snapshot).not.toBeNull();
+    expect(data.snapshot?.plotOutline).toBeNull();
+  });
+
+  it('Ρ5 — 🔒 ξένη αγγελία ⇒ 404 (ο φρουρός κρίνει πριν διαβαστεί οτιδήποτε)', async () => {
+    callerUid = 'user_stranger';
+    siblings = [RELIEF_FILE];
+    publishedWith({ ring: RING_MM, showInListing: true });
+    await expect(relief()).rejects.toMatchObject({ statusCode: 404 });
+  });
 });

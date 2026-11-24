@@ -7,6 +7,7 @@
  *
  * ```
  * GET  — κατάσταση περιγράμματος (§14.11 Ζ4): ισχύον · ποιος κρατά την απόφαση · νεότερο σχέδιο + προέλευση (και στον κάδο)
+ *   · `?view=relief` (§14.11 Ζ5): το ανάγλυφο όπως το βλέπει ο ΙΔΙΟΚΤΗΤΗΣ — το περίγραμμα πάντα (Π9)· δεν δημοσιεύει τίποτα
  * POST — φόρμα ιδιοκτήτη (Β4.7): σημεία + όριο + αποτύπωμα (JSON) + δήλωση Δ2
  *   → υποκείμενο: κηδεμονία (ξένη ⇒ 404) · φάκελος του ίδιου ανθρώπου (αλλιώς TERRAIN_NO_DOSSIER)
  *   → κοινός κώδικας εδάφους: σχήμα · δήλωση · «είναι γη;» · ΤΟ ΠΕΡΙΓΡΑΜΜΑ ΠΟΥ ΙΣΧΥΕΙ ΣΤΟΝ ΦΑΚΕΛΟ (Ζ3c) · ο ΕΝΑΣ κριτής
@@ -44,8 +45,17 @@ import {
   type OwnerMaterialDoorEnv,
   type OwnerMaterialPublicationDoor,
 } from '@/server/listing-material/publish-owner-property-material';
-import type { PlotOutlineStatus } from '@/lib/terrain/plot-outline/plot-outline-status';
-import { loadDossierPlotOutline, loadDossierPlotOutlineStatus } from '@/server/listing-terrain/dossier-terrain.reader';
+import {
+  OWNER_TERRAIN_RELIEF_VIEW,
+  OWNER_TERRAIN_VIEW_PARAM,
+  type PlotOutlineStatus,
+} from '@/lib/terrain/plot-outline/plot-outline-status';
+import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
+import {
+  loadDossierOwnerReliefSnapshot,
+  loadDossierPlotOutline,
+  loadDossierPlotOutlineStatus,
+} from '@/server/listing-terrain/dossier-terrain.reader';
 import {
   amendOwnerPlotOutline,
   confirmOwnerPlotOutline,
@@ -112,6 +122,11 @@ const TERRAIN_DOOR: OwnerMaterialPublicationDoor<TerrainUpload> = {
   }),
   codes: TERRAIN_DOOR_CODES,
 };
+
+/** Η απάντηση του `?view=relief`: το στιγμιότυπο του ιδιοκτήτη, ή `null` όταν δεν δημοσιεύτηκε ποτέ ανάγλυφο. */
+interface OwnerReliefView {
+  readonly snapshot: ListingTerrainSnapshot | null;
+}
 
 async function ownerPropertyIdOf(context?: RouteContext): Promise<string> {
   return (await context?.params)?.ownerPropertyId?.trim() ?? '';
@@ -193,18 +208,24 @@ async function amendHandler(
 /**
  * **GET — τι ξέρει ο φάκελος για το περίγραμμα** (ADR-920 §14.11 Ζ4): ισχύον περίγραμμα, ποιος κρατά την απόφαση, το
  * νεότερο σχέδιο (και στον κάδο) με την προέλευσή του. Μόνο ανάγνωση· ίδιος φρουρός κηδεμονίας/φακέλου με τις πράξεις.
+ *
+ * `?view=relief` (Ζ5) — το ανάγλυφο όπως το βλέπει ο **ιδιοκτήτης**: το περίγραμμα πάνω του **πάντα** (Π9). Ο φρουρός
+ * κρίνει **πριν** διαβαστεί οτιδήποτε· η απάντηση δεν γράφεται πουθενά (ούτε ράφι, ούτε αγγελία).
  */
 async function statusHandler(
-  _request: NextRequest,
+  request: NextRequest,
   actor: ApiActor,
   context?: RouteContext,
-): Promise<NextResponse<ApiSuccessResponse<PlotOutlineStatus>>> {
+): Promise<NextResponse<ApiSuccessResponse<PlotOutlineStatus | OwnerReliefView>>> {
   const env = await enterOwnerDoor(await ownerPropertyIdOf(context), actor, TERRAIN_DOOR);
+  if (new URL(request.url).searchParams.get(OWNER_TERRAIN_VIEW_PARAM) === OWNER_TERRAIN_RELIEF_VIEW) {
+    return apiSuccess<OwnerReliefView>({ snapshot: await loadDossierOwnerReliefSnapshot(env.adminDb, env.dossier) });
+  }
   return apiSuccess<PlotOutlineStatus>(await loadDossierPlotOutlineStatus(env.adminDb, env.dossier));
 }
 
 export const GET = withStandardRateLimit(
-  withPersonalOrOrgAuth<ApiSuccessResponse<PlotOutlineStatus>, RouteContext>(statusHandler),
+  withPersonalOrOrgAuth<ApiSuccessResponse<PlotOutlineStatus | OwnerReliefView>, RouteContext>(statusHandler),
 );
 
 export const POST = withHeavyRateLimit(

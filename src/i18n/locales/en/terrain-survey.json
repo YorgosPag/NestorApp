@@ -251,6 +251,15 @@
         "changed": "Done.",
         "unchanged": "It already was — nothing changed."
       }
+    },
+    "onRelief": {
+      "heading": "The outline on the relief",
+      "audience": {
+        "private": "Only you see it like this. On the public listing the relief appears without the outline, until you choose to show it above.",
+        "public": "This is also how it appears on the public listing."
+      },
+      "updating": "The map is updating…",
+      "retry": "Try again"
     }
   }
 }

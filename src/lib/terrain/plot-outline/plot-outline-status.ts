@@ -20,6 +20,14 @@ import { z } from 'zod';
 
 import { confirmedDrawingFactsShape } from './plot-outline-confirmation';
 
+/**
+ * ADR-920 §14.11 Ζ5 — **the owner's own look at the relief with the outline on it**: `GET …/terrain?view=relief`. The same
+ * door and guard as the status; the answer is `{ snapshot }` — the snapshot the owner's audience is entitled to (the outline
+ * ALWAYS, Π9), or `null` when no relief has been published. It is never baked to the public shelf.
+ */
+export const OWNER_TERRAIN_VIEW_PARAM = 'view';
+export const OWNER_TERRAIN_RELIEF_VIEW = 'relief';
+
 const inForceSchema = z.object({
   showInListing: z.boolean(),
   /** Plan area of the ring, m². */

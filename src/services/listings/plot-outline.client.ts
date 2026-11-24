@@ -16,7 +16,14 @@ import { namedRefusalOf, type NamedRefusal } from '@/lib/api/api-client-types';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { IDEMPOTENCY_KEY_HEADER } from '@/lib/api/idempotency/idempotency-contract';
 import type { PlotOutlineAmendment } from '@/lib/terrain/plot-outline/plot-outline-confirmation';
-import { parsePlotOutlineStatus, type PlotOutlineStatus } from '@/lib/terrain/plot-outline/plot-outline-status';
+import {
+  OWNER_TERRAIN_RELIEF_VIEW,
+  OWNER_TERRAIN_VIEW_PARAM,
+  parsePlotOutlineStatus,
+  type PlotOutlineStatus,
+} from '@/lib/terrain/plot-outline/plot-outline-status';
+import { readListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-snapshot-reader';
+import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
 import {
   isTerrainRefusalCode,
   PLOT_OUTLINE_CONFIRM_FIELDS,
@@ -111,6 +118,29 @@ function statusOf(data: unknown): PlotOutlineStatusOutcome {
 export async function fetchPlotOutlineStatus(target: OwnerTerrainTarget): Promise<PlotOutlineStatusOutcome> {
   try {
     return statusOf(await apiClient.get<unknown>(terrainEndpointOf(target)));
+  } catch (cause) {
+    return { ok: false, refusal: namedRefusalOf(cause, isTerrainRefusalCode) };
+  }
+}
+
+/** `snapshot: null` = δεν δημοσιεύτηκε ποτέ ανάγλυφο. */
+export type OwnerReliefOutcome =
+  | { readonly ok: true; readonly snapshot: ListingTerrainSnapshot | null }
+  | { readonly ok: false; readonly refusal: PlotOutlineRefusal };
+
+/**
+ * **Το ανάγλυφο όπως το βλέπει ο ιδιοκτήτης** (Ζ5) — με το περίγραμμα πάνω του ό,τι κι αν λέει το Π9. Κρίνεται με τον
+ * **ίδιο** αναγνώστη που κρίνει το δημόσιο στιγμιότυπο: ό,τι δεν σχεδιάζεται ⇒ `rejected`, ποτέ μισός χάρτης.
+ */
+export async function fetchOwnerRelief(target: OwnerTerrainTarget): Promise<OwnerReliefOutcome> {
+  try {
+    const data = await apiClient.get<unknown>(
+      `${terrainEndpointOf(target)}?${OWNER_TERRAIN_VIEW_PARAM}=${OWNER_TERRAIN_RELIEF_VIEW}`,
+    );
+    if (!isRecord(data) || !('snapshot' in data)) return { ok: false, refusal: 'rejected' };
+    if (data.snapshot === null) return { ok: true, snapshot: null };
+    const read = readListingTerrainSnapshot(data.snapshot);
+    return read.ok ? { ok: true, snapshot: read.snapshot } : { ok: false, refusal: 'rejected' };
   } catch (cause) {
     return { ok: false, refusal: namedRefusalOf(cause, isTerrainRefusalCode) };
   }

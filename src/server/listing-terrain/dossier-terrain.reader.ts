@@ -31,10 +31,13 @@ import {
 } from '@/lib/terrain/plot-outline/plot-outline-confirmation';
 import { ringAreaM2 } from '@/lib/terrain/plot-outline/plot-outline-area';
 import type { PlotDrawingPlace, PlotDrawingSummary, PlotOutlineStatus } from '@/lib/terrain/plot-outline/plot-outline-status';
+import { judgeListingTerrainSource } from '@/lib/terrain/publication/listing-terrain-judge';
+import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
 import {
   parseListingTerrainSource,
   plotOutlineChoiceIn,
   samePlotOutlineRing,
+  withPlotOutline,
   type ListingTerrainSource,
   type PlotOutlineChoice,
 } from '@/lib/terrain/publication/listing-terrain-source';
@@ -220,6 +223,31 @@ export async function loadCurrentDossierTerrainSource(
 ): Promise<CurrentDossierTerrainSource | null> {
   const { relief } = await dossierTerrainRecords(adminDb, dossier, UNREADABLE_SOURCE);
   return relief === null ? null : downloadDossierTerrainSource(relief, dossier.id);
+}
+
+// ─── ADR-920 §14.11 Ζ5 — το ανάγλυφο όπως το βλέπει ο ΙΔΙΟΚΤΗΤΗΣ (`GET …/terrain?view=relief`) ─────────────────────────
+
+/**
+ * **Το στιγμιότυπο του ιδιοκτήτη**: η τρέχουσα πηγή με το περίγραμμα που **ισχύει** (Ζ3c — και όταν το κρατά ακόμη μόνο το
+ * σχέδιο), κριμένη από τον **ΕΝΑ** κριτή με κοινό `'owner'` ⇒ το περίγραμμα φαίνεται **ό,τι κι αν λέει** το Π9. `null` όταν
+ * δεν δημοσιεύτηκε ποτέ ανάγλυφο.
+ *
+ * ⛔ **Δεν δημοσιεύει τίποτα**: δεν γράφει ράφι, δεν αγγίζει την αγγελία — το δημόσιο στιγμιότυπο το ψήνει μόνο ο ψήστης,
+ * με κοινό `'public'` (CHECK 3.105). Εδώ χτίζεται ανά αίτημα και φεύγει μόνο προς τον άνθρωπο που πέρασε τον φρουρό.
+ * 🔴 Fail-closed: πηγή που ο κριτής αρνείται ⇒ 503 με όνομα, ποτέ «κανένα ανάγλυφο».
+ */
+export async function loadDossierOwnerReliefSnapshot(
+  adminDb: AdminFirestore,
+  dossier: Pick<PropertyDossier, 'id' | 'userId'>,
+): Promise<ListingTerrainSnapshot | null> {
+  const state = await loadDossierTerrainState(adminDb, dossier);
+  if (state === null) return null;
+  const verdict = judgeListingTerrainSource(withPlotOutline(state.current.source, state.outline));
+  if (!verdict.ok) {
+    logger.error('Το ανάγλυφο του ιδιοκτήτη δεν χτίστηκε', { dossierId: dossier.id, fileId: state.current.fileId, code: verdict.code });
+    throw new ApiError(503, UNREADABLE_SOURCE);
+  }
+  return verdict.snapshot;
 }
 
 // ─── ADR-920 §14.11 Ζ4 — η κατάσταση που βλέπει ο ιδιοκτήτης (`GET …/terrain`) ─────────────────────────────────────────
