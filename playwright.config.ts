@@ -27,6 +27,7 @@ const DEDICATED_SPECS = {
   visualBim3d: '**/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts',
   cameraMotion: '**/test-harness/camera-motion/camera-motion.e2e.spec.ts',
   addressFieldWidth: '**/test-harness/address-field-width/address-field-width.e2e.spec.ts',
+  contactEvidenceStates: '**/test-harness/contact-evidence-states/contact-evidence-states.e2e.spec.ts',
   publicReflow: '**/public-site/reflow/public-reflow.e2e.spec.ts',
   publicFloorplanPixels: '**/public-floorplan/pixel-gate/public-floorplan-pixels.e2e.spec.ts',
 } as const;
@@ -222,6 +223,24 @@ export default defineConfig({
         locale: 'el-GR',
       },
       testMatch: [DEDICATED_SPECS.addressFieldWidth],
+      timeout: 300000,
+    },
+    {
+      /*
+        🔍 CHECK 3.117 (ADR-950 §8.19) — οι καταστάσεις του πίνακα «Το έγγραφο ↔ η επαφή» που η παραγωγή
+        δεν ξαναπαράγει κατά παραγγελία («Μήπως…» · «Ο χάρτης δεν απάντησε» · τηλέφωνο στη «Συμπλήρωση κενών»).
+        🔑 `el-GR`: τα κείμενα που κρίνονται είναι τα ελληνικά του `el/contacts-form.json` (η παραγωγή είναι
+        ελληνόγλωσση)· με `en-US` το spec θα συγκρινόταν με άλλη γλώσσα και θα κοκκίνιζε χωρίς βλάβη.
+        ⚠️ Καμία `snapshotPathTemplate`: κρίνει ΚΕΙΜΕΝΟ στο DOM, όχι εικόνες.
+      */
+      name: 'contact-evidence-states',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 900 },
+        navigationTimeout: 120000,
+        locale: 'el-GR',
+      },
+      testMatch: [DEDICATED_SPECS.contactEvidenceStates],
       timeout: 300000,
     },
     {

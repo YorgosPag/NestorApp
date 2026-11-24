@@ -1,0 +1,137 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔍 CHECK 3.117 — ΠΥΛΗ ΚΑΤΑΣΤΑΣΕΩΝ ΤΟΥ ΠΙΝΑΚΑ «ΤΟ ΕΓΓΡΑΦΟ ↔ Η ΕΠΑΦΗ» (ADR-950 §8.19)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# «Λέει ο πίνακας την αλήθεια σε ό,τι η παραγωγή ΔΕΝ ξαναπαράγει όταν το ζητήσεις;»
+#   Κ1 «ΣΑΜΟΓΡΑΦΗΣ» (λάθος της AI) ⇒ «Μήπως: …Σαμοθράκης…» + το τυπωμένο (§8.13)
+#   Κ2 κανένας χάρτης δεν απάντησε ⇒ «Ο χάρτης δεν απάντησε», ποτέ «δεν επιβεβαιώθηκε» (§8.16)
+#   Κ3 το τηλέφωνο στη «Συμπλήρωση κενών» = η ΙΔΙΑ μορφή με τον πίνακα (§8.14)
+#
+# 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ: η ανάγνωση είναι AI (μη ντετερμινιστική) και ο χάρτης εξωτερικός. Στον ζωντανό
+# έλεγχο της 2026-11-24 η «Νέα ανάγνωση» διάβασε ΣΩΣΤΑ «ΣΑΜΟΘΡΑΚΗΣ» ⇒ το «Μήπως…» δεν φάνηκε· ο χάρτης
+# απάντησε ⇒ το «δεν απάντησε» δεν φάνηκε· η επαφή είχε ήδη τηλέφωνο ⇒ ο διάλογος δεν το έδειξε.
+# Τρεις καταστάσεις που ΚΑΝΕΙΣ δεν είχε δει στην οθόνη. Πρότυπο Storybook/Chromatic: σταθερές αναγνώσεις
+# με το σχήμα του διακομιστή, ο ΠΡΑΓΜΑΤΙΚΟΣ πίνακας και ο ΠΡΑΓΜΑΤΙΚΟΣ διάλογος.
+#
+# ⚠️ ΜΟΝΟ CI, ΠΟΤΕ ΤΟΠΙΚΑ ΑΠΟ ΠΡΑΚΤΟΡΑ: ο dev server πιάνει >3 GB μνήμης στον υπολογιστή του Giorgio
+#    (μετρημένο 2026-11-24). Η σελίδα είναι 404 στην παραγωγή (`isTestHarnessRouteEnabled`).
+# Ίδιο σχήμα με το address-field-width-gate.yml (CHECK 3.82) — εκεί τα πλήρη «γιατί» κάθε βήματος.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: T2 🔍 Contact Evidence States Gate (CHECK 3.117)
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/contacts/document-evidence/**'
+      - 'src/lib/contacts/contact-evidence-*.ts'
+      - 'src/lib/contact/channel-phone.ts'
+      - 'src/config/contact-document-evidence.ts'
+      - 'src/i18n/locales/el/contacts-form.json'
+      - 'src/i18n/locales/en/contacts-form.json'
+      - 'src/app/**/test-harness/contact-evidence-states/**'
+      - 'src/middleware.ts'
+      - 'src/config/test-harness-access.ts'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/contact-evidence-states-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/contacts/document-evidence/**'
+      - 'src/lib/contacts/contact-evidence-*.ts'
+      - 'src/lib/contact/channel-phone.ts'
+      - 'src/config/contact-document-evidence.ts'
+      - 'src/i18n/locales/el/contacts-form.json'
+      - 'src/i18n/locales/en/contacts-form.json'
+      - 'src/app/**/test-harness/contact-evidence-states/**'
+      - 'src/middleware.ts'
+      - 'src/config/test-harness-access.ts'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/contact-evidence-states-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contact-evidence-states-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  evidence-states:
+    name: 🔍 CHECK 3.117 — λέει ο πίνακας την αλήθεια σε ό,τι δεν ξαναπαράγεται; (3 κριτήρια)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      options: --user 1001
+
+    # ⚠️ ΔΕΝ είναι μυστικά: ο `getAuth` απαιτεί να ΥΠΑΡΧΕΙ κλειδί, δεν κάνει δικτυακή κλήση (βλ. 3.82).
+    # ⚠️ ΜΗΝ «λύσεις» μελλοντικό κόκκινο βάζοντας εδώ secrets του παραγωγικού project.
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-contact-evidence-states-no-network
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-contact-evidence-states
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-contact-evidence-states.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🚀 Start dev server
+        run: pnpm run dev > /tmp/dev-server.log 2>&1 &
+
+      # Αναμονή για τη ΣΥΓΚΕΚΡΙΜΕΝΗ διαδρομή (και προθέρμανση)· πραγματικός User-Agent, γιατί το
+      # `src/middleware.ts` μπλοκάρει το `headlesschrome` με 403.
+      - name: ⏳ Wait for the harness route
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" \
+              http://localhost:3000/test-harness/contact-evidence-states || echo 000)
+            [ "$code" = "200" ] && echo "harness έτοιμο μετά ${i}0s" && exit 0
+            sleep 10
+          done
+          echo "::error::το harness δεν απάντησε 200 σε 600s (τελευταίος κώδικας $code)"
+          tail -80 /tmp/dev-server.log
+          exit 1
+
+      # ⚠️ Το φίλτρο είναι σκέτο `contact-evidence-states` (ποτέ πλήρης διαδρομή με `(bare)`) — βλ. 3.82.
+      - name: 🔍 CHECK 3.117 — η πύλη καταστάσεων του πίνακα
+        env:
+          PLAYWRIGHT_WEB_SERVER_URL: http://localhost:3000/test-harness/contact-evidence-states
+        run: pnpm run test:contact-evidence-states
+
+      - name: 📤 Upload playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: contact-evidence-states-report
+          path: |
+            playwright-report/
+            reports/junit/playwright.xml
+          if-no-files-found: warn
+
+      - name: 📤 Upload dev server log
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: contact-evidence-states-dev-server-log
+          path: /tmp/dev-server.log
+          if-no-files-found: warn

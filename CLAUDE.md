@@ -326,7 +326,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:7dd62f9ef2bc1611dcb24bc19c626df550feed989d35c7553696ffb270ad317e -->
+     fingerprint: sha256:dfe65d14e4c5ff893c8fa78cb67e71cd227f250d47235cb7d438d6992539a0d9 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -427,6 +427,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.114** | **Πύλη του ενός γραφέα του σταδίου ευκαιρίας** (ADR-930) — «γράφει κάποιος ευκαιρία **έξω από τις πόρτες του server** (`…/stage` · `…/owner` · `/api/opportunities`) — χωρίς κριτή κατόχου, έλεγχο σύγκρουσης, ίχ…» · `npm run test:opportunity-stage-authority` · `SKIP_OPPORTUNITY_STAGE_AUTHORITY=1` · 📘 `docs/gates/3.114.md` | ⛔ ZERO TOL (Κ1+Κ2+Κ3+Κ4) | — |
 | **3.115** | **Πύλη του πληθυντικού** (ADR-932) — «λέει αυτό το μήνυμα **«1 παραγγελίες»**; — μετρά το `{count}` χωρίς πληθυντικό ICU, ή λείπει από τον πληθυντικό του κατηγορία που η γλώσσα του…» · `npm run test:i18n-plural` · `SKIP_I18N_PLURAL=1` · 📘 `docs/gates/3.115.md` | 🔴 RATCHET κατά ταυτότητα (σκέτο · λείπει κατηγορία · δεν ανα… | `.i18n-plural-baseline.json` |
 | **3.116** | **Πύλη του σιωπηλά πεταμένου modifier** (ADR-940) — «γράφει κάποιος κλάση Tailwind με modifier που ο compiler **ΔΕΝ** θα παραγάγει; — το `bg-[…]/12` δεν αποδόθηκε ΠΟΤΕ και καμία πύλη δεν το είδε» · `npm run test:tailwind-modifier` · `SKIP_TAILWIND_MODIFIER=1` · 📘 `docs/gates/3.116.md` | ⛔ ZERO TOL | — |
+| **3.117** | **Πύλη καταστάσεων του πίνακα «έγγραφο ↔ επαφή»** (ADR-950) — «λέει ο πίνακας την αλήθεια σε ό,τι η παραγωγή ΔΕΝ ξαναπαράγει όταν το ζητήσεις; — λάθος ανάγνωση της AI, χάρτης που δεν απάντησε, κενό που δεν υπάρχε…» · `npm run test:contact-evidence-states` · 📘 `docs/gates/3.117.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -441,7 +442,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
 📊 Πύλες που **τρέχουν**: **106** (εκτελεστής 98 + hook 21) ·
-γραμμές εδώ: **98** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+γραμμές εδώ: **99** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 
