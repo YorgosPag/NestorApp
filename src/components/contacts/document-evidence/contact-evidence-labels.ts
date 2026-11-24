@@ -26,7 +26,8 @@ export const CONTACT_EVIDENCE_KEYS = {
   dismissReason: 'contacts-form:documentEvidence.actions.dismissReason',
   restore: 'contacts-form:documentEvidence.actions.restore',
   editToAccept: 'contacts-form:documentEvidence.actions.editToAccept',
-  personaRequired: 'contacts-form:documentEvidence.actions.personaRequired',
+  /** ADR-950 §9 — «Καταχώριση» από την προβολή (κενό πεδίο, ελεγμένη τιμή, ένα πάτημα). */
+  register: 'contacts-form:documentEvidence.actions.register',
   compareOnly: 'contacts-form:documentEvidence.actions.compareOnly',
   reread: 'contacts-form:documentEvidence.actions.reread',
   dismissFailed: 'contacts-form:documentEvidence.errors.dismissFailed',
@@ -54,6 +55,9 @@ export const CONTACT_EVIDENCE_ROW_KEYS: Readonly<Record<EvidenceRowKey, string>>
   address: 'contacts-form:documentEvidence.fields.address',
   phone: 'contacts-form:documentEvidence.fields.phone',
   teeRegistryNumber: 'contacts-form:documentEvidence.fields.teeRegistryNumber',
+  oeeNumber: 'contacts-form:documentEvidence.fields.oeeNumber',
+  barAssociationNumber: 'contacts-form:documentEvidence.fields.barAssociationNumber',
+  notaryRegistryNumber: 'contacts-form:documentEvidence.fields.notaryRegistryNumber',
 };
 
 /** Η γραμμή `fullName` σε εταιρεία/υπηρεσία είναι **επωνυμία**, όχι ονοματεπώνυμο. */
@@ -73,6 +77,7 @@ const CONTACT_EVIDENCE_UNGROUNDED_KEYS: Readonly<Record<UngroundedReason, string
   'failed-check': 'contacts-form:documentEvidence.ungrounded.failedCheck',
   disputed: 'contacts-form:documentEvidence.ungrounded.disputed',
   unverified: 'contacts-form:documentEvidence.ungrounded.unverified',
+  'issuer-missing': 'contacts-form:documentEvidence.ungrounded.issuerMissing',
 };
 
 /**
@@ -100,6 +105,8 @@ export const CONTACT_EVIDENCE_FILL_KEYS = {
   button: 'contacts-form:documentEvidence.fill.button',
   title: 'contacts-form:documentEvidence.fill.title',
   description: 'contacts-form:documentEvidence.fill.description',
+  /** Από την προβολή: η εφαρμογή καταχωρίζει αμέσως (ADR-950 §9). */
+  descriptionImmediate: 'contacts-form:documentEvidence.fill.descriptionImmediate',
   address: 'contacts-form:documentEvidence.fill.address',
   apply: 'contacts-form:documentEvidence.fill.apply',
   cancel: 'contacts-form:documentEvidence.fill.cancel',

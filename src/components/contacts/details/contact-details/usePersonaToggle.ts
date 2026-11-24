@@ -3,7 +3,7 @@ import type React from 'react';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { PersonaType } from '@/types/contacts/personas';
-import { createDefaultPersonaData } from '@/types/contacts/personas';
+import { activatePersonaInForm } from '@/lib/contacts/persona-credential-form';
 import { resolveEditingFormData, type OptimisticPersonaState } from './contact-details-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { SettledGuardOutcome } from '@/hooks/impact-guard/guard-result';
@@ -46,29 +46,13 @@ export function usePersonaToggle({
     const currentActive = currentFormData.activePersonas ?? [];
     const isActive = currentActive.includes(personaType);
 
-    let updatedActive: PersonaType[];
-    let updatedPersonaData = currentFormData.personaData ?? {};
-
-    if (isActive) {
-      updatedActive = currentActive.filter((activePersona) => activePersona !== personaType);
-    } else {
-      updatedActive = [...currentActive, personaType];
-      if (!updatedPersonaData[personaType]) {
-        const defaultData = createDefaultPersonaData(personaType);
-        const {
-          personaType: _personaType,
-          status: _status,
-          activatedAt: _activatedAt,
-          deactivatedAt: _deactivatedAt,
-          notes: _notes,
-          ...defaultFields
-        } = defaultData;
-        updatedPersonaData = {
-          ...updatedPersonaData,
-          [personaType]: defaultFields as Record<string, string | number | null>,
-        };
-      }
-    }
+    // Η ενεργοποίηση είναι η ΜΙΑ `activatePersonaInForm` — κοινή με την εγγραφή αρ. μητρώου (ADR-950 §9).
+    const { activePersonas: updatedActive, personaData: updatedPersonaData } = isActive
+      ? {
+          activePersonas: currentActive.filter((activePersona) => activePersona !== personaType),
+          personaData: currentFormData.personaData ?? {},
+        }
+      : activatePersonaInForm(currentFormData, personaType);
 
     if (isEditing) {
       setEditedData((previous) => ({

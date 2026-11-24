@@ -32,7 +32,8 @@ import {
 } from './contact-details-helpers';
 import { usePersonaToggle } from './usePersonaToggle';
 import { useEditSessionState } from './useEditSessionState';
-import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
+import { useEvidenceRegister, type RegisterFormData } from './useEvidenceRegister';
+import { focusContactField } from './focus-contact-field';
 const logger = createModuleLogger('ContactDetails');
 
 const VALIDATION_FIELD_TAB: Record<string, string> = {
@@ -61,6 +62,8 @@ interface UseContactDetailsControllerResult {
   handleMultiplePhotoUploadComplete: (index: number, result: FileUploadResult) => void;
   handlePersonaToggle: (personaType: PersonaType) => Promise<void>;
   handlePhotoClick: (index: number) => void;
+  /** ADR-950 §9 — «Καταχώριση» από την προβολή· `undefined` σε επεξεργασία. */
+  handleRegister: RegisterFormData | undefined;
   handleSaveEdit: () => Promise<void>;
   handleSelectChange: (name: string, value: string) => void;
   handleStartEdit: () => void;
@@ -134,6 +137,18 @@ export function useContactDetailsController({
     }
   }, [contact, optimisticPersonas]);
 
+  const {
+    runExistingContactPartialFormUpdate,
+    guardDialogs: contactGuardDialogs,
+  } = useGuardedContactMutation({
+    editContact: contact,
+    notifications,
+  });
+
+  const { registeredChanges, handleRegister } = useEvidenceRegister({
+    contact, isEditing, runSave, runExistingContactPartialFormUpdate, onContactUpdated,
+  });
+
   const enhancedFormData = useMemo(() => {
     if (!contact) {
       return {} as ContactFormData;
@@ -157,8 +172,9 @@ export function useContactDetailsController({
       };
     }
 
-    return formData;
-  }, [contact, optimisticPersonas, savedPhotoURLs]);
+    // ADR-950 §9 — ό,τι μόλις καταχωρίστηκε, μέχρι να το φέρει ο δίσκος.
+    return registeredChanges ? { ...formData, ...registeredChanges } : formData;
+  }, [contact, optimisticPersonas, registeredChanges, savedPhotoURLs]);
 
   // ADR-323 · ADR-327 §8.5.4: το `editedData` ΕΙΝΑΙ η διαφορά από τη βάση — ο setter κρατά μόνο ό,τι διαφέρει
   // (`useEditSessionState`), όσο ολόκληρη φόρμα κι αν του δώσει μια ενότητα. Μη κενό = αλλαγές που θα χαθούν·
@@ -189,14 +205,6 @@ export function useContactDetailsController({
     };
   }, [contact, editedData, enhancedFormData]);
 
-  const {
-    runExistingContactPartialFormUpdate,
-    guardDialogs: contactGuardDialogs,
-  } = useGuardedContactMutation({
-    editContact: contact,
-    notifications,
-  });
-
   const getValidationResult = useCallback((formData: ContactFormData): ValidationResult | null => {
     switch (formData.type) {
       case 'individual':
@@ -208,40 +216,6 @@ export function useContactDetailsController({
       default:
         return null;
     }
-  }, []);
-
-  /**
-   * Μεταφέρει τον χρήστη **στο** πρόβλημα: εστίαση + κύλιση στο πρώτο άκυρο πεδίο.
-   *
-   * Γιατί χρειάζεται αναμονή καρτέλας: το Radix κρατά **όλα** τα panels
-   * προσαρτημένα και κρύβει τα ανενεργά με CSS. Άρα το `querySelector` βρίσκει το
-   * πεδίο ακόμη κι όταν ανήκει σε άλλη καρτέλα — αλλά `focus()` και
-   * `scrollIntoView()` σε κρυμμένο στοιχείο δεν κάνουν **τίποτα**. Πρέπει να
-   * περιμένουμε να εφαρμοστεί η αλλαγή καρτέλας και το στοιχείο να γίνει ορατό
-   * (`offsetParent !== null`), αλλιώς το μήνυμα λάθους μένει το μόνο σήμα.
-   */
-  const focusField = useCallback((fieldName?: string) => {
-    if (!fieldName || typeof document === 'undefined') {
-      return;
-    }
-
-    const selector = `[name="${fieldName}"], #${fieldName}`;
-    const MAX_FRAMES = 20; // ~330ms στα 60fps — αρκετά για ένα tab switch
-
-    const attempt = (framesLeft: number) => {
-      const element = document.querySelector(selector);
-      const isVisible = element instanceof HTMLElement && element.offsetParent !== null;
-
-      if (!isVisible) {
-        if (framesLeft > 0) window.requestAnimationFrame(() => attempt(framesLeft - 1));
-        return;
-      }
-
-      element.focus();
-      revealInScroll(element, { urgency: 'requested', block: 'center' });
-    };
-
-    window.requestAnimationFrame(() => attempt(MAX_FRAMES));
   }, []);
 
   const handleStartEdit = useCallback(() => {
@@ -305,7 +279,7 @@ export function useContactDetailsController({
       contactNotifications.validationReviewFieldsWithHint(firstErrorKey ?? '');
       const errorTab = firstField ? VALIDATION_FIELD_TAB[firstField] : undefined;
       if (errorTab) setActiveTab(errorTab);
-      focusField(firstField);
+      focusContactField(firstField);
       return;
     }
 
@@ -387,7 +361,7 @@ export function useContactDetailsController({
         contactNotifications.updateError();
       }
     }
-  }, [contact, editedData, endEditSession, focusField, getEditedFormData, getValidationResult, contactNotifications, onContactUpdated, runExistingContactPartialFormUpdate]);
+  }, [contact, editedData, endEditSession, getEditedFormData, getValidationResult, contactNotifications, onContactUpdated, runExistingContactPartialFormUpdate]);
 
   /**
    * ADR-332 D27 Ζ5 — **μία αποθήκευση τη φορά, και το κουμπί το λέει.**
@@ -476,6 +450,7 @@ export function useContactDetailsController({
     handleMultiplePhotoUploadComplete,
     handlePersonaToggle,
     handlePhotoClick,
+    handleRegister,
     handleSaveEdit,
     handleSelectChange,
     handleStartEdit,

@@ -24,6 +24,7 @@ import {
   CONTACT_DOCUMENT_EVIDENCE,
   evidenceSpecsFor,
   isEvidenceAddressField,
+  isEvidenceIssuerField,
   purposeHasEvidence,
   type EvidenceAcceptance,
   type EvidenceAddressField,
@@ -37,6 +38,9 @@ import { SEAT_PARTS, seatState, type SeatFields, type SeatPart } from '@/lib/com
 import { sameLegalName } from '@/lib/company/legal-name-match';
 import { formHeadquarters } from '@/lib/company/registry-form-acceptance';
 import { contactValueKey, groundEvidence, type GroundedValue, type UngroundedReason } from '@/lib/contacts/contact-evidence-grounding';
+import type { PersonaAdoptionTarget } from '@/config/declared-credential-adoption';
+import { sameCredentialValue, type CredentialValue } from '@/lib/contacts/declared-credential-comparison';
+import { formCredentialOf, personaAdoptionTargetOf } from '@/lib/contacts/persona-credential-form';
 import { sameAddressFieldValue } from '@/lib/geocoding/field-match';
 import type { DocumentEvidenceField, EvidenceAddressVerification, EvidenceFieldConsensus } from '@/schemas/ai-analysis';
 import { getTaxOfficeDisplayName } from '@/subapps/accounting/data/greek-tax-offices';
@@ -47,8 +51,14 @@ import { personNameMatch } from '@/utils/greek-person-name';
 
 export type EvidenceComparisonState = FieldComparisonState | 'partial';
 
-/** Κλειδί γραμμής που **δεν** είναι διεύθυνση — ένα πεδίο, μία γραμμή. */
-type EvidenceValueKey = Exclude<EvidenceFieldKey, EvidenceAddressField>;
+/** Κλειδί γραμμής που **δεν** είναι διεύθυνση — ένα πεδίο (ή αριθμός μητρώου + ο εκδότης του), μία γραμμή. */
+type EvidenceValueKey = Exclude<EvidenceRowKey, 'address'>;
+
+/** ADR-950 §9 — ο αρ. μητρώου επαγγέλματος της γραμμής: **πού** γράφεται και **τι** λέει το έγγραφο (`null` = αγείωτο). */
+export interface EvidenceCredential {
+  readonly target: PersonaAdoptionTarget;
+  readonly value: CredentialValue | null;
+}
 
 /** `none` = καμία απόφαση · `dismissed` = αγνοήθηκε **αυτή** η τιμή · `reopened` = αγνοήθηκε άλλη τιμή. */
 export type EvidenceDecisionState = 'none' | 'dismissed' | 'reopened';
@@ -88,6 +98,8 @@ export interface EvidenceRow {
   readonly dismissal: EvidenceDismissal | null;
   /** Μόνο στη γραμμή `address`: κρίση ανά μέρος + οι δύο πλευρές. */
   readonly seat: EvidenceSeat | null;
+  /** Μόνο στις γραμμές μητρώου επαγγέλματος (`persona-field`). */
+  readonly credential: EvidenceCredential | null;
 }
 
 export interface EvidenceSeat {
@@ -120,11 +132,7 @@ export function isEvidenceActionable(row: EvidenceRow): boolean {
 
 function textField(formData: ContactFormData, target: EvidenceTarget): string | null {
   if (target === 'personFullName') return present(`${formData.firstName ?? ''} ${formData.lastName ?? ''}`);
-  if (target === 'engineerTeeRegistryNumber') {
-    const value = formData.personaData?.engineer?.teeRegistryNumber;
-    return value === null || value === undefined ? null : present(String(value));
-  }
-  if (target === 'phones' || target === 'headquarters') return null;
+  if (target === 'phones' || target === 'headquarters' || target === 'personaCredential') return null;
   const value: unknown = formData[target];
   return typeof value === 'string' ? present(value) : null;
 }
@@ -190,6 +198,103 @@ function valueRow(spec: EvidenceFieldSpec, key: EvidenceValueKey, target: Eviden
     contact: contacts.map((c) => (spec.kind === 'taxOffice' ? getTaxOfficeDisplayName(c) : c)).join(' · ') || null,
     ...decisionOf(key, documentKey, input.dismissals),
     seat: null,
+    credential: null,
+  };
+}
+
+// ============================================================================
+// ADR-950 §9 — ΑΡΙΘΜΟΣ ΜΗΤΡΩΟΥ ΕΠΑΓΓΕΛΜΑΤΟΣ: αριθμός (+ εκδότης) = ΜΙΑ γραμμή
+// ============================================================================
+
+interface CredentialSpecs {
+  readonly number: EvidenceFieldSpec;
+  /** `null` = αρχή με **ένα** μητρώο για όλη τη χώρα (ΤΕΕ · ΟΕΕ). */
+  readonly issuer: EvidenceFieldSpec | null;
+  readonly target: PersonaAdoptionTarget;
+}
+
+/** Ο αριθμός μητρώου με τον εκδότη του και τον προορισμό του — `null` αν η αρχή δεν γράφει σε persona. */
+function credentialSpecsOf(specs: readonly EvidenceFieldSpec[], number: EvidenceFieldSpec): CredentialSpecs | null {
+  const target = number.registry === undefined ? null : personaAdoptionTargetOf(number.registry);
+  if (target === null) return null;
+  const issuer = target.chapterField === null
+    ? null
+    : specs.find((s) => s.registry === number.registry && isEvidenceIssuerField(s.key)) ?? null;
+  return { number, issuer, target };
+}
+
+interface GroundedCredential {
+  readonly printed: string | null;
+  readonly numberPrinted: boolean;
+  readonly value: CredentialValue | null;
+  readonly documentKey: string | null;
+  readonly ungrounded: UngroundedReason | null;
+}
+
+const joinCredential = (value: CredentialValue): string => (value.chapter === null ? value.number : `${value.number} · ${value.chapter}`);
+
+/**
+ * Το διαπιστευτήριο του εγγράφου — **ένας** υπολογισμός για τον πίνακα **και** τον διακομιστή. Αρχή με παραρτήματα:
+ * αριθμός **χωρίς** γειωμένο εκδότη ⇒ `issuer-missing`, ποτέ μισή τιμή (ADR-841 Α9.1).
+ */
+function groundCredential(specs: CredentialSpecs, reading: EvidenceReading): GroundedCredential {
+  const number = readingOf(reading, specs.number);
+  const issuer = specs.issuer === null ? null : readingOf(reading, specs.issuer);
+  const printed = present([number.printed, issuer?.printed ?? null].filter((part) => part !== null).join(' · '));
+  const failed = (ungrounded: UngroundedReason): GroundedCredential =>
+    ({ printed, numberPrinted: number.printed !== null, value: null, documentKey: null, ungrounded });
+  if (!number.ok) return failed(number.reason);
+  if (specs.target.chapterField === null) {
+    return { printed, numberPrinted: true, value: { number: number.display, chapter: null }, documentKey: number.key, ungrounded: null };
+  }
+  if (issuer === null || !issuer.ok) return failed(issuer === null || issuer.reason === 'absent' ? 'issuer-missing' : issuer.reason);
+  return {
+    printed,
+    numberPrinted: true,
+    value: { number: number.display, chapter: issuer.display },
+    documentKey: `${number.key}|${issuer.key}`,
+    ungrounded: null,
+  };
+}
+
+/** Κανονική μορφή για σύγκριση: αριθμός ως συστάδα ψηφίων, εκδότης χωρίς τόνους/πεζά-κεφαλαία. */
+function credentialKey(value: CredentialValue): CredentialValue {
+  return {
+    number: contactValueKey('registryNumber', value.number) ?? value.number,
+    chapter: value.chapter === null ? null : contactValueKey('text', value.chapter) ?? value.chapter,
+  };
+}
+
+function credentialState(document: CredentialValue | null, contact: CredentialValue | null): EvidenceComparisonState {
+  if (document === null) return 'not-comparable';
+  if (contact === null) return 'missing';
+  return sameCredentialValue(credentialKey(document), credentialKey(contact)) ? 'match' : 'differs';
+}
+
+/**
+ * Η γραμμή ενός μητρώου — ή `null` όταν **ούτε** το έγγραφο **ούτε** η επαφή το αναφέρουν (η σφραγίδα ενός μηχανικού δεν
+ * χρειάζεται τρεις γραμμές «Α.Μ. δικηγόρου: δεν βρέθηκε»).
+ */
+function credentialRow(specs: CredentialSpecs, key: EvidenceValueKey, input: EvidenceComparisonInput): EvidenceRow | null {
+  const grounded = groundCredential(specs, input.reading);
+  const contact = formCredentialOf(input.formData, specs.target);
+  if (!grounded.numberPrinted && contact === null) return null;
+  return {
+    key,
+    acceptance: 'persona-field',
+    target: 'personaCredential',
+    state: credentialState(grounded.value, contact),
+    documentPrinted: grounded.printed,
+    documentDisplay: grounded.value === null ? null : joinCredential(grounded.value),
+    documentKey: grounded.documentKey,
+    ungrounded: grounded.ungrounded,
+    documentAlternate: grounded.ungrounded === 'disputed' ? disputeOf(input.reading, specs.number.key)?.alternate ?? null : null,
+    correctedFrom: null,
+    phoneLineType: null,
+    contact: contact === null ? null : joinCredential(contact),
+    ...decisionOf(key, grounded.documentKey, input.dismissals),
+    seat: null,
+    credential: { target: specs.target, value: grounded.value },
   };
 }
 
@@ -277,6 +382,7 @@ function addressRow(specs: readonly AddressSpec[], input: EvidenceComparisonInpu
     contact: contact === null ? null : joinSeat(contact),
     ...decisionOf('address', grounded.documentKey, input.dismissals),
     seat: { parts, document: grounded.document, contact },
+    credential: null,
   };
 }
 
@@ -296,7 +402,10 @@ export function compareEvidenceWithForm(input: EvidenceComparisonInput): readonl
   for (const spec of specs) {
     const target = spec.target[input.contactType];
     const key = spec.key;
-    if (target !== undefined && !isEvidenceAddressField(key)) rows.push(valueRow(spec, key, target, input));
+    if (target === undefined || isEvidenceAddressField(key) || isEvidenceIssuerField(key)) continue;
+    const credential = credentialSpecsOf(specs, spec);
+    const row = credential === null ? valueRow(spec, key, target, input) : credentialRow(credential, key, input);
+    if (row !== null) rows.push(row);
   }
   const addressSpecs = addressSpecsOf(specs);
   if (addressSpecs.length > 0) rows.push(addressRow(addressSpecs, input));
@@ -316,6 +425,8 @@ export function evidenceDocumentKey(reading: EvidenceReading, purpose: string | 
   }
   const spec = specs.find((s) => s.key === row);
   if (spec === undefined) return null;
+  const credential = credentialSpecsOf(specs, spec);
+  if (credential !== null) return groundCredential(credential, reading).documentKey;
   const grounded = readingOf(reading, spec);
   return grounded.ok ? grounded.key : null;
 }

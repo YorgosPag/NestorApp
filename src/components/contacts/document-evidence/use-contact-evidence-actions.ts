@@ -1,10 +1,11 @@
 'use client';
 
 /**
- * @fileoverview Οι **τέσσερις** πράξεις μιας γραμμής «Το έγγραφο λέει / Η επαφή λέει» (ADR-950 §4.5).
+ * @fileoverview Οι πράξεις μιας γραμμής «Το έγγραφο λέει / Η επαφή λέει» (ADR-950 §4.5 · §9).
  * @module components/contacts/document-evidence/use-contact-evidence-actions
  *
- * - **Αποδοχή** — μόνο η φόρμα (`acceptEvidence`)· η εγγραφή περνά από την υπάρχουσα αποθήκευση και τους 4 φρουρούς.
+ * - **Αποδοχή** (επεξεργασία) — μόνο η φόρμα (`acceptEvidence`)· η εγγραφή περνά από την υπάρχουσα αποθήκευση και τους 4 φρουρούς.
+ * - **Καταχώριση** (προβολή) — η ίδια αλλαγή, σταλμένη **αμέσως** στην ίδια φυλαγμένη αποθήκευση (`host.onRegister`).
  * - **Πρόταση διεύθυνσης** — στον ιδιοκτήτη της έδρας (`proposeHqAddress`), ποτέ απευθείας εγγραφή.
  * - **Αγνόηση / Αναίρεση** — διακομιστής (ο ΕΝΑΣ γραφέας), **αισιόδοξα**: φαίνεται αμέσως, επαναφορά σε αποτυχία.
  */
@@ -14,7 +15,13 @@ import { useCallback } from 'react';
 import type { EvidenceDismissReason } from '@/config/contact-document-evidence';
 import { proposeHqAddress } from '@/components/contacts/dynamic/hq-address-proposal-store';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { acceptEvidence, acceptEvidenceBatch, evidenceSeatProposal } from '@/lib/contacts/contact-evidence-acceptance';
+import {
+  acceptEvidence,
+  acceptEvidenceBatch,
+  canRegisterEvidence,
+  evidenceSeatProposal,
+  formDataChanges,
+} from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -31,6 +38,11 @@ export interface ContactEvidenceActions {
   readonly accept: (row: EvidenceRow) => void;
   readonly proposeAddress: (row: EvidenceRow) => void;
   readonly fillEmpty: (rows: readonly EvidenceRow[], seat: EvidenceRow | null) => void;
+  /** ADR-950 §9 — «Καταχώριση» μίας γραμμής από την προβολή (φυλαγμένη αποθήκευση, ένα πάτημα). */
+  readonly register: (row: EvidenceRow) => void;
+  /** Υπάρχει καταχώριση από την προβολή; (όχι σε επεξεργασία — εκεί ισχύει η «Αποδοχή») */
+  readonly canRegister: boolean;
+  readonly isRegistering: boolean;
   readonly dismiss: (row: EvidenceRow, reason: EvidenceDismissReason) => void;
   readonly restore: (row: EvidenceRow) => void;
 }
@@ -85,14 +97,34 @@ export function useContactEvidenceActions(file: FileRecord, fileName: string): C
     host.onOpenAddresses?.();
   }, [host, file.id, observedAt, fileName]);
 
-  /** «Συμπλήρωση κενών»: όλα τα επιλεγμένα σε **μία** αλλαγή φόρμας, και η διεύθυνση ως πρόταση (ADR-950 §8.6). */
+  const canRegister = host !== null && !host.canEdit && host.onRegister !== undefined;
+
+  /** Από την προβολή: η **ίδια** `acceptEvidenceBatch`, και στην αποθήκευση φεύγει μόνο ό,τι άλλαξε (ADR-950 §9). */
+  const registerRows = useCallback((rows: readonly EvidenceRow[]) => {
+    if (host === null || !canRegister || host.onRegister === undefined) return;
+    const next = acceptEvidenceBatch(host.formData, rows.filter(canRegisterEvidence), host.contactType);
+    void host.onRegister(next, formDataChanges(host.formData, next));
+  }, [host, canRegister]);
+
+  const register = useCallback((row: EvidenceRow) => registerRows([row]), [registerRows]);
+
+  /**
+   * «Συμπλήρωση κενών»: όλα τα επιλεγμένα σε **μία** αλλαγή φόρμας, και η διεύθυνση ως πρόταση (ADR-950 §8.6). Από την
+   * προβολή ⇒ **μία** καταχώριση· η διεύθυνση μένει στην επεξεργασία (ιδιοκτήτης της είναι ο editor έδρας).
+   */
   const fillEmpty = useCallback((rows: readonly EvidenceRow[], seat: EvidenceRow | null) => {
-    if (host?.setFormData === undefined || !host.canEdit) return;
+    if (host === null) return;
+    if (!host.canEdit) {
+      registerRows(rows);
+      return;
+    }
+    if (host.setFormData === undefined) return;
     if (rows.length > 0) host.setFormData(acceptEvidenceBatch(host.formData, rows, host.contactType));
     if (seat !== null) proposeAddress(seat);
-  }, [host, proposeAddress]);
+  }, [host, proposeAddress, registerRows]);
 
-  return host === null ? null : { accept, proposeAddress, fillEmpty, dismiss, restore };
+  if (host === null) return null;
+  return { accept, proposeAddress, fillEmpty, register, canRegister, isRegistering: host.isRegistering ?? false, dismiss, restore };
 }
 
 /** Πότε διαβάστηκε — η σφραγίδα του διακομιστή· χωρίς αυτήν, «τώρα» (ποτέ ημερομηνία από το LLM). */

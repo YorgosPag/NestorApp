@@ -440,6 +440,11 @@ const EVIDENCE_FIELD_HINTS: Readonly<Record<EvidenceFieldKey, string>> = {
   addressCity: 'city / town of the address',
   phone: 'one telephone number, as printed (the first one if several)',
   teeRegistryNumber: 'Technical Chamber of Greece registry number (ΑΡ. ΜΗΤΡΩΟΥ ΤΕΕ / Α.Μ. ΤΕΕ) — the number only, without the label',
+  oeeNumber: 'Economic Chamber of Greece registry / licence number of an accountant (Α.Μ. ΟΕΕ / ΑΡ. ΑΔΕΙΑΣ ΟΕΕ) — the number only, without the label',
+  barAssociationNumber: 'bar association registry number of a lawyer (Α.Μ. Δ.Σ. / Α.Μ.Δ.Σ.Α. / Α.Μ. ΔΣΘ) — the number only, without the label or the association',
+  barAssociation: 'the bar association the lawyer is registered with, as printed (e.g. "Δ.Σ.Θ.", "Δικηγορικός Σύλλογος Αθηνών") — only when a lawyer registry number is printed',
+  notaryRegistryNumber: 'notary registry number (Α.Μ. Συμβολαιογραφικού Συλλόγου) — the number only, without the label',
+  notaryDistrict: 'the notarial association / court-of-appeal district the notary belongs to, as printed (e.g. "Συμβολαιογραφικός Σύλλογος Εφετείου Θεσσαλονίκης") — only when the stamp is a notary stamp',
 };
 
 /**

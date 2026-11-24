@@ -35,6 +35,7 @@ export function ContactDetails({
     handleMultiplePhotoUploadComplete,
     handlePersonaToggle,
     handlePhotoClick,
+    handleRegister,
     handleSaveEdit,
     handleSelectChange,
     handleStartEdit,
@@ -112,6 +113,8 @@ export function ContactDetails({
           handleLogoChange={isEditing ? handleLogoChange : undefined}
           validationErrors={isEditing ? validationErrors : undefined}
           onFieldBlur={isEditing ? handleFieldBlur : undefined}
+          onRegisterFormData={readOnly ? undefined : handleRegister}
+          isRegisteringFormData={isSaving}
         />
       </DetailsContainer>
 

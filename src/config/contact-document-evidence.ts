@@ -15,6 +15,7 @@
  *    **υψηλότερα** (καμία γείωση). Αρχικές τιμές — βαθμονόμηση στα πραγματικά έγγραφα (ADR-950 §5.3).
  */
 
+import type { RegistryAuthorityId } from '@/constants/professional-registries';
 import type { ContactType } from '@/types/contacts/contracts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
@@ -35,6 +36,11 @@ export const EVIDENCE_FIELD_KEYS = [
   'addressCity',
   'phone',
   'teeRegistryNumber',
+  'oeeNumber',
+  'barAssociationNumber',
+  'barAssociation',
+  'notaryRegistryNumber',
+  'notaryDistrict',
 ] as const;
 export type EvidenceFieldKey = (typeof EVIDENCE_FIELD_KEYS)[number];
 
@@ -48,8 +54,25 @@ export function isEvidenceAddressField(key: EvidenceFieldKey): key is EvidenceAd
   return ADDRESS_FIELD_SET.has(key);
 }
 
-/** Μία γραμμή του πίνακα «Το έγγραφο λέει / Η επαφή λέει»: κάθε πεδίο, εκτός από τα μέρη διεύθυνσης που γίνονται `address`. */
-export type EvidenceRowKey = Exclude<EvidenceFieldKey, EvidenceAddressField> | 'address';
+/**
+ * ADR-950 §9 — ο **εκδότης** ενός αριθμού μητρώου με παραρτήματα (Δικηγορικός Σύλλογος ανά πόλη · Συμβολαιογραφικός
+ * ανά περιφέρεια). Δεν είναι δική του γραμμή: κρίνεται **μαζί** με τον αριθμό του (ADR-841 Α9.1 — «1234» χωρίς «ΔΣΘ»
+ * δεν επαληθεύεται από κανέναν), όπως τα μέρη διεύθυνσης κρίνονται ως μία έδρα.
+ */
+export const EVIDENCE_ISSUER_FIELDS = ['barAssociation', 'notaryDistrict'] as const;
+export type EvidenceIssuerField = (typeof EVIDENCE_ISSUER_FIELDS)[number];
+
+const ISSUER_FIELD_SET: ReadonlySet<EvidenceFieldKey> = new Set(EVIDENCE_ISSUER_FIELDS);
+
+export function isEvidenceIssuerField(key: EvidenceFieldKey): key is EvidenceIssuerField {
+  return ISSUER_FIELD_SET.has(key);
+}
+
+/**
+ * Μία γραμμή του πίνακα «Το έγγραφο λέει / Η επαφή λέει»: κάθε πεδίο, εκτός από τα μέρη διεύθυνσης (γίνονται `address`)
+ * και τους εκδότες μητρώου (ζουν μέσα στη γραμμή του αριθμού τους).
+ */
+export type EvidenceRowKey = Exclude<EvidenceFieldKey, EvidenceAddressField | EvidenceIssuerField> | 'address';
 
 /** Η ρίζα του λεξιλογίου αιτιών «Αγνόησης» (σχήμα GitHub code scanning: η απόφαση λέει **γιατί**). */
 export const EVIDENCE_DISMISS_REASONS = ['outdated-document', 'misread', 'other'] as const;
@@ -73,7 +96,8 @@ export type EvidenceFieldKind =
  * - `form-field` — γεμίζει **ένα** πεδίο της φόρμας.
  * - `append-phone` — **προσθέτει** τηλέφωνο, ποτέ δεν αντικαθιστά (η επαφή μπορεί να έχει πολλά).
  * - `propose-address` — πρόταση στον editor διευθύνσεων (ιδιοκτήτης της έδρας), ποτέ απευθείας εγγραφή.
- * - `persona-field` — γεμίζει πεδίο persona (ADR-121) **μόνο** αν η persona είναι ενεργή (αρ. ΤΕΕ ⇒ `engineer`).
+ * - `persona-field` — αρ. μητρώου επαγγέλματος: γράφεται στην persona που ορίζει η **αρχή** του (`registry` →
+ *   `DECLARED_CREDENTIAL_ADOPTION`) και την **ενεργοποιεί** αν λείπει (ADR-950 §9).
  * - `compare-only` — μόνο σύγκριση: ονοματεπώνυμο σφραγίδας. Ένα «ενιαίο» όνομα δεν σπάει με ασφάλεια σε
  *   όνομα/επώνυμο, και η αλλαγή ονόματος προσώπου είναι αλλαγή **ταυτότητας** (φρουρός ADR-249)· τη διορθώνει η ταυτότητα.
  */
@@ -87,9 +111,9 @@ export type EvidenceFormTextField = {
 /**
  * Τι της επαφής συγκρίνεται: απλό πεδίο κειμένου, ή ένας από τους **σύνθετους** στόχους
  * (`personFullName` = όνομα + επώνυμο · `phones` = όλα τα τηλέφωνα · `headquarters` = θέση 0 της `companyAddresses` ·
- * `engineerTeeRegistryNumber` = `personaData.engineer.teeRegistryNumber`).
+ * `personaCredential` = τα πεδία μητρώου της persona που ορίζει το `registry` του πεδίου).
  */
-export type EvidenceTarget = EvidenceFormTextField | 'personFullName' | 'phones' | 'headquarters' | 'engineerTeeRegistryNumber';
+export type EvidenceTarget = EvidenceFormTextField | 'personFullName' | 'phones' | 'headquarters' | 'personaCredential';
 
 export interface EvidenceFieldSpec {
   readonly key: EvidenceFieldKey;
@@ -98,6 +122,8 @@ export interface EvidenceFieldSpec {
   /** Ανά είδος επαφής: το κείμενο της φόρμας που συγκρίνεται. Απών ⇒ το πεδίο δεν αφορά αυτό το είδος. */
   readonly target: Readonly<Partial<Record<ContactType, EvidenceTarget>>>;
   readonly minConfidence: number;
+  /** Μόνο στα πεδία μητρώου επαγγέλματος: **ποια αρχή** κρατά το μητρώο — από εκεί λύνεται persona και πεδίο. */
+  readonly registry?: RegistryAuthorityId;
 }
 
 const CODE_CONFIDENCE = 0.6;
@@ -106,6 +132,25 @@ const TEXT_CONFIDENCE = 0.8;
 function spec(key: EvidenceFieldKey, kind: EvidenceFieldKind, acceptance: EvidenceAcceptance, target: EvidenceFieldSpec['target'], minConfidence: number): EvidenceFieldSpec {
   return { key, kind, acceptance, target, minConfidence };
 }
+
+/** Πεδίο μητρώου επαγγέλματος — αριθμός (`registryNumber`, κατώφλι κωδικού) ή εκδότης (`text`). Μόνο φυσικά πρόσωπα. */
+function registrySpec(key: EvidenceFieldKey, kind: 'registryNumber' | 'text', registry: RegistryAuthorityId): EvidenceFieldSpec {
+  const minConfidence = kind === 'registryNumber' ? CODE_CONFIDENCE : TEXT_CONFIDENCE;
+  return { ...spec(key, kind, 'persona-field', { individual: 'personaCredential' }, minConfidence), registry };
+}
+
+/**
+ * ADR-950 §9 — τα μητρώα επαγγέλματος που διαβάζονται σε σφραγίδα. Το **κλειδί** κάθε πεδίου είναι το όνομα του πεδίου
+ * της persona (`DECLARED_CREDENTIAL_ADOPTION`: `numberField` / `chapterField`) — νέα αρχή = γραμμές εδώ, καμία νέα λογική.
+ */
+const PROFESSIONAL_REGISTRIES: readonly EvidenceFieldSpec[] = [
+  registrySpec('teeRegistryNumber', 'registryNumber', 'tee'),
+  registrySpec('oeeNumber', 'registryNumber', 'oee'),
+  registrySpec('barAssociationNumber', 'registryNumber', 'bar-association'),
+  registrySpec('barAssociation', 'text', 'bar-association'),
+  registrySpec('notaryRegistryNumber', 'registryNumber', 'notary-association'),
+  registrySpec('notaryDistrict', 'text', 'notary-association'),
+];
 
 const VAT = spec('vatNumber', 'vat', 'form-field', { individual: 'vatNumber', company: 'companyVatNumber', service: 'serviceVatNumber' }, CODE_CONFIDENCE);
 // Η ΔΟΥ γειώνεται στον ΚΛΕΙΣΤΟ κατάλογο (`GREEK_TAX_OFFICES`) ⇒ κωδικός, άρα κατώφλι κωδικού.
@@ -133,7 +178,7 @@ export const CONTACT_DOCUMENT_EVIDENCE: Readonly<Record<string, readonly Evidenc
     TAX_OFFICE,
     ...ADDRESS,
     spec('phone', 'phone', 'append-phone', { individual: 'phones', company: 'phones', service: 'phones' }, CODE_CONFIDENCE),
-    spec('teeRegistryNumber', 'registryNumber', 'persona-field', { individual: 'engineerTeeRegistryNumber' }, CODE_CONFIDENCE),
+    ...PROFESSIONAL_REGISTRIES,
   ],
   id: [
     spec('lastName', 'nameToken', 'form-field', { individual: 'lastName' }, TEXT_CONFIDENCE),
@@ -173,6 +218,9 @@ const DIGIT_RECHECK_FIELDS: ReadonlySet<EvidenceFieldKey> = new Set<EvidenceFiel
   'addressPostalCode',
   'addressNumber',
   'teeRegistryNumber',
+  'oeeNumber',
+  'barAssociationNumber',
+  'notaryRegistryNumber',
   'documentNumber',
   'birthDate',
 ]);

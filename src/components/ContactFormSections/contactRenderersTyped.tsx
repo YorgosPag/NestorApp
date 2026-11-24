@@ -11,6 +11,7 @@ import { MinistryPicker } from '@/components/shared/MinistryPicker';
 import { PublicServicePicker } from '@/components/contacts/pickers/PublicServicePicker';
 import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
 import { ContactLinkSurfaces } from '@/components/contacts/contact-link-surfaces';
+import { ProfessionalRegistriesField } from '@/components/contacts/personas/ProfessionalRegistriesField';
 import { ContactCompanyRegistryCheck } from '@/components/contacts/ContactCompanyRegistryCheck';
 import { COMPANY_ADDRESSES_SECTION_ID } from '@/config/company-gemi/core/section-registry';
 import { canonicalLegalForm } from '@/lib/contact/legal-form-vocabulary';
@@ -45,6 +46,11 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
           }
         }}
       />
+    )),
+
+    // 🪪 ADR-950 §9 — αρ. μητρώου ανά αρχή (ΤΕΕ · ΟΕΕ · Δικηγορικός · Συμβολαιογραφικός), ανάλογα με το επάγγελμα.
+    professionalRegistries: pickerRenderer((fieldDisabled, fieldId) => (
+      <ProfessionalRegistriesField id={fieldId} formData={formData} onChange={setFormData} disabled={fieldDisabled} />
     )),
 
     employer: pickerRenderer((fieldDisabled) => (

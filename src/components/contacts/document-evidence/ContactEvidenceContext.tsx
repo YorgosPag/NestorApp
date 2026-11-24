@@ -30,6 +30,13 @@ export interface ContactEvidenceHost {
   /** Επεξεργασία (όχι προβολή) **και** υπάρχει γραφέας φόρμας — ίδιος κανόνας με το ADR-948 `canEdit`. */
   readonly canEdit: boolean;
   readonly onOpenAddresses?: () => void;
+  /**
+   * ADR-950 §9 — **«Καταχώριση»** από την προβολή: η νέα εικόνα της φόρμας + **μόνο** ό,τι άλλαξε, προς τη φυλαγμένη
+   * αποθήκευση της καρτέλας. `undefined` ⇒ καμία καταχώριση (επεξεργασία · αποσυρμένη επαφή · φόρμα δημιουργίας).
+   */
+  readonly onRegister?: (next: ContactFormData, changes: Partial<ContactFormData>) => Promise<void>;
+  /** Τρέχει αποθήκευση της καρτέλας — τα κουμπιά καταχώρισης κλειδώνουν (`disabled` + `aria-busy`). */
+  readonly isRegistering?: boolean;
 }
 
 /** `null` = «αναιρέθηκε» · τιμή = «αγνοήθηκε» · απουσία = καμία εκκρεμής απόφαση. */
@@ -50,6 +57,8 @@ export function ContactEvidenceProvider({
   setFormData,
   canEdit,
   onOpenAddresses,
+  onRegister,
+  isRegistering,
 }: ContactEvidenceHost & { readonly children: React.ReactNode }) {
   const [pending, setPendingState] = useState<PendingDecisions>({});
   const setPending = useCallback((fileId: string, row: EvidenceRowKey, value: EvidenceDismissal | null | undefined) => {
@@ -61,8 +70,8 @@ export function ContactEvidenceProvider({
     });
   }, []);
   const value = useMemo(
-    () => ({ contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, pending, setPending }),
-    [contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, pending, setPending],
+    () => ({ contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, pending, setPending }),
+    [contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, pending, setPending],
   );
   return <ContactEvidenceContext.Provider value={value}>{children}</ContactEvidenceContext.Provider>;
 }

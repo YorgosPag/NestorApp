@@ -187,3 +187,4 @@ See **ADR-327 §18 "Vendor 360° Contact Tab"** for the full design (component t
 | `src/components/ContactFormSections/UnifiedContactTabbedSection.tsx` | Replaced 2 guard if-blocks (23 lines) with 1 registry call (5 lines), removed `BrokerageService`/`ClientService` imports |
 | `src/i18n/locales/el/contacts.json` | Added `persona.guards.realEstateAgent.blocked` + `persona.guards.client.blocked` |
 | `src/i18n/locales/en/contacts.json` | Added `persona.guards.realEstateAgent.blocked` + `persona.guards.client.blocked` |
+| 2026-11-24 | ADR-950 §9: η ενεργοποίηση persona στη φόρμα έγινε ΜΙΑ καθαρή `activatePersonaInForm` (`lib/contacts/persona-credential-form.ts`)· το `usePersonaToggle` την καλεί. Αρ. μητρώου από έγγραφο ή από τα «Μητρώα επαγγέλματος» ενεργοποιεί την αντίστοιχη persona. |

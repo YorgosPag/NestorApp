@@ -330,7 +330,10 @@
       "taxOffice": "Tax office (DOY)",
       "address": "Address",
       "phone": "Phone",
-      "teeRegistryNumber": "TEE registry number"
+      "teeRegistryNumber": "TEE registry number",
+      "oeeNumber": "OEE registry number",
+      "barAssociationNumber": "Lawyer registry number",
+      "notaryRegistryNumber": "Notary registry number"
     },
     "state": {
       "match": "Matches",
@@ -345,7 +348,8 @@
       "failedCheck": "Illegible — fails the validity check",
       "failedCheckVat": "Possibly obscured — fill it in from the form",
       "disputed": "Uncertain — the second reading disagrees",
-      "unverified": "Not confirmed on the map — re-read the document or check the address"
+      "unverified": "Not confirmed on the map — re-read the document or check the address",
+      "issuerMissing": "The issuing association could not be read — fill it in from “Professional”"
     },
     "corroboration": {
       "alternate": "Second reading: {value}",
@@ -357,6 +361,7 @@
       "button": "{count, plural, one {Fill empty field (#)} other {Fill empty fields (#)}}",
       "title": "Fill empty fields from the document",
       "description": "Only empty contact fields, only verified values. Nothing existing is replaced; changes are saved with “Save”.",
+      "descriptionImmediate": "Only empty contact fields, only verified values. Nothing existing is replaced; the selected values are saved to the contact immediately.",
       "address": "Address (as a proposal in “Addresses”)",
       "apply": "{count, plural, one {Fill # field} other {Fill # fields}}",
       "cancel": "Cancel",
@@ -379,7 +384,7 @@
       "dismissReason": "Why ignore it?",
       "restore": "Undo ignore",
       "editToAccept": "Edit to accept",
-      "personaRequired": "To accept, enable the “Engineer” role",
+      "register": "Save to contact",
       "compareOnly": "Corrected from the form",
       "reread": "Read again"
     },

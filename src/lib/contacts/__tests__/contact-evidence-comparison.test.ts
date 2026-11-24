@@ -123,3 +123,55 @@ describe('ΔΟΥ, ΤΕΕ, τύπος γραμμής', () => {
     expect(row(rowsOf(reading), 'phone').phoneLineType).toBe('FIXED_LINE');
   });
 });
+
+describe('αρ. μητρώου επαγγέλματος — αριθμός + εκδότης = ΜΙΑ γραμμή (ADR-950 §9)', () => {
+  const lawyerFields: readonly DocumentEvidenceField[] = [
+    { field: 'barAssociationNumber', printed: 'Α.Μ. 4521', confidence: 0.95 },
+    { field: 'barAssociation', printed: 'Δ.Σ.Θ.', confidence: 0.95 },
+  ];
+  const keysOf = (rows: readonly EvidenceRow[]) => rows.map((r) => r.key);
+
+  it('ο αρ. ΤΕΕ λείπει από επαφή χωρίς ιδιότητα «Μηχανικός» — και λέει πού θα γραφτεί', () => {
+    const tee = row(rowsOf({ fields: FIELDS }), 'teeRegistryNumber');
+    expect(tee).toMatchObject({ state: 'missing', acceptance: 'persona-field', contact: null });
+    expect(tee.credential).toMatchObject({ target: { persona: 'engineer', numberField: 'teeRegistryNumber' }, value: { number: '74693', chapter: null } });
+  });
+
+  it('ίδιος αριθμός στην ενεργή ιδιότητα ⇒ «Ταιριάζει»· ανενεργή ιδιότητα δεν μετρά ως τιμή της επαφής', () => {
+    const personaData = { engineer: { teeRegistryNumber: '74 693' } };
+    expect(row(rowsOf({ fields: FIELDS }, { ...formData, activePersonas: ['engineer'], personaData }), 'teeRegistryNumber').state).toBe('match');
+    expect(row(rowsOf({ fields: FIELDS }, { ...formData, personaData }), 'teeRegistryNumber').state).toBe('missing');
+  });
+
+  it('μητρώο που ούτε το έγγραφο ούτε η επαφή αναφέρουν ⇒ καμία γραμμή', () => {
+    const keys = keysOf(rowsOf({ fields: FIELDS }));
+    expect(keys).not.toContain('barAssociationNumber');
+    expect(keys).not.toContain('notaryRegistryNumber');
+    expect(keys).not.toContain('oeeNumber');
+  });
+
+  it('δικηγόρος: μία γραμμή με αριθμό και σύλλογο — ο σύλλογος δεν είναι δική του γραμμή', () => {
+    const rows = rowsOf({ fields: lawyerFields });
+    expect(row(rows, 'barAssociationNumber')).toMatchObject({ state: 'missing', documentDisplay: '4521 · Δ.Σ.Θ.', ungrounded: null });
+    expect(rows.some((r) => String(r.key) === 'barAssociation')).toBe(false);
+  });
+
+  it('αριθμός δικηγόρου ΧΩΡΙΣ σύλλογο ⇒ δεν συγκρίνεται, δεν γίνεται αποδεκτός (ADR-841 Α9.1)', () => {
+    const lonely = row(rowsOf({ fields: [lawyerFields[0]] }), 'barAssociationNumber');
+    expect(lonely).toMatchObject({ state: 'not-comparable', ungrounded: 'issuer-missing', documentDisplay: null, documentKey: null });
+    expect(evidenceDocumentKey({ fields: [lawyerFields[0]] }, PURPOSE, 'barAssociationNumber')).toBeNull();
+  });
+
+  it('ίδιος αριθμός, άλλος σύλλογος ⇒ «Διαφέρει»· ίδιος σύλλογος με άλλα πεζά/κεφαλαία ⇒ «Ταιριάζει»', () => {
+    const withLawyer = (barAssociation: string): ContactFormData =>
+      ({ ...formData, activePersonas: ['lawyer'], personaData: { lawyer: { barAssociationNumber: '4521', barAssociation } } });
+    expect(row(rowsOf({ fields: lawyerFields }, withLawyer('Δ.Σ.Α.')), 'barAssociationNumber').state).toBe('differs');
+    expect(row(rowsOf({ fields: lawyerFields }, withLawyer('δ.σ.θ.')), 'barAssociationNumber').state).toBe('match');
+  });
+
+  it('ο διακομιστής υπολογίζει το ίδιο κλειδί «Αγνόησης» με τον πίνακα', () => {
+    const reading: EvidenceReading = { fields: lawyerFields };
+    expect(evidenceDocumentKey(reading, PURPOSE, 'barAssociationNumber')).toBe(row(rowsOf(reading), 'barAssociationNumber').documentKey);
+    expect(evidenceDocumentKey({ fields: FIELDS }, PURPOSE, 'teeRegistryNumber')).toBe('74693');
+  });
+});

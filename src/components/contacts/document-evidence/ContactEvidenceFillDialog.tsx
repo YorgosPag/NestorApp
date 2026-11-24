@@ -32,6 +32,8 @@ interface ContactEvidenceFillDialogProps {
   readonly onApply: (rows: readonly EvidenceRow[], seat: EvidenceRow | null) => void;
   /** Η ετικέτα της γραμμής — ίδια με του πίνακα (επωνυμία ⇄ ονοματεπώνυμο). */
   readonly labelOf: (row: EvidenceRow) => string;
+  /** Από την προβολή: η εφαρμογή **καταχωρίζει αμέσως** (ADR-950 §9) — το κείμενο το λέει, δεν υπόσχεται «Αποθήκευση». */
+  readonly immediate?: boolean;
 }
 
 const SEAT_ID = 'address';
@@ -55,7 +57,7 @@ function FillItem({ id, label, value, checked, onToggle }: {
   );
 }
 
-export function ContactEvidenceFillDialog({ open, onOpenChange, rows, seat, onApply, labelOf }: ContactEvidenceFillDialogProps) {
+export function ContactEvidenceFillDialog({ open, onOpenChange, rows, seat, onApply, labelOf, immediate = false }: ContactEvidenceFillDialogProps) {
   const { t } = useTranslation('contacts-form');
   const allIds = [...rows.map((row) => row.key), ...(seat === null ? [] : [SEAT_ID])];
   const [unchecked, setUnchecked] = useState<ReadonlySet<string>>(new Set());
@@ -76,7 +78,7 @@ export function ContactEvidenceFillDialog({ open, onOpenChange, rows, seat, onAp
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t(FILL.title)}</DialogTitle>
-          <DialogDescription>{t(FILL.description)}</DialogDescription>
+          <DialogDescription>{t(immediate ? FILL.descriptionImmediate : FILL.description)}</DialogDescription>
         </DialogHeader>
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {rows.map((row) => (

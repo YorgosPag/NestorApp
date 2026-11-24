@@ -125,19 +125,25 @@ function PanelActions({ file, rows, actions, labelOf }: {
   const parentIsLive = useRetiredKind() === null;
   const [fillOpen, setFillOpen] = useState(false);
   if (host === null) return null;
-  const fillRows = fillableEvidenceRows(rows, host.formData);
-  const fillSeat = fillableEvidenceSeat(rows);
+  const fillRows = fillableEvidenceRows(rows);
+  // Η διεύθυνση είναι πρόταση προς τον editor έδρας ⇒ μόνο σε επεξεργασία· από την προβολή καταχωρίζονται τα πεδία.
+  const fillSeat = host.canEdit ? fillableEvidenceSeat(rows) : null;
   const fillCount = fillRows.length + (fillSeat === null ? 0 : 1);
+  const canFill = host.canEdit || actions.canRegister;
   return (
     <span className="flex flex-wrap items-center gap-2">
       {parentIsLive && (
         <ClassifyAgainButton label={t(KEYS.reread)} busy={classifyingIds.has(file.id)} onClick={() => void classifyAgain(file.id)} showLabel />
       )}
-      {fillCount > 0 && host.canEdit && (
-        <Button type="button" variant="outline" size="sm" onClick={() => setFillOpen(true)}>{t(FILL.button, { count: fillCount })}</Button>
+      {fillCount > 0 && canFill && (
+        <Button type="button" variant="outline" size="sm" disabled={actions.isRegistering} aria-busy={actions.isRegistering}
+          onClick={() => setFillOpen(true)}>
+          {t(FILL.button, { count: fillCount })}
+        </Button>
       )}
-      {fillCount > 0 && !host.canEdit && <span className="text-xs text-muted-foreground">{t(FILL.editToFill)}</span>}
-      <ContactEvidenceFillDialog open={fillOpen} onOpenChange={setFillOpen} rows={fillRows} seat={fillSeat} onApply={actions.fillEmpty} labelOf={labelOf} />
+      {fillCount > 0 && !canFill && <span className="text-xs text-muted-foreground">{t(FILL.editToFill)}</span>}
+      <ContactEvidenceFillDialog open={fillOpen} onOpenChange={setFillOpen} rows={fillRows} seat={fillSeat} onApply={actions.fillEmpty}
+        labelOf={labelOf} immediate={!host.canEdit} />
     </span>
   );
 }
@@ -181,7 +187,7 @@ export function ContactEvidencePanel({ file }: { readonly file: FileRecord }) {
                 <TableCell>{row.contact ?? '—'}</TableCell>
                 <TableCell><StateCell row={row} /></TableCell>
                 <TableCell>
-                  <ContactEvidenceRowActions row={row} formData={host.formData} canEdit={host.canEdit} actions={actions} />
+                  <ContactEvidenceRowActions row={row} canEdit={host.canEdit} actions={actions} />
                 </TableCell>
               </TableRow>
             ))}

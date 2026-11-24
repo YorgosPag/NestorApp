@@ -13,6 +13,7 @@ import {
   EVIDENCE_DISMISS_REASONS,
   EVIDENCE_FIELD_KEYS,
   isEvidenceAddressField,
+  isEvidenceIssuerField,
   type EvidenceRowKey,
 } from '@/config/contact-document-evidence';
 import { isNonEmptyString, isOneOf, isPlainRecord } from '@/lib/type-guards';
@@ -24,7 +25,7 @@ export const EVIDENCE_DISMISSALS_FIELD = 'evidenceDismissals';
 /** Είναι κλειδί γραμμής του πίνακα; (πεδίο εκτός διεύθυνσης, ή `address`) */
 export function isEvidenceRowKey(value: unknown): value is EvidenceRowKey {
   if (value === 'address') return true;
-  return isOneOf(EVIDENCE_FIELD_KEYS, value) && !isEvidenceAddressField(value);
+  return isOneOf(EVIDENCE_FIELD_KEYS, value) && !isEvidenceAddressField(value) && !isEvidenceIssuerField(value);
 }
 
 function dismissalOf(raw: unknown): EvidenceDismissal | null {

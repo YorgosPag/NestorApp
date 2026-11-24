@@ -601,6 +601,7 @@
       "position": "Position",
       "skills": "Skills",
       "licences": "Licences",
+      "professionalRegistries": "Professional registries",
       "street": "Street",
       "streetNumber": "Number",
       "city": "City",
@@ -678,6 +679,10 @@
       "description": "Each role activates additional fields specific to that role",
       "empty": "No roles selected",
       "remove": "Remove"
+    },
+    "registries": {
+      "add": "Add registry",
+      "empty": "No professional registry number recorded."
     },
     "guards": {
       "realEstateAgent": {

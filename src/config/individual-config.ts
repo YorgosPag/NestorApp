@@ -283,6 +283,12 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         icon: 'wrench',
       },
       {
+        // 🎯 DUMMY: ProfessionalRegistriesField (ADR-950 §9) — αρ. μητρώου ανά αρχή, ανάλογα με το επάγγελμα
+        id: 'professionalRegistries',
+        label: PROFESSIONAL_INFO_FIELD_LABELS.PROFESSIONAL_REGISTRIES,
+        type: 'input',
+      },
+      {
         id: 'specialty',
         label: PROFESSIONAL_INFO_FIELD_LABELS.SPECIALTY,
         type: 'input',

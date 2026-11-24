@@ -65,6 +65,9 @@ export interface RendererContext {
   handleProfilePhotoSelection?: (index: number) => void;
   /** True when the contact is in trash — shows amber banner + opens trash sub-tab in EntityFilesManager */
   isContactTrashed?: boolean;
+  /** ADR-950 §9 — «Καταχώριση» στοιχείου εγγράφου από την προβολή (μόνο η καρτέλα υπάρχουσας επαφής το δίνει). */
+  onRegisterFormData?: (next: ContactFormData, changes: Partial<ContactFormData>) => Promise<void>;
+  isRegisteringFormData?: boolean;
 }
 
 export type RendererFn = (
@@ -210,6 +213,8 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
             setFormData={ctx.setFormData}
             canEdit={!ctx.disabled && ctx.setFormData !== undefined}
             onOpenAddresses={ctx.onActiveTabChange ? () => ctx.onActiveTabChange?.(addressSectionIdFor(contactType)) : undefined}
+            onRegister={ctx.isContactTrashed ? undefined : ctx.onRegisterFormData}
+            isRegistering={ctx.isRegisteringFormData}
           >
           <EntityFilesManager
             entityType={ENTITY_TYPES.CONTACT}

@@ -16,18 +16,23 @@ import { phoneTypeForLineType } from '@/lib/contact/phone-type-vocabulary';
 import type { SeatFields } from '@/lib/company/contact-registry-comparison';
 import type { RegistrySeatApplication } from '@/lib/company/registry-form-acceptance';
 import { isEvidenceActionable, type EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
+import { writeFormCredential } from '@/lib/contacts/persona-credential-form';
 import type { ContactType, PhoneInfo } from '@/types/contacts/contracts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
-/** Αξίζει «Αποδοχή»; Γειωμένη τιμή · θέλει κρίση · η πολιτική το επιτρέπει · (persona) η persona είναι ενεργή. */
-export function canAcceptEvidence(row: EvidenceRow, formData: ContactFormData): boolean {
+/**
+ * Αξίζει «Αποδοχή»; Γειωμένη τιμή · θέλει κρίση · η πολιτική το επιτρέπει. Αρ. μητρώου επαγγέλματος: πάντα — η
+ * persona του **ενεργοποιείται** από την ίδια την αποδοχή (ADR-950 §9· πριν απαιτούσε ενεργή «Μηχανικός», που καμία
+ * οθόνη δεν επέτρεπε πια να ενεργοποιηθεί — ADR-282 Φάση 4).
+ */
+export function canAcceptEvidence(row: EvidenceRow): boolean {
   if (row.documentDisplay === null || !isEvidenceActionable(row)) return false;
   switch (row.acceptance) {
     case 'form-field':
     case 'append-phone':
       return true;
     case 'persona-field':
-      return formData.activePersonas?.includes('engineer') ?? false;
+      return row.credential !== null && row.credential.value !== null;
     case 'propose-address':
     case 'compare-only':
       return false;
@@ -57,19 +62,20 @@ function appendPhone(formData: ContactFormData, row: EvidenceRow, e164: string, 
   return { ...formData, phones: [...phones, phone] };
 }
 
-function setPersonaTee(formData: ContactFormData, value: string): ContactFormData {
-  const personaData = formData.personaData ?? {};
-  return { ...formData, personaData: { ...personaData, engineer: { ...(personaData.engineer ?? {}), teeRegistryNumber: value } } };
+/** Αρ. μητρώου επαγγέλματος ⇒ τα πεδία της persona που ορίζει η αρχή του, και η persona ενεργή (ADR-950 §9). */
+function acceptCredential(formData: ContactFormData, row: EvidenceRow): ContactFormData {
+  const credential = row.credential;
+  return credential === null || credential.value === null ? formData : writeFormCredential(formData, credential.target, credential.value);
 }
 
 /** «Αποδοχή»: νέα `formData` με την τιμή του εγγράφου στο **ένα** πεδίο — τίποτα άλλο δεν αγγίζεται. */
 export function acceptEvidence(formData: ContactFormData, row: EvidenceRow, contactType: ContactType): ContactFormData {
   const value = row.documentDisplay;
-  if (value === null || !canAcceptEvidence(row, formData)) return formData;
+  if (value === null || !canAcceptEvidence(row)) return formData;
   if (row.acceptance === 'append-phone') return appendPhone(formData, row, value, contactType);
-  if (row.acceptance === 'persona-field') return setPersonaTee(formData, value);
+  if (row.acceptance === 'persona-field') return acceptCredential(formData, row);
   const target = row.target;
-  if (target === 'personFullName' || target === 'phones' || target === 'headquarters' || target === 'engineerTeeRegistryNumber') {
+  if (target === 'personFullName' || target === 'phones' || target === 'headquarters' || target === 'personaCredential') {
     return formData;
   }
   return { ...formData, [target]: value };
@@ -94,8 +100,30 @@ export function evidenceSeatProposal(row: EvidenceRow): { readonly seat: SeatFie
  * HubSpot enrichment «fill empty only»): `missing` και αποδεκτή. Ποτέ αντικατάσταση υπάρχουσας τιμής (`differs`),
  * ποτέ αβέβαιη (`disputed` · `unverified` · δυσανάγνωστη) — αυτές δεν φτάνουν καν σε `missing`.
  */
-export function fillableEvidenceRows(rows: readonly EvidenceRow[], formData: ContactFormData): readonly EvidenceRow[] {
-  return rows.filter((row) => row.state === 'missing' && canAcceptEvidence(row, formData));
+export function fillableEvidenceRows(rows: readonly EvidenceRow[]): readonly EvidenceRow[] {
+  return rows.filter(canRegisterEvidence);
+}
+
+/**
+ * ADR-950 §9 — αξίζει **«Καταχώριση»** με ένα πάτημα (χωρίς επεξεργασία); **Μόνο** κενό πεδίο της επαφής με γειωμένη
+ * τιμή: ποτέ αντικατάσταση (`differs` · `partial` θέλουν το μάτι του ανθρώπου πάνω στη φόρμα), ποτέ αβέβαιη τιμή.
+ * Ο ίδιος κανόνας με τη «Συμπλήρωση κενών» — μία γραμμή αντί για πολλές.
+ */
+export function canRegisterEvidence(row: EvidenceRow): boolean {
+  return row.state === 'missing' && canAcceptEvidence(row);
+}
+
+/**
+ * Η διαφορά δύο εικόνων της φόρμας — **μόνο** τα πεδία πρώτου επιπέδου που άλλαξαν αναφορά. Είναι ό,τι στέλνει η
+ * «Καταχώριση» στην αποθήκευση (ADR-323: οι φρουροί βλέπουν ολόκληρη τη φόρμα, η εγγραφή μόνο το «βρώμικο» κομμάτι).
+ */
+export function formDataChanges(before: ContactFormData, after: ContactFormData): Partial<ContactFormData> {
+  const changes: Partial<ContactFormData> = {};
+  const keep = <K extends keyof ContactFormData>(key: K): void => {
+    if (after[key] !== before[key]) changes[key] = after[key];
+  };
+  (Object.keys(after) as (keyof ContactFormData)[]).forEach(keep);
+  return changes;
 }
 
 /** Η διεύθυνση ως **πρόταση** στη συμπλήρωση — μόνο όταν η έδρα της επαφής είναι κενή. */

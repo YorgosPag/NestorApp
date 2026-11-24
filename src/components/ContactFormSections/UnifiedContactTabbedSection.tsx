@@ -48,6 +48,9 @@ interface UnifiedContactTabbedSectionProps {
   validationErrors?: Record<string, string>;
   onFieldBlur?: (fieldName: string) => void;
   isContactTrashed?: boolean;
+  /** ADR-950 §9 — «Καταχώριση» στοιχείου εγγράφου από την προβολή· μόνο η καρτέλα υπάρχουσας επαφής το δίνει. */
+  onRegisterFormData?: (next: ContactFormData, changes: Partial<ContactFormData>) => Promise<void>;
+  isRegisteringFormData?: boolean;
 }
 
 export function UnifiedContactTabbedSection({
@@ -61,6 +64,7 @@ export function UnifiedContactTabbedSection({
   onActiveTabChange, initialTab, activeTab,
   validationErrors, onFieldBlur,
   isContactTrashed = false,
+  onRegisterFormData, isRegisteringFormData,
 }: UnifiedContactTabbedSectionProps) {
   const { t } = useTranslation('contacts');
   const { user } = useAuth();
@@ -123,6 +127,7 @@ export function UnifiedContactTabbedSection({
       canonicalUploadContext,
       handleLogoChange, handleFileChange,
       handleUploadedLogoURL, handleUploadedPhotoURL,
+      onRegisterFormData, isRegisteringFormData,
     };
 
     const customRenderers = {
@@ -162,6 +167,7 @@ export function UnifiedContactTabbedSection({
     canonicalUploadContext, onActiveTabChange, initialTab, activeTab,
     companyDisplayName, user?.companyId,
     validationErrors, onFieldBlur,
+    onRegisterFormData, isRegisteringFormData,
   ]);
 
   return (

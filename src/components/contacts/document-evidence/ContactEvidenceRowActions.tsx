@@ -5,7 +5,8 @@
  * @module components/contacts/document-evidence/ContactEvidenceRowActions
  *
  * Κάθε κουμπί εμφανίζεται **μόνο** όταν η πράξη του είναι δυνατή· όταν δεν είναι, λέμε **γιατί** (προβολή αντί για
- * επεξεργασία · persona ανενεργή · πεδίο που διορθώνεται από τη φόρμα). Η «Αγνόηση» ζητά **αιτία** (GitHub code scanning).
+ * επεξεργασία · πεδίο που διορθώνεται από τη φόρμα). Προβολή + κενό πεδίο ⇒ **«Καταχώριση»** με ένα πάτημα (ADR-950 §9).
+ * Η «Αγνόηση» ζητά **αιτία** (GitHub code scanning).
  */
 
 import React from 'react';
@@ -20,27 +21,23 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { EVIDENCE_DISMISS_REASONS } from '@/config/contact-document-evidence';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { canAcceptEvidence, canProposeEvidenceSeat } from '@/lib/contacts/contact-evidence-acceptance';
+import { canAcceptEvidence, canProposeEvidenceSeat, canRegisterEvidence } from '@/lib/contacts/contact-evidence-acceptance';
 import { isEvidenceActionable, type EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
-import type { ContactFormData } from '@/types/ContactFormTypes';
 
 import { CONTACT_EVIDENCE_KEYS as KEYS, CONTACT_EVIDENCE_REASON_KEYS } from './contact-evidence-labels';
 import type { ContactEvidenceActions } from './use-contact-evidence-actions';
 
 interface ContactEvidenceRowActionsProps {
   readonly row: EvidenceRow;
-  readonly formData: ContactFormData;
   readonly canEdit: boolean;
   readonly actions: ContactEvidenceActions;
 }
 
-/** Γιατί **δεν** υπάρχει κουμπί αποδοχής — ή `null` όταν υπάρχει (ή δεν χρειάζεται). */
-function acceptBlockedKey(row: EvidenceRow, formData: ContactFormData, canEdit: boolean): string | null {
+/** Γιατί **δεν** υπάρχει κουμπί αποδοχής/καταχώρισης — ή `null` όταν υπάρχει (ή δεν χρειάζεται). */
+function acceptBlockedKey(row: EvidenceRow, canEdit: boolean, canRegister: boolean): string | null {
   if (!isEvidenceActionable(row) || row.documentDisplay === null) return null;
   if (row.acceptance === 'compare-only') return KEYS.compareOnly;
-  if (!canEdit) return KEYS.editToAccept;
-  if (row.acceptance === 'persona-field' && !canAcceptEvidence(row, formData)) return KEYS.personaRequired;
-  return null;
+  return canEdit || canRegister ? null : KEYS.editToAccept;
 }
 
 function DismissMenu({ row, actions }: { readonly row: EvidenceRow; readonly actions: ContactEvidenceActions }) {
@@ -62,13 +59,21 @@ function DismissMenu({ row, actions }: { readonly row: EvidenceRow; readonly act
   );
 }
 
-export function ContactEvidenceRowActions({ row, formData, canEdit, actions }: ContactEvidenceRowActionsProps) {
+export function ContactEvidenceRowActions({ row, canEdit, actions }: ContactEvidenceRowActionsProps) {
   const { t } = useTranslation('contacts-form');
-  const blocked = acceptBlockedKey(row, formData, canEdit);
-  const canAccept = canEdit && canAcceptEvidence(row, formData);
+  // Προβολή: «Καταχώριση» **μόνο** για κενό πεδίο με ελεγμένη τιμή (ADR-950 §9)· ό,τι αντικαθιστά τιμή θέλει επεξεργασία.
+  const canRegister = actions.canRegister && canRegisterEvidence(row);
+  const blocked = acceptBlockedKey(row, canEdit, canRegister);
+  const canAccept = canEdit && canAcceptEvidence(row);
   const canPropose = canEdit && canProposeEvidenceSeat(row);
   return (
     <span className="flex flex-wrap items-center justify-end gap-1">
+      {canRegister && (
+        <Button type="button" variant="outline" size="sm" disabled={actions.isRegistering} aria-busy={actions.isRegistering}
+          onClick={() => actions.register(row)}>
+          {t(KEYS.register)}
+        </Button>
+      )}
       {canAccept && (
         <Button type="button" variant="outline" size="sm" onClick={() => actions.accept(row)}>
           {t(row.acceptance === 'append-phone' ? KEYS.add : KEYS.accept)}
