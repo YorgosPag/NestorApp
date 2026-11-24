@@ -46,7 +46,9 @@ const IDLE: TerrainGeoreferenceAction = { kind: 'idle' };
 
 /**
  * @param reliefRevision αλλάζει όποτε η πόρτα ξαναδιάβασε τον φάκελο (νέο ανάγλυφο · αλλαγή περιγράμματος) — τότε η
- *   κατάσταση ξαναδιαβάζεται: νέα σημεία μπορεί να έκαναν τη δήλωση «αδήλωτη».
+ *   κατάσταση ξαναδιαβάζεται: νέα σημεία μπορεί να έκαναν τη δήλωση «αδήλωτη». **`null` = ο φάκελος δεν έχει διαβαστεί
+ *   ακόμη ⇒ περίμενε**: αλλιώς το πρώτο φόρτωμα ρωτά δύο φορές (μία στο mount, μία όταν απαντήσει ο φάκελος — μετρημένο
+ *   ζωντανά 2026-11-24, ADR-920 §14.12).
  */
 export function useTerrainGeoreference(target: OwnerTerrainTarget, reliefRevision: unknown): TerrainGeoreferenceApi {
   const [view, setView] = useState<TerrainGeoreferenceView>({ kind: 'loading' });
@@ -63,7 +65,10 @@ export function useTerrainGeoreference(target: OwnerTerrainTarget, reliefRevisio
     setView(outcome.ok ? { kind: 'ready', georeference: outcome.georeference } : { kind: 'failed', refusal: outcome.refusal });
   }, [ownerPropertyId]);
 
-  useEffect(() => { void refresh(); }, [refresh, reliefRevision]);
+  useEffect(() => {
+    if (reliefRevision === null) return;
+    void refresh();
+  }, [refresh, reliefRevision]);
 
   const amend = useCallback(async (amendment: TerrainGeoreferenceAmendment) => {
     if (busy.current) return;

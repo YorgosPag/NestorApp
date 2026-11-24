@@ -37,7 +37,8 @@ export function PlotOutlineTab({ target, listingAreaM2 }: PlotOutlineTabProps) {
   // `refresh` είναι σταθερή (useCallback ανά αγγελία) ⇒ καμία νέα συνάρτηση ανά απόδοση στο hook της αποστολής.
   const drawing = usePlotDrawingImport(target, listingAreaM2, status.refresh);
   // Η κατάσταση του περιγράμματος ξαναδιαβάζεται μετά από κάθε πράξη στον φάκελο ⇒ ξαναδιαβάζεται και η γεωαναφορά.
-  const georeference = useTerrainGeoreference(target, status.view);
+  // Όσο ο φάκελος ακόμη φορτώνει δίνεται `null` ⇒ η γεωαναφορά περιμένει και ρωτά ΜΙΑ φορά, όχι δύο.
+  const georeference = useTerrainGeoreference(target, status.view.kind === 'loading' ? null : status.view);
   return (
     <section className="flex flex-col gap-4" data-plot-outline-tab="">
       <p className="m-0 text-sm text-muted-foreground">{t('terrain-survey:plotOutline.intro')}</p>

@@ -20,7 +20,7 @@ const Checkbox = React.forwardRef<
   const iconSizes = useIconSizes();
   // ☑️ ΤΕΤΡΑΓΩΝΟ, ποτέ κύκλος: ως τις 2026-11-24 εδώ έμπαινε το `quick.rounded` (`border-border rounded-lg`) — ακτίνα
   //    8px σε κουτί 16px = τέλειος κύκλος, ίδιος με ραδιόφωνο (ζωντανό εύρημα ADR-920 §14.12), ΚΑΙ δεύτερο χρώμα
-  //    περιγράμματος που ανταγωνιζόταν το `control.outline` του ADR-770 §17. Μόνο η ακτίνα, από το token της (2px).
+  //    περιγράμματος που ανταγωνιζόταν το `control.outline` του ADR-770 §17. Μόνο η ακτίνα, από το token της (4px: `sm = calc(var(--radius) - 4px)`).
   const { radiusClass } = useBorderTokens();
 
   return (
