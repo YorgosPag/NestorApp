@@ -125,7 +125,7 @@
     "src/i18n/generated/routes/tour-invite__token.el.json": "e45f06e8af44370d125a47684c157ad22a75322ee394c594ed7f31242e315a58",
     "src/i18n/generated/routes/vendor__quote.el.json": "9008d70d1eecfbd00d960c695b3edd9299aca580f46373c00ccfc67a4c2bd9cf",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "5a5f61c46933bd1ef7a7214c6a7b9e4388c03630fb5db7b2eba4fcab24ac6e1f",
+    "src/i18n/generated/shell-slice.el.json": "de0894a92f6f7889906ebefd764a6c71e0a624c73c1719ebfef7599c9b4b3b8f",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "generator": "scripts/generate-i18n-shell-slice.js",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3b6bbec1b5fe7bbd32ccc964185448d1ad08fb2349e4a5c20497b76a970e62a6",
+  "inputsSha256": "15714330c2e2314121121ddb25ae8d80febe2d1297dad52da90e8831a652becd",
   "languages": [
     "el"
   ],
@@ -4742,6 +4742,7 @@
             "detail.media.floorplanProvenance.measured",
             "detail.media.galleryAlt.agency",
             "detail.media.galleryAlt.ownerDeclared",
+            "detail.media.morePhotos",
             "detail.media.openFloorplan",
             "detail.media.sourceNote.agency",
             "detail.media.sourceNote.ownerDeclared",
@@ -41251,7 +41252,7 @@
   ],
   "stats": {
     "matchedKeys": 281,
-    "sliceBytes": 1376625
+    "sliceBytes": 1376731
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

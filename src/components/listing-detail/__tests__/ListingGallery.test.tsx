@@ -22,7 +22,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import { ListingGallery } from '../ListingGallery';
+import { GALLERY_THUMB_LIMIT, ListingGallery } from '../ListingGallery';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import type { ListingAuthorship, PublicListing } from '@/types/public-listing';
 
@@ -41,6 +41,7 @@ jest.mock('next/navigation', () => ({
 
 function listingWith(authorship: ListingAuthorship, images = 2): PublicListing {
   return {
+    id: 'prop_a0000001',
     authorship,
     agencyName: authorship === 'agency' ? 'ΠΑΓΩΝΗΣ Α.Ε.' : null,
     coverImage: null,
@@ -136,5 +137,45 @@ describe('Θ — Η ΘΗΚΗ ΚΑΤΕΧΕΙ ΤΟ ΣΧΗΜΑ', () => {
       expect(classesOf(thumb)).toEqual(expect.arrayContaining(['aspect-[4/3]', 'object-cover']));
       expect(thumb.getAttribute('loading')).toBe('lazy');
     }
+  });
+});
+
+/**
+ * 🔴 **Βρέθηκε ΖΩΝΤΑΝΑ στην παραγωγή** (2026-11-24): οι φωτογραφίες της αγγελίας ήταν σκέτες εικόνες — η προβολή με τα
+ * βελάκια υπήρχε, αλλά μόνο πίσω από έναν μικρό σύνδεσμο κειμένου. Κάθε πλακίδιο είναι πλέον **σύνδεσμος στη θέση του**
+ * (`?photo=N`, ADR-897 Φ4)· όσες δεν χωρούν **ονομάζονται με αριθμό**, δεν κρύβονται πίσω από βελάκι.
+ */
+describe('Π — ΚΑΘΕ ΦΩΤΟΓΡΑΦΙΑ ΑΝΟΙΓΕΙ ΤΗΝ ΠΛΗΡΗ ΠΡΟΒΟΛΗ ΣΤΗ ΘΕΣΗ ΤΗΣ', () => {
+  const photoLinks = (): HTMLElement[] => screen.getAllByRole('img').map((image) => image.closest('a') as HTMLElement);
+
+  it('🔴 Π1 — κάθε εικόνα ζει μέσα σε σύνδεσμο προς `…/photos?photo=N`, 1-based, με τη σειρά της', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `<Link>` γύρω από την εικόνα ⇒ `closest('a')` είναι null.
+    render(<ListingGallery listing={listingWith('agency', 3)} />);
+    const hrefs = photoLinks().map((link) => link.getAttribute('href'));
+
+    expect(hrefs).toHaveLength(3);
+    hrefs.forEach((href, position) => {
+      expect(href).toMatch(new RegExp(`/listing/prop_a0000001/photos\\?photo=${position + 1}$`));
+    });
+  });
+
+  it('Π2 — ως το όριο: ΟΛΕΣ ορατές, κανένα πλακίδιο υπερχείλισης', () => {
+    render(<ListingGallery listing={listingWith('agency', GALLERY_THUMB_LIMIT + 1)} />);
+
+    expect(screen.getAllByRole('img')).toHaveLength(GALLERY_THUMB_LIMIT + 1);
+    expect(screen.queryByText(/detail\.media\.morePhotos/)).not.toBeInTheDocument();
+  });
+
+  it('🔴 Π3 — πάνω από το όριο: το τελευταίο πλακίδιο ΓΡΑΦΕΙ πόσες λείπουν και οδηγεί στο πλέγμα, όχι σε μία φωτογραφία', () => {
+    const extra = 3;
+    render(<ListingGallery listing={listingWith('agency', GALLERY_THUMB_LIMIT + 1 + extra)} />);
+    const images = screen.getAllByRole('img');
+    const badge = screen.getByText(`search-results:detail.media.morePhotos::${JSON.stringify({ count: extra })}`);
+
+    expect(images).toHaveLength(GALLERY_THUMB_LIMIT + 1);
+    // Το `alt` μετρά το ΣΥΝΟΛΟ, όχι όσες ζωγραφίστηκαν — αλλιώς «7 από 7» ενώ υπάρχουν 10.
+    expect(images[0]).toHaveAttribute('alt', expect.stringContaining(`"total":${GALLERY_THUMB_LIMIT + 1 + extra}`));
+    expect(badge.closest('a')).toBe(images[images.length - 1]?.closest('a'));
+    expect(badge.closest('a')?.getAttribute('href')).toMatch(/\/listing\/prop_a0000001\/photos$/);
   });
 });

@@ -69,6 +69,20 @@ const LEAD_FRAME = 'aspect-[4/3] max-h-[70vh]';
 /** Ίσα πλακίδια: ένα πλέγμα με ανάμεικτες αναλογίες αφήνει κενά κάτω από κάθε οριζόντια φωτογραφία. */
 const THUMB_FRAME = 'aspect-[4/3]';
 
+/**
+ * 🔑 **Πόσες μικρογραφίες ζωγραφίζει η σελίδα της αγγελίας** — δύο σειρές των τριών (τρεις των δύο σε κινητό). Οι
+ * υπόλοιπες **δεν κρύβονται πίσω από βελάκι** (Baymard: 50–80% των ανθρώπων δεν βρίσκει ποτέ ό,τι κρύβει ένα καρουσέλ)·
+ * το τελευταίο πλακίδιο **γράφει πόσες λείπουν** και οδηγεί στη σελίδα «Φωτογραφίες» (πρότυπο Airbnb «Show all photos»).
+ */
+export const GALLERY_THUMB_LIMIT = 6;
+
+/**
+ * Το πλακίδιο-σύνδεσμος: **κάθε** φωτογραφία ανοίγει την πλήρη προβολή **στη δική της θέση** (`?photo=N`, ADR-897 Φ4) —
+ * ένας μηχανισμός, η διεύθυνση· όχι δεύτερο lightbox εδώ. Όνομα του συνδέσμου = το `alt` της εικόνας του.
+ */
+const TILE_LINK =
+  'relative block rounded-lg cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background';
+
 export function ListingGallery({ listing }: { readonly listing: PublicListing }) {
   const { t } = useTranslation(['search-results']);
 
@@ -91,6 +105,9 @@ export function ListingGallery({ listing }: { readonly listing: PublicListing })
   const images = listingGalleryImages(listing);
   const [lead, ...rest] = images;
   const total = images.length;
+  const thumbs = rest.slice(0, GALLERY_THUMB_LIMIT);
+  /** Όσες δεν χώρεσαν στο πλέγμα — το τελευταίο πλακίδιο τις **ονομάζει με αριθμό**. */
+  const hidden = rest.length - thumbs.length;
 
   if (lead === undefined) {
     return (
@@ -102,21 +119,28 @@ export function ListingGallery({ listing }: { readonly listing: PublicListing })
 
   return (
     <section aria-label={t('search-results:detail.media.title')} className="flex flex-col gap-2">
-      <GalleryImage image={lead} index={1} total={total} sizes={LEAD_SIZES} frame={LEAD_FRAME} priority />
+      <Link href={listingPhotosHref(listing.id, 0)} className={TILE_LINK}>
+        <GalleryImage image={lead} index={1} total={total} sizes={LEAD_SIZES} frame={LEAD_FRAME} priority />
+      </Link>
 
-      {rest.length > 0 && (
+      {thumbs.length > 0 && (
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {rest.map((image, position) => (
-            <li key={image.url}>
-              <GalleryImage
-                image={image}
-                index={position + 2}
-                total={total}
-                sizes={THUMB_SIZES}
-                frame={THUMB_FRAME}
-              />
-            </li>
-          ))}
+          {thumbs.map((image, position) => {
+            const overflow = hidden > 0 && position === thumbs.length - 1;
+            return (
+              <li key={image.url}>
+                {/* Το πλακίδιο υπερχείλισης οδηγεί στο ΠΛΕΓΜΑ (όλες), όχι σε μία φωτογραφία. */}
+                <Link href={overflow ? listingPhotosHref(listing.id) : listingPhotosHref(listing.id, position + 1)} className={TILE_LINK}>
+                  <GalleryImage image={image} index={position + 2} total={total} sizes={THUMB_SIZES} frame={THUMB_FRAME} />
+                  {overflow && (
+                    <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/70 text-sm font-medium text-foreground">
+                      {t('search-results:detail.media.morePhotos', { count: hidden })}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
 
