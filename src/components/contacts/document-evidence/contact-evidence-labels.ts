@@ -67,7 +67,7 @@ export const CONTACT_EVIDENCE_STATE_KEYS: Readonly<Record<EvidenceComparisonStat
   'not-comparable': 'contacts-form:documentEvidence.state.notComparable',
 };
 
-export const CONTACT_EVIDENCE_UNGROUNDED_KEYS: Readonly<Record<UngroundedReason, string>> = {
+const CONTACT_EVIDENCE_UNGROUNDED_KEYS: Readonly<Record<UngroundedReason, string>> = {
   absent: 'contacts-form:documentEvidence.ungrounded.absent',
   'low-confidence': 'contacts-form:documentEvidence.ungrounded.lowConfidence',
   'failed-check': 'contacts-form:documentEvidence.ungrounded.failedCheck',
@@ -75,12 +75,24 @@ export const CONTACT_EVIDENCE_UNGROUNDED_KEYS: Readonly<Record<UngroundedReason,
   unverified: 'contacts-form:documentEvidence.ungrounded.unverified',
 };
 
-/** ADR-950 §8 — τα τεκμήρια διακομιστή στην οθόνη (δεύτερη ανάγνωση · διορθωμένη οδός). */
+/**
+ * ADR-950 §8.12 — ΑΦΜ που **δεν περνά το ψηφίο ελέγχου**: στη σφραγίδα σχεδόν πάντα τον καλύπτει η υπογραφή (ζωντανός
+ * έλεγχος 2026-11-24: «0408 719 944» · «0408 7944»). Το σκέτο «Δυσανάγνωστο» δεν έλεγε στον άνθρωπο τι να κάνει.
+ */
+const VAT_FAILED_CHECK_KEY = 'contacts-form:documentEvidence.ungrounded.failedCheckVat';
+
+/** Η ετικέτα του «γιατί δεν συγκρίνεται» — ανά αιτία, με την ειδική περίπτωση του ΑΦΜ. */
+export function ungroundedLabelKey(row: EvidenceRowKey, reason: UngroundedReason): string {
+  return row === 'vatNumber' && reason === 'failed-check' ? VAT_FAILED_CHECK_KEY : CONTACT_EVIDENCE_UNGROUNDED_KEYS[reason];
+}
+
+/** ADR-950 §8 — τα τεκμήρια διακομιστή στην οθόνη (δεύτερη ανάγνωση · διορθωμένη οδός · τυπωμένη μορφή). */
 export const CONTACT_EVIDENCE_CORROBORATION_KEYS = {
   alternate: 'contacts-form:documentEvidence.corroboration.alternate',
   alternateUnreadable: 'contacts-form:documentEvidence.corroboration.alternateUnreadable',
   correctedStreet: 'contacts-form:documentEvidence.corroboration.correctedStreet',
-  printedStreet: 'contacts-form:documentEvidence.corroboration.printedStreet',
+  /** «Τυπωμένο: …» κάτω από την κανονική μορφή — οδός «Μήπως…» και τηλέφωνο (ADR-950 §8.12). */
+  printed: 'contacts-form:documentEvidence.corroboration.printed',
 } as const;
 
 /** ADR-950 §8.6 — «Συμπλήρωση κενών». */

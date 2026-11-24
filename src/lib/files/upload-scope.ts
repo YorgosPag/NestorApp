@@ -19,7 +19,7 @@
  * ικανοποιούσε γραμμή καταλόγου).
  */
 
-import type { FileCategory, FileDomain } from '@/config/domain-constants';
+import { ENTITY_TYPES, type EntityType, type FileCategory, type FileDomain } from '@/config/domain-constants';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import type { FileRecord } from '@/types/file-record';
 import { META_TAB_PURPOSES, buildPurposeFilter } from './file-purpose-filter';
@@ -177,12 +177,20 @@ export function readQueryNarrowing(
  * ακροατής του ζει ήδη, το SDK απαντά την `getDocs` από τη **δική του** όψη — «συγχρονισμένη» (`fromCache: false`)
  * αλλά ~100ms **πίσω** από την εγγραφή που μόλις επιβεβαιώθηκε. Μετρημένο: `getDocs` τη στιγμή του `ready` ⇒ 3
  * έγγραφα· ο ακροατής 97ms μετά ⇒ 4. Άρα «γράφω και ξαναρωτώ» **δεν** εγγυάται ότι βλέπω ό,τι έγραψα· ο ακροατής ναι.
+ *
+ * 🔴 **Γιατί η λίστα της ΕΠΑΦΗΣ είναι ζωντανή (ADR-950 §8.12)**: η φόρμα επαφής διαβάζει από το αρχείο ό,τι γράφει
+ * ο **διακομιστής** στο παρασκήνιο (`ingestion`: ανάγνωση AI, τεκμήρια, επαλήθευση διεύθυνσης) — σε χρόνο που ο πελάτης
+ * δεν ξέρει. Εφάπαξ ανάγνωση ⇒ ο πίνακας «Το έγγραφο λέει» μένει μπαγιάτικος (ζωντανός έλεγχος 2026-11-24). Το ερώτημα
+ * είναι το **ίδιο** με την εφάπαξ ανάγνωση της καρτέλας (`fetchAllDomains`: μόνο ισότητες) ⇒ κανένας νέος δείκτης.
  */
+const LIVE_ENTITY_TYPES: ReadonlySet<EntityType> = new Set<EntityType>([ENTITY_TYPES.CONTACT]);
+
 export function fileListIsLive(
   displayStyle: string | undefined,
   scopes: readonly FileScope[] | undefined,
+  entityType?: EntityType,
 ): boolean {
-  return displayStyle === 'floorplan-gallery' || scopes !== undefined;
+  return displayStyle === 'floorplan-gallery' || scopes !== undefined || (entityType !== undefined && LIVE_ENTITY_TYPES.has(entityType));
 }
 
 const INTERNED_SCOPES = new Map<string, readonly FileScope[]>();

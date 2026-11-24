@@ -104,22 +104,26 @@ describe('🏆 Α37.9 — ο χώρος ρωτιέται ΜΟΝΟ για ετα�
 /**
  * Α39.4 — ADR-866 §2.10.8 Β5 · Π4: το δέσιμο του διαχειριστή — δύο γραμμές που η ζωντανή επαλήθευση βρήκε λάθος.
  *
- * | Μετάλλαξη (`EntityFilesManager.tsx`) | Αποτέλεσμα |
+ * Η λογική ζει στο `entity-files-manager-surface.tsx` — το `EntityFilesManager.tsx` είναι μόνο το περιτύλιγμα με
+ * `key` ανά οντότητα (από `c2e27988`). Η άγκυρα διαβάζει το αρχείο όπου **ζουν** οι γραμμές, αλλιώς δεν φρουρεί τίποτα.
+ *
+ * | Μετάλλαξη (`entity-files-manager-surface.tsx`) | Αποτέλεσμα |
  * |---|---|
  * | `onOpenUploadZone={() => setShowUploadZone(!showUploadZone)}` (Π4) | «ανοίγει, ποτέ εναλλαγή» ⇒ 🔴 |
  * | `realtime: displayStyle === 'floorplan-gallery'` (Β5) | «ο κανόνας παράδοσης είναι ο ΕΝΑΣ» ⇒ 🔴 |
  */
 describe('Α39.4 — EntityFilesManager: η εντολή ανοίγει · η παράδοση έρχεται από τον ΕΝΑ κανόνα', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'EntityFilesManager.tsx'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'entity-files-manager-surface.tsx'), 'utf8');
 
   it('«Ανέβασμα αρχείου» ΑΝΟΙΓΕΙ τη ζώνη — δεύτερο πάτημα δεν την κλείνει σιωπηλά (Π4)', () => {
     expect(source).toMatch(/onOpenUploadZone=\{\(\) => setShowUploadZone\(true\)\}/);
     expect(source).not.toMatch(/setShowUploadZone\(\s*!/);
   });
 
-  it('ζωντανή ή όχι λίστα ⇒ `fileListIsLive(displayStyle, scopePolicy?.readScopes)` — κανένα χειρόγραφο κριτήριο (Β5)', () => {
+  it('ζωντανή ή όχι λίστα ⇒ `fileListIsLive(displayStyle, scopePolicy?.readScopes, entityType)` — κανένα χειρόγραφο κριτήριο (Β5)', () => {
     // ΕΝΑ κριτήριο, δύο αναγνώστες (ADR-912 §12.14): η ανάγνωση **και** η ανανέωση της εργαλειοθήκης.
-    expect(source).toMatch(/const liveList = fileListIsLive\(displayStyle, scopePolicy\?\.readScopes\);/);
+    // Ο τύπος οντότητας μπαίνει στο ΙΔΙΟ κριτήριο (ADR-950 §8.12: η λίστα επαφής είναι ζωντανή).
+    expect(source).toMatch(/const liveList = fileListIsLive\(displayStyle, scopePolicy\?\.readScopes, entityType\);/);
     expect(source).toMatch(/realtime: liveList,/);
     expect(source).toMatch(/liveList=\{liveList\}/);
     expect(source).not.toMatch(/realtime: displayStyle ===/);

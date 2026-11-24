@@ -49,6 +49,19 @@ export function normalisePhone(raw: string, country: CountryCode = DEFAULT_PHONE
 }
 
 /**
+ * **Ένας αριθμός → όπως τον διαβάζει άνθρωπος της χώρας του** (ADR-950 §8.12): εθνική μορφή για αριθμό της
+ * `country` (`+302310559595` ⇒ `231 055 9595`), διεθνής για ξένο (`+359 74 520 126`) — αλλιώς ο ξένος θα έχανε τον
+ * κωδικό του. Ίδια σύμβαση με το τηλεφωνητή του Android / τις Επαφές Google (ίδια metadata). `null` = μη έγκυρος.
+ *
+ * Μόνο **προβολή**: η αποθηκευμένη και συγκρινόμενη μορφή μένει το E.164 του `normalisePhone`.
+ */
+export function readablePhone(raw: string, country: CountryCode = DEFAULT_PHONE_COUNTRY): string | null {
+  const parsed = parsePhoneNumberFromString(raw.trim(), country);
+  if (parsed === undefined || !parsed.isValid()) return null;
+  return parsed.country === country ? parsed.formatNational() : parsed.formatInternational();
+}
+
+/**
  * **Ποιος είναι ο κωδικός χώρας ενός διεθνούς αριθμού;** — `+359 74520126` ⇒ `{ +359, 74520126 }`.
  *
  * 🔴 Ζούσε ως χειρόγραφος πίνακας ~120 κωδικών (CC3/CC2/1-ψήφιοι) στο `parsePhoneForStorage` του

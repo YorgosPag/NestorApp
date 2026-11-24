@@ -343,6 +343,7 @@
       "absent": "Not found on the document",
       "lowConfidence": "Illegible",
       "failedCheck": "Illegible — fails the validity check",
+      "failedCheckVat": "Possibly obscured — fill it in from the form",
       "disputed": "Uncertain — the second reading disagrees",
       "unverified": "Not confirmed on the map — re-read the document or check the address"
     },
@@ -350,7 +351,7 @@
       "alternate": "Second reading: {value}",
       "alternateUnreadable": "Second reading: a digit is not clearly legible",
       "correctedStreet": "Did you mean: {street}?",
-      "printedStreet": "Printed: {street}"
+      "printed": "Printed: {value}"
     },
     "fill": {
       "button": "{count, plural, one {Fill empty field (#)} other {Fill empty fields (#)}}",

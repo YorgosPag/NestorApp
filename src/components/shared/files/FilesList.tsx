@@ -35,7 +35,7 @@ import { formatDate } from '@/lib/intl-utils';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
 import { useFileListActions } from './hooks/useFileListActions';
-import { useFileClassification } from './hooks/useFileClassification';
+import { useClassifyAgain } from './ClassifyAgainProvider';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { useUserDisplayNames, seedUserNameCache } from '@/hooks/useUserDisplayNames';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -65,7 +65,6 @@ export interface FilesListProps {
   entityType?: string;
   selectedIds?: Set<string>;
   onToggleSelect?: (fileId: string) => void;
-  onClassified?: () => void;
 }
 
 // ============================================================================
@@ -87,7 +86,6 @@ export function FilesList({
   entityType,
   selectedIds,
   onToggleSelect,
-  onClassified,
 }: FilesListProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
@@ -110,16 +108,12 @@ export function FilesList({
   const linkFileLabel = t('list.linkFile', { entity: entityName });
   const unlinkFileLabel = t('list.unlinkFile', { entity: entityName });
 
-  const { classifyFile, classifyingIds } = useFileClassification();
+  // ADR-950 §8.12 — η ΜΙΑ πράξη «ξαναδιάβασε + ανανέωσε» (`ClassifyAgainProvider`), κοινή με τον πίνακα τεκμηρίων.
+  const { classifyAgain, classifyingIds } = useClassifyAgain();
   // Αποσυρμένη μητρική εγγραφή (ADR-329 §3.9): η επανάληψη ταξινόμησης ΓΡΑΦΕΙ στο αρχείο ⇒ δεν προσφέρεται.
   // Η ίδια απάντηση κρίνει και την κενή κατάσταση (Ν1): προτροπή προς κουμπί μόνο όπου το κουμπί ζωγραφίζεται.
   const parentIsLive = useRetiredKind() === null;
   const canRetryClassify = parentIsLive;
-
-  async function handleRetryClassify(fileId: string) {
-    await classifyFile(fileId, true);
-    onClassified?.();
-  }
 
   // All interactive state + handlers from extracted hook
   const actions = useFileListActions({
@@ -305,7 +299,7 @@ export function FilesList({
                       <ClassifyAgainButton
                         label={t('list.retryClassification')}
                         busy={classifyingIds.has(file.id)}
-                        onClick={() => handleRetryClassify(file.id)}
+                        onClick={() => void classifyAgain(file.id)}
                       />
                     )}
                   </span>
@@ -325,7 +319,7 @@ export function FilesList({
                   <ClassifyAgainButton
                     label={t('list.readEvidence')}
                     busy={classifyingIds.has(file.id)}
-                    onClick={() => handleRetryClassify(file.id)}
+                    onClick={() => void classifyAgain(file.id)}
                     showLabel
                   />
                 )}

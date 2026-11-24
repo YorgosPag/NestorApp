@@ -173,7 +173,7 @@ export function EntityFilesManagerSurface({
   const [linkModalFile, setLinkModalFile] = useState<FileRecord | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileRecord | null>(null);
   const { confirm, dialogProps } = useConfirmDialog();
-  const liveList = fileListIsLive(displayStyle, scopePolicy?.readScopes);
+  const liveList = fileListIsLive(displayStyle, scopePolicy?.readScopes, entityType);
 
   // =========================================================================
   // DATA FETCHING

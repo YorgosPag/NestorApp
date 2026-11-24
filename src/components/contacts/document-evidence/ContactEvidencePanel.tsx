@@ -7,14 +7,15 @@
  * Έξω από φόρμα επαφής ή χωρίς ανάγνωση ⇒ **τίποτα** (το `FilePreviewPanel` μένει ίδιο για κάθε άλλη οντότητα).
  * Η κρίση λέγεται με **εικονίδιο + κείμενο** (CHECK 3.41). Η τιμή του εγγράφου φαίνεται **πάντα** όπως τυπώνεται —
  * και όταν δεν συγκρίνεται, με τον λόγο («δυσανάγνωστο» · «αβέβαιο» + η δεύτερη ανάγνωση · «δεν επιβεβαιώθηκε στον
- * χάρτη»): ο άνθρωπος βλέπει τι διάβασε η μηχανή, ποτέ μια σιωπή. Η διορθωμένη οδός λέγεται «Μήπως…», με το τυπωμένο δίπλα.
+ * χάρτη»): ο άνθρωπος βλέπει τι διάβασε η μηχανή, ποτέ μια σιωπή. Η διορθωμένη οδός λέγεται «Μήπως…» και το τηλέφωνο
+ * φαίνεται στην τυπική του μορφή — με το τυπωμένο από κάτω.
  */
 
 import React, { useState } from 'react';
 import { AlertTriangle, CheckCircle2, CircleDashed, CircleHelp, EyeOff, type LucideIcon } from 'lucide-react';
 
 import { ClassifyAgainButton } from '@/components/shared/files/ClassifyAgainButton';
-import { useFileClassification } from '@/components/shared/files/hooks/useFileClassification';
+import { useClassifyAgain } from '@/components/shared/files/ClassifyAgainProvider';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -22,6 +23,7 @@ import { useFileDisplayName } from '@/hooks/useFileDisplayName';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { fillableEvidenceRows, fillableEvidenceSeat } from '@/lib/contacts/contact-evidence-acceptance';
 import type { EvidenceComparisonState, EvidenceRow } from '@/lib/contacts/contact-evidence-comparison';
+import { readablePhone } from '@/lib/contact/channel-phone';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import type { FileRecord } from '@/types/file-record';
 
@@ -37,7 +39,7 @@ import {
   CONTACT_EVIDENCE_REASON_KEYS,
   CONTACT_EVIDENCE_ROW_KEYS,
   CONTACT_EVIDENCE_STATE_KEYS,
-  CONTACT_EVIDENCE_UNGROUNDED_KEYS,
+  ungroundedLabelKey,
 } from './contact-evidence-labels';
 import { useContactEvidenceActions, type ContactEvidenceActions } from './use-contact-evidence-actions';
 
@@ -53,22 +55,33 @@ function rowLabelKey(row: EvidenceRow, isPerson: boolean): string {
   return row.key === 'fullName' && !isPerson ? CONTACT_EVIDENCE_ORGANISATION_NAME_KEY : CONTACT_EVIDENCE_ROW_KEYS[row.key];
 }
 
+/** Η κανονική μορφή + «Τυπωμένο: …» από κάτω (οδός «Μήπως…» · τηλέφωνο — ADR-950 §8.12). Ίδιο ⇒ μία γραμμή. */
+function WithPrinted({ main, printed }: { readonly main: string; readonly printed: string | null }) {
+  const { t } = useTranslation('contacts-form');
+  return (
+    <span className="flex flex-col">
+      <span>{main}</span>
+      {printed !== null && printed !== main && (
+        <span className="text-xs text-muted-foreground">{t(CORROBORATION.printed, { value: printed })}</span>
+      )}
+    </span>
+  );
+}
+
 function DocumentCell({ row }: { readonly row: EvidenceRow }) {
   const { t } = useTranslation('contacts-form');
   if (row.ungrounded === null && row.correctedFrom !== null) {
-    return (
-      <span className="flex flex-col">
-        <span>{t(CORROBORATION.correctedStreet, { street: row.documentDisplay ?? '' })}</span>
-        <span className="text-xs text-muted-foreground">{t(CORROBORATION.printedStreet, { street: row.documentPrinted ?? '' })}</span>
-      </span>
-    );
+    return <WithPrinted main={t(CORROBORATION.correctedStreet, { street: row.documentDisplay ?? '' })} printed={row.documentPrinted} />;
   }
+  // Τηλέφωνο: η τυπική μορφή (libphonenumber), όχι οι τελείες της κάρτας — και όχι το E.164 της φόρμας (ADR-950 §8.12).
+  const phone = row.ungrounded === null && row.key === 'phone' && row.documentDisplay !== null ? readablePhone(row.documentDisplay) : null;
+  if (phone !== null) return <WithPrinted main={phone} printed={row.documentPrinted} />;
   // «Το έγγραφο λέει» = όπως **τυπώνεται** — όχι η μορφή της φόρμας (E.164 · κωδικός ΔΟΥ).
   if (row.ungrounded === null) return <>{row.documentPrinted ?? row.documentDisplay}</>;
   return (
     <span className="flex flex-col">
       {row.documentPrinted !== null && <span>{row.documentPrinted}</span>}
-      <span className="text-xs text-muted-foreground">{t(CONTACT_EVIDENCE_UNGROUNDED_KEYS[row.ungrounded])}</span>
+      <span className="text-xs text-muted-foreground">{t(ungroundedLabelKey(row.key, row.ungrounded))}</span>
       {row.ungrounded === 'disputed' && (
         <span className="text-xs text-muted-foreground">
           {row.documentAlternate === null ? t(CORROBORATION.alternateUnreadable) : t(CORROBORATION.alternate, { value: row.documentAlternate })}
@@ -107,7 +120,8 @@ function PanelActions({ file, rows, actions, labelOf }: {
 }) {
   const { t } = useTranslation('contacts-form');
   const host = useContactEvidenceHost();
-  const { classifyFile, classifyingIds } = useFileClassification();
+  // ADR-950 §8.12 — ίδια πράξη με τη λίστα: ξαναδιάβασε ΚΑΙ ανανέωσε (πριν, μόνο το πρώτο ⇒ πίνακας μπαγιάτικος).
+  const { classifyAgain, classifyingIds } = useClassifyAgain();
   const parentIsLive = useRetiredKind() === null;
   const [fillOpen, setFillOpen] = useState(false);
   if (host === null) return null;
@@ -117,7 +131,7 @@ function PanelActions({ file, rows, actions, labelOf }: {
   return (
     <span className="flex flex-wrap items-center gap-2">
       {parentIsLive && (
-        <ClassifyAgainButton label={t(KEYS.reread)} busy={classifyingIds.has(file.id)} onClick={() => void classifyFile(file.id, true)} showLabel />
+        <ClassifyAgainButton label={t(KEYS.reread)} busy={classifyingIds.has(file.id)} onClick={() => void classifyAgain(file.id)} showLabel />
       )}
       {fillCount > 0 && host.canEdit && (
         <Button type="button" variant="outline" size="sm" onClick={() => setFillOpen(true)}>{t(FILL.button, { count: fillCount })}</Button>

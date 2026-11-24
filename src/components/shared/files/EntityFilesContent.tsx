@@ -55,6 +55,7 @@ import { MediaGallery } from './media';
 import { FloorplanGallery } from './media/FloorplanGallery';
 import { gridPatterns } from '@/styles/design-tokens';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
+import { ClassifyAgainProvider } from './ClassifyAgainProvider';
 
 // ============================================================================
 // TYPES
@@ -346,15 +347,18 @@ function FilesTabContent(props: EntityFilesContentProps) {
       )}
 
       {/* Λίστα + προεπισκόπηση: δίπλα-δίπλα σε υπολογιστή, πλήρης οθόνη στο κινητό (ADR-912 §12.15). */}
-      <FilesPreviewSplit
-        list={<FileViewDispatch {...props} iconSizes={iconSizes} />}
-        files={props.filteredFiles}
-        selectedFile={props.selectedFile}
-        onSelect={props.onSelectFile}
-        onClose={() => props.onSelectFile(null)}
-        companyId={props.custody?.companyId}
-        currentUserId={props.currentUserId}
-      />
+      {/* ADR-950 §8.12 — «ξαναδιάβασε + ανανέωσε»: ΜΙΑ πράξη για τη λίστα ΚΑΙ τον πίνακα της προεπισκόπησης. */}
+      <ClassifyAgainProvider onRead={props.onClassified}>
+        <FilesPreviewSplit
+          list={<FileViewDispatch {...props} iconSizes={iconSizes} />}
+          files={props.filteredFiles}
+          selectedFile={props.selectedFile}
+          onSelect={props.onSelectFile}
+          onClose={() => props.onSelectFile(null)}
+          companyId={props.custody?.companyId}
+          currentUserId={props.currentUserId}
+        />
+      </ClassifyAgainProvider>
 
       {/* Storage info */}
       {props.totalStorageBytes > 0 && (
@@ -392,7 +396,6 @@ function FileViewDispatch(props: EntityFilesContentProps & { iconSizes: ReturnTy
       entityType: props.entityType,
       selectedIds: props.selectedIds,
       onToggleSelect: props.toggleSelect,
-      onClassified: props.onClassified,
     };
 
     if (props.listGroupingMode === 'domainCategory') {

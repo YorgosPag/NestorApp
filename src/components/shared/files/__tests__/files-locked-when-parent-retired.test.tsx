@@ -3,7 +3,8 @@
  * και **καμία** πράξη γραφής. Τα φύλλα **ρωτούν** `useRetiredKind()`· ο `EntityFilesManager` δεν περνά τίποτα.
  *
  * Τρία σημεία, ένα ανά φύλλο που ρωτά:
- *   Φ1 — `EntityFilesContent`: οι χειριστές γραφής ΔΕΝ φτάνουν στη λίστα (χειριστής που λείπει ⇒ κανένα κουμπί)
+ *   Φ1 — `EntityFilesContent`: οι χειριστές γραφής ΔΕΝ φτάνουν στη λίστα (χειριστής που λείπει ⇒ κανένα κουμπί) — ούτε
+ *        η ανανέωση της «ξανά ανάγνωσης», που ζει πλέον στον `ClassifyAgainProvider` (ADR-950 §8.12)
  *   Φ2 — `EntityFilesToolbar`: το μενού «Προσθήκη / Λήψη» δεν ζωγραφίζεται
  *   Φ3 — `LifecycleFileRow`: η γραμμή κάδου/αρχείου αρχείων μένει, η επαναφορά όχι
  *
@@ -37,6 +38,14 @@ jest.mock('@/components/ui/tooltip', () => ({
 
 // Τα παιδιά του περιεχομένου είναι σύνορα: εδώ μετριέται ΤΙ τους δίνεται, όχι πώς ζωγραφίζουν.
 const listProps = jest.fn<void, [Record<string, unknown>]>();
+// ADR-950 §8.12 — η «ξανά ανάγνωση + ανανέωση» δεν περνά πια ως prop της λίστας· μετριέται στον πάροχό της.
+const classifyAgainOnRead = jest.fn<void, [unknown]>();
+jest.mock('../ClassifyAgainProvider', () => ({
+  ClassifyAgainProvider: ({ onRead, children }: { onRead: unknown; children: React.ReactNode }) => {
+    classifyAgainOnRead(onRead);
+    return <>{children}</>;
+  },
+}));
 jest.mock('../FilesList', () => ({
   FilesList: (props: Record<string, unknown>) => { listProps(props); return null; },
 }));
@@ -66,7 +75,7 @@ import { EntityFilesToolbar } from '../EntityFilesToolbar';
 import { LifecycleFileRow } from '../LifecycleListFrame';
 import { mockViewport } from '@/test-utils/viewport';
 
-const WRITE_HANDLERS = ['onDelete', 'onRename', 'onDescriptionUpdate', 'onUnlink', 'onToggleSelect', 'onClassified'] as const;
+const WRITE_HANDLERS = ['onDelete', 'onRename', 'onDescriptionUpdate', 'onUnlink', 'onToggleSelect'] as const;
 
 const FILE = { id: 'file_1', displayName: 'Συμβόλαιο.pdf', sizeBytes: 10 } as unknown as FileRecord;
 
@@ -126,8 +135,10 @@ const under = (status: string, node: React.ReactNode) =>
   render(<RetiredRecordProvider record={{ status }}>{node}</RetiredRecordProvider>);
 
 const lastListProps = () => listProps.mock.calls[listProps.mock.calls.length - 1][0];
+const lastOnRead = () => classifyAgainOnRead.mock.calls[classifyAgainOnRead.mock.calls.length - 1][0];
 
 beforeEach(() => listProps.mockReset());
+beforeEach(() => classifyAgainOnRead.mockReset());
 beforeEach(() => mockViewport(false));
 
 describe('Φ1 — EntityFilesContent', () => {
@@ -135,6 +146,7 @@ describe('Φ1 — EntityFilesContent', () => {
     under(status, <EntityFilesContent {...contentProps()} />);
 
     for (const handler of WRITE_HANDLERS) expect(lastListProps()[handler]).toBeUndefined();
+    expect(lastOnRead()).toBeUndefined();
     expect(screen.queryByTestId('upload-zone')).toBeNull();
   });
 
@@ -149,6 +161,7 @@ describe('Φ1 — EntityFilesContent', () => {
     under('active', <EntityFilesContent {...contentProps()} />);
 
     for (const handler of WRITE_HANDLERS) expect(lastListProps()[handler]).toEqual(expect.any(Function));
+    expect(lastOnRead()).toEqual(expect.any(Function));
     expect(screen.getAllByTestId('upload-zone').length).toBeGreaterThan(0);
   });
 });
