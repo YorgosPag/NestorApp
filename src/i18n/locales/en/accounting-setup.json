@@ -350,6 +350,12 @@
         "reactivateFailed": "Reactivation failed. Please try again.",
         "reactivateDuplicate": "An active account with this IBAN already exists. Deactivate it first."
       }
+    },
+    "brandLogo": {
+      "title": "Document logo",
+      "alt": "Company logo",
+      "empty": "Not set — documents are issued with text only.",
+      "manage": "Manage in company settings"
     }
   },
   "reconciliation": {

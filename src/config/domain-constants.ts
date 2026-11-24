@@ -1430,6 +1430,9 @@ export const API_ROUTES = {
   // ── Org Structure (ADR-326) ───────────────────────────────────────────
   ORG_STRUCTURE: '/api/org-structure',
 
+  // ── Λογότυπο του χώρου (ADR-ACC-018 §17) ─────────────────────────────
+  COMPANY_BRAND_LOGO: '/api/companies/brand-logo',
+
   // ── Επεξεργασία AI ανά εταιρεία (ADR-929 Δ15 #1) ─────────────────────
   AI_PROCESSING_SETTINGS: '/api/settings/ai-processing',
 

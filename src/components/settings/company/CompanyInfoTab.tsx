@@ -1,13 +1,8 @@
 'use client';
 
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { CompanyBrandLogoSection } from './brand/CompanyBrandLogoSection';
 
+/** Καρτέλα «Στοιχεία» της εταιρείας — σήμερα: η ταυτότητα εμφάνισης (λογότυπο, ADR-ACC-018 §17). */
 export function CompanyInfoTab() {
-  const { t } = useTranslation('org-structure');
-
-  return (
-    <div className="py-6 text-center text-sm text-muted-foreground">
-      {t('orgStructure.tabs.info')} — {t('orgStructure.subtitle')}
-    </div>
-  );
+  return <CompanyBrandLogoSection />;
 }

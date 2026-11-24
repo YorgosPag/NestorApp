@@ -14,6 +14,7 @@ import type { Timestamp } from 'firebase/firestore';
 import type { OrgStructure } from '@/types/org/org-structure';
 import type { OrganizationCapabilities } from '@/types/organization-capability';
 import type { CompanyAiProcessingSettings } from '@/types/company-ai-processing';
+import type { CompanyBrandLogo } from '@/types/company-brand';
 
 // =============================================================================
 // COMPANY DOCUMENT
@@ -96,6 +97,12 @@ export interface CompanyDocument {
    * απουσία σημαίνει `unrequested` για **κάθε** ικανότητα — δες `capabilityStatusOf`.
    */
   readonly capabilities?: OrganizationCapabilities;
+  /**
+   * **Το λογότυπο της εταιρείας** — η ΜΙΑ πηγή για PDF, βιτρίνες και email (ADR-ACC-018 §17, ADR-928 §5.11).
+   * Απουσία/`null` ⇒ κανένα λογότυπο (κεφαλίδα μόνο κειμένου), **ποτέ** λογότυπο άλλης εταιρείας. Γραφέας: μόνο το
+   * `server/company/brand-logo-store.server.ts`.
+   */
+  readonly brandLogo?: CompanyBrandLogo | null;
   /** When this document was created */
   readonly createdAt: Timestamp;
   /** Last update timestamp */

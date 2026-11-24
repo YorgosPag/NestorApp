@@ -106,6 +106,27 @@
       "noItems": "No sub-categories",
       "save": "Save",
       "cancel": "Cancel"
+    },
+    "brandLogo": {
+      "title": "Company logo",
+      "description": "Shown on your invoices and certificates. Documents already issued keep the logo they were issued with.",
+      "empty": "No logo set — documents are issued with text only.",
+      "upload": "Upload logo",
+      "replace": "Replace",
+      "remove": "Remove",
+      "uploading": "Uploading…",
+      "removing": "Removing…",
+      "hint": "PNG, JPG or WebP up to {maxMb} MB. At least {recommendedPx} px on the long side is recommended; a transparent background fits everywhere.",
+      "previewLabel": "How it will appear in the invoice header",
+      "alt": "Company logo",
+      "loadFailed": "The logo could not be loaded.",
+      "saveFailed": "The change was not saved. Please try again.",
+      "refusal": {
+        "format": "Unsupported format — choose PNG, JPG or WebP.",
+        "size": "The file exceeds {maxMb} MB.",
+        "tooSmall": "The image is too small — at least {minPx} px on the long side is needed.",
+        "undecodable": "The file cannot be read as an image."
+      }
     }
   },
   "departments": {

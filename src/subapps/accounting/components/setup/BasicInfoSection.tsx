@@ -29,6 +29,7 @@ import type { CompanySetupInput } from '../../types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { cn } from '@/lib/utils';
+import { CompanyBrandLogoSummary } from './CompanyBrandLogoSummary';
 
 // ============================================================================
 // TYPES
@@ -96,6 +97,9 @@ export function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionPro
       </CardHeader>
       <CardContent>
         <fieldset className="space-y-4">
+          {/* ADR-ACC-018 §17: το λογότυπο των παραστατικών — αλλάζει ΜΟΝΟ στις Ρυθμίσεις εταιρείας (μία πηγή). */}
+          <CompanyBrandLogoSummary />
+
           {/* Row 1: Επωνυμία (autocomplete) + Επάγγελμα */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
