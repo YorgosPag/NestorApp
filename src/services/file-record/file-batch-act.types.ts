@@ -8,7 +8,8 @@
  * πρέπει να το ξέρουν **και οι δύο** πλευρές *(ο διακομιστής αρνείται πάνω από αυτό, ο πελάτης τεμαχίζει)*.
  */
 
-import type { ListingRefreshReport } from '@/services/listings/listing-media-refresh';
+// ⚠️ Από το ΦΥΛΛΟ του συμβολαίου, ποτέ από τη μηχανή: ο περιπατητής του κελύφους ακολουθεί και `import type` (CHECK 3.34).
+import type { ListingRefreshReport } from '@/services/listings/listing-publish-outcome.types';
 
 /** Πόσα αρχεία χωρά **ένα** αίτημα — η μπάρα μαζικών ενεργειών είναι η ίδια για κάθε πράξη. */
 export const MAX_FILES_PER_BATCH_ACT = 50;

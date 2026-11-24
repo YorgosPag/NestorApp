@@ -13,7 +13,7 @@
  * στον γραφέα — αλλιώς το «τι έγινε» θα αποκτούσε **δεύτερη** αυθεντία.
  */
 
-import type { PublishOutcome } from '@/services/listings/publish-public-listing';
+import type { PublishOutcome } from '@/services/listings/listing-publish-outcome.types';
 import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';
 import type { AdminAreaDeclarationRejection } from '@/lib/geo/admin-area-declaration';
 import type { OwnerProperty } from '@/types/owner-property';

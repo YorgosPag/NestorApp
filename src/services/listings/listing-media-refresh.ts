@@ -55,15 +55,12 @@ import {
   type PublishOutcome,
 } from './publish-public-listing';
 
-const logger = createModuleLogger('listing-media-refresh');
+// Το συμβόλαιο του σύρματος ζει σε φύλλο χωρίς εισαγωγές (το διαβάζει και ο πελάτης)· εδώ επανεξάγεται.
+import type { ListingMediaRefreshOutcome, ListingRefreshReport } from './listing-publish-outcome.types';
 
-/**
- * Τι έγινε — η έκβαση του γραφέα, ή **`absent`** όταν δεν υπήρχε ακίνητο να προβληθεί.
- *
- * 🔑 Το `absent` είναι **δηλωμένη** απάντηση και όχι `failed`: ακίνητο που δεν υπάρχει ή ανήκει
- * σε άλλον μισθωτή δεν είναι «εκκρεμής προβολή» που θα διορθώσει η επανασύνθεση.
- */
-export type ListingMediaRefreshOutcome = PublishOutcome | 'absent';
+export type { ListingMediaRefreshOutcome, ListingRefreshReport };
+
+const logger = createModuleLogger('listing-media-refresh');
 
 /**
  * **Ξαναπρόβαλε την αγγελία ενός ακινήτου, επειδή άλλαξε αρχείο του.**
@@ -143,12 +140,6 @@ export interface ChangedListingFile {
 
 /** Το πεδίο κατόχου που ρωτιέται ανά είδος: μισθωτής για τα εταιρικά, άνθρωπος για τον φάκελο ακινήτου. */
 type OwnerField = 'companyId' | 'userId';
-
-/** Τι έγινε στην αγγελία **ενός** ακινήτου, μετά από αλλαγή αρχείων του. */
-export interface ListingRefreshReport {
-  readonly propertyId: string;
-  readonly outcome: ListingMediaRefreshOutcome;
-}
 
 /**
  * **Ποιους κατόχους ενός είδους αγγίζει αυτή η δέσμη αρχείων** — ένας ανά κάτοχο, με τον μισθωτή του αρχείου.

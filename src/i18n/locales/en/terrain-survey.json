@@ -285,7 +285,11 @@
         "local": "No point falls inside the area of the Greek Grid — these look like local coordinates."
       }
     },
+    "audience": {
+      "heading": "On the public listing"
+    },
     "showLocationInListing": {
+      "needsGreekGrid": "Available once you declare above that the coordinates are in GGRS87 — without a system there is no position to show.",
       "label": "Show the plot on the listing's map, at its measured position",
       "hint": "Adds to the public listing the plot's position as the surveyor measured it. If you leave it unticked, only you see the measured position; the position you already declared on the listing does not change."
     },

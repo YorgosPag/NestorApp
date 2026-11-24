@@ -145,8 +145,41 @@ export const contractCasesQueries: readonly ContractCase[] = [
       });
       const q = db.collection('q14');
       expect(await idsOf(q.where('at', '>=', new Date(2_000)).where('at', '<=', new Date(9_000)))).toEqual(['mid', 'new']);
-      expect(await idsOf(q.where('at', '<', Timestamp.fromMillis(6_000)))).toEqual(['mid', 'old']);
+      // Σειρά κατά `at` (η ανισότητα υπονοεί ταξινόμηση στο πεδίο της — Q15), όχι κατά id: `old` (1 s) πριν από `mid` (5 s).
+      // 🔴 Ως τις 2026-11-24 εδώ έγραφε `['mid','old']` — τη σειρά του ΨΕΥΤΙΚΟΥ. Ο emulator το αρνιόταν από την πρώτη μέρα.
+      expect(await idsOf(q.where('at', '<', Timestamp.fromMillis(6_000)))).toEqual(['old', 'mid']);
       expect(await idsOf(q.where('at', '==', new Date(1_000)))).toEqual(['old']);
+    },
+  },
+  {
+    id: 'Q15',
+    title: 'ανισότητα ΧΩΡΙΣ `orderBy` ⇒ σειρά κατά το πεδίο της ανισότητας, ισοπαλία κατά id — όχι κατά id εγγράφου (StructuredQuery.order_by)',
+    async run(db) {
+      // Τα id είναι επίτηδες ΑΝΑΠΟΔΑ από τις τιμές: σειρά κατά id θα έδινε a, b, c, d.
+      await seedDocs(db, 'q15', { a: { n: 9 }, b: { n: 5 }, c: { n: 5 }, d: { n: 2 }, e: { n: 1 }, f: { other: 1 } });
+      expect(await idsOf(db.collection('q15').where('n', '>', 1))).toEqual(['d', 'b', 'c', 'a']);
+      expect(await idsOf(db.collection('q15').where('n', '>=', 5).limit(2))).toEqual(['b', 'c']);
+      // Ισότητα ΔΕΝ υπονοεί ταξινόμηση: μένει η σειρά κατά id (Q11).
+      expect(await idsOf(db.collection('q15').where('n', '==', 5))).toEqual(['b', 'c']);
+    },
+  },
+  {
+    id: 'Q16',
+    title: 'υπονοούμενη ταξινόμηση με ΠΟΛΛΑ πεδία: τα πεδία ανισότητας προστίθενται κατά ΟΝΟΜΑ, με τη φορά του τελευταίου ρητού `orderBy` (StructuredQuery.order_by)',
+    async run(db) {
+      await seedDocs(db, 'q16', {
+        a: { size: 3, age: 20 },
+        b: { size: 1, age: 20 },
+        c: { size: 2, age: 10 },
+        d: { size: 9, age: 30 },
+      });
+      const q = db.collection('q16');
+      // Δύο πεδία ανισότητας χωρίς `orderBy` ⇒ κατά όνομα πεδίου (`age` πριν από `size`), όχι κατά σειρά φίλτρων.
+      expect(await idsOf(q.where('size', '>', 0).where('age', '>', 0))).toEqual(['c', 'b', 'a', 'd']);
+      // Ρητό `orderBy` σε ΑΛΛΟ πεδίο προηγείται· το πεδίο ανισότητας προστίθεται μετά, με την ΙΔΙΑ φορά.
+      expect(await idsOf(q.where('size', '>', 0).orderBy('age', 'desc'))).toEqual(['d', 'a', 'b', 'c']);
+      // Ρητό `orderBy` στο ΙΔΙΟ το πεδίο της ανισότητας δεν διπλασιάζεται· ισοπαλία κατά id με την ίδια φορά.
+      expect(await idsOf(q.where('age', '>=', 20).orderBy('age', 'desc'))).toEqual(['d', 'b', 'a']);
     },
   },
 ];

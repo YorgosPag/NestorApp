@@ -12,6 +12,7 @@
  * ο αναγνώστης αρχείων και ο ΕΝΑΣ γραφέας της αγγελίας, που έχουν δικές τους άγκυρες.
  */
 
+import { PHOTO_MATERIAL } from '@/lib/listings/listing-material';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/test-utils/fake-firestore/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -109,7 +110,7 @@ async function call(method: typeof GET, propertyId: string): Promise<Wire['data'
 }
 
 function source(id: string): unknown {
-  return { privateStoragePath: `companies/c/${id}.jpg`, material: 'photo', sourceFileId: id, focalPoint: null };
+  return { privateStoragePath: `companies/c/${id}.jpg`, material: PHOTO_MATERIAL, sourceFileId: id, focalPoint: null };
 }
 
 function publishWith(sources: unknown[]): void {

@@ -18,13 +18,16 @@ const Checkbox = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  // ☑️ ΤΕΤΡΑΓΩΝΟ, ποτέ κύκλος: ως τις 2026-11-24 εδώ έμπαινε το `quick.rounded` (`border-border rounded-lg`) — ακτίνα
+  //    8px σε κουτί 16px = τέλειος κύκλος, ίδιος με ραδιόφωνο (ζωντανό εύρημα ADR-920 §14.12), ΚΑΙ δεύτερο χρώμα
+  //    περιγράμματος που ανταγωνιζόταν το `control.outline` του ADR-770 §17. Μόνο η ακτίνα, από το token της (2px).
+  const { radiusClass } = useBorderTokens();
 
   return (
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      `peer ${iconSizes.sm} shrink-0 ${quick.rounded} border ${control.outline} ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${control.checkedOutline} ${control.checkedFill} ${control.checkedInk}`,
+      `peer ${iconSizes.sm} shrink-0 ${radiusClass.sm} border ${control.outline} ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${control.checkedOutline} ${control.checkedFill} ${control.checkedInk}`,
       className
     )}
     {...props}

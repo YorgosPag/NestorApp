@@ -154,16 +154,19 @@ export async function loadOwnerTerrainGeoreferenceStatus(env: OwnerMaterialDoorE
  * στέκει και για τα νέα σημεία** (ίδιος κριτής με τη δήλωση). Αλλιώς η νέα πηγή γράφεται «αδήλωτη» **και χωρίς συγκατάθεση**:
  * η συγκατάθεση αφορούσε μια θέση που δεν ισχύει πια. Η κάρτα θα ξαναρωτήσει, και μέχρι τότε καμία θέση δεν φεύγει πουθενά.
  * 🔒 Αμετάβλητο: συγκατάθεση ⇒ δηλωμένο ΕΓΣΑ'87 (το ίδιο κρατά και το {@link amendOwnerTerrainGeoreference}).
+ *
+ * 🔑 **Καθαρή**: η προηγούμενη πηγή έρχεται ήδη διαβασμένη από το `loadDossierTerrainInheritance` (το ΙΔΙΟ κατέβασμα που
+ * δίνει και το περίγραμμα) — εδώ δεν ρωτιέται ξανά ο φάκελος. `previous === null` = δεν δημοσιεύτηκε ποτέ ανάγλυφο.
  */
-export async function carriedOwnerGeoreference(
-  env: OwnerMaterialDoorEnv,
+export function carriedOwnerGeoreference(
+  previous: ListingTerrainSource | null,
   incoming: ListingTerrainSource,
-): Promise<TerrainGeoreferenceChoice> {
-  const current = await loadCurrentDossierTerrainSource(env.adminDb, env.dossier);
-  if (current === null) return NO_TERRAIN_GEOREFERENCE_CHOICE;
+  property: Pick<OwnerProperty, 'place'>,
+): TerrainGeoreferenceChoice {
+  if (previous === null) return NO_TERRAIN_GEOREFERENCE_CHOICE;
 
-  const carried = choiceOf(current.source);
+  const carried = choiceOf(previous);
   if (carried.coordinateSystem !== GREEK_GRID_CRS.name) return carried;
-  const reading = readAsGreekGrid(incoming, listingPositionOf(env.property));
+  const reading = readAsGreekGrid(incoming, listingPositionOf(property));
   return reading !== null && reading.kind === 'agrees' ? carried : NO_TERRAIN_GEOREFERENCE_CHOICE;
 }

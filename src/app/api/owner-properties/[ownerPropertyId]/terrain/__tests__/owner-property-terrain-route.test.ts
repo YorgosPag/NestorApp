@@ -263,9 +263,9 @@ describe('ADR-920 Β4.3 — η πόρτα του τοπογραφικού του
     expect(setDoc.mock.calls[0][0]).not.toHaveProperty('companyId');
     expect(collections).toContain('files_personal');
     expect(collections).not.toContain('files');
-    // Πρώτο ερώτημα: το επιβεβαιωμένο περίγραμμα του φακέλου (Ζ3)· δεύτερο: η γεωαναφορά του προηγούμενου ανάγλυφου
-    // (§14.12 φάση Α)· τρίτο: οι προκάτοχοι.
-    expect(trace).toEqual(['query', 'query', 'query', 'set', 'upload', 'update', 'audit', 'refresh']);
+    // Πρώτο ερώτημα: ό,τι κληρονομεί το νέο ανάγλυφο από τον φάκελο — περίγραμμα (Ζ3) ΚΑΙ γεωαναφορά (§14.12 φάση Α),
+    // μαζί (Ι17)· δεύτερο: οι προκάτοχοι. Ως τις 2026-11-24 ήταν τρία: περίγραμμα και γεωαναφορά ρωτούσαν χωριστά.
+    expect(trace).toEqual(['query', 'query', 'set', 'upload', 'update', 'audit', 'refresh']);
   });
 
   it('Ι2 — 🔒 ξένη αγγελία ⇒ 404, και το σώμα ΔΕΝ διαβάζεται', async () => {
@@ -389,6 +389,26 @@ describe('ADR-920 Β4.3 — η πόρτα του τοπογραφικού του
     storedSourceBytes = '{';
     await expect(post()).rejects.toMatchObject({ statusCode: 503, message: 'TERRAIN_CURRENT_SOURCE_UNREADABLE' });
     expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it('Ι17 — 🏆 ό,τι κληρονομεί το νέο ανάγλυφο διαβάζεται ΜΙΑ φορά: ένα ερώτημα φακέλου και ένα κατέβασμα', async () => {
+    // Η πηγή νικά για το περίγραμμα ΚΑΙ κρατά τη γεωαναφορά: ως τις 2026-11-24 αυτό ήταν 2 ερωτήματα φακέλου + 2 κατεβάσματα.
+    siblings = [{ ...confirmedDrawing(CONFIRMED), isDeleted: true }, publishedRelief(BEFORE_DRAWING, { ring: RING_MM, showInListing: false })];
+    await post();
+    const beforeUpload = trace.slice(0, trace.indexOf('upload'));
+    expect(trace).toContain('upload');
+    // Δύο ερωτήματα πριν από το ανέβασμα: ΕΝΑ της κληρονομιάς + το ερώτημα προκατόχων του κινητήρα (όπως στο Ι1).
+    expect(beforeUpload.filter((step) => step === 'query')).toHaveLength(2);
+    expect(downloads).toHaveBeenCalledTimes(1);
+    expect(storedSource().plotOutline).toEqual({ ring: RING_MM, showInListing: false });
+  });
+
+  it('Ι18 — σχέδιο χωρίς ανάγλυφο (πρώτη δημοσίευση): το περίγραμμα έρχεται από το σχέδιο, καμία πηγή δεν κατεβαίνει', async () => {
+    siblings = [confirmedDrawing(CONFIRMED)];
+    await post();
+    expect(downloads).not.toHaveBeenCalled();
+    expect(storedSource().plotOutline).toEqual({ ring: INSIDE_RING.map(({ x, y }) => [x, y]), showInListing: true });
+    expect(storedSource()).toMatchObject({ coordinateSystem: null, showLocationInListing: false });
   });
 });
 

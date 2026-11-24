@@ -38,8 +38,8 @@ import { buildPublishedTerrainFileRecord } from '@/lib/listings/terrain-file-rec
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { NO_TERRAIN_GEOREFERENCE_CHOICE } from '@/lib/terrain/publication/listing-terrain-source';
 import {
+  NO_TERRAIN_INHERITANCE,
   TERRAIN_DOOR_CODES,
   terrainMaterialDoor,
   terrainPublishedFacts,
@@ -85,9 +85,8 @@ const TERRAIN_DOOR: MaterialPublicationDoor<TerrainUpload> = {
   ...terrainMaterialDoor<MaterialDoorEnv, MaterialBirth>({
     propertyTypeOf: (env) => env.property.type,
     // ADR-920 §14.11 Ζ3 — το γραφείο δεν έχει φάκελο, άρα ούτε επιβεβαιωμένο περίγραμμα: ό,τι στείλει ο browser αφαιρείται.
-    confirmedOutlineOf: async () => null,
-    // ADR-920 §14.12 φάση Α — το γραφείο δεν έχει κάρτα ιδιοκτήτη: καμία δήλωση συστήματος, καμία συγκατάθεση θέσης.
-    carriedGeoreferenceOf: async () => NO_TERRAIN_GEOREFERENCE_CHOICE,
+    // ADR-920 §14.12 φάση Α — ούτε κάρτα ιδιοκτήτη: καμία δήλωση συστήματος, καμία συγκατάθεση θέσης.
+    inheritedOf: async () => NO_TERRAIN_INHERITANCE,
     recordOf: ({ companyId, propertyId, createdBy, sourceRevisions }) =>
       buildPublishedTerrainFileRecord({ home: { companyId, propertyId }, createdBy, sourceRevisions }),
     recordPublished: (verdict, env) => recordTerrainPublished(verdict.fileId, verdict.supersedes, env),

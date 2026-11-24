@@ -8,8 +8,9 @@
  *
  * 🔑 **Το σύστημα δηλώνεται, δεν μαντεύεται** (Civil 3D `GEOCSASSIGN` · QGIS «prompt for CRS»): η κάρτα λέει τι δείχνουν τα
  *    σημεία και τι θα έδινε η ανάγνωσή τους ως ΕΓΣΑ '87 — **πριν** δηλώσει ο άνθρωπος. Η επιλογή μένει δική του.
- * 🔑 **Δύο ερωτήσεις, δύο στοιχεία**: «σε ποιο σύστημα;» (ραδιόφωνα) και «να φαίνεται η θέση;» (κουτάκι). Το κουτάκι μένει
- *    ανενεργό μέχρι να δηλωθεί ΕΓΣΑ '87 — χωρίς σύστημα δεν υπάρχει θέση να φανεί.
+ * 🔑 **Δύο ερωτήσεις, δύο ονομασμένες ομάδες με διαχωριστικό**: «σε ποιο σύστημα;» (ραδιόφωνα) και «στη δημόσια αγγελία»
+ *    (κουτάκι) — Airbnb: η διεύθυνση και η κοινοποίηση θέσης είναι χωριστές ενότητες. Το κουτάκι μένει ανενεργό μέχρι να
+ *    δηλωθεί ΕΓΣΑ '87 και **λέει γιατί** — χωρίς σύστημα δεν υπάρχει θέση να φανεί.
  * ♿ Η ζωντανή περιοχή μένει πάντα στο DOM, για να ανακοινώνεται η έκβαση κάθε πράξης.
  */
 
@@ -17,6 +18,7 @@ import React, { useId } from 'react';
 
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Separator } from '@/components/ui/separator';
 import type { TerrainGeoreferenceApi } from '@/hooks/listings/useTerrainGeoreference';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatNumber } from '@/lib/intl-formatting';
@@ -37,6 +39,9 @@ function isCoordinateSystem(value: string): value is TerrainCoordinateSystem {
 }
 
 const whole = (metres: number) => formatNumber(metres, { maximumFractionDigits: 0 });
+
+/** Ο τίτλος κάθε ομάδας της κάρτας — ίδιος και για τις δύο, ώστε να διαβάζονται ως δύο **ισότιμες** ερωτήσεις. */
+const GROUP_LEGEND = 'p-0 text-sm font-medium text-foreground';
 
 /** Τι θα έδινε η ανάγνωση ως ΕΓΣΑ '87 — με τους μετρημένους αριθμούς, όχι σκέτο «σωστό / λάθος». */
 function ReadingLine({ reading }: { readonly reading: GreekGridReading }) {
@@ -59,7 +64,7 @@ function SystemChoice({ api, status, busy }: {
   const greekGridHolds = status.greekGrid.kind === 'agrees';
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
-      <legend className="p-0 text-sm text-foreground">{t(`${NS}.system.question`)}</legend>
+      <legend className={GROUP_LEGEND}>{t(`${NS}.system.question`)}</legend>
       {status.suggestion !== null && (
         <p className="m-0 text-xs text-muted-foreground">{t(`${NS}.system.suggestion.${SYSTEM_KEY[status.suggestion]}`)}</p>
       )}
@@ -73,6 +78,26 @@ function SystemChoice({ api, status, busy }: {
           </span>
         ))}
       </RadioGroup>
+    </fieldset>
+  );
+}
+
+/**
+ * **Η δεύτερη ερώτηση, σε δική της ονομασμένη ομάδα**: «τι βλέπει το κοινό;». Ως τις 2026-11-24 το κουτάκι καθόταν ακριβώς
+ * κάτω από τα δύο ραδιόφωνα, χωρίς τίποτα ανάμεσα — διαβαζόταν ως **τρίτη επιλογή συστήματος** (ζωντανός έλεγχος `2cc1dc01`).
+ */
+function AudienceChoice({ api, status, busy }: {
+  readonly api: TerrainGeoreferenceApi;
+  readonly status: TerrainGeoreferenceStatus;
+  readonly busy: boolean;
+}) {
+  const { t } = useTranslation(['terrain-survey']);
+  return (
+    <fieldset className="m-0 flex flex-col gap-2 border-0 p-0" data-georeference-audience="">
+      <legend className={GROUP_LEGEND}>{t(`${NS}.audience.heading`)}</legend>
+      <TerrainLocationVisibilityCheckbox checked={status.showLocationInListing}
+        systemDeclared={status.coordinateSystem === GREEK_GRID} busy={busy}
+        onChange={(showInListing) => void api.amend({ kind: 'location-visibility', showInListing })} />
     </fieldset>
   );
 }
@@ -106,9 +131,8 @@ export function TerrainGeoreferenceCard({ api }: { readonly api: TerrainGeorefer
         <>
           <ReadingLine reading={view.georeference.greekGrid} />
           <SystemChoice api={api} status={view.georeference} busy={busy} />
-          <TerrainLocationVisibilityCheckbox checked={view.georeference.showLocationInListing}
-            disabled={busy || view.georeference.coordinateSystem !== GREEK_GRID}
-            onChange={(showInListing) => void api.amend({ kind: 'location-visibility', showInListing })} />
+          <Separator />
+          <AudienceChoice api={api} status={view.georeference} busy={busy} />
         </>
       )}
       <ActionMessage api={api} />

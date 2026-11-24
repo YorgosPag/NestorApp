@@ -68,8 +68,8 @@ import {
 } from '@/server/listing-terrain/terrain-georeference.server';
 import {
   loadDossierOwnerReliefSnapshot,
-  loadDossierPlotOutline,
   loadDossierPlotOutlineStatus,
+  loadDossierTerrainInheritance,
 } from '@/server/listing-terrain/dossier-terrain.reader';
 import {
   amendOwnerPlotOutline,
@@ -131,9 +131,15 @@ const TERRAIN_DOOR: OwnerMaterialPublicationDoor<TerrainUpload> = {
     propertyTypeOf: (env) => env.property.type,
     // 🗺️ ADR-920 §14.11 Ζ3c — το περίγραμμα που ΙΣΧΥΕΙ (νικά η νεότερη απόφαση: πηγή ή σχέδιο) — ποτέ μόνο το σχέδιο, που
     //    μπορεί να είναι στον κάδο: ο κάδος του σχεδίου δεν αφαιρεί το περίγραμμα (copy semantics).
-    confirmedOutlineOf: (env) => loadDossierPlotOutline(env.adminDb, env.dossier),
     // 📍 ADR-920 §14.12 φάση Α — η δήλωση ΕΓΣΑ'87 και η συγκατάθεση θέσης μεταφέρονται, αφού ξανακριθούν στα νέα σημεία.
-    carriedGeoreferenceOf: carriedOwnerGeoreference,
+    // 🏆 ΕΝΑ ερώτημα φακέλου, ΕΝΑ κατέβασμα: η ίδια ανάγνωση της προηγούμενης πηγής δίνει και τα δύο.
+    inheritedOf: async (env) => {
+      const { current, outline } = await loadDossierTerrainInheritance(env.adminDb, env.dossier);
+      return {
+        outline,
+        georeferenceFor: (incoming) => carriedOwnerGeoreference(current?.source ?? null, incoming, env.property),
+      };
+    },
     recordOf: ({ userId, dossierId, createdBy, sourceRevisions }) =>
       buildPublishedTerrainFileRecord({ home: { userId, dossierId }, createdBy, sourceRevisions }),
     recordPublished: (verdict, env) => recordOwnerTerrainChange(AUDIT_FIELDS.terrain, verdict.fileId, verdict.supersedes, env),

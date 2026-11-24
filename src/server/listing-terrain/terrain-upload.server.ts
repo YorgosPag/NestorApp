@@ -30,6 +30,7 @@ import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { isLandProperty } from '@/constants/property-classification';
 import { judgeListingTerrainSource } from '@/lib/terrain/publication/listing-terrain-judge';
 import {
+  NO_TERRAIN_GEOREFERENCE_CHOICE,
   encodeListingTerrainSource,
   parseListingTerrainSource,
   withGeoreferenceChoice,
@@ -182,26 +183,45 @@ export function terrainUploadOfSource(params: {
 }
 
 /**
+ * **Ό,τι κληρονομεί ένα νέο ανάγλυφο από την κηδεμονία του** — διαβασμένο **μία** φορά, πριν κριθούν τα νέα σημεία.
+ *
+ * 🗺️ `outline`: το περίγραμμα που ισχύει (ADR-920 §14.11 Ζ3 · Ζ3c) — `null` = κανένα.
+ * 📍 `georeferenceFor`: η δήλωση συστήματος + η συγκατάθεση θέσης που ισχύουν για τα **νέα** σημεία (§14.12 φάση Α). Είναι
+ *    συνάρτηση επειδή η δήλωση **ξανακρίνεται** πάνω σε ό,τι ανέβηκε· είναι **σύγχρονη** επειδή ό,τι χρειάζεται από τον
+ *    φάκελο έχει ήδη διαβαστεί — καμία δεύτερη ανάγνωση.
+ */
+export interface TerrainInheritance {
+  readonly outline: PlotOutlineChoice | null;
+  readonly georeferenceFor: (incoming: ListingTerrainSource) => TerrainGeoreferenceChoice;
+}
+
+/** Κηδεμονία χωρίς φάκελο (το γραφείο): κανένα περίγραμμα, καμία δήλωση, καμία συγκατάθεση — **ρητά**. */
+export const NO_TERRAIN_INHERITANCE: TerrainInheritance = {
+  outline: null,
+  georeferenceFor: () => NO_TERRAIN_GEOREFERENCE_CHOICE,
+};
+
+/**
  * **Τι έστειλε ο άνθρωπος** — με τη σειρά «φθηνό πρώτα»: δήλωση και είδος ακινήτου πριν διαβαστούν
  * megabytes, το στιγμιότυπο τελευταίο.
  *
  * @param propertyType το είδος του ακινήτου **όπως το διάβασε ο φρουρός κηδεμονίας** — ποτέ από τον πελάτη.
- * @param confirmedOutline το επιβεβαιωμένο περίγραμμα **της πόρτας** (φάκελος ή `null`) — ρωτιέται αφού περάσουν τα φθηνά.
- * @param carriedGeoreference η δήλωση συστήματος + η συγκατάθεση θέσης που **ισχύουν** για τα νέα σημεία (§14.12 φάση Α).
+ * @param inherited ό,τι κληρονομεί το νέο ανάγλυφο **από την πόρτα** — ρωτιέται **μία** φορά, αφού περάσουν τα φθηνά.
  */
 export async function readTerrainUpload(
   formData: FormData,
   propertyType: unknown,
-  confirmedOutline: () => Promise<PlotOutlineChoice | null>,
-  carriedGeoreference: (incoming: ListingTerrainSource) => Promise<TerrainGeoreferenceChoice>,
+  inherited: () => Promise<TerrainInheritance>,
 ): Promise<TerrainUpload> {
   const file = readSourceFile(formData);
   const declaration = readDeclaration(formData);
   // Δ1: μόνο οικόπεδο / αγροτεμάχιο — ο ισχυρός κριτής, που λύνει και τις ελληνικές ετικέτες.
   if (!isLandProperty(propertyType)) throw new ApiError(422, 'TERRAIN_NOT_LAND');
 
-  const outlined = withConfirmedOutline(await readSource(file), await confirmedOutline());
-  const source = withCarriedGeoreference(outlined, await carriedGeoreference(outlined));
+  const incoming = await readSource(file);
+  const { outline, georeferenceFor } = await inherited();
+  const outlined = withConfirmedOutline(incoming, outline);
+  const source = withCarriedGeoreference(outlined, georeferenceFor(outlined));
   return terrainUploadOfSource({
     source,
     declaration,
@@ -215,16 +235,11 @@ interface TerrainDoorParts<TEnv, TBirth> {
   /** Το είδος του ακινήτου από το έγγραφο που ήδη διάβασε ο φρουρός κηδεμονίας. */
   readonly propertyTypeOf: (env: TEnv) => unknown;
   /**
-   * 🗺️ Το περίγραμμα που ισχύει σε αυτή την κηδεμονία (ADR-920 §14.11 Ζ3 · Ζ3c): ο φάκελος του ιδιοκτήτη το διαβάζει, το
-   * γραφείο (χωρίς φάκελο) απαντά `null`. ⚠️ Χωρίς προεπιλογή: κάθε πόρτα δηλώνει τι ισχύει γι' αυτήν.
+   * 🗺️📍 Ό,τι κληρονομεί το νέο ανάγλυφο σε αυτή την κηδεμονία ({@link TerrainInheritance}): ο φάκελος του ιδιοκτήτη το
+   * διαβάζει με **ένα** ερώτημα και **ένα** κατέβασμα· το γραφείο (χωρίς φάκελο, χωρίς κάρτα ιδιοκτήτη) απαντά
+   * `NO_TERRAIN_INHERITANCE`. ⚠️ Χωρίς προεπιλογή: κάθε πόρτα δηλώνει τι ισχύει γι' αυτήν.
    */
-  readonly confirmedOutlineOf: (env: TEnv) => Promise<PlotOutlineChoice | null>;
-  /**
-   * 📍 Η δήλωση συστήματος + η συγκατάθεση θέσης που ισχύουν για τα **νέα** σημεία (ADR-920 §14.12 φάση Α): ο φάκελος του
-   * ιδιοκτήτη τις μεταφέρει από το προηγούμενο ανάγλυφο (και ξανακρίνει τη δήλωση)· το γραφείο, χωρίς κάρτα ιδιοκτήτη,
-   * απαντά `NO_TERRAIN_GEOREFERENCE_CHOICE`. ⚠️ Χωρίς προεπιλογή: κάθε πόρτα δηλώνει τι ισχύει γι' αυτήν.
-   */
-  readonly carriedGeoreferenceOf: (env: TEnv, incoming: ListingTerrainSource) => Promise<TerrainGeoreferenceChoice>;
+  readonly inheritedOf: (env: TEnv) => Promise<TerrainInheritance>;
   /** 🔒 Η γέννηση: `buildPublishedTerrainFileRecord`, γραμμένο **στην πόρτα** (CHECK 3.105 Κ2). */
   readonly recordOf: (birth: TBirth) => BuildPendingFileRecordResult;
   /** Το ίχνος στο ιστορικό του ακινήτου. ⚠️ Δεν επιτρέπεται να ρίξει τη δημοσίευση. */
@@ -238,12 +253,7 @@ export function terrainMaterialDoor<TEnv, TBirth>(
   return {
     category: FILE_CATEGORIES.DRAWINGS,
     codes: { uploadFailed: TERRAIN_DOOR_CODES.uploadFailed },
-    read: (formData, env) => readTerrainUpload(
-      formData,
-      parts.propertyTypeOf(env),
-      () => parts.confirmedOutlineOf(env),
-      (incoming) => parts.carriedGeoreferenceOf(env, incoming),
-    ),
+    read: (formData, env) => readTerrainUpload(formData, parts.propertyTypeOf(env), () => parts.inheritedOf(env)),
     fileOf: (upload) => upload.file,
     sceneFileIdsOf: (upload) => upload.sceneFileIds,
     recordOf: (_upload, birth) => parts.recordOf(birth),

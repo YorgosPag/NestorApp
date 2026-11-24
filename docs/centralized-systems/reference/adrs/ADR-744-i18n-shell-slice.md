@@ -3722,3 +3722,35 @@ G, ζεστή μνήμη, ο ίδιος κώδικας με το hook (στιγ�
 **Ανοιχτά ερωτήματα πριν από υλοποίηση**:
 - Πόσα ένθετα layouts υπάρχουν σήμερα και πόσα bytes θα έφευγαν από το καθολικό κέλυφος (`--measure`).
 - Τι γίνεται με layouts server (όχι `'use client'`), που δεν μπορούν να καλέσουν `registerRouteSlice`.
+
+## §36 — ΤΟ `import type` ΠΟΥ ΕΣΕΡΝΕ ΤΟΝ ΔΙΑΚΟΜΙΣΤΗ ΣΤΗΝ ΚΛΕΙΣΤΟΤΗΤΑ ΤΟΥ ΠΕΛΑΤΗ (2026-11-24, ADR-920 §14.12)
+
+**Το σύμπτωμα.** Μετά το ADR-920 Β6.12 φάση Α, το manifest σφράγισε στο namespace `quotes` τη συμβολοσειρά
+`GGRS87 / Greek Grid` — το `description` του `GREEK_GRID_CRS` (`lib/geo/greek-grid.ts`).
+
+**Τι μετρήθηκε (δύο χωριστά πράγματα).**
+
+1. **Η συμβολοσειρά δεν είναι σφάλμα του ταξινομητή.** Είναι η συγκομιδή ιδιοτήτων (`harvestPropertyValues`,
+   `key-tables.js`): κλήση `t(x.description)` μαζεύει **κάθε** `description: '…'` literal της κλειστότητας. Η υπερ-συλλογή
+   είναι δηλωμένη και σκόπιμη — ό,τι δεν ορίζει κανένα locale κλαδεύεται στο κόψιμο. Επαληθεύτηκε: η συμβολοσειρά υπάρχει
+   **μόνο** στο `shell-slice.manifest.json`, σε κανένα slice και σε κανένα locale.
+2. **Η κλειστότητα όμως έφτανε εκεί από δύο διαδρομές**, και η μία ήταν διαρροή:
+   - 🔴 `file-batch-act.types.ts` (το διαβάζει ο πελάτης) → `import type` από `listing-media-refresh.ts` (`server-only`) →
+     όλο το ράφι και ο ψήστης εδάφους. Ο περιπατητής ακολουθεί και τις εισαγωγές τύπου.
+   - ⚪ `types/file-record.ts` → `plot-outline-confirmation` → `listing-terrain-source` → `greek-grid`. Όλα καθαρά modules·
+     νόμιμη εξάρτηση τύπων, **μένει**.
+
+**Η διόρθωση.** Τα τρία ονόματα του σύρματος (`PublishOutcome` · `ListingMediaRefreshOutcome` · `ListingRefreshReport`)
+ζουν πλέον σε φύλλο χωρίς εισαγωγές, `services/listings/listing-publish-outcome.types.ts`· οι μηχανές τα επανεξάγουν
+(πρότυπο `public-listing-projection-types`), τα καθαρά αρχεία (`file-batch-act.types` · `types/owner-property` ·
+`owner-property-projection` · `owner-property-write-result`) τα παίρνουν από το φύλλο.
+
+**Μέτρηση πριν / μετά (ξαναπαραγωγή).** Το manifest μίκρυνε κατά **163 γραμμές**: έφυγαν από τις κλειστότητες των
+προμηθειών όσα έσερνε η αλυσίδα του διακομιστή (π.χ. οι περιγραφές δικαιωμάτων «Approve financial transactions»,
+`howToRequest.step1–3`). Το `GGRS87 / Greek Grid` **μένει** και στις 3 θέσεις, από τη δεύτερη (νόμιμη) διαδρομή.
+
+**Άγκυρα.** `services/file-record/__tests__/file-batch-act-types-closure.test.ts` (4 tests): η κλειστότητα του συμβολαίου
+— ακολουθώντας **και** `import type` — δεν φτάνει σε module με `import 'server-only'`, και το φύλλο δεν εισάγει τίποτα.
+
+**Ανοιχτό (δεν αποφασίστηκε).** Η κλάση «καθαρό αρχείο τύπων που εισάγει τύπο από `server-only` module» φυλάσσεται μόνο
+σε αυτό το ένα αρχείο. Δεν μετρήθηκε πόσα άλλα υπάρχουν στο δέντρο.

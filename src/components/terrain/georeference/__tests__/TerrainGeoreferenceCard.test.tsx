@@ -7,6 +7,8 @@
  * | το κουτάκι θέσης ενεργό χωρίς δηλωμένο ΕΓΣΑ '87 | Κ3 |
  * | η κάρτα εμφανίζεται χωρίς ανάγλυφο | Κ5 |
  * | η πρόταση εφαρμόζεται μόνη της | Κ1 |
+ * | το κουτάκι ανενεργό χωρίς γραμμένο λόγο · ο λόγος εμφανίζεται και όσο τρέχει πράξη | Κ3 · Κ6 |
+ * | το κουτάκι ξαναμπαίνει στην ομάδα των ραδιοφώνων · φεύγει το διαχωριστικό | Κ8 |
  */
 
 import React from 'react';
@@ -25,6 +27,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 import { TerrainGeoreferenceCard } from '../TerrainGeoreferenceCard';
 
 const NS = 'terrain-survey:georeference';
+const NEEDS_GREEK_GRID = `${NS}.showLocationInListing.needsGreekGrid`;
 const AGREES = { kind: 'agrees', distanceM: 120, toleranceM: 279 } as const;
 
 function statusOf(overrides: Partial<TerrainGeoreferenceStatus> = {}): TerrainGeoreferenceStatus {
@@ -71,14 +74,32 @@ describe('TerrainGeoreferenceCard', () => {
     expect(amend).toHaveBeenCalledWith({ kind: 'coordinate-system', system: 'local' });
   });
 
-  it('Κ3 — το κουτάκι θέσης είναι ανενεργό μέχρι να δηλωθεί ΕΓΣΑ \'87 — και με «τοπικές» επίσης', () => {
+  it('Κ3 — το κουτάκι θέσης είναι ανενεργό μέχρι να δηλωθεί ΕΓΣΑ \'87 — και με «τοπικές» επίσης — και ΛΕΕΙ γιατί', () => {
     const undeclared = render(<TerrainGeoreferenceCard api={apiOf(statusOf()).api} />);
     expect(consent()).toBeDisabled();
+    expect(consent()).toHaveAccessibleDescription(expect.stringContaining(NEEDS_GREEK_GRID));
     undeclared.unmount();
 
     render(<TerrainGeoreferenceCard api={apiOf(statusOf({ coordinateSystem: 'local' })).api} />);
     expect(consent()).toBeDisabled();
     expect(local()).toBeChecked();
+    expect(screen.getByText(NEEDS_GREEK_GRID)).toBeInTheDocument();
+  });
+
+  it('Κ8 — δύο ΟΝΟΜΑΣΜΕΝΕΣ ομάδες με διαχωριστικό: το κουτάκι δεν είναι τρίτη επιλογή συστήματος', () => {
+    const { container } = render(<TerrainGeoreferenceCard api={apiOf(statusOf()).api} />);
+    const system = screen.getByRole('group', { name: `${NS}.system.question` });
+    const audience = screen.getByRole('group', { name: `${NS}.audience.heading` });
+
+    expect(system).not.toBe(audience);
+    expect(system).not.toContainElement(consent());
+    expect(audience).toContainElement(consent());
+    expect(audience).not.toContainElement(greekGrid());
+    // Το διαχωριστικό στέκεται ΑΝΑΜΕΣΑ στις δύο ομάδες, στη σειρά του DOM.
+    const separator = container.querySelector('[data-orientation="horizontal"]');
+    expect(separator).not.toBeNull();
+    expect(system.compareDocumentPosition(separator as Element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect((separator as Element).compareDocumentPosition(audience) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('Κ4 — δηλωμένο ΕΓΣΑ \'87: το κουτάκι στέλνει τη συγκατάθεση, και την άρση της', () => {
@@ -86,6 +107,8 @@ describe('TerrainGeoreferenceCard', () => {
     const first = render(<TerrainGeoreferenceCard api={api} />);
     expect(greekGrid()).toBeChecked();
     expect(consent()).not.toBeChecked();
+    expect(consent()).not.toBeDisabled();
+    expect(screen.queryByText(NEEDS_GREEK_GRID)).toBeNull();
     fireEvent.click(consent());
     expect(amend).toHaveBeenCalledWith({ kind: 'location-visibility', showInListing: true });
     first.unmount();
@@ -106,6 +129,8 @@ describe('TerrainGeoreferenceCard', () => {
     expect(greekGrid()).toBeDisabled();
     expect(local()).toBeDisabled();
     expect(consent()).toBeDisabled();
+    // Ανενεργό επειδή τρέχει πράξη — όχι επειδή λείπει το σύστημα: ο λόγος «δήλωσε ΕΓΣΑ '87» εδώ θα ήταν ψέμα.
+    expect(screen.queryByText(NEEDS_GREEK_GRID)).toBeNull();
     acting.unmount();
 
     const refused = apiOf(statusOf(), { kind: 'refused', refusal: 'TERRAIN_GEOREFERENCE_FAR_FROM_LISTING' });

@@ -182,15 +182,40 @@ async function effectivePlotOutline(
 }
 
 /**
- * **Το περίγραμμα που ισχύει στον φάκελο** (Ζ3c) — ό,τι βάζει ο server σε ΚΑΘΕ δημοσίευση ισοϋψών, ή `null`.
- * Η πηγή κατεβαίνει **μόνο** όταν νικά (το σχέδιο είναι ήδη στην εγγραφή του).
+ * **Ό,τι κληρονομεί ένα ΝΕΟ ανάγλυφο από τον φάκελο**: η προηγούμενη πηγή (`null` = δεν δημοσιεύτηκε ποτέ) και το
+ * περίγραμμα που ισχύει (Ζ3c — μπορεί να το κρατά **μόνο το σχέδιο**, πριν από το πρώτο ανάγλυφο).
  */
-export async function loadDossierPlotOutline(
+export interface DossierTerrainInheritance {
+  readonly current: CurrentDossierTerrainSource | null;
+  readonly outline: PlotOutlineChoice | null;
+}
+
+/**
+ * 🏆 **Ο ΕΝΑΣ δρόμος**: ένα ερώτημα φακέλου, και η πηγή κατεβαίνει **το πολύ μία** φορά — η ίδια ανάγνωση τροφοδοτεί
+ * το περίγραμμα (όταν νικά η πηγή) και ό,τι άλλο ταξιδεύει μέσα της (δήλωση συστήματος, συγκατάθεση θέσης).
+ */
+async function dossierTerrainInheritance(
   adminDb: AdminFirestore,
   dossier: Pick<PropertyDossier, 'id' | 'userId'>,
-): Promise<PlotOutlineChoice | null> {
-  const records = await dossierTerrainRecords(adminDb, dossier, UNREADABLE_OUTLINE);
-  return effectivePlotOutline(records, dossier.id, (relief) => downloadDossierTerrainSource(relief, dossier.id));
+  code: string,
+): Promise<DossierTerrainInheritance> {
+  const records = await dossierTerrainRecords(adminDb, dossier, code);
+  const current = records.relief === null ? null : await downloadDossierTerrainSource(records.relief, dossier.id);
+  // Όταν νικά η πηγή, είναι η `records.relief` — ήδη κατεβασμένη. Ο δεύτερος κλάδος υπάρχει μόνο για τον τύπο.
+  const sourceOf = async (relief: DossierTerrainFile) => current ?? downloadDossierTerrainSource(relief, dossier.id);
+  return { current, outline: await effectivePlotOutline(records, dossier.id, sourceOf) };
+}
+
+/**
+ * **Ό,τι βάζει ο server σε ΚΑΘΕ δημοσίευση ισοϋψών** (Ζ3c · §14.12 φάση Α): το περίγραμμα που ισχύει και η προηγούμενη
+ * πηγή, από **ένα** ερώτημα και **ένα** κατέβασμα. ⚠️ Πριν από τις 2026-11-24 το περίγραμμα και η γεωαναφορά ρωτούσαν
+ * χωριστά τον φάκελο — δύο ερωτήματα, και η ίδια πηγή κατέβαινε δύο φορές όταν κρατούσε και το περίγραμμα.
+ */
+export function loadDossierTerrainInheritance(
+  adminDb: AdminFirestore,
+  dossier: Pick<PropertyDossier, 'id' | 'userId'>,
+): Promise<DossierTerrainInheritance> {
+  return dossierTerrainInheritance(adminDb, dossier, UNREADABLE_OUTLINE);
 }
 
 /** Ό,τι χρειάζεται μια αλλαγή περιγράμματος χωρίς νέο σχέδιο (Π9 · αφαίρεση): η πηγή που ξαναδημοσιεύεται + το ισχύον περίγραμμα. */
@@ -200,17 +225,15 @@ export interface DossierTerrainState {
 }
 
 /**
- * **Η τρέχουσα πηγή μαζί με το περίγραμμα που ισχύει** — ή `null` όταν δεν δημοσιεύτηκε ποτέ ανάγλυφο. Ένα ερώτημα, ένα
- * κατέβασμα, ο **ίδιος** κανόνας με το {@link loadDossierPlotOutline}.
+ * **Η τρέχουσα πηγή μαζί με το περίγραμμα που ισχύει** — ή `null` όταν δεν δημοσιεύτηκε ποτέ ανάγλυφο. Ο **ίδιος** δρόμος
+ * με το {@link loadDossierTerrainInheritance}: ένα ερώτημα, ένα κατέβασμα.
  */
 export async function loadDossierTerrainState(
   adminDb: AdminFirestore,
   dossier: Pick<PropertyDossier, 'id' | 'userId'>,
 ): Promise<DossierTerrainState | null> {
-  const records = await dossierTerrainRecords(adminDb, dossier, UNREADABLE_SOURCE);
-  if (records.relief === null) return null;
-  const current = await downloadDossierTerrainSource(records.relief, dossier.id);
-  return { current, outline: await effectivePlotOutline(records, dossier.id, async () => current) };
+  const { current, outline } = await dossierTerrainInheritance(adminDb, dossier, UNREADABLE_SOURCE);
+  return current === null ? null : { current, outline };
 }
 
 /**

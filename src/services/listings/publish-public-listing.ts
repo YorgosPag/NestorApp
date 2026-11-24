@@ -62,8 +62,10 @@ import { refreshShowcasePresence } from '@/services/mandate/showcase-presence.se
 
 const logger = createModuleLogger('publish-public-listing');
 
-/** Τι έκανε ο γραφέας — ρητά, ώστε η επανασύνθεση να μπορεί να **μετρήσει**. */
-export type PublishOutcome = 'published' | 'withdrawn' | 'failed';
+// Το συμβόλαιο ζει σε φύλλο χωρίς εισαγωγές (το διαβάζει και ο πελάτης)· εδώ επανεξάγεται για τον κώδικα του διακομιστή.
+import type { PublishOutcome } from './listing-publish-outcome.types';
+
+export type { PublishOutcome };
 
 /**
  * **Η έκβαση ΚΑΙ η εικόνα που είδε ο κόσμος** — ό,τι επιστρέφει ο πυρήνας (ADR-777 §8.70).

@@ -42,7 +42,7 @@ import {
   type ProjectableProperty,
 } from '@/services/listings/public-listing-projection';
 import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
-import type { PublishOutcome } from '@/services/listings/publish-public-listing';
+import type { PublishOutcome } from '@/services/listings/listing-publish-outcome.types';
 import { resolveDisplayPrice, type DisplayPrice } from '@/lib/properties/price-resolver';
 import type { ListingMapEntry } from '@/lib/listings/listing-map-entry';
 import { mandatesOf } from '@/types/owner-property-mandate';

@@ -22,7 +22,7 @@
  * **εκτελεί**, όχι να ταιριάζει κείμενο — γι' αυτό ζει σε άγκυρα.
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
 import {
@@ -230,16 +230,39 @@ interface CameraCall {
  */
 const AUTHORITY_FILE = join(SRC, 'lib', 'geo', 'camera-motion.ts');
 
+/**
+ * 🎥 **ΚΑΜΕΡΕΣ ΠΟΥ ΔΕΝ ΕΙΝΑΙ ΧΑΡΤΗΣ** — δηλωμένες μία-μία, με λόγο (ADR-847 §10.9).
+ *
+ * Το `FRAMING_CALL` κρίνει **ονόματα μεθόδων**, και το `flyTo` δεν είναι αποκλειστικό του MapLibre: η κάμερα **three.js**
+ * του 3Δ εδάφους (`Terrain3dFlight.flyTo`) πετά ανάμεσα σε όψεις του μοντέλου, όχι πάνω σε χάρτη. Η αρχή του ADR-847
+ * (διάρκεια van Wijk, περιθώρια, ταβάνι ζουμ) **δεν έχει νόημα** εκεί — δεν υπάρχει ζουμ πλακιδίων ούτε γεωγραφική απόσταση.
+ * 🔴 Κόκκινο στο CI από `6d818733` (2026-11-22) ως τις 2026-11-24: η άγκυρα κατήγγειλε το `terrain-3d-engine.ts` ως «ορφανό».
+ *
+ * ⚠️ **ΟΧΙ μετονομασία της μεθόδου για να ξεφύγει από το regex**, και **ΟΧΙ εξαίρεση φακέλου**: μια δήλωση ανά αρχείο, που
+ *    οι τρεις δοκιμές του «Δ» την ξανακρίνουν — αλλιώς η λίστα θα γινόταν η πόρτα από την οποία περνά αληθινός χάρτης.
+ * ⚠️ Το `prefers-reduced-motion` το κρατά η **ίδια** η πτήση (`terrain-3d-flight.ts` → `lib/a11y/reduced-motion`), και το
+ *    `essential: true` σαρώνεται παρακάτω σε **όλο** το δέντρο, χωρίς εξαιρέσεις.
+ */
+const NON_MAP_CAMERAS: Readonly<Record<string, string>> = {
+  'components/listing-detail/terrain/3d/terrain-3d-engine.ts':
+    'κάμερα three.js του 3Δ εδάφους (`rig.flight.flyTo` → `Terrain3dFlight`): πτήση ανάμεσα σε όψεις μοντέλου, όχι χάρτη',
+};
+
+/** Ό,τι κάνει ένα αρχείο **αρχείο χάρτη**: η βιβλιοθήκη, το React περιτύλιγμά της, ή το δικό μας σύνορο (CHECK 3.75). */
+const MAP_MODULE = /['"](?:maplibre-gl|react-map-gl(?:\/[^'"]*)?|@\/lib\/maps(?:\/[^'"]*)?)['"]/;
+
+const relativeToSrc = (file: string): string => file.slice(SRC.length + 1).replace(/\\/g, '/');
+
 function cameraCalls(): CameraCall[] {
   const found: CameraCall[] = [];
   for (const file of sourceFiles(SRC)) {
-    if (file === AUTHORITY_FILE) continue;
+    if (file === AUTHORITY_FILE || relativeToSrc(file) in NON_MAP_CAMERAS) continue;
     const text = withoutComments(readFileSync(file, 'utf8'));
     FRAMING_CALL.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = FRAMING_CALL.exec(text)) !== null) {
       const open = match.index + match[0].length - 1;
-      found.push({ file: file.slice(SRC.length + 1).replace(/\\/g, '/'), args: argumentsOf(text, open) });
+      found.push({ file: relativeToSrc(file), args: argumentsOf(text, open) });
     }
   }
   return found;
@@ -289,6 +312,41 @@ describe('Γ. ΤΟ ΔΕΝΤΡΟ — καμία κίνηση κάμερας χω�
       .map(file => file.slice(SRC.length + 1).replace(/\\/g, '/'));
 
     expect(guilty).toEqual([]);
+  });
+});
+
+describe('Δ. ΟΙ ΔΗΛΩΜΕΝΕΣ ΚΑΜΕΡΕΣ ΠΟΥ ΔΕΝ ΕΙΝΑΙ ΧΑΡΤΗΣ — η εξαίρεση ξανακρίνεται, δεν εμπιστεύεται', () => {
+  const declared = Object.entries(NON_MAP_CAMERAS);
+  const sourceOf = (file: string): string => withoutComments(readFileSync(join(SRC, file), 'utf8'));
+
+  it('κάθε δήλωση έχει λόγο — μια εξαίρεση χωρίς «γιατί» είναι απλώς τρύπα', () => {
+    expect(declared.length).toBeGreaterThan(0);
+    for (const [file, why] of declared) expect({ file, hasReason: why.trim().length >= 20 }).toEqual({ file, hasReason: true });
+  });
+
+  it('🔴 κάθε δηλωμένο αρχείο ΥΠΑΡΧΕΙ και ΚΑΝΕΙ κλήση κάμερας — αλλιώς η δήλωση είναι ορφανή', () => {
+    const orphans = declared
+      .map(([file]) => file)
+      .filter(file => !existsSync(join(SRC, file)) || !new RegExp(FRAMING_CALL.source).test(sourceOf(file)));
+
+    expect(orphans).toEqual([]);
+  });
+
+  it('🔴 ΚΑΝΕΝΑ δηλωμένο αρχείο δεν αγγίζει χάρτη — η λίστα δεν γίνεται πόρτα για αληθινό MapLibre', () => {
+    /*
+      Αυτό είναι που κάνει την εξαίρεση ασφαλή: αν κάποιος προσθέσει εδώ αρχείο που εισάγει
+      `maplibre-gl` / `react-map-gl` / `@/lib/maps`, ή αν το ήδη δηλωμένο αποκτήσει χάρτη,
+      η δήλωση ακυρώνεται και οι κλήσεις του ξαναμπαίνουν στην κρίση του «Γ».
+    */
+    const touchingMap = declared.map(([file]) => file).filter(file => MAP_MODULE.test(sourceOf(file)));
+
+    expect(touchingMap).toEqual([]);
+  });
+
+  it('ο ανιχνευτής χάρτη ΒΛΕΠΕΙ χάρτη — αλλιώς η προηγούμενη δοκιμή είναι πράσινη επειδή δεν κοίταξε', () => {
+    const mapFiles = sourceFiles(SRC).filter(file => MAP_MODULE.test(withoutComments(readFileSync(file, 'utf8'))));
+
+    expect(mapFiles.length).toBeGreaterThanOrEqual(8);
   });
 });
 

@@ -93,7 +93,7 @@ import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
 import type { PhotoFocalPoint } from '@/lib/listings/photo-focal-point';
 import type { PhotoCaptureSpot } from '@/lib/listings/photo-capture-spot';
 import type { ListingMapMark } from '@/lib/listings/listing-map-mark';
-import type { PublishOutcome } from '@/services/listings/publish-public-listing';
+import type { PublishOutcome } from '@/services/listings/listing-publish-outcome.types';
 import {
   UNDECLARED_OBJECTIVE_VALUE,
   type ObjectiveValueDeclarations,

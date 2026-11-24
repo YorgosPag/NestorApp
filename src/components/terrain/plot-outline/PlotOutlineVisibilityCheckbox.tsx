@@ -2,16 +2,18 @@
 
 /**
  * @fileoverview **Π9 — «να φαίνεται το περίγραμμα στη δημόσια αγγελία»**: το ΕΝΑ κουτάκι, με την εξήγησή του (ADR-920 §14.11 Π9 · Ζ4).
- * @related ./PlotDrawingImport (πριν την επιβεβαίωση) · ./PlotOutlineStatusCard (αλλαγή χωρίς νέο σχέδιο, `PATCH`)
+ * @related ./PlotDrawingImport (πριν την επιβεβαίωση) · ./PlotOutlineStatusCard (αλλαγή χωρίς νέο σχέδιο, `PATCH`) ·
+ *   ../ListingVisibilityConsent (το κοινό σχήμα — εδώ μένει μόνο **ποια** ερώτηση είναι)
  * @module components/terrain/plot-outline/PlotOutlineVisibilityCheckbox
  *
  * 🔑 Ίδια ερώτηση σε δύο στιγμές ⇒ ίδια διατύπωση και ίδια προειδοποίηση (το σχήμα εντοπίζει το οικόπεδο στο Κτηματολόγιο).
  */
 
-import React, { useId } from 'react';
+import React from 'react';
 
-import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+import { ListingVisibilityConsent } from '../ListingVisibilityConsent';
 
 const NS = 'terrain-survey:plotOutline.showInListing';
 
@@ -23,14 +25,8 @@ export interface PlotOutlineVisibilityCheckboxProps {
 
 export function PlotOutlineVisibilityCheckbox({ checked, disabled, onChange }: PlotOutlineVisibilityCheckboxProps) {
   const { t } = useTranslation(['terrain-survey']);
-  const id = useId();
   return (
-    <label htmlFor={id} className="flex items-start gap-2 text-sm text-foreground">
-      <Checkbox id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onChange(value === true)} />
-      <span className="flex flex-col gap-0.5">
-        <span>{t(`${NS}.label`)}</span>
-        <span className="text-xs text-muted-foreground">{t(`${NS}.hint`)}</span>
-      </span>
-    </label>
+    <ListingVisibilityConsent label={t(`${NS}.label`)} hint={t(`${NS}.hint`)} checked={checked} disabled={disabled}
+      onChange={onChange} />
   );
 }
