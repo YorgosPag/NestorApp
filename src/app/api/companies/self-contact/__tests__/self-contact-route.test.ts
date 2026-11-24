@@ -114,6 +114,37 @@ describe('Σ — τι δέχεται το PUT', () => {
   });
 });
 
+describe('Δ — τι δέχεται το POST (ADR-951 §4.1)', () => {
+  it.each([
+    ['χωρίς σώμα', undefined, false],
+    ['κενό αντικείμενο (παλιός πελάτης)', {}, false],
+    ['ρητή επιβεβαίωση', { confirmDuplicateTaxId: true }, true],
+    ['ρητό όχι', { confirmDuplicateTaxId: false }, false],
+  ])('Δ1 %s ⇒ ο γραφέας με confirmDuplicateTaxId=%p', async (_label, body, confirmed) => {
+    store.create.mockResolvedValue(LINKED);
+    expect((await call(POST, body)).status).toBe(200);
+    expect(store.create).toHaveBeenCalledWith('comp_a', expect.objectContaining({ kind: 'user', uid: 'u_admin' }), confirmed);
+  });
+
+  it.each([
+    ['ξένο πεδίο (.strict)', { confirmDuplicateTaxId: true, companyId: 'comp_b' }],
+    ['όχι boolean', { confirmDuplicateTaxId: 'yes' }],
+  ])('Δ2 %s ⇒ 400 INVALID_BODY, ο γραφέας δεν καλείται', async (_label, body) => {
+    const res = await call(POST, body);
+    expect(res.status).toBe(400);
+    expect(store.create).not.toHaveBeenCalled();
+  });
+
+  it('Δ3 tax-id-taken ⇒ 409 με κατονομασμένο refusal ΚΑΙ τους κατόχους (για σύνδεση ή επιβεβαίωση)', async () => {
+    const holders = [{ contactId: 'cont_dup', displayName: 'Α ΑΕ', type: 'company', archived: true }];
+    store.create.mockResolvedValue({ kind: 'tax-id-taken', holders });
+    const res = await call(POST, {});
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'REFUSED', refusal: 'tax-id-taken', holders });
+    expect(readState).not.toHaveBeenCalled();
+  });
+});
+
 describe('Ε — μετάφραση εκβάσεων', () => {
   it.each([
     ['already-linked', 409],

@@ -10,6 +10,8 @@
  * 🔑 Το σχήμα είναι γενικό σε «οντότητα ↔ επαφή» ώστε οι νομικές οντότητες του ADR-232 να το πάρουν χωρίς ξαναγράψιμο.
  */
 
+import type { ContactType } from '@/types/contacts';
+
 /** Ο δεσμός όπως ζει στο `companies/{companyId}.selfContact`. */
 export interface WorkspaceSelfContact {
   readonly contactId: string;
@@ -83,4 +85,27 @@ export type SelfContactRefusal =
   /** Η εικόνα δεν πέρασε την κανονικοποίηση λογοτύπου (μορφή · μέγεθος · αποκωδικοποίηση). */
   | 'contact-image-refused'
   /** Το προφίλ δεν έχει επωνυμία — δεν γεννιέται επαφή χωρίς όνομα. */
-  | 'profile-nameless';
+  | 'profile-nameless'
+  /**
+   * Άλλη επαφή του χώρου έχει ήδη το ΑΦΜ του προφίλ (ADR-944 §9 · ADR-951 §4) — η δημιουργία γίνεται μόνο με ρητή
+   * επιβεβαίωση (`confirmDuplicateTaxId`). Η άρνηση συνοδεύεται από τους κατόχους, ώστε η οθόνη να προσφέρει σύνδεση.
+   */
+  | 'tax-id-taken';
+
+/** Ένας κάτοχος του ΑΦΜ, όπως τον δείχνει η επιβεβαίωση «δημιουργία παρ' όλα αυτά». */
+export interface SelfContactTaxIdHolder {
+  readonly contactId: string;
+  readonly displayName: string;
+  readonly type: ContactType;
+  /**
+   * Στο αρχείο — μετρά ως κάτοχος (μοτίβο Odoo), αλλά δεν συνδέεται πριν επανέλθει. Επαφή στον **κάδο** δεν είναι
+   * κάτοχος καθόλου (ADR-944 §9.7), άρα δεν φτάνει ποτέ εδώ.
+   */
+  readonly archived: boolean;
+}
+
+/** Το σώμα του `POST /api/companies/self-contact`. */
+export interface CreateSelfContactRequest {
+  /** Ο άνθρωπος είδε τους κατόχους του ίδιου ΑΦΜ και ζητά ρητά νέα επαφή. */
+  readonly confirmDuplicateTaxId?: boolean;
+}

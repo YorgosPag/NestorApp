@@ -9,7 +9,10 @@ import 'server-only';
  * - **σύνδεση** υπάρχουσας επαφής — προαιρετικά με «η εικόνα της επαφής γίνεται λογότυπο του χώρου», που περνά από
  *   τον ΕΝΑ γραφέα λογοτύπου (`setCompanyBrandLogo`: κανονικοποίηση, αμετάβλητο asset, Ιστορικό)·
  * - **δημιουργία** επαφής από τα στοιχεία του χώρου (μοτίβο Odoo `res.company.create` → partner) — επαφή **και**
- *   δεσμός στην **ίδια** συναλλαγή: ποτέ επαφή-ορφανή, ποτέ δεσμός σε επαφή που δεν γράφτηκε·
+ *   δεσμός στην **ίδια** συναλλαγή: ποτέ επαφή-ορφανή, ποτέ δεσμός σε επαφή που δεν γράφτηκε. Αν άλλη επαφή του
+ *   χώρου έχει ήδη το ΑΦΜ του προφίλ (και αρχειοθετημένη — μοτίβο Odoo· στον κάδο όχι, ADR-944 §9.7), κρίνει ο
+ *   ΕΝΑΣ κανόνας `decideVatDuplicate` (ADR-944 §9): `confirm` ⇒ άρνηση `tax-id-taken` με τους κατόχους, εκτός αν ο
+ *   άνθρωπος τους είδε και επιβεβαίωσε ρητά· `block` ⇒ άρνηση πάντα. Ο έλεγχος γίνεται **μέσα** στη συναλλαγή·
  * - **αποσύνδεση** — μόνο ο δεσμός· η επαφή μένει ως έχει.
  *
  * 🔑 **Ιδεμποτία εκ κατασκευής**: σύνδεση με την ήδη συνδεδεμένη επαφή ⇒ τίποτα να γραφτεί.
@@ -24,7 +27,9 @@ import { SELF_CONTACT_FIELD, selfContactOf } from '@/lib/company/self-contact-re
 import { nowISO } from '@/lib/date-local';
 import { FieldValue, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import { decideVatDuplicate } from '@/lib/contacts/contact-identifier-duplicate-policy';
 import { normalizeVat } from '@/lib/validation/greek-vat-number';
+import { findContactVatHolders, transactionQueryReader, type ContactVatHolder } from '@/server/lib/contact-vat-holders.server';
 import { auditActorOf, performerStamp, resolvePerformer, type ResolvedPerformer } from '@/server/lib/performer-stamp';
 import { buildContactDocument } from '@/services/ai-pipeline/shared/contact-document-builder';
 import { readCompanyContactDeclaration, readCompanyTaxDeclaration } from '@/services/company/company-legal-identity';
@@ -35,6 +40,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import type {
   SelfContactLogoChoice,
   SelfContactRefusal,
+  SelfContactTaxIdHolder,
   WorkspaceSelfContact,
 } from '@/types/company-self-contact';
 import { setCompanyBrandLogo } from './brand-logo-store.server';
@@ -46,6 +52,8 @@ export type SelfContactWriteOutcome =
   | { readonly kind: 'linked'; readonly selfContact: WorkspaceSelfContact }
   | { readonly kind: 'unlinked' }
   | { readonly kind: 'refused'; readonly refusal: SelfContactRefusal }
+  /** Άλλη επαφή έχει ήδη το ΑΦΜ του προφίλ — καμία εγγραφή· οι κάτοχοι, για να προσφέρει η οθόνη σύνδεση. */
+  | { readonly kind: 'tax-id-taken'; readonly holders: readonly SelfContactTaxIdHolder[] }
   /** Το έγγραφο του χώρου δεν υπάρχει. */
   | { readonly kind: 'absent' }
   /** Το προφίλ δεν διαβάστηκε (βλάβη) — ποτέ άρνηση «χωρίς επωνυμία» για δεδομένα που δεν είδαμε. */
@@ -179,9 +187,58 @@ async function profileContactSeed(
   };
 }
 
-/** **Δημιουργία επαφής από τα στοιχεία του χώρου** + σύνδεση, σε ΜΙΑ συναλλαγή (μοτίβο Odoo). */
+const taxIdHolderOf = (holder: ContactVatHolder): SelfContactTaxIdHolder => ({
+  contactId: holder.id, displayName: holder.name, type: holder.type, archived: holder.archived,
+});
+
+/**
+ * «Μπορεί να γεννηθεί νέα επαφή με αυτό το ΑΦΜ;» — ο ΕΝΑΣ κανόνας του ADR-944 §9 πάνω στους κατόχους. `null` = ναι.
+ * Χωρίς ΑΦΜ στο προφίλ δεν υπάρχει τι να συγκρουστεί.
+ */
+async function taxIdConflictOf(
+  tx: FirebaseFirestore.Transaction, companyId: string, vatNumber: string | null, confirmed: boolean,
+): Promise<SelfContactWriteOutcome | null> {
+  if (vatNumber === null) return null;
+  const holders = await findContactVatHolders(companyId, vatNumber, transactionQueryReader(tx));
+  const decision = decideVatDuplicate('company', holders);
+  if (decision === 'allow' || (decision === 'confirm' && confirmed)) return null;
+  return { kind: 'tax-id-taken', holders: holders.map(taxIdHolderOf) };
+}
+
+interface CreateWrite {
+  readonly companyId: string;
+  readonly contactId: string;
+  readonly vatNumber: string | null;
+  readonly contactDoc: FirebaseFirestore.DocumentData;
+  readonly actor: ResolvedPerformer;
+  readonly confirmDuplicateTaxId: boolean;
+}
+
+/** Η συναλλαγή της δημιουργίας: κάθε κρίση (χώρος · δεσμός · ΑΦΜ) **πριν** από κάθε εγγραφή — όλα ή τίποτα. */
+async function writeCreatedSelfContact(write: CreateWrite): Promise<SelfContactWriteOutcome> {
+  const { companyId, contactId, actor } = write;
+  return getAdminFirestore().runTransaction(async (tx): Promise<SelfContactWriteOutcome> => {
+    const company = await tx.get(companyRef(companyId));
+    if (!company.exists) return { kind: 'absent' };
+    if (selfContactOf(company.data()) !== null) return { kind: 'refused', refusal: 'already-linked' };
+    const conflict = await taxIdConflictOf(tx, companyId, write.vatNumber, write.confirmDuplicateTaxId);
+    if (conflict !== null) return conflict;
+    const selfContact: WorkspaceSelfContact = { contactId, linkedAt: nowISO(), linkedBy: actor.id };
+    tx.create(contactRef(contactId), write.contactDoc);
+    tx.update(companyRef(companyId), {
+      [SELF_CONTACT_FIELD]: selfContact, updatedAt: FieldValue.serverTimestamp(), ...performerStamp(actor),
+    });
+    return { kind: 'linked', selfContact };
+  });
+}
+
+/**
+ * **Δημιουργία επαφής από τα στοιχεία του χώρου** + σύνδεση, σε ΜΙΑ συναλλαγή (μοτίβο Odoo).
+ * `confirmDuplicateTaxId`: ο άνθρωπος είδε τους κατόχους του ίδιου ΑΦΜ (από προηγούμενη άρνηση) και ζητά ρητά νέα.
+ * Ο `buildContactDocument` παίρνει `skipDuplicateCheck` γιατί ο έλεγχος ΑΦΜ γίνεται εδώ, **μέσα** στη συναλλαγή.
+ */
 export async function createSelfContactFromWorkspace(
-  companyId: string, performer: AuditPerformer,
+  companyId: string, performer: AuditPerformer, confirmDuplicateTaxId = false,
 ): Promise<SelfContactWriteOutcome> {
   const seed = await profileContactSeed(companyId);
   if ('kind' in seed) return seed;
@@ -190,16 +247,8 @@ export async function createSelfContactFromWorkspace(
   const built = buildContactDocument(
     { ...seed, type: 'company', companyId, firstName: '', lastName: '', performer, skipDuplicateCheck: true }, actor,
   );
-  const outcome = await getAdminFirestore().runTransaction(async (tx): Promise<SelfContactWriteOutcome> => {
-    const company = await tx.get(companyRef(companyId));
-    if (!company.exists) return { kind: 'absent' };
-    if (selfContactOf(company.data()) !== null) return { kind: 'refused', refusal: 'already-linked' };
-    const selfContact: WorkspaceSelfContact = { contactId, linkedAt: nowISO(), linkedBy: actor.id };
-    tx.create(contactRef(contactId), built.doc);
-    tx.update(companyRef(companyId), {
-      [SELF_CONTACT_FIELD]: selfContact, updatedAt: FieldValue.serverTimestamp(), ...performerStamp(actor),
-    });
-    return { kind: 'linked', selfContact };
+  const outcome = await writeCreatedSelfContact({
+    companyId, contactId, vatNumber: seed.vatNumber, contactDoc: built.doc, actor, confirmDuplicateTaxId,
   });
   if (outcome.kind !== 'linked') return outcome;
   await recordAccountContactBirth({

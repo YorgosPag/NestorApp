@@ -40,6 +40,12 @@ export type ContactType = (typeof CONTACT_TYPES)[number];
 // 2. RUNTIME TYPE GUARD
 // =============================================================================
 
+const CONTACT_TYPE_SET: ReadonlySet<unknown> = new Set<ContactType>(CONTACT_TYPES);
+
+/** Είναι η τιμή (ωμό έγγραφο Firestore · σώμα απάντησης δικτύου) ένας κανονικός `ContactType`; */
+export function isContactType(value: unknown): value is ContactType {
+  return CONTACT_TYPE_SET.has(value);
+}
 
 // =============================================================================
 // 3. ALIAS RESOLUTION — Greek ↔ English normalization

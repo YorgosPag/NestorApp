@@ -145,6 +145,15 @@
       "keepWorkspaceLogo": "No, keep the current logo",
       "useContactImage": "Yes, make it the workspace logo",
       "createFromWorkspace": "Create a contact from the workspace details",
+      "createAnother": "None of these — create a new contact",
+      "unnamedContact": "Unnamed contact",
+      "taxIdTaken": {
+        "title": "Another contact already has the workspace VAT number",
+        "description": "A new contact with the same VAT number would be a duplicate. If one of these is your workspace, link it instead of creating a new one. If it is archived, restore it first.",
+        "archived": "archived",
+        "createAnyway": "Create a new contact anyway",
+        "cancel": "Cancel"
+      },
       "creating": "Creating…",
       "unlink": "Unlink",
       "unlinking": "Unlinking…",

@@ -10,8 +10,7 @@
 
 import 'server-only';
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { findContactVatHolders } from '@/server/lib/contact-vat-holders.server';
 import {
   PO_MATCH_SCORING,
   PO_MATCHABLE_STATUSES,
@@ -226,21 +225,15 @@ function normalise(text: string): string {
   return text.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-/** Find supplier contact by VAT number */
+/**
+ * Find supplier by VAT number — μέσα από τη ΜΙΑ ερώτηση ΑΦΜ του server (`findContactVatHolders`, ADR-951 §4).
+ * Ο πρώτος κάτοχος, όπως πριν (ίδια σειρά εγγράφων)· το ΑΦΜ πλέον κανονικοποιείται με την ΕΝΑ κρίση.
+ */
 async function findSupplierByVat(
   companyId: string,
   vatNumber: string | null
 ): Promise<string | null> {
   if (!vatNumber) return null;
-
-  const db = getAdminFirestore();
-  const snapshot = await db
-    .collection(COLLECTIONS.CONTACTS)
-    .where('companyId', '==', companyId)
-    .where('vatNumber', '==', vatNumber)
-    .limit(1)
-    .get();
-
-  if (snapshot.empty) return null;
-  return snapshot.docs[0].id;
+  const [first] = await findContactVatHolders(companyId, vatNumber);
+  return first?.id ?? null;
 }

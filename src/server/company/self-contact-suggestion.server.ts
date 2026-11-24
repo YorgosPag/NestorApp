@@ -6,22 +6,21 @@ import 'server-only';
  *
  * 🔑 **Πρόταση, ποτέ απόφαση**: το ίδιο ΑΦΜ είναι ισχυρή ένδειξη, όχι απόδειξη (μια επαφή μπορεί να είναι λάθος
  *    καταχωρισμένη). Ο διαχειριστής επιβεβαιώνει· η σύνδεση γίνεται μόνο από τον γραφέα.
- * 🔑 Ερώτημα **μόνο με ισότητες** (`companyId` + `vatNumber`), όπως το `checkVatUniqueness` — καμία σάρωση, κανένας
- *    σύνθετος δείκτης. Το ΑΦΜ κανονικοποιείται με την ΕΝΑ κρίση (`greek-vat-number`).
+ * 🔑 Η ερώτηση «ποιες επαφές έχουν αυτό το ΑΦΜ» είναι η ΜΙΑ του server (`findContactVatHolders`) — η ίδια που φράζει
+ *    τη δημιουργία διπλής επαφής στον γραφέα. Η πρόταση κρατά μόνο ό,τι **μπορεί** να συνδεθεί: εταιρείες εκτός
+ *    αρχείου (ο κάδος έχει ήδη αποκλειστεί από την ερώτηση, ADR-944 §9.7).
+ * 🔑 Το όνομα από τον ΕΝΑ αναγνώστη ωμού εγγράφου (`extractContactDisplayName`): οι επαφές-εταιρείες κρατούν το όνομα
+ *    στο `companyName` — το `displayName` το έχουν μόνο όσες έγραψε ο `buildContactDocument` (ζωντανό σφάλμα 2026-11-24).
  */
 
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { GREEK_VAT_REGEX, normalizeVat } from '@/lib/validation/greek-vat-number';
-import { isInactiveContact } from '@/services/contact/platform-company-contact-resolver';
+import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
+import { findContactVatHolders } from '@/server/lib/contact-vat-holders.server';
 import type { SelfContactCandidate, SelfContactSuggestion } from '@/types/company-self-contact';
 
-/** Αρκεί να ξέρουμε «ένα» ή «παραπάνω από ένα». */
-const SUGGESTION_PROBE_LIMIT = 5;
-
-/** Η επαφή όπως τη δείχνει η κάρτα — από ήδη διαβασμένο έγγραφο. */
+/** Η επαφή όπως τη δείχνει η κάρτα — από ήδη διαβασμένο έγγραφο (ανύπαρκτο ⇒ κενό όνομα, το id μένει). */
 export function selfContactCandidateOf(contactId: string, data: FirebaseFirestore.DocumentData | undefined): SelfContactCandidate {
-  const displayName = typeof data?.displayName === 'string' ? data.displayName : '';
+  const displayName = data === undefined ? '' : extractContactDisplayName(data).trim();
   const logoURL = typeof data?.logoURL === 'string' ? data.logoURL.trim() : '';
   return { contactId, displayName, hasOwnImage: logoURL !== '' };
 }
@@ -31,16 +30,9 @@ export async function suggestSelfContact(companyId: string, taxId: string | null
   const vat = taxId === null ? '' : normalizeVat(taxId);
   if (!GREEK_VAT_REGEX.test(vat)) return { kind: 'no-tax-id' };
 
-  const snapshot = await getAdminFirestore()
-    .collection(COLLECTIONS.CONTACTS)
-    .where('companyId', '==', companyId)
-    .where('vatNumber', '==', vat)
-    .limit(SUGGESTION_PROBE_LIMIT)
-    .get();
-
-  const candidates = snapshot.docs
-    .filter((doc) => doc.data().type === 'company' && !isInactiveContact(doc.data()))
-    .map((doc) => selfContactCandidateOf(doc.id, doc.data()));
+  const candidates = (await findContactVatHolders(companyId, vat))
+    .filter((holder) => holder.type === 'company' && !holder.archived)
+    .map((holder) => selfContactCandidateOf(holder.id, holder.data));
 
   if (candidates.length === 0) return { kind: 'none' };
   if (candidates.length === 1) return { kind: 'suggested', candidate: candidates[0] };

@@ -28,9 +28,13 @@ const COMPANY = 'comp_a';
 const RAW_VAT = ' 094 012 345 ';
 const VAT = normalizeVat(RAW_VAT);
 
+/**
+ * 🔴 Ρεαλιστικό σχήμα: οι επαφές-εταιρείες κρατούν το όνομα στο `companyName` — **χωρίς** `displayName`. Το παλιό
+ *    fixture είχε μόνο `displayName` και γι' αυτό δεν έπιασε το σφάλμα της κενής κάρτας (ζωντανός έλεγχος 2026-11-24).
+ */
 function seedContact(id: string, overrides: Record<string, unknown> = {}): void {
   fake.seed(COLLECTIONS.CONTACTS, id, {
-    companyId: COMPANY, type: 'company', displayName: `Επαφή ${id}`, status: 'active', vatNumber: VAT, ...overrides,
+    companyId: COMPANY, type: 'company', companyName: `Επαφή ${id}`, status: 'active', vatNumber: VAT, ...overrides,
   });
 }
 
@@ -74,6 +78,20 @@ describe('Π — πρόταση από το ΑΦΜ', () => {
   it.each([null, '', '12345', 'όχι-ΑΦΜ'])('Π5 χωρίς έγκυρο ΑΦΜ (%p) ⇒ no-tax-id, κανένα ερώτημα', async (taxId) => {
     seedContact('cont_a', { vatNumber: '' });
     expect(await suggestSelfContact(COMPANY, taxId)).toEqual({ kind: 'no-tax-id' });
+  });
+
+  it('Π6 όνομα από τον ΕΝΑ αναγνώστη: companyName → αλλιώς tradeName· ένα παλιό displayName ΔΕΝ είναι πηγή', async () => {
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_a', {
+      companyId: COMPANY, type: 'company', status: 'active', vatNumber: VAT, tradeName: 'Διακριτικός', displayName: 'μπαγιάτικο',
+    });
+    expect(await suggestSelfContact(COMPANY, VAT)).toMatchObject({
+      kind: 'suggested', candidate: { contactId: 'cont_a', displayName: 'Διακριτικός' },
+    });
+  });
+
+  it('Π7 επαφή χωρίς κανένα όνομα ⇒ κενό (η οθόνη γράφει «χωρίς όνομα»), ποτέ "undefined"', async () => {
+    fake.seed(COLLECTIONS.CONTACTS, 'cont_a', { companyId: COMPANY, type: 'company', status: 'active', vatNumber: VAT });
+    expect(await suggestSelfContact(COMPANY, VAT)).toMatchObject({ kind: 'suggested', candidate: { displayName: '' } });
   });
 });
 

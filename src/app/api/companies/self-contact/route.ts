@@ -4,7 +4,8 @@
  * - `GET`: κάθε μέλος — ο δεσμός, ή (χωρίς δεσμό) η πρόταση από το ΑΦΜ του προφίλ, **και** `canEdit`.
  * - `PUT` `{ contactId, logoChoice }`: διαχειριστές — σύνδεση υπάρχουσας επαφής. `HEAVY`, όπως το PUT του
  *   λογοτύπου: με `use-contact-image` κάνει την ίδια κανονικοποίηση εικόνας.
- * - `POST`: διαχειριστές — δημιουργία επαφής από τα στοιχεία του χώρου + σύνδεση (μία συναλλαγή).
+ * - `POST` `{ confirmDuplicateTaxId? }`: διαχειριστές — δημιουργία επαφής από τα στοιχεία του χώρου + σύνδεση (μία
+ *   συναλλαγή). Άλλη επαφή με το ίδιο ΑΦΜ ⇒ **409** `tax-id-taken` **με τους κατόχους**, εκτός αν επιβεβαιώθηκε ρητά.
  * - `DELETE`: διαχειριστές — αποσύνδεση (η επαφή μένει).
  *
  * Αρνήσεις ⇒ **409/422** με κατονομασμένο `refusal` που μεταφράζει ο browser. Βλάβη ανάγνωσης ⇒ **503**
@@ -34,16 +35,22 @@ import {
   SELF_CONTACT_LOGO_CHOICES,
   type SelfContactRefusal,
   type SelfContactResponse,
+  type SelfContactTaxIdHolder,
 } from '@/types/company-self-contact';
 
 type SelfContactError =
   | { readonly error: 'NOT_FOUND' | 'INVALID_BODY' | 'UNAVAILABLE' }
-  | { readonly error: 'REFUSED'; readonly refusal: SelfContactRefusal };
+  | { readonly error: 'REFUSED'; readonly refusal: SelfContactRefusal }
+  /** Άλλη επαφή έχει ήδη το ΑΦΜ — οι κάτοχοι, ώστε η οθόνη να προσφέρει σύνδεση ή ρητή επιβεβαίωση. */
+  | { readonly error: 'REFUSED'; readonly refusal: 'tax-id-taken'; readonly holders: readonly SelfContactTaxIdHolder[] };
 
 const LinkBodySchema = z.object({
   contactId: z.string().trim().min(1).max(200),
   logoChoice: z.enum(SELF_CONTACT_LOGO_CHOICES),
 }).strict();
+
+/** `POST` — κενό σώμα = χωρίς επιβεβαίωση (συμβατό με τον παλιό πελάτη που έστελνε `{}`). */
+const CreateBodySchema = z.object({ confirmDuplicateTaxId: z.boolean().optional() }).strict();
 
 /** Οι αρνήσεις κατάστασης (σύγκρουση) ≠ αρνήσεις εισόδου (μη επεξεργάσιμο). */
 const CONFLICT_REFUSALS: ReadonlySet<SelfContactRefusal> = new Set(['already-linked', 'contact-inactive']);
@@ -68,6 +75,11 @@ async function viewResponse(ctx: AuthContext) {
 async function respond(ctx: AuthContext, outcome: SelfContactWriteOutcome) {
   if (outcome.kind === 'absent') return errorOf('NOT_FOUND');
   if (outcome.kind === 'unavailable') return errorOf('UNAVAILABLE');
+  if (outcome.kind === 'tax-id-taken') {
+    return NextResponse.json<SelfContactError>(
+      { error: 'REFUSED', refusal: 'tax-id-taken', holders: outcome.holders }, { status: 409 },
+    );
+  }
   if (outcome.kind === 'refused') {
     const status = CONFLICT_REFUSALS.has(outcome.refusal) ? 409 : 422;
     return NextResponse.json<SelfContactError>({ error: 'REFUSED', refusal: outcome.refusal }, { status });
@@ -86,8 +98,12 @@ async function handlePut(req: NextRequest, ctx: AuthContext, _cache: PermissionC
   return respond(ctx, await linkSelfContact(ctx.companyId, contactId, logoChoice, performerOf(ctx)));
 }
 
-async function handlePost(_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) {
-  return respond(ctx, await createSelfContactFromWorkspace(ctx.companyId, performerOf(ctx)));
+async function handlePost(req: NextRequest, ctx: AuthContext, _cache: PermissionCache) {
+  const raw: unknown = await req.json().catch(() => ({}));
+  const parsed = CreateBodySchema.safeParse(raw ?? {});
+  if (!parsed.success) return NextResponse.json<SelfContactError>({ error: 'INVALID_BODY' }, { status: 400 });
+  const confirmed = parsed.data.confirmDuplicateTaxId === true;
+  return respond(ctx, await createSelfContactFromWorkspace(ctx.companyId, performerOf(ctx), confirmed));
 }
 
 async function handleDelete(_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) {

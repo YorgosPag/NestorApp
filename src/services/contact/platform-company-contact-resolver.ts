@@ -22,6 +22,7 @@ import 'server-only';
 import type { DocumentData, Firestore, Transaction } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { performerFromActorId } from '@/lib/audit/audit-performer';
+import { extractContactDisplayName } from '@/server/lib/contact-doc-fields';
 import type { ResolvedPerformer } from '@/server/lib/performer-stamp';
 import { buildContactDocument } from '@/services/ai-pipeline/shared/contact-document-builder';
 import { generateDeterministicPlatformCompanyContactId } from '@/services/enterprise-id-convenience-catalog';
@@ -103,6 +104,7 @@ export async function resolvePlatformCompanyContact(
 function judgeExisting(contactId: string, buyerCompanyId: string, data: DocumentData | undefined): PlatformCompanyContactResolution {
   if (platformCompanyOfContact(contactId, buyerCompanyId, data) === null) return { kind: 'refused', reason: 'foreign' };
   if (isInactiveContact(data)) return { kind: 'refused', reason: 'inactive' };
-  const displayName = typeof data?.displayName === 'string' ? data.displayName : '';
+  // Ο ΕΝΑΣ αναγνώστης ονόματος ωμού εγγράφου — οι επαφές-εταιρείες κρατούν το όνομα στο `companyName` (ADR-951 §4).
+  const displayName = data === undefined ? '' : extractContactDisplayName(data).trim();
   return { kind: 'existing', contactId, displayName };
 }

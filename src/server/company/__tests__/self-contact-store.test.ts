@@ -62,7 +62,8 @@ const companyDoc = () => fake.getData(COLLECTIONS.COMPANIES, COMPANY) as Record<
 const selfContactField = () => companyDoc()?.selfContact as Record<string, unknown> | undefined;
 
 function seedContact(id: string, overrides: Record<string, unknown> = {}): void {
-  fake.seed(COLLECTIONS.CONTACTS, id, { companyId: COMPANY, type: 'company', displayName: `Επαφή ${id}`, status: 'active', ...overrides });
+  // Ρεαλιστικό σχήμα: οι επαφές-εταιρείες κρατούν το όνομα στο `companyName` (ADR-951 §4.1).
+  fake.seed(COLLECTIONS.CONTACTS, id, { companyId: COMPANY, type: 'company', companyName: `Επαφή ${id}`, status: 'active', ...overrides });
 }
 
 const PROFILE_TAX = {
@@ -244,6 +245,75 @@ describe('Δ — δημιουργία επαφής από τα στοιχεία 
   it('Δ5 το έγγραφο του χώρου δεν υπάρχει ⇒ absent και καμία επαφή', async () => {
     expect(await createSelfContactFromWorkspace('comp_missing', ADMIN)).toEqual({ kind: 'absent' });
     expect(fake.getData(COLLECTIONS.CONTACTS, 'cont_new')).toBeUndefined();
+  });
+});
+
+describe('Φ — φραγμός διπλού ΑΦΜ στη δημιουργία (ADR-951 §4.1 · ADR-944 §9)', () => {
+  /** Το ΑΦΜ του προφίλ, κανονικοποιημένο (`' 094 012 345 '`). */
+  const PROFILE_VAT = '094012345';
+
+  const expectNothingWritten = () => {
+    expect(fake.getData(COLLECTIONS.CONTACTS, 'cont_new')).toBeUndefined();
+    expect(selfContactField()).toBeUndefined();
+    expect(recordBirth).not.toHaveBeenCalled();
+    expect(recordChange).not.toHaveBeenCalled();
+  };
+
+  it('Φ1 ενεργή επαφή του χώρου με το ίδιο ΑΦΜ ⇒ tax-id-taken με τον κάτοχο, ΤΙΠΟΤΑ δεν γράφεται (το ζωντανό σφάλμα)', async () => {
+    seedContact('cont_dup', { vatNumber: PROFILE_VAT });
+    const outcome = await createSelfContactFromWorkspace(COMPANY, ADMIN);
+    expect(outcome).toEqual({
+      kind: 'tax-id-taken',
+      holders: [{ contactId: 'cont_dup', displayName: 'Επαφή cont_dup', type: 'company', archived: false }],
+    });
+    expectNothingWritten();
+  });
+
+  it('Φ2 κάτοχος στο ΑΡΧΕΙΟ μετρά (μοτίβο Odoo active_test=False), σημαδεμένος archived', async () => {
+    seedContact('cont_old', { vatNumber: PROFILE_VAT, status: 'archived' });
+    expect(await createSelfContactFromWorkspace(COMPANY, ADMIN)).toEqual({
+      kind: 'tax-id-taken',
+      holders: [{ contactId: 'cont_old', displayName: 'Επαφή cont_old', type: 'company', archived: true }],
+    });
+    expectNothingWritten();
+  });
+
+  it('Φ2β επαφή στον ΚΑΔΟ δεν είναι κάτοχος (ADR-944 §9.7) ⇒ η δημιουργία περνά χωρίς επιβεβαίωση', async () => {
+    seedContact('cont_trashed', { vatNumber: PROFILE_VAT, status: 'deleted' });
+    expect(await createSelfContactFromWorkspace(COMPANY, ADMIN)).toMatchObject({ kind: 'linked' });
+    expect(fake.getData(COLLECTIONS.CONTACTS, 'cont_new')).toMatchObject({ vatNumber: PROFILE_VAT });
+  });
+
+  it('Φ3 και φυσικό πρόσωπο με το ίδιο ΑΦΜ (ατομική επιχείρηση) ⇒ confirm ⇒ tax-id-taken', async () => {
+    seedContact('cont_person', { type: 'individual', vatNumber: PROFILE_VAT, companyName: null, firstName: 'Γιώργος', lastName: 'Π' });
+    expect(await createSelfContactFromWorkspace(COMPANY, ADMIN)).toMatchObject({
+      kind: 'tax-id-taken', holders: [{ contactId: 'cont_person', displayName: 'Γιώργος Π', type: 'individual' }],
+    });
+  });
+
+  it('Φ4 ρητή επιβεβαίωση ⇒ η επαφή ΚΑΙ ο δεσμός γράφονται παρά τον κάτοχο', async () => {
+    seedContact('cont_dup', { vatNumber: PROFILE_VAT });
+    const outcome = await createSelfContactFromWorkspace(COMPANY, ADMIN, true);
+    expect(outcome).toMatchObject({ kind: 'linked', selfContact: { contactId: 'cont_new' } });
+    expect(fake.getData(COLLECTIONS.CONTACTS, 'cont_new')).toMatchObject({ vatNumber: PROFILE_VAT });
+    expect(recordBirth).toHaveBeenCalledTimes(1);
+  });
+
+  it('Φ5 ίδιο ΑΦΜ σε ΑΛΛΟ χώρο δεν μετρά (απομόνωση μισθωτή) ⇒ δημιουργία', async () => {
+    seedContact('cont_foreign', { companyId: OTHER_COMPANY, vatNumber: PROFILE_VAT });
+    expect(await createSelfContactFromWorkspace(COMPANY, ADMIN)).toMatchObject({ kind: 'linked' });
+  });
+
+  it('Φ6 προφίλ χωρίς έγκυρο ΑΦΜ ⇒ τίποτα να συγκρουστεί ⇒ δημιουργία', async () => {
+    seedContact('cont_dup', { vatNumber: PROFILE_VAT });
+    readTax.mockResolvedValue({ ...PROFILE_TAX, taxId: null });
+    expect(await createSelfContactFromWorkspace(COMPANY, ADMIN)).toMatchObject({ kind: 'linked' });
+  });
+
+  it('Φ7 ο δεσμός κρίνεται ΠΡΙΝ από το ΑΦΜ: συνδεδεμένος χώρος ⇒ already-linked, όχι tax-id-taken', async () => {
+    seedContact('cont_dup', { vatNumber: PROFILE_VAT });
+    await linkSelfContact(COMPANY, 'cont_dup', 'keep-workspace-logo', ADMIN);
+    expect(await createSelfContactFromWorkspace(COMPANY, ADMIN)).toEqual({ kind: 'refused', refusal: 'already-linked' });
   });
 });
 

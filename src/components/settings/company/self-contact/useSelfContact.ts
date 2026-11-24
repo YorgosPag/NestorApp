@@ -13,16 +13,21 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { API_ROUTES } from '@/config/domain-constants';
+import { isContactType } from '@/constants/contact-types';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { ApiClientError } from '@/lib/api/api-client-types';
 import type {
+  CreateSelfContactRequest,
   SelfContactLogoChoice,
   SelfContactRefusal,
   SelfContactResponse,
+  SelfContactTaxIdHolder,
 } from '@/types/company-self-contact';
 
 export type SelfContactProblem =
-  | { readonly kind: 'refused'; readonly refusal: SelfContactRefusal }
+  | { readonly kind: 'refused'; readonly refusal: Exclude<SelfContactRefusal, 'tax-id-taken'> }
+  /** Η δημιουργία αρνήθηκε: άλλες επαφές έχουν ήδη το ΑΦΜ — η οθόνη τις δείχνει και ζητά ρητή επιβεβαίωση. */
+  | { readonly kind: 'tax-id-taken'; readonly holders: readonly SelfContactTaxIdHolder[] }
   | { readonly kind: 'load-failed' | 'save-failed' };
 
 export type SelfContactPending = 'link' | 'create' | 'unlink' | null;
@@ -36,18 +41,30 @@ interface SelfContactState {
 
 const INITIAL: SelfContactState = { loading: true, view: null, pending: null, problem: null };
 
-const REFUSALS: ReadonlySet<unknown> = new Set<SelfContactRefusal>([
+type PlainRefusal = Exclude<SelfContactRefusal, 'tax-id-taken'>;
+
+const REFUSALS: ReadonlySet<unknown> = new Set<PlainRefusal>([
   'contact-not-found', 'not-a-company', 'contact-inactive', 'already-linked',
   'contact-image-unavailable', 'contact-image-refused', 'profile-nameless',
 ]);
 
-const isSelfContactRefusal = (value: unknown): value is SelfContactRefusal => REFUSALS.has(value);
+const isPlainRefusal = (value: unknown): value is PlainRefusal => REFUSALS.has(value);
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+/** Ο server είναι αξιόπιστος, αλλά η απάντηση είναι δίκτυο: κάθε κάτοχος ελέγχεται πριν φτάσει στην οθόνη. */
+function isTaxIdHolder(value: unknown): value is SelfContactTaxIdHolder {
+  return isRecord(value) && typeof value.contactId === 'string' && typeof value.displayName === 'string'
+    && isContactType(value.type) && typeof value.archived === 'boolean';
+}
 
 function problemOf(error: unknown): SelfContactProblem {
   if (error instanceof ApiClientError && (error.statusCode === 409 || error.statusCode === 422)) {
-    const body = error.errorBody;
-    const refusal = typeof body === 'object' && body !== null ? (body as { refusal?: unknown }).refusal : undefined;
-    if (isSelfContactRefusal(refusal)) return { kind: 'refused', refusal };
+    const body = isRecord(error.errorBody) ? error.errorBody : {};
+    if (body.refusal === 'tax-id-taken' && Array.isArray(body.holders)) {
+      return { kind: 'tax-id-taken', holders: body.holders.filter(isTaxIdHolder) };
+    }
+    if (isPlainRefusal(body.refusal)) return { kind: 'refused', refusal: body.refusal };
   }
   return { kind: 'save-failed' };
 }
@@ -83,15 +100,19 @@ export function useSelfContact(onBrandLogoChanged: () => void) {
     if (done && logoChoice === 'use-contact-image') onBrandLogoChanged();
   }, [run, onBrandLogoChanged]);
 
-  const create = useCallback(
-    () => run('create', () => apiClient.post<SelfContactResponse>(API_ROUTES.COMPANY_SELF_CONTACT, {})),
-    [run],
-  );
+  /** `confirmDuplicateTaxId`: μόνο αφού ο άνθρωπος είδε τους κατόχους του ίδιου ΑΦΜ (`tax-id-taken`). */
+  const create = useCallback((confirmDuplicateTaxId = false) => {
+    const body: CreateSelfContactRequest = confirmDuplicateTaxId ? { confirmDuplicateTaxId } : {};
+    return run('create', () => apiClient.post<SelfContactResponse>(API_ROUTES.COMPANY_SELF_CONTACT, body));
+  }, [run]);
+
+  /** «Άκυρο» στην επιβεβαίωση — τίποτα δεν γράφτηκε, απλώς κλείνει. */
+  const dismissProblem = useCallback(() => setState((s) => ({ ...s, problem: null })), []);
 
   const unlink = useCallback(
     () => run('unlink', () => apiClient.delete<SelfContactResponse>(API_ROUTES.COMPANY_SELF_CONTACT)),
     [run],
   );
 
-  return { state, link, create, unlink };
+  return { state, link, create, unlink, dismissProblem };
 }

@@ -8,6 +8,8 @@
  * ΑΦΜ (διαλέγει ο άνθρωπος) · **καμία** (δημιουργία από τα στοιχεία του χώρου — μοτίβο Odoo).
  * 🔑 Αν η επαφή έχει δική της εικόνα, η σύνδεση **ρωτά** αν θα γίνει λογότυπο του χώρου — ποτέ σιωπηλή αντικατάσταση.
  * 🔑 Ενέργειες μόνο όταν ο server απαντά `canEdit` — η οθόνη δεν δείχνει κουμπί που ο server θα αρνηθεί.
+ * 🔑 Με πρόταση, **πρώτα η σύνδεση**: η δημιουργία γίνεται δευτερεύουσα («Καμία από αυτές…») και, αν ο server βρει
+ *    επαφή με το ίδιο ΑΦΜ, ζητά ρητή επιβεβαίωση (`TaxIdTakenPrompt`, ADR-951 §4).
  */
 
 import { useId, useState } from 'react';
@@ -24,9 +26,10 @@ import type {
   SelfContactResponse,
   SelfContactSuggestion,
 } from '@/types/company-self-contact';
+import { TaxIdTakenPrompt } from './TaxIdTakenPrompt';
 import { useSelfContact, type SelfContactPending, type SelfContactProblem } from './useSelfContact';
 
-const REFUSAL_KEY: Readonly<Record<SelfContactRefusal, string>> = {
+const REFUSAL_KEY: Readonly<Record<Exclude<SelfContactRefusal, 'tax-id-taken'>, string>> = {
   'contact-not-found': 'orgStructure.selfContact.refusal.contactNotFound',
   'not-a-company': 'orgStructure.selfContact.refusal.notACompany',
   'contact-inactive': 'orgStructure.selfContact.refusal.contactInactive',
@@ -43,7 +46,8 @@ const SUGGESTION_KEY: Readonly<Record<SelfContactSuggestion['kind'], string>> = 
   'no-tax-id': 'orgStructure.selfContact.suggestion.noTaxId',
 };
 
-function problemKey(problem: SelfContactProblem): string {
+/** Τα προβλήματα που λέγονται σε μία γραμμή — το `tax-id-taken` έχει δική του επιβεβαίωση. */
+function problemKey(problem: Exclude<SelfContactProblem, { readonly kind: 'tax-id-taken' }>): string {
   if (problem.kind === 'refused') return REFUSAL_KEY[problem.refusal];
   return problem.kind === 'load-failed' ? 'orgStructure.selfContact.loadFailed' : 'orgStructure.selfContact.saveFailed';
 }
@@ -65,7 +69,9 @@ function CandidateRow({ candidate, busy, canEdit, onLink }: CandidateProps) {
     <li className="space-y-2 rounded-md border border-border p-3">
       <p className="flex items-center gap-2 text-sm font-medium">
         <Building2 className="h-4 w-4" aria-hidden />
-        <Link href={getEntityHref('contact', candidate.contactId)} className="underline underline-offset-2">{candidate.displayName}</Link>
+        <Link href={getEntityHref('contact', candidate.contactId)} className="underline underline-offset-2">
+          {candidate.displayName || t('orgStructure.selfContact.unnamedContact')}
+        </Link>
       </p>
       {!canEdit ? null : asking ? (
         <fieldset className="space-y-2">
@@ -89,7 +95,7 @@ interface ViewProps {
   readonly view: SelfContactResponse;
   readonly pending: SelfContactPending;
   readonly onLink: (contactId: string, choice: SelfContactLogoChoice) => void;
-  readonly onCreate: () => void;
+  readonly onCreate: (confirmDuplicateTaxId?: boolean) => void;
   readonly onUnlink: () => void;
 }
 
@@ -101,6 +107,9 @@ function UnlinkedView({ view, pending, onLink, onCreate }: Omit<ViewProps, 'onUn
   const suggestion = view.suggestion;
   const candidates = suggestion?.kind === 'suggested' ? [suggestion.candidate] : suggestion?.kind === 'ambiguous' ? suggestion.candidates : [];
   const intro = SUGGESTION_KEY[suggestion?.kind ?? 'none'];
+  const createLabel = candidates.length > 0
+    ? 'orgStructure.selfContact.createAnother'
+    : 'orgStructure.selfContact.createFromWorkspace';
   return (
     <>
       <p className="text-sm text-muted-foreground">{t(intro)}</p>
@@ -110,9 +119,12 @@ function UnlinkedView({ view, pending, onLink, onCreate }: Omit<ViewProps, 'onUn
         </ul>
       ) : null}
       {canEdit ? (
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onCreate}>
+        <Button
+          type="button" size="sm" variant={candidates.length > 0 ? 'ghost' : 'outline'} disabled={busy}
+          onClick={() => onCreate()}
+        >
           <Plus className="mr-1 h-4 w-4" aria-hidden />
-          {pending === 'create' ? t('orgStructure.selfContact.creating') : t('orgStructure.selfContact.createFromWorkspace')}
+          {pending === 'create' ? t('orgStructure.selfContact.creating') : t(createLabel)}
         </Button>
       ) : null}
     </>
@@ -126,7 +138,7 @@ function LinkedView({ view, pending, onUnlink }: Pick<ViewProps, 'view' | 'pendi
     <p className="flex flex-wrap items-center gap-3 text-sm">
       <Building2 className="h-4 w-4" aria-hidden />
       <Link href={getEntityHref('contact', view.linked.contactId)} className="font-medium underline underline-offset-2">
-        {view.linked.displayName}
+        {view.linked.displayName || t('orgStructure.selfContact.unnamedContact')}
       </Link>
       {view.canEdit ? (
         <Button type="button" size="sm" variant="ghost" disabled={pending !== null} onClick={onUnlink}>
@@ -140,9 +152,10 @@ function LinkedView({ view, pending, onUnlink }: Pick<ViewProps, 'view' | 'pendi
 
 export function SelfContactSection({ onBrandLogoChanged }: { readonly onBrandLogoChanged: () => void }) {
   const { t } = useTranslation('org-structure');
-  const { state, link, create, unlink } = useSelfContact(onBrandLogoChanged);
+  const { state, link, create, unlink, dismissProblem } = useSelfContact(onBrandLogoChanged);
   const titleId = useId();
   const view = state.view;
+  const problem = state.problem;
   return (
     <section aria-labelledby={titleId} className="space-y-3 py-6">
       <header className="space-y-1">
@@ -151,9 +164,17 @@ export function SelfContactSection({ onBrandLogoChanged }: { readonly onBrandLog
       </header>
       {view?.linked ? <LinkedView view={view} pending={state.pending} onUnlink={() => void unlink()} /> : null}
       {view !== null && view.linked === null ? (
-        <UnlinkedView view={view} pending={state.pending} onLink={(id, c) => void link(id, c)} onCreate={() => void create()} />
+        <UnlinkedView view={view} pending={state.pending} onLink={(id, c) => void link(id, c)} onCreate={(c) => void create(c)} />
       ) : null}
-      {state.problem !== null ? <p role="alert" className="text-sm text-destructive">{t(problemKey(state.problem))}</p> : null}
+      {problem?.kind === 'tax-id-taken' ? (
+        <TaxIdTakenPrompt
+          holders={problem.holders} busy={state.pending !== null}
+          onCreateAnyway={() => void create(true)} onCancel={dismissProblem}
+        />
+      ) : null}
+      {problem !== null && problem.kind !== 'tax-id-taken' ? (
+        <p role="alert" className="text-sm text-destructive">{t(problemKey(problem))}</p>
+      ) : null}
     </section>
   );
 }
