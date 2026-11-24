@@ -39,8 +39,27 @@ export interface CustomRendererField {
   [key: string]: unknown;
 }
 
+/** Οι χειριστές πολλαπλών φωτογραφιών — μία δήλωση για section και renderers. */
+export interface ContactPhotoHandlerProps {
+  onPhotosChange?: (photos: PhotoSlot[]) => void;
+  handleMultiplePhotosChange?: (photos: PhotoSlot[]) => void;
+  handleMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void;
+  handleProfilePhotoSelection?: (index: number) => void;
+}
+
+/** Ό,τι δίνει **μόνο** η καρτέλα υπάρχουσας επαφής (ADR-950 §9 · §11 · ADR-944 §9.8) — μία δήλωση για section και renderers. */
+export interface ExistingContactRendererProps {
+  /** ADR-950 §9 — «Καταχώριση» στοιχείου εγγράφου από την προβολή (μόνο η καρτέλα υπάρχουσας επαφής το δίνει). */
+  onRegisterFormData?: (next: ContactFormData, changes: Partial<ContactFormData>) => Promise<void>;
+  isRegisteringFormData?: boolean;
+  /** ADR-950 §11 — ανοίγει την επεξεργασία από την προβολή (η «Πρόταση διεύθυνσης» φτάνει στον editor έδρας με ένα πάτημα). */
+  onStartEdit?: () => void;
+  /** Το ΑΦΜ που έχει **ήδη** η επαφή — ίδιο ⇒ καμία υπόσχεση φραγμού/επιβεβαίωσης (ADR-944 §9.8). Χωρίς επαφή: `undefined`. */
+  storedVatNumber?: string;
+}
+
 /** Context needed to build renderers */
-export interface RendererContext {
+export interface RendererContext extends ExistingContactRendererProps, ContactPhotoHandlerProps {
   formData: ContactFormData;
   setFormData?: (data: ContactFormData) => void;
   disabled: boolean;
@@ -59,17 +78,8 @@ export interface RendererContext {
   handleFileChange?: (file: File | null) => void;
   handleUploadedLogoURL?: (url: string) => void;
   handleUploadedPhotoURL?: (url: string) => void;
-  onPhotosChange?: (photos: PhotoSlot[]) => void;
-  handleMultiplePhotosChange?: (photos: PhotoSlot[]) => void;
-  handleMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void;
-  handleProfilePhotoSelection?: (index: number) => void;
   /** True when the contact is in trash — shows amber banner + opens trash sub-tab in EntityFilesManager */
   isContactTrashed?: boolean;
-  /** ADR-950 §9 — «Καταχώριση» στοιχείου εγγράφου από την προβολή (μόνο η καρτέλα υπάρχουσας επαφής το δίνει). */
-  onRegisterFormData?: (next: ContactFormData, changes: Partial<ContactFormData>) => Promise<void>;
-  isRegisteringFormData?: boolean;
-  /** ADR-950 §11 — ανοίγει την επεξεργασία από την προβολή (η «Πρόταση διεύθυνσης» φτάνει στον editor έδρας με ένα πάτημα). */
-  onStartEdit?: () => void;
 }
 
 export type RendererFn = (
@@ -158,6 +168,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
         disabled={fieldDisabled ?? disabled}
         excludeContactId={formData.id}
         contactType={contactType}
+        storedVatNumber={ctx.storedVatNumber}
       />
     ),
 
@@ -212,6 +223,7 @@ export function buildCoreRenderers(ctx: RendererContext): Record<string, Rendere
           <ContactEvidenceProvider
             contactId={contactId}
             contactType={contactType}
+            storedVatNumber={ctx.storedVatNumber}
             formData={formData}
             setFormData={ctx.setFormData}
             canEdit={!ctx.disabled && ctx.setFormData !== undefined}

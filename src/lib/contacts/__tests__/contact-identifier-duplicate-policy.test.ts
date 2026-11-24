@@ -5,6 +5,7 @@ import {
   decideVatDuplicate,
   formVatOf,
   strictestDecision,
+  vatChanges,
   type IdentifierHolder,
 } from '@/lib/contacts/contact-identifier-duplicate-policy';
 import type { ContactType } from '@/types/contacts';
@@ -78,5 +79,21 @@ describe('formVatOf', () => {
     expect(formVatOf({}, 'individual')).toBe('');
     expect(formVatOf({}, 'company')).toBe('');
     expect(formVatOf({}, 'service')).toBe('');
+  });
+});
+
+describe('vatChanges — ο κανόνας ρωτά ΜΟΝΟ για ό,τι αλλάζει (ADR-944 §9.8)', () => {
+  it('ίδιο με το αποθηκευμένο ⇒ δεν αλλάζει, ακόμη και με κενά', () => {
+    expect(vatChanges('040817944', '040817944')).toBe(false);
+    expect(vatChanges(' 0408 17944 ', '040817944')).toBe(false);
+  });
+
+  it('άλλο ΑΦΜ ή κενό αποθηκευμένο ⇒ αλλάζει', () => {
+    expect(vatChanges('077030866', '040817944')).toBe(true);
+    expect(vatChanges('040817944', '')).toBe(true);
+  });
+
+  it('καμία αποθηκευμένη επαφή (δημιουργία) ⇒ όλα αλλάζουν', () => {
+    expect(vatChanges('040817944', undefined)).toBe(true);
   });
 });

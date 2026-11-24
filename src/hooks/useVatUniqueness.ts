@@ -22,6 +22,7 @@ import {
 } from '@/lib/validation/vat-validation';
 import {
   decideVatDuplicate,
+  vatChanges,
   type IdentifierDuplicateDecision,
   type IdentifierHolder,
 } from '@/lib/contacts/contact-identifier-duplicate-policy';
@@ -99,12 +100,17 @@ export function useVatUniqueness(
 /**
  * Η απόφαση του κανόνα (ADR-944 §9) για το ΑΦΜ που γράφεται τώρα: `allow` · `confirm` · `block`, μαζί με τους κατόχους.
  * Όσο τρέχει ο έλεγχος (ή πριν από αυτόν) η απόφαση είναι `allow` — ο καλών κοιτά το `isChecking` αν πρέπει να περιμένει.
+ *
+ * 🔑 `storedVat` = το ΑΦΜ που έχει **ήδη** η επαφή. Ίδιο ⇒ ο φρουρός αποθήκευσης δεν θα ρωτήσει (`vatChanges`) ⇒
+ *    `allow` με τους κατόχους: παλιό διπλότυπο που **φαίνεται**, χωρίς υπόσχεση φραγμού ή επιβεβαίωσης.
  */
 export function useVatDuplicateDecision(
   vatNumber: string | undefined | null,
   candidateType: ContactType,
-  excludeContactId?: string
+  excludeContactId?: string,
+  storedVat?: string
 ): UseVatDuplicateDecisionReturn {
   const { isChecking, holders } = useVatUniqueness(vatNumber, excludeContactId);
-  return { isChecking, holders, decision: decideVatDuplicate(candidateType, holders) };
+  const changes = vatChanges(vatNumber ?? '', storedVat);
+  return { isChecking, holders, decision: changes ? decideVatDuplicate(candidateType, holders) : 'allow' };
 }

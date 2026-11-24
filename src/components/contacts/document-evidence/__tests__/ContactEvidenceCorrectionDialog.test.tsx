@@ -50,6 +50,7 @@ function setup(options: {
   readonly corrected?: boolean;
   readonly outcome?: (values: EvidenceCorrectionValues) => EvidenceCorrectionOutcomePreview | null;
   readonly followUpBusy?: boolean;
+  readonly storedVatNumber?: string;
 } = {}) {
   const onSave = jest.fn<void, [EvidenceCorrectionValues, EvidenceFollowUp | null]>();
   const onClear = jest.fn();
@@ -61,6 +62,7 @@ function setup(options: {
       purpose="stamp-signature"
       contactId="cont_self"
       contactType="individual"
+      storedVatNumber={options.storedVatNumber}
       fields={options.fields ?? [VAT_FIELD]}
       corrected={options.corrected ?? false}
       outcomeOf={options.outcome ?? (() => null)}
@@ -163,7 +165,13 @@ describe('το ΑΦΜ το έχει ήδη άλλη επαφή (ADR-950 §12 · 
   it('ρωτά για ό,τι γράφει ο άνθρωπος, με τον τύπο της επαφής, εξαιρώντας την ίδια', () => {
     const { type } = setup({ outcome: missing });
     type(VALID_VAT);
-    expect(mockVat).toHaveBeenLastCalledWith(VALID_VAT, 'individual', 'cont_self');
+    expect(mockVat).toHaveBeenLastCalledWith(VALID_VAT, 'individual', 'cont_self', undefined);
+  });
+
+  it('δίνει στον κανόνα το ΑΦΜ που έχει ΗΔΗ η επαφή — ίδιο ⇒ καμία υπόσχεση φραγμού (ADR-944 §9.8)', () => {
+    const { type } = setup({ outcome: missing, storedVatNumber: VALID_VAT });
+    type(VALID_VAT);
+    expect(mockVat).toHaveBeenLastCalledWith(VALID_VAT, 'individual', 'cont_self', VALID_VAT);
   });
 
   it('απαγόρευση ⇒ προειδοποίηση με το όνομα, ΚΑΜΙΑ «καταχώριση» — μόνο αποθήκευση της διόρθωσης', () => {

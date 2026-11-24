@@ -8,11 +8,13 @@
  * σύνδεσμο) και τι θα γίνει στην αποθήκευση — `block` ή `confirm`, όπως το κρίνει το `decideVatDuplicate`.
  *
  * 🔑 `block` ⇒ `role="alert"` (η αποθήκευση δεν θα γίνει)· `confirm` ⇒ `role="status"` (πληροφορία).
+ * 🔑 `allow` **με** κατόχους ⇒ το ΑΦΜ δεν αλλάζει (`vatChanges`): παλιό διπλότυπο, μόνο πληροφορία — καμία υπόσχεση
+ *    φραγμού ή επιβεβαίωσης που ο φρουρός δεν θα τηρήσει (ADR-944 §9.8).
  * 🔑 Κείμενο + εικονίδιο, ποτέ μόνο χρώμα (CHECK 3.41).
  */
 
 import React from 'react';
-import { AlertTriangle, Ban } from 'lucide-react';
+import { AlertTriangle, Ban, Info } from 'lucide-react';
 
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -31,7 +33,16 @@ const KEYS = {
   heading: 'contacts-form:validation.identifierDuplicate.vatHeading',
   blockHint: 'contacts-form:validation.identifierDuplicate.vatBlockHint',
   confirmHint: 'contacts-form:validation.identifierDuplicate.vatConfirmHint',
+  existingHint: 'contacts-form:validation.identifierDuplicate.vatExistingHint',
 } as const;
+
+const HINT_KEY: Record<IdentifierDuplicateDecision, string> = {
+  block: KEYS.blockHint,
+  confirm: KEYS.confirmHint,
+  allow: KEYS.existingHint,
+};
+
+const HINT_ICON: Record<IdentifierDuplicateDecision, typeof Info> = { block: Ban, confirm: AlertTriangle, allow: Info };
 
 export interface VatDuplicateNoticeProps {
   readonly vatNumber: string;
@@ -43,16 +54,16 @@ export function VatDuplicateNotice({ vatNumber, decision, holders }: VatDuplicat
   const { t } = useTranslation(['contacts-form']);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  if (decision === 'allow' || holders.length === 0) return null;
+  if (holders.length === 0) return null;
   const blocked = decision === 'block';
-  const Icon = blocked ? Ban : AlertTriangle;
+  const Icon = HINT_ICON[decision];
   return (
     <section role={blocked ? 'alert' : 'status'} aria-label={t(KEYS.region)} className="mt-1 flex gap-2 text-xs">
-      <Icon className={cn(iconSizes.sm, blocked ? 'text-destructive' : colors.text.warning, 'shrink-0')} aria-hidden="true" />
+      <Icon className={cn(iconSizes.sm, blocked ? 'text-destructive' : decision === 'confirm' ? colors.text.warning : colors.text.muted, 'shrink-0')} aria-hidden="true" />
       <div className="flex flex-col gap-0.5">
         <span className={cn(blocked && 'font-medium text-destructive')}>{t(KEYS.heading, { vatNumber })}</span>
         <ContactHolderLinks holders={holders} />
-        <p className={cn('m-0', colors.text.muted)}>{t(blocked ? KEYS.blockHint : KEYS.confirmHint)}</p>
+        <p className={cn('m-0', colors.text.muted)}>{t(HINT_KEY[decision])}</p>
       </div>
     </section>
   );

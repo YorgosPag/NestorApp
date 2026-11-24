@@ -40,6 +40,7 @@ import { generateContactId } from '@/services/enterprise-id.service';
 import type { CanonicalUploadContext } from '@/components/ContactFormSections/utils/PhotoUploadConfiguration';
 // 🏢 ENTERPRISE: Utility for class name composition (canonical pattern)
 import { cn } from '@/lib/utils';
+import { storedVatOf } from '@/utils/contactForm/identifier-duplicate-guard';
 // 🏢 ENTERPRISE: Centralized dialog sizing tokens (ADR-031)
 import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
 
@@ -322,6 +323,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                 canonicalUploadContext={canonicalUploadContext}
                 validationErrors={validationErrors}
                 onFieldBlur={handleFieldBlur}
+                storedVatNumber={editContact ? storedVatOf(editContact) : undefined}
               />
             </RelationshipProvider>
 

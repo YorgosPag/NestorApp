@@ -12,6 +12,7 @@ import { useContactDetailsController } from './contact-details/useContactDetails
 import { ContactEditFocusProvider } from './contact-details/ContactEditFocusContext';
 import { resolveEditingFormData } from './contact-details/contact-details-helpers';
 import type { ContactDetailsProps } from './contact-details/contact-details-types';
+import { storedVatOf } from '@/utils/contactForm/identifier-duplicate-guard';
 
 export function ContactDetails({
   contact,
@@ -116,6 +117,7 @@ export function ContactDetails({
           onRegisterFormData={readOnly ? undefined : handleRegister}
           isRegisteringFormData={isSaving}
           onStartEdit={readOnly || isEditing ? undefined : handleStartEdit}
+          storedVatNumber={contact ? storedVatOf(contact) : undefined}
         />
       </DetailsContainer>
 

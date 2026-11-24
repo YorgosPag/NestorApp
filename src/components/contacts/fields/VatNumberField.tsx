@@ -35,6 +35,8 @@ interface VatNumberFieldProps {
   excludeContactId?: string;
   /** Ο τύπος της επαφής που γράφεται — από αυτόν εξαρτάται αν το διπλό ΑΦΜ απαγορεύεται ή θέλει επιβεβαίωση. */
   contactType: ContactType;
+  /** Το ΑΦΜ που έχει **ήδη** η επαφή — ίδιο ⇒ καμία υπόσχεση φραγμού/επιβεβαίωσης (ADR-944 §9.8). Χωρίς επαφή: `undefined`. */
+  storedVatNumber?: string;
 }
 
 // ============================================================================
@@ -48,10 +50,11 @@ export function VatNumberField({
   disabled,
   excludeContactId,
   contactType,
+  storedVatNumber,
 }: VatNumberFieldProps) {
   const { t } = useTranslation('contacts');
   const colors = useSemanticColors();
-  const { isChecking, decision, holders } = useVatDuplicateDecision(value, contactType, excludeContactId);
+  const { isChecking, decision, holders } = useVatDuplicateDecision(value, contactType, excludeContactId, storedVatNumber);
 
   return (
     <div className="w-full">

@@ -32,6 +32,8 @@ import type { EvidenceCorrection, EvidenceDismissal, FileRecord } from '@/types/
 export interface ContactEvidenceHost {
   readonly contactId: string;
   readonly contactType: ContactType;
+  /** Το ΑΦΜ που έχει **ήδη** η επαφή — ίδιο ⇒ καμία υπόσχεση φραγμού/επιβεβαίωσης (ADR-944 §9.8). Χωρίς επαφή: `undefined`. */
+  readonly storedVatNumber?: string;
   readonly formData: ContactFormData;
   readonly setFormData?: (next: ContactFormData) => void;
   /** Επεξεργασία (όχι προβολή) **και** υπάρχει γραφέας φόρμας — ίδιος κανόνας με το ADR-948 `canEdit`. */
@@ -83,6 +85,7 @@ export function ContactEvidenceProvider({
   children,
   contactId,
   contactType,
+  storedVatNumber,
   formData,
   setFormData,
   canEdit,
@@ -95,10 +98,10 @@ export function ContactEvidenceProvider({
   const [pendingCorrections, setPendingCorrection] = usePendingDecisions<EvidenceCorrection>();
   const value = useMemo(
     () => ({
-      contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, onStartEdit,
-      pending, setPending, pendingCorrections, setPendingCorrection,
+      contactId, contactType, storedVatNumber, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering,
+      onStartEdit, pending, setPending, pendingCorrections, setPendingCorrection,
     }),
-    [contactId, contactType, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, onStartEdit,
+    [contactId, contactType, storedVatNumber, formData, setFormData, canEdit, onOpenAddresses, onRegister, isRegistering, onStartEdit,
       pending, setPending, pendingCorrections, setPendingCorrection],
   );
   return <ContactEvidenceContext.Provider value={value}>{children}</ContactEvidenceContext.Provider>;

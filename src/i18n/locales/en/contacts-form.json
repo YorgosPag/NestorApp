@@ -236,6 +236,7 @@
       "vatRegion": "VAT number already held by another contact",
       "vatBlockHint": "Two individuals cannot share a VAT number — the contact will not be saved with it.",
       "vatConfirmHint": "Allowed (e.g. a sole proprietorship, a branch) — you will be asked to confirm when saving.",
+      "vatExistingHint": "It was already there — saving will not ask about it. Open the other contact if it is a duplicate record.",
       "holdersLabel": "Contacts holding the same value",
       "vatHeading": "VAT number {vatNumber} is already held by:",
       "blockTitle": "This VAT number belongs to another individual",

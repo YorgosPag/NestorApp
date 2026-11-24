@@ -19,6 +19,7 @@ import {
   decideVatDuplicate,
   formVatOf,
   strictestDecision,
+  vatChanges,
   type IdentifierDuplicateDecision,
   type IdentifierHolder,
 } from '@/lib/contacts/contact-identifier-duplicate-policy';
@@ -39,8 +40,11 @@ export interface IdentifierDuplicateDialogState {
   readonly emails: readonly IdentifierDuplicateEntry[];
 }
 
-/** Το ΑΦΜ όπως είναι **αποθηκευμένο** — η υπηρεσία το κρατά σε δικό της πεδίο. */
-function storedVatOf(contact: Contact): string {
+/**
+ * Το ΑΦΜ όπως είναι **αποθηκευμένο** — η υπηρεσία το κρατά σε δικό της πεδίο. Το διαβάζει και η προειδοποίηση πριν
+ * από την αποθήκευση (`VatNumberField` · διάλογος «Διόρθωση ανάγνωσης»), ώστε να κρίνει «αλλάζει;» όπως εδώ.
+ */
+export function storedVatOf(contact: Contact): string {
   const field = contact.type === 'service' ? 'serviceVatNumber' : 'vatNumber';
   const value = getSafeFieldValue<unknown>(contact, field, '');
   return typeof value === 'string' ? normalizeVat(value) : '';
@@ -49,7 +53,7 @@ function storedVatOf(contact: Contact): string {
 /** Το νέο ΑΦΜ, **μόνο** αν αλλάζει και είναι έγκυρο 9ψήφιο — αλλιώς δεν υπάρχει τίποτα να ρωτηθεί. */
 export function changedVatOf(editContact: Contact, formData: ContactFormData): string | null {
   const next = normalizeVat(formVatOf(formData, editContact.type));
-  if (!isValidGreekVat(next) || next === storedVatOf(editContact)) return null;
+  if (!isValidGreekVat(next) || !vatChanges(next, storedVatOf(editContact))) return null;
   return next;
 }
 

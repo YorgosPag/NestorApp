@@ -16,6 +16,7 @@
  *    δημιουργία επαφής δίνουν την **ίδια** απάντηση.
  */
 
+import { normalizeVat } from '@/lib/validation/greek-vat-number';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
 
@@ -36,6 +37,15 @@ export function decideVatDuplicate(
   if (holders.length === 0) return 'allow';
   const individualHolder = holders.some((holder) => holder.type === 'individual');
   return candidateType === 'individual' && individualHolder ? 'block' : 'confirm';
+}
+
+/**
+ * **Αλλάζει** το ΑΦΜ σε αυτή την αποθήκευση; Ο κανόνας ρωτά **μόνο** για ό,τι αλλάζει (§9.3) — η ίδια ερώτηση για τον
+ * φρουρό αποθήκευσης και για την προειδοποίηση πριν από αυτήν, ώστε η οθόνη να μην υπόσχεται φραγμό που δεν θα έρθει.
+ * `stored === undefined` ⇒ καμία αποθηκευμένη επαφή (δημιουργία) ⇒ όλα αλλάζουν.
+ */
+export function vatChanges(next: string, stored: string | undefined): boolean {
+  return stored === undefined || normalizeVat(next) !== normalizeVat(stored);
 }
 
 /** Email: επιτρέπεται πάντα, με ρητή επιβεβαίωση όταν υπάρχει ήδη αλλού. */

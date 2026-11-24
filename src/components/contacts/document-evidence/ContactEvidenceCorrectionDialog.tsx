@@ -62,6 +62,8 @@ interface ContactEvidenceCorrectionDialogProps {
   readonly contactId: string;
   /** Ο τύπος της — από αυτόν εξαρτάται αν το διπλό ΑΦΜ απαγορεύεται ή θέλει επιβεβαίωση (ADR-944 §9). */
   readonly contactType: ContactType;
+  /** Το ΑΦΜ που έχει **ήδη** η επαφή — ίδιο ⇒ καμία υπόσχεση φραγμού/επιβεβαίωσης (ADR-944 §9.8). Χωρίς επαφή: `undefined`. */
+  readonly storedVatNumber?: string;
   readonly fields: readonly EvidenceCorrectionField[];
   /** Υπάρχει ήδη διόρθωση ⇒ προσφέρεται η αναίρεσή της. */
   readonly corrected: boolean;
@@ -167,7 +169,7 @@ function CorrectionFooter({ canSave, followUp, followUpBusy, onCancel, onSave }:
 }
 
 export function ContactEvidenceCorrectionDialog({
-  row, rowLabel, purpose, contactId, contactType, fields, corrected, outcomeOf, followUpBusy, onSave, onClear, onClose,
+  row, rowLabel, purpose, contactId, contactType, storedVatNumber, fields, corrected, outcomeOf, followUpBusy, onSave, onClear, onClose,
 }: ContactEvidenceCorrectionDialogProps) {
   const { t } = useTranslation('contacts-form');
   const [draft, setDraft] = useState<Draft>(() => initialDraft(fields, corrected));
@@ -176,7 +178,7 @@ export function ContactEvidenceCorrectionDialog({
   // ADR-944 §9 — η ίδια απόφαση με το πεδίο ΑΦΜ της φόρμας και τον φρουρό αποθήκευσης, πάνω σε ό,τι γράφει τώρα ο
   // άνθρωπος. `block` (δύο φυσικά πρόσωπα) ⇒ καμία πράξη πάνω στην επαφή με το ίδιο πάτημα — ούτε «καταχώριση» ούτε
   // «αποδοχή»· `confirm` ⇒ η πράξη προσφέρεται και η επιβεβαίωση ζητείται στην αποθήκευση. Όσο τρέχει ο έλεγχος, περιμένει.
-  const vat = useVatDuplicateDecision(draft.vatNumber, contactType, contactId);
+  const vat = useVatDuplicateDecision(draft.vatNumber, contactType, contactId, storedVatNumber);
   const writesVat = outcome?.followUp === 'register' || outcome?.followUp === 'accept';
   const followUp = writesVat && vat.decision === 'block' ? null : outcome?.followUp ?? null;
   const labelOf = (field: EvidenceCorrectionField) => (fields.length === 1 ? rowLabel : t(correctionFieldLabelKey(field.key)));

@@ -4,8 +4,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
-import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
-import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -14,7 +12,7 @@ import { getContactFormConfig, getContactFormSections, getContactFormRenderer } 
 import { createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 import { getIndividualSortedSections } from '@/config/individual-config';
 import { useTranslation } from 'react-i18next';
-import { buildCoreRenderers, buildCompanyRenderers, type RendererContext } from './contactRenderersCore';
+import { buildCoreRenderers, buildCompanyRenderers, type ContactPhotoHandlerProps, type ExistingContactRendererProps, type RendererContext } from './contactRenderersCore';
 import { buildIndividualRenderers, buildServiceRenderers, buildSectionFooterRenderers } from './contactRenderersTyped';
 
 /**
@@ -23,17 +21,13 @@ import { buildIndividualRenderers, buildServiceRenderers, buildSectionFooterRend
  * Single component που αντικαθιστά όλα τα διάσπαρτα ContactFormSection components.
  * SINGLE SOURCE OF TRUTH για όλες τις επαφές!
  */
-interface UnifiedContactTabbedSectionProps {
+interface UnifiedContactTabbedSectionProps extends ExistingContactRendererProps, ContactPhotoHandlerProps {
   contactType: ContactType;
   formData: ContactFormData;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
   handleFileChange?: (file: File | null) => void;
   handleLogoChange?: (file: File | null) => void;
-  onPhotosChange?: (photos: PhotoSlot[]) => void;
-  handleMultiplePhotosChange?: (photos: PhotoSlot[]) => void;
-  handleMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void;
-  handleProfilePhotoSelection?: (index: number) => void;
   handleUploadedLogoURL?: (logoURL: string) => void;
   handleUploadedPhotoURL?: (photoURL: string) => void;
   setFormData?: (data: ContactFormData) => void;
@@ -48,11 +42,6 @@ interface UnifiedContactTabbedSectionProps {
   validationErrors?: Record<string, string>;
   onFieldBlur?: (fieldName: string) => void;
   isContactTrashed?: boolean;
-  /** ADR-950 §9 — «Καταχώριση» στοιχείου εγγράφου από την προβολή· μόνο η καρτέλα υπάρχουσας επαφής το δίνει. */
-  onRegisterFormData?: (next: ContactFormData, changes: Partial<ContactFormData>) => Promise<void>;
-  isRegisteringFormData?: boolean;
-  /** ADR-950 §11 — ανοίγει την επεξεργασία της καρτέλας από την προβολή· μόνο η καρτέλα υπάρχουσας επαφής το δίνει. */
-  onStartEdit?: () => void;
 }
 
 export function UnifiedContactTabbedSection({
@@ -66,7 +55,7 @@ export function UnifiedContactTabbedSection({
   onActiveTabChange, initialTab, activeTab,
   validationErrors, onFieldBlur,
   isContactTrashed = false,
-  onRegisterFormData, isRegisteringFormData, onStartEdit,
+  onRegisterFormData, isRegisteringFormData, onStartEdit, storedVatNumber,
 }: UnifiedContactTabbedSectionProps) {
   const { t } = useTranslation('contacts');
   const { user } = useAuth();
@@ -129,7 +118,7 @@ export function UnifiedContactTabbedSection({
       canonicalUploadContext,
       handleLogoChange, handleFileChange,
       handleUploadedLogoURL, handleUploadedPhotoURL,
-      onRegisterFormData, isRegisteringFormData, onStartEdit,
+      onRegisterFormData, isRegisteringFormData, onStartEdit, storedVatNumber,
     };
 
     const customRenderers = {
@@ -169,7 +158,7 @@ export function UnifiedContactTabbedSection({
     canonicalUploadContext, onActiveTabChange, initialTab, activeTab,
     companyDisplayName, user?.companyId,
     validationErrors, onFieldBlur,
-    onRegisterFormData, isRegisteringFormData, onStartEdit,
+    onRegisterFormData, isRegisteringFormData, onStartEdit, storedVatNumber,
   ]);
 
   return (
