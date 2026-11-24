@@ -5,7 +5,8 @@
  */
 
 import type jsPDF from 'jspdf';
-import type { InvoiceType, PaymentMethod } from '../../types';
+import type { InvoiceIssuer, InvoiceType, PaymentMethod } from '../../types';
+import { normalisePublicWebsite } from '@/lib/validation/email-validation';
 import type { HumanLanguage } from '@/i18n/languages';
 import { FONTS, FONT_STYLES } from '@/services/pdf/layout';
 
@@ -40,9 +41,13 @@ export const LAYOUT = {
   contentWidth: 180,
 };
 
-/** Logo dimensions (mm) */
+/**
+ * Το **κουτί** του λογοτύπου στην κεφαλίδα (mm) — ADR-ACC-018 §17.3. Το λογότυπο χωρά μέσα στη δική του αναλογία
+ * (aspect-fit): τετράγωνο ⇒ 25×25 όπως πριν, οριζόντιο ⇒ ως 45 mm πλάτος. Αναλογία 9:5, η ίδια με την προεπισκόπηση
+ * των Ρυθμίσεων (`CompanyBrandLogoSection`, `aspect-[9/5]`).
+ */
 export const LOGO = {
-  width: 25,
+  width: 45,
   height: 25,
 };
 
@@ -128,6 +133,15 @@ export const PAYMENT_METHOD_LABELS: Readonly<Record<PaymentMethod, string>> = {
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Ο σύνδεσμος του website του εκδότη (κλικ στο λογότυπο · υποσέλιδο) — ADR-ACC-018 §17.3. Ο ΕΝΑΣ κριτής δημόσιου
+ * website (`normalisePublicWebsite`: `https://` όταν λείπει σχήμα, άρνηση διαπιστευτηρίων στο URL). Άκυρο ή κενό ⇒
+ * `null` ⇒ καμία περιοχή συνδέσμου, ποτέ σύνδεσμος που μαντεύτηκε.
+ */
+export function issuerWebsiteHref(issuer: Pick<InvoiceIssuer, 'website'>): string | null {
+  return issuer.website ? normalisePublicWebsite(issuer.website) : null;
+}
 
 /** Check if content needs a page break; if so, add page and return reset Y. */
 export function ensureSpace(pdf: jsPDF, y: number, needed: number): number {

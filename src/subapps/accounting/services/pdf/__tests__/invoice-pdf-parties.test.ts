@@ -16,6 +16,7 @@ import { drawCustomerSection, drawHeader } from '../invoice-pdf-parties';
 
 interface TextCall { readonly text: string; readonly x: number; readonly y: number; readonly fontSize: number; readonly right: boolean }
 interface RectCall { readonly h: number }
+interface BoxCall { readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly extra: unknown }
 
 const CHAR_WIDTH_PER_PT = 0.2;
 
@@ -23,6 +24,8 @@ function fakePdf() {
   let fontSize = 10;
   const texts: TextCall[] = [];
   const rects: RectCall[] = [];
+  const images: BoxCall[] = [];
+  const links: BoxCall[] = [];
   const width = (text: string) => text.length * fontSize * CHAR_WIDTH_PER_PT;
   const wrap = (text: string, max: number): string[] => text.split('\n').flatMap((paragraph) => {
     const lines: string[] = [];
@@ -43,9 +46,13 @@ function fakePdf() {
     },
     roundedRect: (_x: number, _y: number, _w: number, h: number) => { rects.push({ h }); },
     setTextColor: () => undefined, setDrawColor: () => undefined, setLineWidth: () => undefined,
-    line: () => undefined, addImage: () => undefined, addPage: () => undefined,
+    line: () => undefined, addPage: () => undefined,
+    addImage: (_data: unknown, format: string, x: number, y: number, w: number, h: number) => {
+      images.push({ x, y, w, h, extra: format });
+    },
+    link: (x: number, y: number, w: number, h: number, opts: { url: string }) => { links.push({ x, y, w, h, extra: opts.url }); },
   };
-  return { pdf: pdf as unknown as jsPDF, texts, rects, widthAt: (t: TextCall) => t.text.length * t.fontSize * CHAR_WIDTH_PER_PT };
+  return { pdf: pdf as unknown as jsPDF, texts, rects, images, links, widthAt: (t: TextCall) => t.text.length * t.fontSize * CHAR_WIDTH_PER_PT };
 }
 
 const LONG_ACTIVITY = 'γενικός ανάδοχος κατασκευαστικών έργων/γενικός ανάδοχος κατασκευαστικών έργων';
@@ -107,5 +114,39 @@ describe('Κ5 — το πλαίσιο του πελάτη μεγαλώνει μ�
     }), 40);
     expect(rects[0].h).toBeGreaterThan(22);
     expect(next).toBeGreaterThanOrEqual(40 + 6 + rects[0].h);
+  });
+});
+
+describe('Κ6 — λογότυπο του χώρου στην κεφαλίδα (ADR-ACC-018 §17.3)', () => {
+  const wide = { bytes: new Uint8Array([1]), format: 'JPEG' as const, width: 900, height: 300, sha256: 'c'.repeat(64) };
+
+  it('aspect-fit: οριζόντιο λογότυπο 3:1 ⇒ 45×15 mm, ΟΧΙ παραμορφωμένο 25×25 — και ο εκδότης ξεκινά μετά το ΠΡΑΓΜΑΤΙΚΟ πλάτος', () => {
+    const { pdf, images, texts } = fakePdf();
+    drawHeader(pdf, invoiceWith({}), wide, 15);
+    expect(images).toEqual([{ x: 15, y: 15, w: 45, h: 15, extra: 'JPEG' }]);
+    const issuerXs = texts.filter((t) => !t.right).map((t) => t.x);
+    expect(Math.min(...issuerXs)).toBe(15 + 45 + 4);
+  });
+
+  it('τετράγωνο λογότυπο ⇒ 25×25 mm, όπως πριν τη Φ1β', () => {
+    const { pdf, images } = fakePdf();
+    drawHeader(pdf, invoiceWith({}), { ...wide, width: 600, height: 600, format: 'PNG' }, 15);
+    expect(images).toEqual([{ x: 15, y: 15, w: 25, h: 25, extra: 'PNG' }]);
+  });
+
+  it('κλικ στο λογότυπο ⇒ website του εκδότη, κανονικοποιημένο σε https://', () => {
+    const { pdf, links } = fakePdf();
+    drawHeader(pdf, invoiceWith({ issuer: { ...makeInvoice().issuer, website: 'www.pagonis.gr' } }), wide, 15);
+    expect(links).toEqual([{ x: 15, y: 15, w: 45, h: 15, extra: 'https://www.pagonis.gr/' }]);
+  });
+
+  it('χωρίς website ⇒ καμία περιοχή συνδέσμου· χωρίς λογότυπο ⇒ καμία εικόνα', () => {
+    const noSite = fakePdf();
+    drawHeader(noSite.pdf, invoiceWith({ issuer: { ...makeInvoice().issuer, website: null } }), wide, 15);
+    expect(noSite.links).toEqual([]);
+    const noLogo = fakePdf();
+    drawHeader(noLogo.pdf, invoiceWith({}), null, 15);
+    expect(noLogo.images).toEqual([]);
+    expect(noLogo.links).toEqual([]);
   });
 });

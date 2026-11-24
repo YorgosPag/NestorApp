@@ -19,10 +19,11 @@ import type { Invoice, InvoiceCustomer } from '../../types';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 import { isGreekAddressCountry } from '@/utils/address/country-codes';
 import { countryLabelIn } from '@/utils/address/country-label-text';
-import { drawPdfLogo } from './pdf-logo';
+import type { PdfBrandImage } from '@/lib/company/brand-logo-image';
+import { drawPdfBrandLogo } from './pdf-logo';
 import {
   COLORS, LAYOUT, LOGO, LABELS, INVOICE_TITLES,
-  ensureSpace, drawHR, setColor, setWeight, drawWrappedLines, type RGB, type FontWeight,
+  ensureSpace, drawHR, setColor, setWeight, drawWrappedLines, issuerWebsiteHref, type RGB, type FontWeight,
 } from './invoice-pdf-constants';
 
 /** Απόσταση ανάμεσα στις δύο στήλες της κεφαλίδας (mm). */
@@ -114,11 +115,19 @@ function drawIssuerBlock(pdf: jsPDF, invoice: Invoice, x: number, startY: number
   return drawWrappedLines(pdf, issuerDetailText(invoice), afterName, { x, maxWidth, lineStep: LINE_STEP });
 }
 
-function drawLogo(pdf: jsPDF, logoBase64: string | null, y: number): number {
-  if (!logoBase64) return LAYOUT.marginLeft;
+/** Απόσταση λογοτύπου → κείμενο εκδότη (mm). */
+const LOGO_GAP = 4;
+
+/**
+ * Το λογότυπο του χώρου στο κουτί της κεφαλίδας, στη **δική του** αναλογία· κλικ ⇒ website του εκδότη. Επιστρέφει το x
+ * όπου ξεκινά ο εκδότης — μετρημένο από το **πραγματικό** πλάτος που ζωγραφίστηκε, όχι από το κουτί.
+ */
+function drawLogo(pdf: jsPDF, invoice: Invoice, logo: PdfBrandImage | null, y: number): number {
+  if (logo === null) return LAYOUT.marginLeft;
   try {
-    drawPdfLogo(pdf, logoBase64, { x: LAYOUT.marginLeft, y, width: LOGO.width, height: LOGO.height });
-    return LAYOUT.marginLeft + LOGO.width + 4;
+    const box = { x: LAYOUT.marginLeft, y, width: LOGO.width, height: LOGO.height };
+    const drawn = drawPdfBrandLogo(pdf, logo, box, issuerWebsiteHref(invoice.issuer));
+    return drawn.x + drawn.width + LOGO_GAP;
   } catch {
     return LAYOUT.marginLeft; // Το λογότυπο απέτυχε — συνεχίζουμε χωρίς αυτό.
   }
@@ -126,10 +135,11 @@ function drawLogo(pdf: jsPDF, logoBase64: string | null, y: number): number {
 
 /**
  * §1: Κεφαλίδα — λογότυπο · εκδότης (αριστερά, αναδιπλωμένος) · τίτλος/αριθμός/ημερομηνίες (δεξιά).
+ * Το λογότυπο το δίνει ο καλών — τα bytes **της αναφοράς του τιμολογίου** (`issuer.logo`), ή `null`.
  */
-export function drawHeader(pdf: jsPDF, invoice: Invoice, logoBase64: string | null, startY: number): number {
+export function drawHeader(pdf: jsPDF, invoice: Invoice, logo: PdfBrandImage | null, startY: number): number {
   const rightEdge = LAYOUT.pageWidth - LAYOUT.marginRight;
-  const issuerX = drawLogo(pdf, logoBase64, startY);
+  const issuerX = drawLogo(pdf, invoice, logo, startY);
   const right = rightBlockLines(invoice);
   const issuerWidth = Math.max(MIN_ISSUER_WIDTH, rightEdge - widestLine(pdf, right) - COLUMN_GAP - issuerX);
 

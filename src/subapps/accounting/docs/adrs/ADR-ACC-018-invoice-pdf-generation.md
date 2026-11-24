@@ -564,6 +564,7 @@ src/subapps/accounting/
 | 2026-11-12 | **§16.1 Φάση 2 → ADR-939.** «Γράψτε μας» στη σελίδα παραστατικού: κανάλι `portal` στα ενιαία εισερχόμενα CRM, απάντηση εκδότη στη σελίδα + email. Το email του παραστατικού παίρνει το πλαίσιο του εκδότη από το νέο SSoT `invoiceIssuerEmailFrame` | Giorgio + Claude Code |
 | 2026-11-24 | **§17 Φ1α — Λογότυπο του χώρου: πηγή · γραφέας · ρυθμίσεις.** Μία πηγή `companies/{companyId}.brandLogo` (ADR-928 §5.11, όχι πεδίο στο `CompanyProfile`)· `PUT/DELETE /api/companies/brand-logo` με κανονικοποίηση `sharp` (PNG/JPEG sRGB, χωρίς EXIF) σε **αμετάβλητο** asset (γενιά + sha256)· UI «Ρυθμίσεις → Εταιρεία → Στοιχεία» + σύνοψη στη Ρύθμιση λογιστικής. Διορθώθηκαν τα μπαγιάτικα §2.2 · §4.1 | Giorgio + Claude Code |
 | 2026-11-13 | **§16 (γ) — Η επίσκεψη ζει όσο ζει ο άνθρωπος (ADR-315 Α19).** Ζωντανό εύρημα: η σελίδα πέθαινε στο 16′ (`visit-expired`). Αδράνεια 15′ ανανεώσιμη σε κάθε θετική κρίση συνδέσμου + απόλυτη 8 ώρες· ένας σκελετός διαδρομών (`_shared/invoice-visit-route.ts`, αντί για τέσσερα αντίγραφα του ελέγχου κουπονιού)· αθόρυβη νέα επίσκεψη στη σελίδα (ADR-ACC-030 §5.6). |
+| 2026-11-24 | **§17.3 Φ1β — Λογότυπο του χώρου στο PDF τιμολογίου.** `InvoiceIssuer.logo` (αναφορά `BrandLogoRef`) γραμμένο μόνο από τον server με τον ΕΝΑ συνθέτη `liveInvoiceIssuer` (λογαριασμοί + λογότυπο)· `invoice-payment-snapshot.ts` → `invoice-issuer-snapshot.ts` (ζωντανό στο πρόχειρο, παγωμένο από τη διαβίβαση)· bytes με καρφωμένη γενιά + sha256 και φράχτη χώρου (server) / proxy + sha256 (browser)· aspect-fit 45×25 mm, κλικ λογοτύπου + υποσέλιδο → website (`normalisePublicWebsite`). Καταργήθηκε το `loadInvoiceLogo`· εκδομένα χωρίς `issuer.logo` ⇒ χωρίς λογότυπο. Εύρημα: δεν υπάρχει ακόμη γραφέας διαβίβασης | Giorgio + Claude Code |
 
 ---
 
@@ -623,7 +624,7 @@ src/subapps/accounting/
 | `app/api/accounting/bank-accounts/` | GET/POST + PATCH/DELETE (`defineRoute`, `sensitive`). Ο διακομιστής ξαναελέγχει IBAN (`validateIBAN`) και BIC (`isValidBIC`, ISO 9362). Διπλό IBAN ⇒ 409, ξένος λογαριασμός ⇒ 404 |
 | `services/payments/invoice-payment-accounts.ts` | Ο **ΕΝΑΣ** κανόνας «ποιοι λογαριασμοί, πότε»: `showsPaymentInstructions` (μεταφορά · `credit` · `mixed`, ποτέ πιστωτικό) · `selectInvoicePaymentAccounts` (ενεργοί + «Στα τιμολόγια», ο προεπιλεγμένος πρώτος, έως 3, δικαιούχος ή επωνυμία εκδότη) · `resolveInvoicePaymentAccounts` (διαβάζει το μητρώο **μόνο** όταν χρειάζεται) · `compareBankAccounts` (η μία σειρά) |
 | `services/repository/accounting-repo-financial.ts` → `createInvoice` | Η **γέννηση** κάθε τιμολογίου (φόρμα · γέφυρα πωλήσεων · πιστωτικό) γράφει το snapshot από το μητρώο. Ό,τι φέρει ο καλών αγνοείται |
-| `app/api/accounting/invoices/invoice-payment-snapshot.ts` | PATCH πρόχειρου: αλλαγή `issuer`/`paymentMethod`/`type` ⇒ το snapshot ξαναχτίζεται με τον ίδιο resolver. GET + email πρόχειρου ⇒ `withCurrentPaymentAccounts` (§15.2). Τα διαβιβασμένα τα φυλά το `IMMUTABLE_STATUSES` |
+| `app/api/accounting/invoices/invoice-issuer-snapshot.ts` | PATCH πρόχειρου: αλλαγή `issuer`/`paymentMethod`/`type` ⇒ το snapshot ξαναχτίζεται (`withServerIssuerSnapshotOnUpdate`). GET + email + δημόσια σελίδα πρόχειρου ⇒ `withCurrentIssuerSnapshot` (§15.2). Τα διαβιβασμένα τα φυλά το `IMMUTABLE_STATUSES`. *(Ως τη Φ1β: `invoice-payment-snapshot.ts` / `withCurrentPaymentAccounts` — γενικεύτηκε σε λογαριασμούς **και** λογότυπο, §17.3.)* |
 | `services/payments/creditor-reference.ts` | ISO 11649: `buildCreditorReference` · `isValidCreditorReference` · `formatCreditorReference` · `findCreditorReferences` (μέσα σε κείμενο τράπεζας, το μακρύτερο έγκυρο πρόθεμα) |
 | `services/engines/matching-reference.ts` | `invoiceCreditorReference(series, number)`: κωδικός σειράς διπλωμένος στα λατινικά (ίδια ομόγλυφα με τις αιτιολογίες) + αριθμός **πάντα 9 ψηφία**, ώστε «A1»+23 ≠ «A»+123. Σειρά με χαρακτήρα εκτός [A-Z0-9] (π.χ. «Γ») ⇒ **κανένα** RF. Η συμφωνία τράπεζας **αποκωδικοποιεί** τα RF των αιτιολογιών σε (σειρά, αριθμό), από το ίδιο κανάλι `InvoiceReference` |
 | `services/payments/epc-qr-payload.ts` | Το payload EPC κατά γράμμα του v3.1. Αδύνατο ⇒ `null` + λόγος, ποτέ κομμένο όνομα |
@@ -662,8 +663,8 @@ src/subapps/accounting/
 - (α) **Ένας κριτής** `bicAgreementWithIBAN(iban, bic)` στο `src/constants/greek-banks.ts` (`match` · `mismatch` · `unknown`). Συγκρίνει τους 8 πρώτους χαρακτήρες (ίδρυμα + χώρα + τοποθεσία, ISO 9362): το `PIRBGRAAXXX` είναι η ίδια τράπεζα με το `PIRBGRAA`. Ξένο IBAN ή άγνωστος κωδικός ⇒ `unknown` ⇒ **δεκτό** (ο κατάλογος δεν κρίνει ό,τι δεν ξέρει). Συγχωνεύσεις: `GREEK_SUCCESSOR_BICS` — για το 087 (Παγκρήτια → CrediaBank) δεκτά **και** `STPGGRAA` **και** `ATTIGRAA`, γιατί επίσημη πηγή για το ποιο δρομολογεί τα παλιά IBAN δεν βρέθηκε: καμία ψευδής άρνηση σωστού BIC. Τον χρησιμοποιούν φόρμα, γραφέας **και** `report-greek-bank-bic.ts` (πριν: ακριβής ισότητα, δηλαδή δεύτερος κανόνας).
 - (β) Γραφέας: `BicIbanMismatchError extends DomainRefusal` (**422**). Στη δημιουργία κρίνεται πριν από τη συναλλαγή· στην αλλαγή, **μέσα** στη συναλλαγή απέναντι στο **αποθηκευμένο** IBAN (το IBAN δεν αλλάζει ποτέ) και μόνο όταν γράφεται BIC. Τα σφάλματα σχήματος μένουν 400, άρα το 422 σημαίνει μόνο αυτό. Μήνυμα φόρμας `setup.bankAccounts.errors.bicMismatch`.
 - (γ) Φόρμα: `bankSource: 'derived' | 'manual'` (πρότυπο «παράγωγο μέχρι να το παρακάμψεις»). Παράγωγα ⇒ κάθε αλλαγή IBAN τα **ξαναγράφει** (και τα αδειάζει αν ο κατάλογος δεν ξέρει το νέο IBAN — ποτέ η τράπεζα του προηγούμενου). Ο χρήστης γράφει ή διαλέγει τράπεζα/BIC (`withManualBank`) ⇒ δεν τα αγγίζει τίποτα· αν δεν συμφωνούν με το IBAN, ο ίδιος κριτής σταματά την αποστολή.
-- (δ) Πρότυπο Stripe (draft → finalize): οι οδηγίες πληρωμής ενός **μεταβλητού** παραστατικού (`draft` · `rejected`) είναι **προβολή** του σημερινού μητρώου· από τη διαβίβαση (`IMMUTABLE_STATUSES`) το αποθηκευμένο `issuer.bankAccounts` είναι **το** έγγραφο. `withCurrentPaymentAccounts` (`invoice-payment-snapshot.ts`, ίδιος resolver): το καλούν το **GET** τιμολογίου (προεπισκόπηση + PDF browser — καθαρή ανάγνωση, καμία εγγραφή) και η **αποστολή email** (το PDF που φεύγει· μετά από επιτυχή αποστολή πρόχειρου, το `issuer` που στάλθηκε γράφεται στην **ίδια** εγγραφή με το `emailHistory`). Το σχέδιο **εξακολουθεί** να τυπώνει μόνο ό,τι του δίνεται (§15 β) — καμία εφεδρεία μέσα στο PDF.
-- ⚠️ **Διαβίβαση**: δεν υπάρχει ακόμη διαδρομή draft → sent (η διαβίβαση στην ΑΑΔΕ δεν έχει συνδεθεί). Ο γραφέας της **πρέπει** να παγώσει το αποτέλεσμα του `withCurrentPaymentAccounts` στην **ίδια** εγγραφή που αλλάζει την κατάσταση· γραμμένο στο docblock του `invoice-payment-snapshot.ts`.
+- (δ) Πρότυπο Stripe (draft → finalize): οι οδηγίες πληρωμής ενός **μεταβλητού** παραστατικού (`draft` · `rejected`) είναι **προβολή** του σημερινού μητρώου· από τη διαβίβαση (`IMMUTABLE_STATUSES`) το αποθηκευμένο `issuer.bankAccounts` είναι **το** έγγραφο. `withCurrentIssuerSnapshot` (`invoice-issuer-snapshot.ts`, ίδιος συνθέτης `liveInvoiceIssuer`, §17.3): το καλούν το **GET** τιμολογίου (προεπισκόπηση + PDF browser — καθαρή ανάγνωση, καμία εγγραφή) και η **αποστολή email** (το PDF που φεύγει· μετά από επιτυχή αποστολή πρόχειρου, το `issuer` που στάλθηκε γράφεται στην **ίδια** εγγραφή με το `emailHistory`). Το σχέδιο **εξακολουθεί** να τυπώνει μόνο ό,τι του δίνεται (§15 β) — καμία εφεδρεία μέσα στο PDF.
+- ⚠️ **Διαβίβαση**: δεν υπάρχει ακόμη διαδρομή draft → sent (η διαβίβαση στην ΑΑΔΕ δεν έχει συνδεθεί). Ο γραφέας της **πρέπει** να παγώσει το αποτέλεσμα του `withCurrentIssuerSnapshot` (λογαριασμοί **και** λογότυπο, §17.3) στην **ίδια** εγγραφή που αλλάζει την κατάσταση· γραμμένο στο docblock του `invoice-issuer-snapshot.ts`.
 
 ## 16. Δημόσια σελίδα πληρωμής τιμολογίου (2026-11-11)
 
@@ -677,7 +678,7 @@ src/subapps/accounting/
 **Αποφάσεις**:
 - (α) **Ένα σύστημα συνδέσμων.** Νέο είδος `invoice_payment` στο `ShareEntityType`, με resolver `invoice-payment.resolver.ts`. Πολιτική: `{ password: false, labelRequired: false, accessLimit: false, openNotice: true, defaultExpiresInHours: 720 }`. Κωδικός δεν υπάρχει, όπως και στους τρεις. Προστασία: token 256 bit, αποθηκεύεται μόνο το hash, υποχρεωτική λήξη, ανάκληση. Το νέο πεδίο πολιτικής `defaultExpiresInHours` (όλα τα άλλα είδη 72) το διαβάζουν **και** ο διακομιστής (`share-create.ts`) **και** ο διάλογος (`initialLinkTokenDraftFor`).
 - (β) **Ποιος δημιουργεί**: `invoicePaymentAuthority` (`share-create-authority.ts`). Τιμολόγιο του μισθωτή (`readTenantInvoice`, γιατί το `getInvoice` δεν ελέγχει μισθωτή) **και** `isPayableByLink`. Το δεύτερο σημαίνει απαίτηση (`isCollectibleInvoice`) που πληρώνεται με μεταφορά (`showsPaymentInstructions`), ο ίδιος κανόνας με τους λογαριασμούς του PDF. Αλλιώς `nothing-to-share` (422). Επιτρέπεται και για πρόχειρο, με τον κανόνα που ήδη ισχύει για το email πρόχειρου. Η σελίδα το δείχνει με ρητή ταινία «Προσχέδιο».
-- (γ) **Ροή δεδομένων** (πρότυπο συνεδρίας θέασης περιήγησης): το `POST /api/shares/resolve` επιστρέφει μόνο `{ shareId, invoiceId }` και γράφει το κουπόνι επίσκεψης. Η σελίδα ζητά `GET /api/shares/[shareId]/invoice-payment` (όψη) και `…/pdf`. Το token δεν ξαναταξιδεύει. Ο διακομιστής (`invoice-public-session.ts`) ξαναελέγχει ότι ο σύνδεσμος είναι ενεργός και δεν έληξε (`findActiveShareOf`, που ως τώρα ήταν `activeTourShareId` της περιήγησης), τον μισθωτή και τις οδηγίες πληρωμής **που θα τύπωνε σήμερα** (`withCurrentPaymentAccounts`). Κεφαλίδες `no-store` + `X-Robots-Tag: noindex`. Η σελίδα `/shared/[token]` κληρονομεί `noindex` + `no-referrer`. Όριο ρυθμού STANDARD. **Επίσκεψη (2026-11-13, ADR-315 Α19)**: το κουπόνι ζει με αδράνεια 15′ που **ανανεώνεται** σε κάθε θετική κρίση του συνδέσμου (όψη · PDF · έναρξη πληρωμής · «Γράψτε μας», ένας σκελετός `invoice-payment/_shared/invoice-visit-route.ts`) και απόλυτη λήξη 8 ωρών· όταν λήξει, η σελίδα ανοίγει αθόρυβα νέα επίσκεψη με το token (`fetchInVisit` · `reopenVisit`, ADR-ACC-030 §5.6). Πριν, η σελίδα πέθαινε 15′ μετά το άνοιγμα.
+- (γ) **Ροή δεδομένων** (πρότυπο συνεδρίας θέασης περιήγησης): το `POST /api/shares/resolve` επιστρέφει μόνο `{ shareId, invoiceId }` και γράφει το κουπόνι επίσκεψης. Η σελίδα ζητά `GET /api/shares/[shareId]/invoice-payment` (όψη) και `…/pdf`. Το token δεν ξαναταξιδεύει. Ο διακομιστής (`invoice-public-session.ts`) ξαναελέγχει ότι ο σύνδεσμος είναι ενεργός και δεν έληξε (`findActiveShareOf`, που ως τώρα ήταν `activeTourShareId` της περιήγησης), τον μισθωτή και τις οδηγίες πληρωμής **που θα τύπωνε σήμερα** (`withCurrentIssuerSnapshot`). Κεφαλίδες `no-store` + `X-Robots-Tag: noindex`. Η σελίδα `/shared/[token]` κληρονομεί `noindex` + `no-referrer`. Όριο ρυθμού STANDARD. **Επίσκεψη (2026-11-13, ADR-315 Α19)**: το κουπόνι ζει με αδράνεια 15′ που **ανανεώνεται** σε κάθε θετική κρίση του συνδέσμου (όψη · PDF · έναρξη πληρωμής · «Γράψτε μας», ένας σκελετός `invoice-payment/_shared/invoice-visit-route.ts`) και απόλυτη λήξη 8 ωρών· όταν λήξει, η σελίδα ανοίγει αθόρυβα νέα επίσκεψη με το token (`fetchInVisit` · `reopenVisit`, ADR-ACC-030 §5.6). Πριν, η σελίδα πέθαινε 15′ μετά το άνοιγμα.
 - (δ) **Δημόσια όψη = ρητή λίστα πεδίων** (`buildInvoicePublicView`, τύπος `InvoicePublicView`). **Ποτέ**: `companyId`, `createdBy`, ids επαφών, email πελάτη, `emailHistory`, αιτιολογία ακύρωσης, εσωτερικά myDATA. Οι **σημειώσεις** περιέχονται, γιατί ήδη τυπώνονται στο PDF.
 - (ε) **Κατάσταση και ποσό** (`invoice-payment-link.ts`): `payable` · `paid` · `cancelled` · `not-payable`. Ακυρωμένο **δεν** είναι «δεν βρέθηκε»: ο πελάτης μαθαίνει ότι δεν οφείλει (Stripe: σελίδα void). Γι' αυτό η ακύρωση **δεν** ανακαλεί τον σύνδεσμο. Η σελίδα διαβάζει πάντα τη ζωντανή κατάσταση. Ποσό QR = **υπόλοιπο** (`invoiceOpenAmount`, όπως το `amount_remaining` του Stripe). Ένα QR **ανά λογαριασμό**. Το «ληξιπρόθεσμο» το κρίνει ο διακομιστής.
 - (στ) **Ένας ορισμός οδηγιών πληρωμής**: `invoicePayableAmount`, `invoicePaymentReference` (+ `remittance`), `paymentBeneficiaryOf`, `paymentQrPayload` μετακόμισαν από τα αρχεία σχεδίασης του PDF (jsPDF) στο καθαρό `services/payments/invoice-payment-instructions.ts`. Το PDF σχεδιάζει, η σελίδα προβάλλει, η αιτιολογία και το QR είναι ίδια. Το QR της σελίδας ζωγραφίζεται συγχρονισμένα από το `qrModuleRuns`, το ίδιο σύμβολο με το PDF.
@@ -756,11 +757,46 @@ src/subapps/accounting/
 
 ### 17.2 Επόμενα (εγκεκριμένο σχέδιο)
 
-- **Φ1β** — `InvoiceIssuer.logo` (αναφορά, γραμμένη **μόνο** από τον server, ζωντανή στο πρόχειρο / παγωμένη από τη
-  διαβίβαση, όπως οι λογαριασμοί §15)· απόδοση με σωστή αναλογία, κλικ στο λογότυπο → website, website-σύνδεσμος στο
-  υποσέλιδο· οι καλούντες σταματούν να διαβάζουν το `logo-data.ts`. Εκδομένα χωρίς `issuer.logo` ⇒ **χωρίς** λογότυπο.
-- **Φ1γ** — βεβαίωση ΑΠΥ με το τρέχον λογότυπο του χώρου.
+- ~~Φ1β~~ — υλοποιήθηκε, βλ. §17.3.
+- **Φ1γ** — βεβαίωση ΑΠΥ με το τρέχον λογότυπο του χώρου (ίδιοι φορτωτές `readPdfBrandImage` / `fetchPdfBrandImage`,
+  ίδιο `drawPdfBrandLogo`)· τότε το `drawPdfLogo` (base64 PNG, τετράγωνο) μένει χωρίς χρήστη.
 - ⛔ Το `logo-data.ts` δεν αγγίζεται (απόφαση Giorgio)· η βιτρίνα (`brand-logo-assets.ts`) μένει εκτός εμβέλειας.
+
+### 17.3 Φ1β — το λογότυπο του χώρου μέσα στο PDF του τιμολογίου (υλοποιήθηκε 2026-11-24)
+
+**Στιγμιότυπο.** `InvoiceIssuer.logo?: BrandLogoRef | null` (`types/invoice.ts`) — **αναφορά** σε αμετάβλητα bytes
+(storagePath · γενιά GCS · sha256 · PNG/JPEG · διαστάσεις), ποτέ bytes ή URL. Το γράφει **μόνο ο server**, με το
+**ίδιο** δόγμα με τους λογαριασμούς (§15 · §15.2): ζωντανό όσο το τιμολόγιο είναι πρόχειρο/απορριφθέν, αμετάβλητο από
+τη διαβίβαση (`IMMUTABLE_STATUSES`).
+
+| Στοιχείο | Αρχείο |
+|---|---|
+| **Ο ΕΝΑΣ συνθέτης** των πεδίων εκδότη του server (λογαριασμοί + λογότυπο) | `subapps/accounting/services/issuer/live-invoice-issuer.server.ts` → `liveInvoiceIssuer`: λογαριασμοί από `resolveInvoicePaymentAccounts`, λογότυπο από `readCompanyBrandLogo` προβεβλημένο σε αναφορά (`brandLogoRefOf`). Αποτυχία ανάγνωσης λογοτύπου ⇒ `null` + προειδοποίηση, **ποτέ** μπλοκ στην τιμολόγηση (ασφαλές: τρέχει μόνο σε ζωντανό εκδότη) |
+| Γέννηση | `accounting-repo-financial.ts` → `createInvoice` (φόρμα · γέφυρα πωλήσεων · πιστωτικό) |
+| Ζωντανό / παγωμένο | `app/api/accounting/invoices/invoice-issuer-snapshot.ts` (μετονομασία του `invoice-payment-snapshot.ts`): `withCurrentIssuerSnapshot` · `withServerIssuerSnapshotOnUpdate` · `hasLiveIssuerSnapshot`. Καλούντες: GET/PATCH `[id]/route.ts` · `send-email` · `invoice-public-session.ts`· ο χώρος δίνεται **ρητά** (`auth.companyId` / `share.companyId`) |
+| Ανάγνωση σχήματος | `lib/company/brand-logo-ref.ts` → `brandLogoRefOf` (εξήχθη): μισή/άκυρη αναφορά ⇒ `null` |
+| **Bytes, αποδεδειγμένα** (μία θύρα) | `lib/company/brand-logo-image.ts` → `PdfBrandImage { bytes · format · width · height · sha256 }` · `pdfBrandImageOf` (έλεγχος sha256 με τον ΕΝΑ `sha256Hex`, `lib/hash/sha256`) · `fetchPdfBrandImage` (browser: proxy `fileDisplayUrl`, ADR-899) |
+| Bytes στον server | `server/company/brand-logo-image.server.ts` → `readPdfBrandImage(ref, companyId)`: φράχτης χώρου με τον ΕΝΑ κριτή `storagePathCustody` · καρφωμένη γενιά (`readStorageObjectGeneration`) · κάδος από τον ΕΝΑ επιλογέα (`fileStorageBucket('legacy-default')`, εκεί γράφει ο γραφέας) · έλεγχος sha256 |
+| Απόδοση | `pdf-logo.ts` → `drawPdfBrandLogo`: μορφή από το asset (JPEG αυτούσιο · PNG με Flate), **aspect-fit** στο κουτί `LOGO` = 45×25 mm (9:5, ίδια αναλογία με την προεπισκόπηση των Ρυθμίσεων), alias `brand-logo-{sha256}`, σύνδεσμος πάνω στο λογότυπο. Η κεφαλίδα (`invoice-pdf-parties.ts`) ξεκινά τον εκδότη από το **πραγματικό** πλάτος που ζωγραφίστηκε |
+| Website | `issuerWebsiteHref` (`invoice-pdf-constants.ts`) πάνω στον ΕΝΑ κριτή `normalisePublicWebsite` (`https://` όταν λείπει σχήμα · άρνηση διαπιστευτηρίων στο URL). Κλικ στο λογότυπο + website στο υποσέλιδο ως `textWithLink`· άκυρο/κενό ⇒ καμία περιοχή συνδέσμου |
+| Καλούντες | `renderInvoicePdfDocument({ logo })` — το λογότυπο το φέρνει ο καλών: `send-email` και δημόσια σελίδα (`readPdfBrandImage`), exporter εφαρμογής (`fetchPdfBrandImage`). Το `loadInvoiceLogo` (ανάγνωση `logo-data.ts`) **καταργήθηκε** |
+
+**Αποφάσεις.**
+- **Bytes ή τίποτα**: ένα PDF ζωγραφίζει μόνο bytes που αποδεικνύει (γενιά + sha256)· κάθε αποτυχία ⇒ κεφαλίδα μόνο
+  με κείμενο, ποτέ αποτυχία PDF/email. Ίδιος έλεγχος σε browser και server (μία συνάρτηση).
+- **Παλιά εκδομένα χωρίς `issuer.logo` ⇒ χωρίς λογότυπο** — ποτέ σημερινή τιμή σε παλιό έγγραφο, ποτέ Παγώνη.
+  ⚠️ Συνέπεια: τα ήδη εκδομένα, που ως σήμερα τύπωναν το ενσωματωμένο σήμα, επανεκτυπώνονται χωρίς λογότυπο.
+- **Ο server δεν διαβάζει ξένα bytes επειδή τα όρισε ένα πεδίο**: φράχτης χώρου πριν από κάθε ανάγνωση Storage. Στον
+  browser το «επιτρέπεται;» το κρίνει ο proxy (`/api/storage/file`), όχι δεύτερος κριτής.
+- `logo-data.ts` **δεν αγγίχθηκε**· το χρησιμοποιεί ακόμη η βεβαίωση ΑΠΥ (Φ1γ).
+
+**Ευρήματα.**
+- ⚠️ **Δεν υπάρχει γραφέας διαβίβασης (draft → sent)** στον κώδικα (2026-11-24· γραφείς `mydata.status`: ακύρωση στο
+  `[id]/route.ts`, `reversal-service.ts`, `sales-accounting-helpers.ts` — κανείς δεν γράφει `sent`/`accepted`). Άρα
+  πάγωμα = το τελευταίο αποθηκευμένο στιγμιότυπο (γέννηση · PATCH με `issuer`/`paymentMethod`/`type` · επιτυχές email
+  πρόχειρου). Όταν γραφτεί η διαβίβαση, **πρέπει** να γράψει το `withCurrentIssuerSnapshot` στην ίδια εγγραφή.
+- Η αναφορά δεν κρατά **θέση κάδου**: ο γραφέας ανεβάζει πάντα στη θέση `legacy-default`. Αν αλλάξει κάδο, η αναφορά
+  πρέπει να αποκτήσει `storagePlacement` (ADR-895).
 
 ---
 

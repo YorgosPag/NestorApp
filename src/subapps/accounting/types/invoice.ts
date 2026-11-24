@@ -10,6 +10,7 @@
  */
 
 import type { CurrencyCode } from '@/types/contacts/banking';
+import type { BrandLogoRef } from '@/types/company-brand';
 import type { CreditCheckResult } from './customer-balance';
 import type {
   MyDataDocumentStatus,
@@ -165,6 +166,12 @@ export interface InvoiceIssuer {
    * Ο πρώτος είναι ο προεπιλεγμένος (αυτός μπαίνει στο EPC QR).
    */
   bankAccounts: InvoicePaymentAccount[];
+  /**
+   * Το λογότυπο του χώρου — **αναφορά** σε αμετάβλητα bytes (γενιά GCS + sha256), ADR-ACC-018 §17.3. Ίδιο δόγμα με
+   * το `bankAccounts`: το γράφει **μόνο ο διακομιστής** (ζωντανό στο πρόχειρο, παγωμένο από τη διαβίβαση).
+   * Απουσία (τιμολόγια πριν τη Φ1β) ή `null` ⇒ PDF **χωρίς** λογότυπο — ποτέ σημερινή τιμή σε παλιό έγγραφο.
+   */
+  logo?: BrandLogoRef | null;
 }
 
 /**

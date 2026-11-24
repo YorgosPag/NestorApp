@@ -9,7 +9,7 @@ import type jsPDF from 'jspdf';
 import autoTable, { type Styles } from 'jspdf-autotable';
 import { forceRobotoCell, yAfterTable } from '@/services/report-engine/report-pdf-chrome';
 import { formatAccountingCurrency } from '../../utils/format';
-import type { Invoice, InvoiceLineItem, InvoicePaymentAccount } from '../../types';
+import type { Invoice, InvoiceIssuer, InvoiceLineItem, InvoicePaymentAccount } from '../../types';
 import { showsPaymentInstructions } from '../payments/invoice-payment-accounts';
 import {
   invoicePayableAmount, invoicePaymentReference, paymentBeneficiaryOf, paymentQrPayload,
@@ -20,7 +20,7 @@ import {
 import {
   COLORS, LAYOUT, LABELS, PAYMENT_METHOD_LABELS, INVOICE_DOCUMENT_LANGUAGE,
   ensureSpace, drawHR, setColor, setWeight,
-  drawPaymentStamp, buildColumnStyles
+  drawPaymentStamp, buildColumnStyles, issuerWebsiteHref,
 } from './invoice-pdf-constants';
 import { uomLabelIn } from '@/lib/uom/uom-label-bundle';
 // Ο ΕΝΑΣ μορφοποιητής IBAN (ομάδες των 4) — ίδιος με την οθόνη, τη σελίδα πληρωμής και τις επαφές.
@@ -254,6 +254,27 @@ export function drawNotesSection(pdf: jsPDF, invoice: Invoice, startY: number): 
   return y + 9 + lines.length * 3.5;
 }
 
+const FOOTER_SEPARATOR = '  |  ';
+
+/**
+ * Website · email του εκδότη στο υποσέλιδο. Το website είναι **σύνδεσμος** (ADR-ACC-018 §17.3) όταν ο κριτής δημόσιου
+ * website το δέχεται· αλλιώς τυπώνεται ως κείμενο, χωρίς περιοχή συνδέσμου.
+ */
+function drawFooterContact(pdf: jsPDF, issuer: InvoiceIssuer, y: number): void {
+  let x = LAYOUT.marginLeft;
+  if (issuer.website) {
+    const href = issuerWebsiteHref(issuer);
+    if (href !== null) pdf.textWithLink(issuer.website, x, y, { url: href });
+    else pdf.text(issuer.website, x, y);
+    x += pdf.getTextWidth(issuer.website);
+    if (issuer.email) {
+      pdf.text(FOOTER_SEPARATOR, x, y);
+      x += pdf.getTextWidth(FOOTER_SEPARATOR);
+    }
+  }
+  if (issuer.email) pdf.text(issuer.email, x, y);
+}
+
 /**
  * §10: Page footers on ALL pages
  */
@@ -266,12 +287,7 @@ export function addPageFooters(pdf: jsPDF, invoice: Invoice): void {
     pdf.setFontSize(7);
 
     setColor(pdf, COLORS.grayLight);
-    const footerParts: string[] = [];
-    if (invoice.issuer.website) footerParts.push(invoice.issuer.website);
-    if (invoice.issuer.email) footerParts.push(invoice.issuer.email);
-    if (footerParts.length > 0) {
-      pdf.text(footerParts.join('  |  '), LAYOUT.marginLeft, footerY);
-    }
+    drawFooterContact(pdf, invoice.issuer, footerY);
 
     pdf.text(
       `${LABELS.page} ${i} / ${totalPages}`,

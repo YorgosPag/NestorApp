@@ -1,27 +1,23 @@
 /**
- * @fileoverview Το PDF ενός τιμολογίου ως **έγγραφο**: λογότυπο, όνομα αρχείου, απόδοση (ADR-ACC-018 §16)
+ * @fileoverview Το PDF ενός τιμολογίου ως **έγγραφο**: όνομα αρχείου, απόδοση (ADR-ACC-018 §16)
  * @description Ο ΕΝΑΣ δρόμος προς το PDF για όλους τους καλούντες, ίδιος σε browser και διακομιστή (το jsPDF είναι
  *   ισόμορφο): λήψη/εκτύπωση από την εφαρμογή (`invoice-pdf-exporter.ts`), συνημμένο email (`send-email`) και
  *   λήψη από τη δημόσια σελίδα πληρωμής. Ως τις 2026-11-11 το λογότυπο και το όνομα αρχείου ήταν γραμμένα δύο φορές
  *   (exporter + email route).
  *
- * @see ADR-ACC-018 §8 (όνομα αρχείου) · §16
+ *   🔑 **Το λογότυπο το φέρνει ο καλών** (ADR-ACC-018 §17.3): τα bytes της αναφοράς `issuer.logo`, με τον φορτωτή του
+ *   περιβάλλοντός του — server `readPdfBrandImage` · browser `fetchPdfBrandImage`, ίδιος έλεγχος sha256. Αυτό το
+ *   module **δεν** διαβάζει πια ενσωματωμένο λογότυπο (ως τη Φ1β: `logo-data.ts`, το σήμα Παγώνη σε **κάθε** χώρο).
+ *
+ * @see ADR-ACC-018 §8 (όνομα αρχείου) · §16 · §17.3
  */
 
 import type jsPDF from 'jspdf';
 
+import type { PdfBrandImage } from '@/lib/company/brand-logo-image';
+
 import type { CompanyProfile, Invoice } from '../../types';
 import { renderInvoicePDF } from './invoice-pdf-template';
-
-/** Το λογότυπο (base64 PNG), ή `null` αν δεν φορτώνεται: το PDF αποδίδεται και χωρίς αυτό. */
-export async function loadInvoiceLogo(): Promise<string | null> {
-  try {
-    const { PAGONIS_LOGO_BASE64 } = await import('./logo-data');
-    return PAGONIS_LOGO_BASE64;
-  } catch {
-    return null;
-  }
-}
 
 /** Ο κύριος ΚΑΔ της εταιρείας για την ενότητα myDATA, ή `null`. */
 export function extractKadFromProfile(profile: CompanyProfile | null): string | null {
@@ -41,6 +37,8 @@ export function invoicePdfFilename(invoice: Pick<Invoice, 'series' | 'number' | 
 
 export interface InvoicePdfDocumentOptions {
   readonly invoice: Invoice;
+  /** Τα bytes της αναφοράς `invoice.issuer.logo` — `null` ⇒ χωρίς λογότυπο (και κάθε τιμολόγιο πριν τη Φ1β). */
+  readonly logo: PdfBrandImage | null;
   readonly kadCode: string | null;
   /** Παρακράτηση: 0 σε κάθε σημερινό καλούντα (ADR-ACC-018 §15, «Εκτός εμβέλειας»). */
   readonly withholdingAmount?: number;
@@ -48,11 +46,11 @@ export interface InvoicePdfDocumentOptions {
   readonly paymentPageUrl?: string | null;
 }
 
-/** Αποδίδει το PDF με το λογότυπο. Ο καλών αποφασίζει αν θα το αποθηκεύσει, θα το επισυνάψει ή θα το σερβίρει. */
+/** Αποδίδει το PDF. Ο καλών αποφασίζει αν θα το αποθηκεύσει, θα το επισυνάψει ή θα το σερβίρει. */
 export async function renderInvoicePdfDocument(options: InvoicePdfDocumentOptions): Promise<jsPDF> {
   return renderInvoicePDF({
     invoice: options.invoice,
-    logoBase64: await loadInvoiceLogo(),
+    logo: options.logo,
     kadCode: options.kadCode,
     withholdingAmount: options.withholdingAmount ?? 0,
     paymentPageUrl: options.paymentPageUrl ?? null,

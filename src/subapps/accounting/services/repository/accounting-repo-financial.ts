@@ -37,7 +37,7 @@ import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 import { getBankAccounts } from './accounting-repo-bank-accounts';
-import { resolveInvoicePaymentAccounts } from '../payments/invoice-payment-accounts';
+import { liveInvoiceIssuer } from '../issuer/live-invoice-issuer.server';
 import { accountingDocId } from './accounting-doc-ids';
 import { readAccountingListPage, scanAccountingList } from './accounting-repo-list';
 import { INVOICE_LIST, JOURNAL_LIST } from './accounting-list-specs';
@@ -193,12 +193,17 @@ export async function createInvoice(
   const id = generateInvoiceAccId();
   const now = isoNow();
 
-  // ADR-ACC-018 §15: οι οδηγίες πληρωμής κάθε νέου τιμολογίου (φόρμα · γέφυρα πωλήσεων · πιστωτικό) γράφονται
-  // ΕΔΩ, από το μητρώο της εταιρείας — ό,τι έφερε ο καλών στο `issuer.bankAccounts` αγνοείται.
-  const bankAccounts = await resolveInvoicePaymentAccounts(
-    () => getBankAccounts(tenant), data, data.issuer?.name ?? '',
-  );
-  const withAccounts: CreateInvoiceInput = data.issuer ? { ...data, issuer: { ...data.issuer, bankAccounts } } : data;
+  // ADR-ACC-018 §15 + §17.3: οι οδηγίες πληρωμής και το λογότυπο κάθε νέου τιμολογίου (φόρμα · γέφυρα πωλήσεων ·
+  // πιστωτικό) γράφονται ΕΔΩ, από τις πηγές του χώρου — ό,τι έφερε ο καλών στο `issuer.bankAccounts`/`issuer.logo`
+  // αγνοείται (ο ΕΝΑΣ συνθέτης `liveInvoiceIssuer`).
+  const withAccounts: CreateInvoiceInput = data.issuer
+    ? {
+      ...data,
+      issuer: await liveInvoiceIssuer(data.issuer, {
+        readAccounts: () => getBankAccounts(tenant), companyId: tenant.companyId, subject: data,
+      }),
+    }
+    : data;
 
   // Atomic invoice counter
   const nextNumber = await getNextInvoiceNumber(tenant, data.series);

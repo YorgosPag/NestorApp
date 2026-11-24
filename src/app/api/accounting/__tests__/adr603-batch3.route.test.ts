@@ -176,6 +176,15 @@ jest.mock('@/server/accounting/public-invoice/invoice-email-payment-link', () =>
 
 jest.mock('@/lib/firebaseAdmin', () => ({ getAdminFirestore: () => ({}) }));
 
+// ADR-ACC-018 §17.3 — το λογότυπο του χώρου: ο ζωντανός εκδότης ρωτά την πηγή, το PDF διαβάζει τα bytes της αναφοράς.
+var brandLogo = { current: null as null | Record<string, unknown> };
+jest.mock('@/server/company/brand-logo-read.server', () => ({
+  readCompanyBrandLogo: jest.fn(async () => brandLogo.current),
+}));
+jest.mock('@/server/company/brand-logo-image.server', () => ({
+  readPdfBrandImage: jest.fn(async () => null),
+}));
+
 // ADR-ACC-018 §16 — το route φτάνει στο PDF μόνο μέσω του ΕΝΟΣ module εγγράφου (λογότυπο · όνομα · απόδοση).
 jest.mock('@/subapps/accounting/services/pdf/invoice-pdf-document', () => ({
   renderInvoicePdfDocument: jest.fn(async () => ({ output: () => new ArrayBuffer(16) })),
@@ -261,7 +270,16 @@ beforeEach(() => {
   mailgun.result = { success: true, messageId: 'mg_1', error: null };
   orgResolver.result = null;
   paymentLink.minted = null;
+  brandLogo.current = null;
 });
+
+// ADR-ACC-018 §17.3 — το τρέχον λογότυπο του χώρου (πλήρες `companies/{id}.brandLogo`) και η αναφορά που παγώνει.
+const LOGO_REF = {
+  storagePath: 'companies/comp_1/entities/company/comp_1/domains/admin/categories/photos/files/file_new.png',
+  generation: '1700000000000002', sha256: 'b'.repeat(64), contentType: 'image/png', width: 900, height: 300,
+};
+const CURRENT_BRAND_LOGO = { ...LOGO_REF, fileId: 'file_new', sizeBytes: 4096, updatedAt: '2026-11-24T10:00:00.000Z' };
+const OLD_LOGO_REF = { ...LOGO_REF, storagePath: LOGO_REF.storagePath.replace('file_new', 'file_old'), sha256: 'a'.repeat(64) };
 
 // ===========================================================================
 // invoices/[id]
@@ -283,6 +301,38 @@ describe('invoices/[id] — GET/PATCH/DELETE', () => {
     expect(res.status).toBe(200);
     // Μετρητά ⇒ ο resolver δεν τυπώνει λογαριασμούς· το παλιό στιγμιότυπο δεν φτάνει στον browser.
     expect(await res.json()).toMatchObject({ data: { issuer: { bankAccounts: [] } } });
+  });
+
+  it('GET πρόχειρο → το ΤΡΕΧΟΝ λογότυπο του χώρου, μόνο τα πεδία της αναφοράς (ADR-ACC-018 §17.3)', async () => {
+    brandLogo.current = CURRENT_BRAND_LOGO;
+    repo.getInvoice.mockResolvedValue(fullInvoice({ paymentMethod: 'cash', issuer: { ...fullInvoice().issuer, logo: OLD_LOGO_REF } }));
+    const res = (await invGet(req(), seg())) as Envelope;
+    const body = await res.json() as { data: { issuer: { logo: unknown } } };
+    expect(body.data.issuer.logo).toEqual(LOGO_REF); // όχι fileId/sizeBytes/updatedAt — και όχι το παλιό
+  });
+
+  it('GET πρόχειρο σε χώρο χωρίς λογότυπο → logo null (ποτέ ξένο ή ενσωματωμένο σήμα)', async () => {
+    repo.getInvoice.mockResolvedValue(fullInvoice({ paymentMethod: 'cash', issuer: { ...fullInvoice().issuer, logo: OLD_LOGO_REF } }));
+    const res = (await invGet(req(), seg())) as Envelope;
+    expect(await res.json()).toMatchObject({ data: { issuer: { logo: null } } });
+  });
+
+  it('GET εκδομένο → το παγωμένο λογότυπο, ακόμη κι αν άλλαξε το τρέχον του χώρου', async () => {
+    brandLogo.current = CURRENT_BRAND_LOGO;
+    const issued = fullInvoice({ mydata: { status: 'sent' }, issuer: { ...fullInvoice().issuer, logo: OLD_LOGO_REF } });
+    repo.getInvoice.mockResolvedValue(issued);
+    const res = (await invGet(req(), seg())) as Envelope;
+    expect(await res.json()).toEqual({ success: true, data: issued });
+  });
+
+  it('PATCH πρόχειρου με issuer → ο server αντικαθιστά το logo που έστειλε ο browser', async () => {
+    brandLogo.current = CURRENT_BRAND_LOGO;
+    repo.getInvoice.mockResolvedValue(fullInvoice());
+    const forged = { ...fullInvoice().issuer, logo: { ...LOGO_REF, storagePath: 'companies/comp_other/x.png' } };
+    const res = (await invPatch(req({ issuer: forged }), seg())) as Envelope;
+    expect(res.status).toBe(200);
+    const [, update] = repo.updateInvoice.mock.calls[0] as unknown as [string, { issuer: { logo: unknown } }];
+    expect(update.issuer.logo).toEqual(LOGO_REF);
   });
 
   it('GET not found → 404 Invoice not found', async () => {
@@ -428,6 +478,30 @@ describe('invoices/[id]/send-email — POST', () => {
     const [, update] = repo.updateInvoice.mock.calls[0] as unknown as [string, { emailHistory: Array<{ paymentLinkShareId: string | null }> }];
     expect(update.emailHistory.at(-1)?.paymentLinkShareId).toBe('shr_1');
     expect(paymentLink.revoke).not.toHaveBeenCalled();
+  });
+
+  it('ADR-ACC-018 §17.3: το PDF παίρνει τα bytes της αναφοράς του τιμολογίου, και το πρόχειρο κρατά ό,τι στάλθηκε', async () => {
+    brandLogo.current = CURRENT_BRAND_LOGO;
+    repo.getInvoice.mockResolvedValue(fullInvoice());
+    const { readPdfBrandImage } = jest.requireMock('@/server/company/brand-logo-image.server') as { readPdfBrandImage: jest.Mock };
+    const { renderInvoicePdfDocument } = jest.requireMock('@/subapps/accounting/services/pdf/invoice-pdf-document') as { renderInvoicePdfDocument: jest.Mock };
+    const image = { bytes: new Uint8Array([1]), format: 'PNG', width: 900, height: 300, sha256: LOGO_REF.sha256 };
+    readPdfBrandImage.mockResolvedValueOnce(image);
+    const res = (await emailPost(req({ recipientEmail: 'c@x.com' }), seg())) as Envelope;
+    expect(res.status).toBe(200);
+    expect(readPdfBrandImage).toHaveBeenCalledWith(LOGO_REF, 'comp_1');
+    expect(renderInvoicePdfDocument).toHaveBeenCalledWith(expect.objectContaining({ logo: image }));
+    const [, update] = repo.updateInvoice.mock.calls[0] as unknown as [string, { issuer: { logo: unknown } }];
+    expect(update.issuer.logo).toEqual(LOGO_REF);
+  });
+
+  it('ADR-ACC-018 §17.3: εκδομένο χωρίς issuer.logo (πριν τη Φ1β) ⇒ PDF χωρίς λογότυπο', async () => {
+    brandLogo.current = CURRENT_BRAND_LOGO;
+    repo.getInvoice.mockResolvedValue(fullInvoice({ mydata: { status: 'accepted' } }));
+    const { readPdfBrandImage } = jest.requireMock('@/server/company/brand-logo-image.server') as { readPdfBrandImage: jest.Mock };
+    const res = (await emailPost(req({ recipientEmail: 'c@x.com' }), seg())) as Envelope;
+    expect(res.status).toBe(200);
+    expect(readPdfBrandImage).toHaveBeenCalledWith(null, 'comp_1');
   });
 
   it('ADR-ACC-018 §16: delivery failure revokes the payment link — nobody received it', async () => {

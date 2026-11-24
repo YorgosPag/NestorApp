@@ -21,8 +21,11 @@ function contentTypeOf(value: unknown): BrandLogoContentType | null {
   return value === 'image/png' || value === 'image/jpeg' ? value : null;
 }
 
-/** Η αναφορά (ό,τι χρειάζεται για να ζωγραφιστεί), ή `null`. */
-function brandLogoRefOf(value: unknown): BrandLogoRef | null {
+/**
+ * Η αναφορά (ό,τι χρειάζεται για να ζωγραφιστεί), ή `null`. Δέχεται και το πλήρες `CompanyBrandLogo`: επιστρέφει
+ * **μόνο** τα πεδία της αναφοράς — έτσι παράγεται το στιγμιότυπο `InvoiceIssuer.logo` και έτσι ξαναδιαβάζεται.
+ */
+export function brandLogoRefOf(value: unknown): BrandLogoRef | null {
   if (!isRecord(value)) return null;
   const contentType = contentTypeOf(value.contentType);
   const { storagePath, generation, sha256, width, height } = value;

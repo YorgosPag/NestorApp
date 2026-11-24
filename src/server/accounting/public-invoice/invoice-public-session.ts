@@ -10,8 +10,8 @@ import 'server-only';
  *   2. Εδώ ελέγχεται, με ανάγνωση **με id**, ότι ο σύνδεσμος είναι **ακόμη** ενεργός (`findActiveShareOf`).
  *      Ανάκληση ⇒ καμία νέα απάντηση, ακόμη και μέσα στο κουπόνι.
  *   3. Το τιμολόγιο διαβάζεται **με τον μισθωτή του συνδέσμου** (`readTenantInvoice`).
- *   4. Οι λογαριασμοί είναι αυτοί που **θα τύπωνε σήμερα** (`withCurrentPaymentAccounts`: πρόχειρο ⇒ μητρώο,
- *      εκδομένο ⇒ στιγμιότυπο): ο ίδιος κριτής με το GET, το PDF και το email.
+ *   4. Οι λογαριασμοί και το λογότυπο είναι αυτά που **θα τύπωνε σήμερα** (`withCurrentIssuerSnapshot`:
+ *      πρόχειρο ⇒ πηγές του χώρου, εκδομένο ⇒ στιγμιότυπο): ο ίδιος κριτής με το GET, το PDF και το email.
  *   5. Τα κανάλια συνομιλίας του εκδότη είναι τα **τρέχοντα** του μισθωτή (`chatChannelsOf`), όχι στιγμιότυπο.
  *
  *   Το ακυρωμένο **δεν** είναι άρνηση: η όψη λέει `standing: 'cancelled'`, και ο πελάτης μαθαίνει ότι δεν οφείλει.
@@ -21,10 +21,12 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 
-import { withCurrentPaymentAccounts } from '@/app/api/accounting/invoices/invoice-payment-snapshot';
+import { withCurrentIssuerSnapshot } from '@/app/api/accounting/invoices/invoice-issuer-snapshot';
+import { brandLogoRefOf } from '@/lib/company/brand-logo-ref';
 import { chatChannelsOf, type ChatChannelRef } from '@/lib/contact/social-chat-links';
 import { todayLocalDate } from '@/lib/date-local';
 import { paymentProviderForCompany } from '@/server/payments/payment-provider-registry';
+import { readPdfBrandImage } from '@/server/company/brand-logo-image.server';
 import { findActiveShareOf } from '@/server/sharing/share-active-lookup';
 import { resolveTenantSocialAccounts } from '@/services/company/company-branding-resolver';
 import type { StoredShare } from '@/server/sharing/share-token-lookup';
@@ -63,7 +65,7 @@ export async function readSharedInvoice(db: Firestore, input: InvoicePublicSessi
   // Ο «χρήστης» του repository είναι ο δημιουργός του συνδέσμου: για λογαριασμό του διαβάζει ο διακομιστής.
   const found = await readTenantInvoice({ companyId: share.companyId, userId: share.createdBy }, share.entityId);
   if (found === null) return { kind: 'refused', reason: 'invoice-absent' };
-  const invoice = await withCurrentPaymentAccounts(found.repository, found.invoice);
+  const invoice = await withCurrentIssuerSnapshot(found.repository, share.companyId, found.invoice);
   return { kind: 'found', invoice, repository: found.repository, companyId: share.companyId, share };
 }
 
@@ -94,12 +96,14 @@ export async function renderInvoicePublicPdf(
   const shared = await readSharedInvoice(db, input);
   if (shared.kind === 'refused') return { kind: 'refused', reason: shared.reason };
   // Δυναμικά: το jsPDF + γραμματοσειρές φορτώνονται μόνο όταν ζητηθεί PDF, όχι σε κάθε προβολή.
-  const [pdfDocument, profile] = await Promise.all([
+  const [pdfDocument, profile, logo] = await Promise.all([
     import('@/subapps/accounting/services/pdf/invoice-pdf-document'),
     shared.repository.getCompanySetup(),
+    // ADR-ACC-018 §17.3: τα bytes ΤΗΣ αναφοράς του τιμολογίου, μόνο από τον χώρο του συνδέσμου — ή χωρίς λογότυπο.
+    readPdfBrandImage(brandLogoRefOf(shared.invoice.issuer.logo), shared.companyId),
   ]);
   const pdf = await pdfDocument.renderInvoicePdfDocument({
-    invoice: shared.invoice, kadCode: pdfDocument.extractKadFromProfile(profile),
+    invoice: shared.invoice, logo, kadCode: pdfDocument.extractKadFromProfile(profile),
   });
   return {
     kind: 'pdf', bytes: new Uint8Array(pdf.output('arraybuffer')), filename: pdfDocument.invoicePdfFilename(shared.invoice),

@@ -39,7 +39,9 @@ import type { EmailSendRecord, UpdateInvoiceInput } from '@/subapps/accounting/t
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { nowISO } from '@/lib/date-local';
 import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
-import { hasLivePaymentAccounts, withCurrentPaymentAccounts } from '../../invoice-payment-snapshot';
+import { hasLiveIssuerSnapshot, withCurrentIssuerSnapshot } from '../../invoice-issuer-snapshot';
+import { readPdfBrandImage } from '@/server/company/brand-logo-image.server';
+import { brandLogoRefOf } from '@/lib/company/brand-logo-ref';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
   mintInvoiceEmailPaymentLink,
@@ -137,8 +139,8 @@ export const POST = defineRoute({
       );
     }
 
-    // ADR-ACC-018 §15.2: πρόχειρο ⇒ ο πελάτης παίρνει τους λογαριασμούς του σημερινού μητρώου, όχι της δημιουργίας.
-    const invoice = await withCurrentPaymentAccounts(repository, stored);
+    // ADR-ACC-018 §15.2 · §17.3: πρόχειρο ⇒ ο πελάτης παίρνει λογαριασμούς + λογότυπο του σημερινού χώρου.
+    const invoice = await withCurrentIssuerSnapshot(repository, auth.companyId, stored);
 
     // ── 3. Payment link (ADR-ACC-018 §16) + PDF server-side ───────────
     const db = getAdminFirestore();
@@ -148,6 +150,8 @@ export const POST = defineRoute({
     const pdfDocument = await import('@/subapps/accounting/services/pdf/invoice-pdf-document');
     const pdf = await pdfDocument.renderInvoicePdfDocument({
       invoice,
+      // ADR-ACC-018 §17.3: τα bytes ΤΗΣ αναφοράς του τιμολογίου (καρφωμένη γενιά + sha256) — ή χωρίς λογότυπο.
+      logo: await readPdfBrandImage(brandLogoRefOf(invoice.issuer.logo), auth.companyId),
       kadCode: pdfDocument.extractKadFromProfile(companyProfile),
       paymentPageUrl: paymentLink?.url ?? null,
     });
@@ -212,7 +216,7 @@ export const POST = defineRoute({
     const updatePayload: UpdateInvoiceInput = {
       emailHistory: updatedEmailHistory,
       // Ό,τι έφτασε στον πελάτη μένει και στο έγγραφο — μόνο σε πρόχειρο· το στιγμιότυπο εκδομένου δεν αγγίζεται ποτέ.
-      ...(mailgunResult.success && hasLivePaymentAccounts(stored) && { issuer: invoice.issuer }),
+      ...(mailgunResult.success && hasLiveIssuerSnapshot(stored) && { issuer: invoice.issuer }),
     };
 
     await repository.updateInvoice(id, updatePayload);

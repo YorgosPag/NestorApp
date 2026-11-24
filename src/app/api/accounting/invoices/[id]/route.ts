@@ -39,7 +39,7 @@ import {
   VOIDABLE_STATUSES,
   CREDIT_NOTE_STATUSES,
 } from '../invoice-schemas';
-import { withCurrentPaymentAccounts, withServerPaymentAccountsOnUpdate } from '../invoice-payment-snapshot';
+import { withCurrentIssuerSnapshot, withServerIssuerSnapshotOnUpdate } from '../invoice-issuer-snapshot';
 import { resettleInvoicePayments } from '@/subapps/accounting/services/repository/accounting-repo-invoice-payments';
 
 // =============================================================================
@@ -58,8 +58,9 @@ export const GET = defineRoute({
       notFound('Invoice not found');
     }
 
-    // ADR-ACC-018 §15.2: πρόχειρο ⇒ οι οδηγίες πληρωμής του σημερινού μητρώου (προεπισκόπηση + PDF)· εκδομένο ⇒ το στιγμιότυπο.
-    return ok(await withCurrentPaymentAccounts(repository, invoice));
+    // ADR-ACC-018 §15.2 · §17.3: πρόχειρο ⇒ οι οδηγίες πληρωμής και το λογότυπο του σημερινού χώρου (προεπισκόπηση +
+    // PDF)· εκδομένο ⇒ το στιγμιότυπο.
+    return ok(await withCurrentIssuerSnapshot(repository, auth.companyId, invoice));
   },
 });
 
@@ -93,8 +94,8 @@ export const PATCH = defineRoute({
       httpError(403, `Cannot edit invoice with myDATA status '${currentStatus}'. Only draft or rejected invoices are editable.`);
     }
 
-    // ADR-ACC-018 §15: αλλαγή τρόπου πληρωμής/εκδότη/τύπου ⇒ ο διακομιστής ξαναχτίζει τους λογαριασμούς από το μητρώο.
-    const withAccounts = await withServerPaymentAccountsOnUpdate(repository, updates, existing);
+    // ADR-ACC-018 §15 · §17.3: αλλαγή τρόπου πληρωμής/εκδότη/τύπου ⇒ ο διακομιστής ξαναχτίζει λογαριασμούς + λογότυπο.
+    const withAccounts = await withServerIssuerSnapshotOnUpdate(repository, auth.companyId, updates, existing);
     await repository.updateInvoice(id, withAccounts as UpdateInvoiceInput);
 
     // ADR-ACC-030: νέες γραμμές ⇒ νέο σύνολο ⇒ το υπόλοιπο ξαναβγαίνει από τον ΕΝΑ υπολογισμό, σε συναλλαγή πάνω

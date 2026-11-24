@@ -14,6 +14,7 @@
 
 import type jsPDF from 'jspdf';
 import type { Invoice } from '../../types';
+import type { PdfBrandImage } from '@/lib/company/brand-logo-image';
 import { LAYOUT } from './invoice-pdf-constants';
 import { drawHeader, drawCustomerSection } from './invoice-pdf-parties';
 import {
@@ -50,8 +51,11 @@ export {
 export interface InvoicePDFRenderOptions {
   /** The invoice to render */
   invoice: Invoice;
-  /** Logo as base64 PNG string (null = skip) */
-  logoBase64: string | null;
+  /**
+   * Το λογότυπο του χώρου — τα bytes **της αναφοράς του τιμολογίου** (`issuer.logo`), αποδεδειγμένα (γενιά + sha256)·
+   * `null` ⇒ κεφαλίδα χωρίς λογότυπο (ADR-ACC-018 §17.3).
+   */
+  logo: PdfBrandImage | null;
   /** KAD code for myDATA section (null = skip) */
   kadCode: string | null;
   /** Withholding tax amount (default: 0) */
@@ -69,7 +73,7 @@ export interface InvoicePDFRenderOptions {
  * @returns The jsPDF instance (caller decides: save, blob, or print)
  */
 export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promise<jsPDF> {
-  const { invoice, logoBase64, kadCode, withholdingAmount, paymentPageUrl = null } = options;
+  const { invoice, logo, kadCode, withholdingAmount, paymentPageUrl = null } = options;
 
   // Dynamic imports for code-splitting
   const { default: jsPDF } = await import('jspdf');
@@ -83,7 +87,7 @@ export async function renderInvoicePDF(options: InvoicePDFRenderOptions): Promis
   // Render sections sequentially
   let y = LAYOUT.marginTop;
 
-  y = drawHeader(pdf, invoice, logoBase64, y);
+  y = drawHeader(pdf, invoice, logo, y);
   y = drawCustomerSection(pdf, invoice, y);
   y = drawCreditNoteReference(pdf, invoice, y);
   y = drawLineItemsTable(pdf, invoice, y);
