@@ -64,7 +64,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           # setup-node@v5: χωρίς αυτό ενεργοποιεί σιωπηρά pnpm cache (packageManager) — εδώ δεν υπάρχει pnpm
           package-manager-cache: false
 

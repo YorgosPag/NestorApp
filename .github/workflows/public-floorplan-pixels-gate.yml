@@ -124,7 +124,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       # 🔑 ΠΡΙΝ ΑΠΟ ΟΛΑ, ΚΑΙ ΦΘΗΝΟ: τα δεσμευμένα `.glb` είναι ΑΚΡΙΒΩΣ ό,τι γράφει ο γεννήτορας;

@@ -65,7 +65,7 @@ jobs:
       - name: 📦 Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       # No --ignore-scripts: the full type-check needs the framework/type

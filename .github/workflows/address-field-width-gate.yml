@@ -145,7 +145,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       # ⚠️ ΧΩΡΙΣ `--ignore-scripts`: ο Next dev server πρέπει όντως να σηκωθεί.

@@ -90,7 +90,7 @@ jobs:
       - name: 📦 Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       # typescript μόνο — parse-only walk, καμία δημιουργία Program (N.17).

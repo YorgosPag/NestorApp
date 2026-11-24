@@ -71,7 +71,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       # ⚠️ Χρειάζεται το ΕΓΚΑΤΕΣΤΗΜΕΝΟ `jest-util` (ο matcher είναι του jest, ποτέ δικός μας —

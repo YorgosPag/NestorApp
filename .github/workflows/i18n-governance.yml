@@ -99,7 +99,7 @@ jobs:
       - name: 📦 Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       # Μόνο για το `typescript` του CHECK 3.13 (βλ. κεφαλίδα). `--ignore-scripts`:
@@ -205,7 +205,7 @@ jobs:
       - name: 📦 Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           # setup-node@v5: χωρίς αυτό ενεργοποιεί σιωπηρά pnpm cache (packageManager) — εδώ δεν υπάρχει pnpm
           package-manager-cache: false
 
@@ -254,7 +254,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       - name: 📦 Install dependencies

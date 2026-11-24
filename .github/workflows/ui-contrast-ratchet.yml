@@ -170,7 +170,7 @@ jobs:
       - name: 📦 Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       # ── Dependency-free steps FIRST ──────────────────────────────────────────
@@ -413,7 +413,7 @@ jobs:
       - name: 📦 Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'pnpm'
 
       # ⚠️ ΧΩΡΙΣ `--ignore-scripts` εδώ, αντίθετα από το φθηνό job: ο Next dev server
