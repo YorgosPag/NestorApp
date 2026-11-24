@@ -12,6 +12,8 @@
 import {
   isTestHarnessRouteEnabled,
   isPerfHarnessRouteEnabled,
+  isTerrainFusionProbeRouteEnabled,
+  TERRAIN_FUSION_PROBE_CLOSES_ON,
 } from '../test-harness-access';
 
 const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
@@ -86,5 +88,37 @@ describe('test-harness route access (ADR-726 §13.5)', () => {
         expect(isPerfHarnessRouteEnabled()).toBe(false);
       },
     );
+  });
+
+  describe('isTerrainFusionProbeRouteEnabled — παραγωγή μόνο ως τη δηλωμένη ημερομηνία (ADR-920 §14.12 Β0)', () => {
+    const closesAt = Date.parse(`${TERRAIN_FUSION_PROBE_CLOSES_ON}T00:00:00Z`);
+
+    it('production, ένα ms πριν από το κλείσιμο → ανοιχτό', () => {
+      setNodeEnv('production');
+      expect(isTerrainFusionProbeRouteEnabled(new Date(closesAt - 1))).toBe(true);
+    });
+
+    it('🔒 production, τη στιγμή του κλεισίματος και μετά → κλειστό', () => {
+      setNodeEnv('production');
+      expect(isTerrainFusionProbeRouteEnabled(new Date(closesAt))).toBe(false);
+      expect(isTerrainFusionProbeRouteEnabled(new Date(closesAt + 365 * 86_400_000))).toBe(false);
+    });
+
+    it('development → ανοιχτό και μετά το κλείσιμο', () => {
+      setNodeEnv('development');
+      expect(isTerrainFusionProbeRouteEnabled(new Date(closesAt + 86_400_000))).toBe(true);
+    });
+
+    it('🔒 ΔΕΝ διευρύνει τα άλλα δύο: production πριν από το κλείσιμο ⇒ μένουν κλειστά', () => {
+      setNodeEnv('production');
+      delete process.env.ENABLE_PERF_HARNESS;
+      expect(isTestHarnessRouteEnabled()).toBe(false);
+      expect(isPerfHarnessRouteEnabled()).toBe(false);
+    });
+
+    it('η ημερομηνία κλεισίματος είναι έγκυρη ημερομηνία ISO', () => {
+      expect(TERRAIN_FUSION_PROBE_CLOSES_ON).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Number.isNaN(closesAt)).toBe(false);
+    });
   });
 });

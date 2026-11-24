@@ -203,3 +203,10 @@ export { LngLatBounds, Marker as MapLibreMarker } from 'maplibre-gl';
  * κινείται ποτέ**. Ο μόνος επιτρεπτός καταναλωτής είναι το harness μέτρησης.
  */
 export { setNow as freezeMapClock, restoreNow as thawMapClock } from 'maplibre-gl';
+
+/**
+ * Εγγραφή πρωτοκόλλου πλακιδίων (ADR-920 §14.12 — σύντηξη υψομέτρων). Η `maplibre-gl` κρατά **ένα καθολικό**
+ * μητρώο πρωτοκόλλων· περνά από το σύνορο ώστε να μην εισάγει κανείς τιμή της βιβλιοθήκης απευθείας (CHECK 3.75).
+ */
+export { addProtocol as registerMapProtocol } from 'maplibre-gl';
+export type { AddProtocolAction as MapProtocolLoader } from 'maplibre-gl';

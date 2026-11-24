@@ -562,6 +562,19 @@ export function elevationSource(id: ElevationSourceId): ElevationArchiveSource {
   return ELEVATION_SOURCE_TABLE[id];
 }
 
+/**
+ * Το σχήμα των πλακιδίων υψομέτρου που **υπολογίζονται στον browser** (σύντηξη μετρημένου + χοντρού, ADR-920 §14.12
+ * Β-1). Δεν είναι διακομιστής: το πρωτόκολλο διαβάζει το χοντρό από το `archiveUrl` μιας πηγής αυτού του πίνακα και
+ * επιστρέφει pixels. Ζει εδώ ώστε το πρότυπο πλακιδίων να γράφεται σε **ένα** σημείο (CHECK 3.95) και ο φύλακας
+ * αιτημάτων να το αναγνωρίζει ως τοπικό.
+ */
+export const ELEVATION_FUSION_URL_SCHEME = 'terrain-fusion://';
+
+/** Το `tiles[0]` μιας πηγής `raster-dem` σύντηξης. `surface` = ποια επιφάνεια (και ποια αναθεώρησή της) ζητείται. */
+export function elevationFusionTileTemplate(surface: string): string {
+  return `${ELEVATION_FUSION_URL_SCHEME}${encodeURIComponent(surface)}/{z}/{x}/{y}`;
+}
+
 function hostMatches(hostname: string, pattern: string): boolean {
   return pattern.startsWith('*.') ? hostname.endsWith(pattern.slice(1)) : hostname === pattern;
 }

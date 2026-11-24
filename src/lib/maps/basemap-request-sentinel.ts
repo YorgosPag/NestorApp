@@ -15,7 +15,7 @@
 
 import type { RequestParameters, RequestTransformFunction, ResourceType } from 'maplibre-gl';
 import { createModuleLogger } from '@/lib/telemetry';
-import { basemapProviderOfHost, unwrapArchiveUrl } from './basemap-catalog';
+import { ELEVATION_FUSION_URL_SCHEME, basemapProviderOfHost, unwrapArchiveUrl } from './basemap-catalog';
 
 const logger = createModuleLogger('MAP_REQUEST_SENTINEL');
 
@@ -35,11 +35,19 @@ export interface MapRequestClassification {
 const LOCAL_SCHEME = /^(data|blob):/i;
 
 /**
+ * Πλακίδιο που **υπολογίζεται στον browser** (σύντηξη υψομέτρων, ADR-920 §14.12): το σχήμα δεν χτυπά διακομιστή. Το χοντρό
+ * που διαβάζει το πρωτόκολλο έρχεται από `archiveUrl` του μητρώου — δηλωμένο εκεί, όχι εδώ.
+ */
+function isComputedInBrowser(url: string): boolean {
+  return LOCAL_SCHEME.test(url) || url.startsWith(ELEVATION_FUSION_URL_SCHEME);
+}
+
+/**
  * Καθαρή κρίση ενός αιτήματος — `origin` = η προέλευση της σελίδας (`null` εκτός περιηγητή).
  * Το `pmtiles://https://…` κρίνεται με τον διακομιστή που **πράγματι** θα χτυπηθεί, όχι με το σχήμα.
  */
 export function classifyMapRequest(url: string, origin: string | null): MapRequestClassification {
-  if (LOCAL_SCHEME.test(url)) return { verdict: 'local', host: null };
+  if (isComputedInBrowser(url)) return { verdict: 'local', host: null };
   let parsed: URL;
   try {
     parsed = new URL(unwrapArchiveUrl(url), origin ?? undefined);

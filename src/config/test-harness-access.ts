@@ -50,3 +50,27 @@ export function isTestHarnessRouteEnabled(): boolean {
 export function isPerfHarnessRouteEnabled(): boolean {
   return isTestHarnessRouteEnabled() || process.env.ENABLE_PERF_HARNESS === '1';
 }
+
+/**
+ * Η τελευταία μέρα που η σελίδα δοκιμής εφικτότητας της σύντηξης υψομέτρων (ADR-920 §14.12 Β0) απαντά στην παραγωγή.
+ * Από τις 00:00 UTC αυτής της ημερομηνίας και μετά: 404.
+ */
+export const TERRAIN_FUSION_PROBE_CLOSES_ON = '2026-12-08';
+
+/**
+ * Η σελίδα του **Β0** (`/test-harness/terrain-fusion`): ανάπτυξη, **ή παραγωγή μέχρι τη δηλωμένη ημερομηνία**.
+ *
+ * Γιατί τρίτο όνομα: η μέτρηση του Β0 γίνεται **στην παραγωγή** (απόφαση Giorgio 2026-11-24 — δεν υπάρχει τοπικός
+ * dev server), άρα ούτε το «μόνο ανάπτυξη» ούτε ο διακόπτης χρόνου κατασκευής του perf harness ταιριάζουν: το build
+ * της παραγωγής δεν δέχεται μεταβλητές ανά ανάπτυξη χωρίς αλλαγή υποδομής.
+ *
+ * **Κλείνει με δύο τρόπους.** Ο κανονικός: το commit που γράφει τα αποτελέσματα του Β0 σβήνει τη σελίδα και αυτή τη
+ * συνάρτηση. Το δίχτυ: η ημερομηνία — αν το κλείσιμο ξεχαστεί, η σελίδα παύει να απαντά μόνη της. Γι' αυτό η σελίδα
+ * αποδίδεται **ανά αίτημα** (`dynamic = 'force-dynamic'`): σε προ-αποδομένη σελίδα η ημερομηνία θα κρινόταν μία φορά,
+ * στο build.
+ *
+ * Η σελίδα δεν διαβάζει και δεν γράφει δεδομένα της εφαρμογής: συνθετικό έδαφος + το δημόσιο αρχείο υψομέτρου.
+ */
+export function isTerrainFusionProbeRouteEnabled(now: Date = new Date()): boolean {
+  return isTestHarnessRouteEnabled() || now.getTime() < Date.parse(`${TERRAIN_FUSION_PROBE_CLOSES_ON}T00:00:00Z`);
+}
