@@ -30,7 +30,9 @@ const YELLOW = '\x1b[1;33m';
 const NC     = '\x1b[0m';
 
 // Files to skip entirely
-const FILE_SKIP_RE = /(\.(png|jpg|ico|woff|lock)$|\.env\.(example|sample)|node_modules|scripts[\\/]git-hooks[\\/]|\.github[\\/]workflows[\\/]|docs[\\/]architecture-review[\\/]|(^|[\\/])\.gitleaks\.toml$|(^|[\\/])check-secret-scan(\.test)?\.js$)/;
+// `roboto-bold-font-data.ts` (ADR-805, 2026-11-24): base64 TTF — μια σειρά 247 «A» (μηδενικά bytes) ταίριαζε στο
+// `AAAA…{100,}` του κλειδιού FCM. Ίδια εξαίρεση με το Regular στο `.gitleaks.toml` (G12 triage).
+const FILE_SKIP_RE = /(\.(png|jpg|ico|woff|lock)$|(^|[\\/])src[\\/]services[\\/]gantt-export[\\/]roboto-bold-font-data\.ts$|\.env\.(example|sample)|node_modules|scripts[\\/]git-hooks[\\/]|\.github[\\/]workflows[\\/]|docs[\\/]architecture-review[\\/]|(^|[\\/])\.gitleaks\.toml$|(^|[\\/])check-secret-scan(\.test)?\.js$)/;
 
 // Line-level patterns
 // Το `(^|[^a-zA-Z0-9])` είναι όριο λέξης, όχι χαλάρωση: ένα πραγματικό κλειδί

@@ -444,6 +444,17 @@ Google με το `cmap` του ίδιου του αρχείου· η άγκυρ�
 
 ## Changelog
 
+* **2026-11-24 — ΠΡΑΓΜΑΤΙΚΟ ΕΝΤΟΝΟ ΣΤΑ PDF (ADR-947 §11).** Νέο `src/services/gantt-export/roboto-bold-font-data.ts`
+  (228 KB base64 · Roboto Bold **v2.137**, `google/fonts` commit `724bf98e9f`, `apache/roboto/Roboto-Bold.ttf`, git blob
+  `d3f01ad2…` = ό,τι δηλώνει το GitHub) — **Apache-2.0** από το name table, άρα ίδια απόδοση με το Regular
+  (`Roboto-Apache-2.0-LICENSE.txt`). Δηλώθηκε στο `.font-assets.json`. 🔴 **Το εύρημα**: το `registerGreekFont` δήλωνε το
+  `'bold'` πάνω στο **ίδιο** Regular TTF ⇒ **κανένα** `setFont('Roboto', 'bold')` σε κανένα PDF δεν πάχαινε. ⚠️ Το
+  Regular (`Version 2.001047; 2015`, 515.100 bytes, 3.387 γλύφοι) **δεν** βρέθηκε σε καμία έκδοση του `google/fonts`
+  (2015 · v2.136 · v2.137, όλες ~162–172 KB) ⇒ το ζευγάρι είναι **ίδια οικογένεια, όχι ίδια έκδοση**. Μετρημένη κάλυψη
+  του Bold: Latin · μονοτονικά ελληνικά (όλα) · `€` `·` `–` `—` `«»` `°` `²` · **λείπουν** τα πολυτονικά (U+1Fxx) και το
+  U+202F, που έχει μόνο το Regular. Το `invoice-pdf-template.ts` (λογιστήριο) κάνει **δική του** καταχώριση με το ίδιο
+  Regular και για τα δύο ύφη, εκτός `registerGreekFont` — **δεν** αγγίχθηκε.
+
 * **2026-10-10 — Η ROBOTO ΤΟΥ UI ΦΙΛΟΞΕΝΕΙΤΑΙ ΑΠΟ ΕΜΑΣ (§10).** Έφυγε το `next/font/google` (η εκκίνηση
   εξαρτιόταν από την απάντηση της Google)· 9 WOFF2 της Roboto 3.015 στο `public/fonts/roboto/` +
   `src/app/ui-font.css`. 🔴 Μετρήθηκε ότι η Roboto 3 είναι **OFL-1.1**, όχι Apache-2.0 όπως έγραφε το §9.2 ⇒

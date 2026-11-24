@@ -16,6 +16,7 @@
     "public/fonts/roboto/roboto-v3.015-math.woff2",
     "public/fonts/roboto/roboto-v3.015-symbols.woff2",
     "public/fonts/roboto/roboto-v3.015-vietnamese.woff2",
+    "src/services/gantt-export/roboto-bold-font-data.ts",
     "src/services/gantt-export/roboto-font-data.ts"
   ]
 }

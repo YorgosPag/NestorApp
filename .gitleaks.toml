@@ -44,6 +44,7 @@ paths = [
   # --- G12 triage 2026-07-08: generated / vendored / junk — never a real secret ---
   '''(^|/)public/pdf\.worker\.min\.mjs$''',                    # vendored pdf.js worker (base64 → aws-token FP)
   '''(^|/)src/services/gantt-export/roboto-font-data\.ts$''',  # embedded Roboto font base64 (→ aws-token FP)
+  '''(^|/)src/services/gantt-export/roboto-bold-font-data\.ts$''',  # embedded Roboto Bold base64 (ADR-805, 2026-11-24: 247× 'A' run → FCM-key FP)
   '''(^|/)\.next-backup-[0-9-]+/''',                           # stale Next.js build artifact dir
   '''(^|/)\.env\.example$''',                                  # placeholder env template
   '''Sharing Debugger - Meta for Developers\.html$''',         # saved 3rd-party Meta page (short-lived FB tokens)

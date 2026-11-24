@@ -50,6 +50,13 @@
       "why": "🔴 Η ΠΙΟ ΕΚΤΕΘΕΙΜΕΝΗ ΔΙΑΝΟΜΗ ΤΟΥ ΕΡΓΟΥ: 687 KB base64 TTF που το jsPDF ΕΝΣΩΜΑΤΩΝΕΙ σε κάθε τιμολόγιο, gantt, milestone και εκτύπωση DXF που φεύγει σε πελάτη. Η άδεια επαληθεύεται αποκωδικοποιώντας τα ίδια τα bytes και διαβάζοντας το name table τους — όχι από τη δήλωση."
     },
 
+    "src/services/gantt-export/roboto-bold-font-data.ts": {
+      "spdx": "Apache-2.0",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-Apache-2.0-LICENSE.txt",
+      "why": "ADR-947 §11 (2026-11-24) — το ΠΡΑΓΜΑΤΙΚΟ έντονο των PDF: 228 KB base64 TTF (Roboto Bold v2.137, google/fonts 724bf98e9f · blob d3f01ad2). Ως τότε το 'bold' του greek-font-loader ήταν το ΙΔΙΟ Regular ⇒ κανένα έντονο σε κανένα PDF. Ενσωματώνεται (υποσύνολο γλύφων) σε κάθε PDF που τυπώνει έντονο. Η άδεια επαληθεύεται από το name table των ίδιων των bytes."
+    },
+
     "public/fonts/roboto/roboto-v3.015-latin.woff2": {
       "spdx": "OFL-1.1",
       "family": "Roboto",
