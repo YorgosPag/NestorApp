@@ -1303,6 +1303,13 @@ if (!process.env.SKIP_SUBCONTRACT_AUTHORITY)
 if (!process.env.SKIP_OPPORTUNITY_STAGE_AUTHORITY)
   addThread('3.114', 'Opportunity stage authority', 'scripts/check-opportunity-stage-authority.js', ['--index']);
 
+// CHECK 3.118 (ADR-951) — ο ένας γραφέας της επαφής του χώρου. «Γράφει κάποιος τον δεσμό `companies/{id}.selfContact`
+// ΕΞΩ από το `self-contact-store.server.ts` — χωρίς τις κρίσεις, τη συναλλαγή, το Ιστορικό;» Κ1 όνομα πεδίου μόνο στους
+// κατόχους · Κ2 όνομα με το χέρι · Κ4 καλωδίωση · Κ5 κανόνες/MCP/AI κλειστά. AST, ZERO-TOL, καμία baseline.
+// 🔴 ΧΩΡΙΣ ΣΚΑΝΔΑΛΗ: δεύτερος γραφέας γεννιέται οπουδήποτε (π.χ. route προφίλ)· το προφίλτρο κρατά τη σάρωση φθηνή.
+if (!process.env.SKIP_SELF_CONTACT_AUTHORITY)
+  addThread('3.118', 'Self contact authority', 'scripts/check-self-contact-authority.js', ['--index']);
+
 // CHECK 3.106 (ADR-923 §5.9) — ο ένας γραφέας του σχήματος καταλόγου. «Γράφει κάποιος ιδιότητα · ομάδα · οικογένεια
 // μέτρησης · κατηγορία · οικογένεια ΕΞΩ από τη μηχανή `src/server/catalog/catalog-store.server.ts` — δηλαδή χωρίς
 // επικύρωση απέναντι στη βιβλιοθήκη, χωρίς CAS, χωρίς ίχνος;» Οι κανόνες κλείνουν τον πελάτη, όχι τον Admin SDK.

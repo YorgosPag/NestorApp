@@ -130,6 +130,35 @@
         "tooSmall": "The image is too small — at least {minPx} px on the long side is needed.",
         "undecodable": "The file cannot be read as an image."
       }
+    },
+    "selfContact": {
+      "title": "Workspace contact",
+      "description": "Which company contact is your workspace itself.",
+      "suggestion": {
+        "suggested": "A contact has the same VAT number as the workspace details. Is this it?",
+        "ambiguous": "More than one contact has the workspace VAT number. Choose which one is your workspace.",
+        "none": "No contact has the workspace VAT number.",
+        "noTaxId": "The workspace details have no valid VAT number, so there is no suggestion."
+      },
+      "thisIsUs": "This is us",
+      "imageQuestion": "This contact has its own image. Make it the workspace logo?",
+      "keepWorkspaceLogo": "No, keep the current logo",
+      "useContactImage": "Yes, make it the workspace logo",
+      "createFromWorkspace": "Create a contact from the workspace details",
+      "creating": "Creating…",
+      "unlink": "Unlink",
+      "unlinking": "Unlinking…",
+      "loadFailed": "Could not load. Please try again.",
+      "saveFailed": "The change was not saved. Please try again.",
+      "refusal": {
+        "contactNotFound": "The contact was not found in this workspace.",
+        "notACompany": "Only a company contact (legal entity) can be the workspace.",
+        "contactInactive": "The contact is archived or deleted.",
+        "alreadyLinked": "The workspace is already linked to another contact. Unlink it first.",
+        "contactImageUnavailable": "The contact image could not be read. Nothing changed.",
+        "contactImageRefused": "The contact image is not suitable as a logo. Nothing changed.",
+        "profileNameless": "The workspace details have no business name. Fill them in under Accounting setup."
+      }
     }
   },
   "departments": {

@@ -297,6 +297,8 @@
     "test:subcontract-authority": "jest scripts/__tests__/subcontract-authority-gate.test.js",
     "opportunity-stage-authority:report": "node scripts/check-opportunity-stage-authority.js",
     "test:opportunity-stage-authority": "jest scripts/__tests__/opportunity-stage-authority-gate.test.js",
+    "self-contact-authority:report": "node scripts/check-self-contact-authority.js",
+    "test:self-contact-authority": "jest scripts/__tests__/self-contact-authority-gate.test.js",
     "catalog-schema-authority:report": "node scripts/check-catalog-schema-authority.js",
     "test:catalog-schema-authority": "jest scripts/__tests__/catalog-schema-authority-gate.test.js",
     "tour-presence-authority:report": "node scripts/check-tour-presence-authority.js",

@@ -1433,6 +1433,9 @@ export const API_ROUTES = {
   // ── Λογότυπο του χώρου (ADR-ACC-018 §17) ─────────────────────────────
   COMPANY_BRAND_LOGO: '/api/companies/brand-logo',
 
+  // ── Η επαφή του χώρου (ADR-951) ──────────────────────────────────────
+  COMPANY_SELF_CONTACT: '/api/companies/self-contact',
+
   // ── Επεξεργασία AI ανά εταιρεία (ADR-929 Δ15 #1) ─────────────────────
   AI_PROCESSING_SETTINGS: '/api/settings/ai-processing',
 
