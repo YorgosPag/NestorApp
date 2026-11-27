@@ -112,24 +112,7 @@ export async function findVatHolders(
   }
 }
 
-/**
- * Check if a VAT number is already used by another contact within the same company.
- * Λεπτό περιτύλιγμα του {@link findVatHolders}: ο **πρώτος** άλλος κάτοχος, για όσους ρωτούν μόνο «υπάρχει;».
- *
- * @param vatNumber - The VAT number to check (must be 9 digits)
- * @param companyId - Tenant company identifier (required for tenant isolation)
- * @param excludeContactId - Optional ID to exclude (self-exclusion during edit)
- * @returns VatUniquenessResult indicating if the VAT is unique
- */
-export async function checkVatUniqueness(
-  vatNumber: string,
-  companyId: string,
-  excludeContactId?: string
-): Promise<VatUniquenessResult> {
-  return vatUniquenessOf(await findVatHolders(vatNumber, companyId, excludeContactId));
-}
-
-/** Οι κάτοχοι στο παλιό σχήμα «υπάρχει; ποιος;» — ο **πρώτος**. Ένα σημείο για τη συνάρτηση και το hook. */
+/** Οι κάτοχοι στο παλιό σχήμα «υπάρχει; ποιος;» — ο **πρώτος**. Το διαβάζει το `useVatUniqueness`. */
 export function vatUniquenessOf(holders: readonly IdentifierHolder[]): VatUniquenessResult {
   const [first] = holders;
   return first === undefined

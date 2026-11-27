@@ -2,14 +2,20 @@
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet, ανά αρχείο ΚΑΙ module)",
     "schema": 2,
-    "generated": "2026-10-01T21:36:32Z",
+    "generated": "2026-11-27T21:26:07Z",
     "totalViolations": 118,
-    "totalFiles": 92,
+    "totalFiles": 90,
     "rule": "Κανένα module δεν ανεβαίνει σε κανένα αρχείο. Νέο αρχείο = μηδενική ανοχή.",
     "registry": ".ssot-registry.json",
     "engine": "scripts/lib/ssot/scan.js (ΜΙΑ μηχανή — ADR-749)"
   },
   "files": {
+    "src/app/(app)/demo/floorplan-background-image/page.tsx": {
+      "slider-primitive": 3
+    },
+    "src/app/api/admin/role-management/users/[uid]/identity-remediation/remediation-operations.ts": {
+      "date-local": 1
+    },
     "src/app/api/financial-intelligence/query/route.ts": {
       "openai-provider": 1
     },
@@ -112,9 +118,6 @@
     "src/components/shared/files/hooks/useFileListActions.ts": {
       "escape-command-bus": 2
     },
-    "src/components/shared/files/media/FloorplanGallery.tsx": {
-      "escape-command-bus": 1
-    },
     "src/components/shared/files/media/MeasureToolOverlay.tsx": {
       "escape-command-bus": 1
     },
@@ -139,9 +142,6 @@
     "src/components/ui/search/HeaderSearch.tsx": {
       "escape-command-bus": 1
     },
-    "src/components/ui/searchable-combobox.tsx": {
-      "escape-command-bus": 1
-    },
     "src/config/ai-analysis-config.ts": {
       "ai-org-structure-tools": 1
     },
@@ -154,14 +154,8 @@
     "src/features/floorplan-import/hooks/useFloorplanSmartUpload.ts": {
       "file-type-classification": 1
     },
-    "src/hooks/useEscapeKey.ts": {
-      "escape-command-bus": 1
-    },
     "src/services/ai-pipeline/agentic-openai-client.ts": {
       "openai-provider": 1
-    },
-    "src/services/ai-pipeline/tools/esco-search-utils.ts": {
-      "quote-comparison": 1
     },
     "src/services/ai-pipeline/tools/handlers/iso19650-enricher.ts": {
       "date-local": 2

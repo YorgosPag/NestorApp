@@ -5866,6 +5866,20 @@
         "src/lib/properties/property-display-area.ts"
       ],
       "tier": 3
+    },
+    "contact-vat-holders": {
+      "addedDate": "2026-11-27",
+      "ssotFile": "src/lib/validation/vat-validation.ts",
+      "description": "ADR-944 §9 — «ποιος άλλος στον χώρο έχει αυτό το ΑΦΜ;» έχει ΜΙΑ απάντηση ανά πλευρά: `findVatHolders` (client, vat-validation.ts) και `findContactVatHolders` (server, contact-vat-holders.server.ts). Και οι δύο φέρνουν ΟΛΟΥΣ τους ζωντανούς κατόχους (όχι τον πρώτο, όχι τον κάδο) με εμβέλεια `companyId`, ώστε ο κανόνας `decideVatDuplicate` να κρίνει «απαγόρευση ή επιβεβαίωση» πάνω στο ίδιο σύνολο. Απαγορεύονται: (α) ωμό ερώτημα ισότητας πάνω στο `vatNumber` αλλού — παρακάμπτει το φίλτρο κάδου και την εμβέλεια χώρου· (β) δεύτερο σώμα των δύο συναρτήσεων ή επιστροφή του `checkVatUniqueness` (το περιτύλιγμα «μόνο ο πρώτος κάτοχος» διαγράφηκε 2026-11-27 ως νεκρό: ο πρώτος κάτοχος μπορεί να είναι εταιρεία ενώ ο δεύτερος φυσικό πρόσωπο).",
+      "forbiddenPatterns": [
+        "where\\(\\s*['\"]vatNumber['\"]\\s*,\\s*['\"]==['\"]",
+        "function\\s+(findVatHolders|findContactVatHolders|checkVatUniqueness)\\s*\\("
+      ],
+      "allowlist": [
+        "src/lib/validation/vat-validation.ts",
+        "src/server/lib/contact-vat-holders.server.ts"
+      ],
+      "tier": 3
     }
   }
 }

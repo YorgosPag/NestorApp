@@ -1327,4 +1327,23 @@ await applySearchIndexTombstone(searchDocRef, identity, version, Date.now());`,
 <CardHeader><HeaderBar actions={<Button>Προσθήκη</Button>}><CardTitle>Τίτλος</CardTitle></HeaderBar></CardHeader>
 <li className="flex justify-between text-sm">`,
   },
+  // ADR-944 §9 — «ποιος άλλος έχει αυτό το ΑΦΜ;»: ένα ερώτημα ανά πλευρά, όλοι οι ζωντανοί κάτοχοι.
+  // Η παγίδα του `shouldSkip`: οι ΚΑΤΑΝΑΛΩΤΕΣ των δύο συναρτήσεων και ερωτήματα σε ΑΛΛΟ πεδίο.
+  'contact-vat-holders': {
+    shouldMatch: `where('vatNumber', '==', normalized),
+.where("vatNumber", "==", vat)
+const q = query(colRef, where( 'vatNumber' , '==', value));
+export async function findVatHolders(vatNumber, companyId) {}
+export async function findContactVatHolders(reader, companyId, vatNumber) {}
+async function checkVatUniqueness(vatNumber, companyId, excludeContactId) {}`,
+    shouldSkip: `import { findVatHolders } from '@/lib/validation/vat-validation';
+const holders = await findVatHolders(vat, companyId, editContact.id);
+const serverHolders = await findContactVatHolders(reader, companyId, vatNumber);
+findVatHolders: (...args: unknown[]) => mockFindVatHolders(...args),
+where('companyId', '==', companyId),
+where('vatNumberNormalized', '==', vat),
+if (contact.vatNumber === normalized) return 'same';
+const result = vatUniquenessOf(holders);
+function useVatUniqueness(vat, companyId) {}`,
+  },
 };
