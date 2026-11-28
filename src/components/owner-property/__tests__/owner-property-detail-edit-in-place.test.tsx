@@ -47,6 +47,8 @@ jest.mock('@/services/realtime/hooks/useMyOwnerProperties', () => {
 });
 
 jest.mock('@/hooks/demand/usePlaceInterest', () => ({ usePlaceInterest: () => ({ kind: 'idle' }) }));
+// ADR-842 §7.7 — η σελίδα διαβάζει τη δημοσιευμένη αγγελία για τα μέσα του δείκτη· εδώ δεν είναι το ερώτημα.
+jest.mock('@/services/realtime/hooks/usePublicListings', () => ({ usePublicListing: () => ({ state: 'absent' }) }));
 jest.mock('@/hooks/owner-property/useOwnerPortfolioStats', () => ({
   useOwnerPortfolioStats: () => ({ state: 'loading' }),
   listingStatsStateOf: () => ({ state: 'loading' }),

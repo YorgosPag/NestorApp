@@ -26,6 +26,7 @@ import {
   placeKnowledgeFromOwnerProperty,
   projectableFromOwnerProperty,
 } from '@/lib/owner-property/owner-property-projection';
+import { ownerCompletionSubject } from '@/lib/owner-property/owner-completion-subject';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { Link } from '@/lib/workspace/navigation';
 import { projectListingShape } from '@/services/listings/public-listing-projection';
@@ -81,8 +82,9 @@ function ImproveWorkspace({ property, subjects, listing }: WorkspaceProps) {
   const { t } = useTranslation([NS]);
   const ids = applicableImproveSections(listing);
   const objectiveValue = useObjectiveValueImprove(subjects.objectiveValue, { zoneEnabled: ids.includes('objectiveValue') });
-  // Κενή ταυτότητα ⇒ καμία ανάγνωση (το `usePublicListing` απαντά «absent» χωρίς listener).
-  const publicListing = usePublicListing(ids.includes('terrain') ? subjects.terrain.listingId : '');
+  // 🖼️ ADR-842 §7.7 — **ένας** ακροατής, πάντα: η οθόνη υπάρχει μόνο για δημοσιευμένη αγγελία, και ο δείκτης
+  //    πληρότητας χρειάζεται τα μέσα της σε κάθε είδος ακινήτου — όχι μόνο όπου ισχύει το τοπογραφικό.
+  const publicListing = usePublicListing(subjects.terrain.listingId);
   // Χωρίς `useMemo`: η κατάσταση της αντικειμενικής είναι νέο αντικείμενο σε κάθε απόδοση, άρα η απομνημόνευση δεν θα κρατούσε.
   const context: ImproveContext = { subjects, objectiveValue, publicListing };
   const entries = useImproveSectionEntries(ids, context);
@@ -92,7 +94,7 @@ function ImproveWorkspace({ property, subjects, listing }: WorkspaceProps) {
       navLabel={t(`${I}.nav.label`)}
       backLabel={t(`${I}.nav.back`)}
       asideLabel={t(`${I}.aside.label`)}
-      aside={<OwnerListingImproveAside ownerPropertyId={property.id} completionListing={listing} objectiveValue={objectiveValue} />}
+      aside={<OwnerListingImproveAside ownerPropertyId={property.id} completionSubject={ownerCompletionSubject(listing, publicListing)} objectiveValue={objectiveValue} />}
     >
       {(activeId) => {
         const id = ids.find((candidate) => candidate === activeId);

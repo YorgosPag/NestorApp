@@ -31,6 +31,8 @@ import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-l
 
 import { OwnerListingCompletion } from '../OwnerListingCompletion';
 import { UNDECLARED_LISTING_OBJECTIVE_VALUE } from '@/lib/objective-value/objective-value-declarations';
+import { ownerCompletionSubject } from '@/lib/owner-property/owner-completion-subject';
+import type { PublicListingLookup } from '@/services/realtime/hooks/public-listings-source';
 
 jest.mock('@/i18n/hooks/useTranslation', () => {
   const reactI18next = jest.requireActual('react-i18next');
@@ -51,6 +53,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     exchange: null,
     coverImage: null,
     gallery: [],
+    floorplans: [],
     type: 'apartment',
     areaSqm: 95,
     areaKind: 'gross',
@@ -79,10 +82,20 @@ beforeAll(async () => {
   instance = await createRealI18n(['properties']);
 });
 
-function renderMeter(over: Partial<PublicListing> = {}) {
+/**
+ * 🔑 **Το υποκείμενο περνά από την ΠΡΑΓΜΑΤΙΚΗ `ownerCompletionSubject`** (ADR-842 §7.7) — όχι
+ * από χειρόγραφο σύνολο εξαιρέσεων: η άγκυρα κρίνει ό,τι βλέπει ο ιδιώτης στην οθόνη.
+ * Προεπιλογή: η αγγελία είναι **δημοσιευμένη**, με τα μέσα του `over`.
+ */
+function renderMeter(
+  over: Partial<PublicListing> = {},
+  published: PublicListingLookup = { state: 'found', listing: listing(over) },
+) {
+  // Η προβολή του browser δεν ξέρει ΠΟΤΕ τα μέσα — τα γράφει κενά, όπως η `projectListingShape`.
+  const projected = listing({ ...over, gallery: [], floorplans: [] });
   return render(
     <I18nextProvider i18n={instance}>
-      <OwnerListingCompletion listing={listing(over)} />
+      <OwnerListingCompletion subject={ownerCompletionSubject(projected, published)} />
     </I18nextProvider>,
   );
 }
@@ -118,13 +131,13 @@ describe('Δ1 — η οθόνη μιλά ελληνικά (το wiring ΕΚΤΕ�
 
 describe('Δ2 — 🔴 coaching, όχι κατηγορητήριο', () => {
   /**
-   * 🔴 **Ο ΚΑΝΟΝΑΣ ΠΟΥ ΤΟ ΞΕΧΩΡΙΖΕΙ ΑΠΟ ΤΟ `PropertyCompletionBreakdown`.** Ο ιδιώτης
-   * με άδεια αγγελία έχει **δεκατέσσερα** κενά· δεκατέσσερις γραμμές «λείπει»
-   * διαβάζονται ως κατηγορητήριο, και το μετρήσιμο αποτέλεσμα είναι ότι δεν
-   * συμπληρώνει **κανένα**.
+   * 🔴 **Ο ΚΑΝΟΝΑΣ ΠΟΥ ΤΟ ΞΕΧΩΡΙΖΕΙ ΑΠΟ ΤΟ `PropertyCompletionBreakdown`.** Πολλές
+   * γραμμές «λείπει» διαβάζονται ως κατηγορητήριο, και το μετρήσιμο αποτέλεσμα είναι
+   * ότι ο άνθρωπος δεν συμπληρώνει **καμία**. Εδώ λείπουν **πέντε** *(μέσα · εμβαδόν ·
+   * υπνοδωμάτια · ΠΕΑ)* και φαίνονται τρεις.
    */
   it('🔴 δείχνει ΤΟ ΠΟΛΥ τρεις προτάσεις, όσα κι αν λείπουν', () => {
-    renderMeter();
+    renderMeter({ areaSqm: null, bedrooms: null });
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(3);
   });
@@ -132,9 +145,10 @@ describe('Δ2 — 🔴 coaching, όχι κατηγορητήριο', () => {
   it('🔑 και είναι τα ΒΑΡΥΤΕΡΑ — αυτά που μετακινούν περισσότερο τον δείκτη', () => {
     renderMeter();
     const items = screen.getAllByRole('listitem').map((li) => li.textContent);
-    // Η μηχανή ταξινομεί κατά βάρος· τα κρίσιμα βάρους 2 έρχονται πρώτα.
-    expect(items).toContain('Κατάσταση διατήρησης');
-    expect(items).toContain('Ενεργειακή κλάση');
+    // Η μηχανή ταξινομεί κατά βάρος· τα κρίσιμα βάρους 2 έρχονται πρώτα. Η ισοπαλία
+    // τους λύνεται από τη σειρά ΠΡΟΤΑΣΗΣ (ADR-842 §7.7): μέσα πρώτα — ως 2026-11-28
+    // λυνόταν από τη σειρά της φόρμας, και οι φωτογραφίες δεν εμφανίζονταν ΠΟΤΕ εδώ.
+    expect(items).toEqual(['Φωτογραφίες', 'Κάτοψη', 'Ενεργειακή κλάση']);
   });
 
   it('🔴 όταν όλα είναι πλήρη, λέει ΟΤΙ είναι πλήρη — και δεν δείχνει λίστα', () => {
@@ -146,12 +160,27 @@ describe('Δ2 — 🔴 coaching, όχι κατηγορητήριο', () => {
       gallery: [
         { url: 'a', width: 1, height: 1, altKey: 'k', sources: [] },
         { url: 'b', width: 1, height: 1, altKey: 'k', sources: [] },
+      ],
+      floorplans: [{ provenance: 'declared', value: { url: 'fp', width: 1, height: 1, altKey: 'k', sources: [] }, at: AT }],
+    });
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    expect(screen.getByText('Όλα τα πεδία έχουν συμπληρωθεί')).toBeInTheDocument();
+  });
+
+  it('χωρίς δημοσιευμένη κάτοψη, η μόνη πρόταση που μένει είναι η κάτοψη', () => {
+    renderMeter({
+      type: 'storage',
+      netAreaSqm: 20,
+      securityFeatures: ['alarm'],
+      condition: 'good',
+      gallery: [
+        { url: 'a', width: 1, height: 1, altKey: 'k', sources: [] },
+        { url: 'b', width: 1, height: 1, altKey: 'k', sources: [] },
         { url: 'c', width: 1, height: 1, altKey: 'k', sources: [] },
       ],
     });
-    // ⚠️ Η κάτοψη λείπει **πάντα** (§8 #2) ⇒ η αποθήκη δεν φτάνει ποτέ στο μηδέν
-    //    ελλείψεων. Άρα η γραμμή «όλα πλήρη» **δεν** εμφανίζεται, και η λίστα δείχνει
-    //    ακριβώς **μία** πρόταση: την κάτοψη. Αυτό είναι η αλήθεια, όχι αστοχία.
+    // ⚠️ Ως 2026-11-28 η κάτοψη έλειπε **πάντα** (§8 #2) και αυτό ήταν το ταβάνι της
+    //    αποθήκης. Πλέον λείπει μόνο όσο το `floorplans` είναι κενό — όπως εδώ.
     expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Κάτοψη']);
   });
 });
@@ -162,17 +191,19 @@ describe('Δ2 — 🔴 coaching, όχι κατηγορητήριο', () => {
 
 describe('Δ3 — κάθε χρώμα λέει το δικό του νούμερο', () => {
   it('κόκκινο ⇒ μετρά τα ΚΡΙΣΙΜΑ (εκεί είναι ο πόνος)', () => {
-    renderMeter();
-    // Άδεια αγγελία διαμερίσματος: κρίσιμα που λείπουν = condition · energyClass ·
-    // floorplan · photos. Το κείμενο πρέπει να λέει **αριθμό**, όχι «{count}».
+    renderMeter({ areaSqm: null, bedrooms: null });
+    // Μόνο το είδος δηλωμένο: 2 από 12 ⇒ 17%. Κρίσιμα που λείπουν = photos · floorplan ·
+    // areaGross · bedrooms · energyClass. Η «κατάσταση διατήρησης» ΔΕΝ μετρά: ο ιδιώτης
+    // δεν έχει πού να τη γράψει (§7.7). Το κείμενο λέει **αριθμό**, όχι «{count}».
     expect(screen.getByText(/κρίσιμα πεδία λείπουν/)).toBeInTheDocument();
-    expect(screen.getByText(/^4 κρίσιμα/)).toBeInTheDocument();
+    expect(screen.getByText(/^5 κρίσιμα/)).toBeInTheDocument();
   });
 
   it('🔴 το ποσοστό ζωγραφίζεται, και είναι αυτό της μηχανής', () => {
     renderMeter();
-    // areaSqm 95 (2) + bedrooms 3 (2) + type (2) = 6 από 23 ⇒ 26%.
-    expect(screen.getByText('26%')).toBeInTheDocument();
+    // areaSqm 95 (2) + bedrooms 3 (2) + type (2) = 6 από **12** ⇒ 50%. Ο παρονομαστής
+    // είναι ό,τι ΜΠΟΡΕΙ να απαντήσει ο ιδιώτης (§7.7) — ήταν 23, και έδινε 26%.
+    expect(screen.getByText('50%')).toBeInTheDocument();
   });
 
   it('πράσινο ⇒ κείμενο ΧΩΡΙΣ αριθμό (δεν μένει τίποτα να μετρηθεί)', () => {
@@ -197,7 +228,49 @@ describe('Δ3 — κάθε χρώμα λέει το δικό του νούμερ
         sources: [],
       })),
     });
-    expect(screen.getByText('91%')).toBeInTheDocument();
+    // 10 από 12 (λείπει μόνο η κάτοψη) ⇒ 83%.
+    expect(screen.getByText('83%')).toBeInTheDocument();
     expect(screen.getByText('Εξαιρετική πληρότητα')).toBeInTheDocument();
+  });
+});
+
+// ============================================================================
+// Δ4 — 🔴 Ο ΔΕΙΚΤΗΣ ΔΕΝ ΛΕΕΙ ΨΕΜΑΤΑ (ADR-842 §7.7)
+// ============================================================================
+
+const EIGHT_PHOTOS = Array.from({ length: 8 }, (_, i) => ({
+  url: `p${i}`,
+  width: 1,
+  height: 1,
+  altKey: 'k',
+  sources: [],
+}));
+
+describe('Δ4 — 🔴 ούτε «λείπει» ό,τι δεν έχει είσοδο, ούτε «λείπουν» μέσα που δεν ξέρουμε', () => {
+  it('🔴 ΔΕΝ προτείνει πεδίο που ο ιδιώτης δεν έχει πού να συμπληρώσει', () => {
+    // Με φωτογραφίες και κάτοψη δημοσιευμένες μένει ΜΟΝΟ το ΠΕΑ — ποτέ «Κατάσταση διατήρησης».
+    renderMeter({
+      gallery: EIGHT_PHOTOS,
+      floorplans: [{ provenance: 'declared', value: { url: 'fp', width: 1, height: 1, altKey: 'k', sources: [] }, at: AT }],
+    });
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ενεργειακή κλάση']);
+    expect(screen.queryByText('Κατάσταση διατήρησης')).not.toBeInTheDocument();
+  });
+
+  it('🔴 τα μέσα έρχονται από τη ΔΗΜΟΣΙΕΥΜΕΝΗ αγγελία — δημοσιευμένες φωτογραφίες δεν «λείπουν»', () => {
+    renderMeter({ energyClass: 'B', gallery: EIGHT_PHOTOS });
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Κάτοψη']);
+  });
+
+  it('🔑 χωρίς δημοσιευμένη αγγελία τα μέσα είναι ΑΓΝΩΣΤΑ — δεν προτείνονται και δεν χρεώνονται', () => {
+    renderMeter({}, { state: 'absent' });
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Ενεργειακή κλάση']);
+    // type (2) + areaGross (2) + bedrooms (2) = 6 από 8.
+    expect(screen.getByText('75%')).toBeInTheDocument();
+  });
+
+  it('όσο η δημοσιευμένη αγγελία διαβάζεται, ο δείκτης ΔΕΝ ζωγραφίζεται', () => {
+    const { container } = renderMeter({}, { state: 'loading' });
+    expect(container).toBeEmptyDOMElement();
   });
 });

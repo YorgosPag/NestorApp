@@ -20,7 +20,7 @@ import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { offerStayCalendarHref, offerTourHref } from '@/lib/owner-property/owner-property-routes';
 import { Link } from '@/lib/workspace/navigation';
 import { cn } from '@/lib/utils';
-import type { projectListingShape } from '@/services/listings/public-listing-projection';
+import type { OwnerCompletionSubject } from '@/lib/owner-property/owner-completion-subject';
 import { setOwnerListingLifecycle } from '@/services/owner-property/owner-property.service';
 import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
 
@@ -105,14 +105,17 @@ function OwnerPropertyActions({ property, onMap, onEdit }: { property: OwnerProp
 export function OwnerPropertyAside({
   property,
   onMap,
-  projectedListing,
+  completionSubject,
   editing,
   onEdit,
 }: {
   readonly property: OwnerProperty;
   readonly onMap: boolean;
-  /** ADR-842 Φ5 — η ίδια προβολή που βλέπει ο αγοραστής, **χωρίς** την πύλη: ο δείκτης υπάρχει και πριν τη δημοσίευση. */
-  readonly projectedListing: ReturnType<typeof projectListingShape>;
+  /**
+   * ADR-842 Φ5 · §7.7 — η προβολή **χωρίς** την πύλη (ο δείκτης υπάρχει και πριν τη δημοσίευση), με τα μέσα της
+   * δημοσιευμένης αγγελίας. `null` όσο εκείνη διαβάζεται.
+   */
+  readonly completionSubject: OwnerCompletionSubject | null;
   /** Ανοιχτή φόρμα ⇒ καμία ενέργεια (η φόρμα έχει τις δικές της)· πληρότητα και κύκλος ζωής μένουν. */
   readonly editing: boolean;
   readonly onEdit: () => void;
@@ -125,7 +128,7 @@ export function OwnerPropertyAside({
           <OwnerPropertyActions property={property} onMap={onMap} onEdit={onEdit} />
         </RecordActionLead>
       )}
-      <OwnerListingCompletion listing={projectedListing} improveOfferId={onMap ? property.id : null} />
+      <OwnerListingCompletion subject={completionSubject} improveOfferId={onMap ? property.id : null} />
       <LifecycleButton property={property} />
     </>
   );

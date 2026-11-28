@@ -57,7 +57,7 @@ import type { PropertyTypeCanonical } from '@/constants/property-types';
 import { listingCompletionArgs } from '@/lib/listings/listing-completion-slice';
 import { offerImproveHref } from '@/lib/owner-property/owner-property-routes';
 import { Link } from '@/lib/workspace/navigation';
-import type { PublicListing } from '@/types/public-listing';
+import type { OwnerCompletionSubject } from '@/lib/owner-property/owner-completion-subject';
 
 import {
   completionBucketIndicatorClass,
@@ -106,12 +106,18 @@ function Suggestion({
  * ανατροπή που έφερε η μέτρηση της Φ5 (δες `listing-completion-slice.ts`): η ίδια
  * προβολή εξυπηρετεί **και** τον ιδιώτη **και** την εταιρεία, με μία γραφή. Έτσι ο
  * δείκτης μετρά **ακριβώς ό,τι βλέπει ο αγοραστής** — όχι ό,τι κρατά η βάση.
+ *
+ * 🔴 **ADR-842 §7.7 — το ΥΠΟΚΕΙΜΕΝΟ, όχι σκέτη αγγελία.** Η αγγελία φτάνει μαζί με το
+ * *«τι δεν μπορεί να απαντήσει αυτός ο άνθρωπος»* (`ownerCompletionSubject`): τα μέσα
+ * είναι της **δημοσιευμένης** αγγελίας, και ό,τι δεν έχει είσοδο ούτε χρεώνεται ούτε
+ * προτείνεται. `null` = η ανάγνωση της δημοσίευσης δεν ολοκληρώθηκε ⇒ **τίποτα**, αντί
+ * για ποσοστό που θα άλλαζε σε ένα καρέ.
  */
 export function OwnerListingCompletion({
-  listing,
+  subject,
   improveOfferId = null,
 }: {
-  readonly listing: PublicListing;
+  readonly subject: OwnerCompletionSubject | null;
   /**
    * ADR-898 Φ3β-2 · ADR-842 Φ4 — η αγγελία που ανοίγει η οθόνη «Βελτίωσε την αγγελία σου». `null` πριν τη
    * δημοσίευση: πρώτα δημοσίευση, μετά βελτίωση (Airbnb) — ο σύνδεσμος δεν εμφανίζεται.
@@ -122,9 +128,17 @@ export function OwnerListingCompletion({
   const colors = useSemanticColors();
 
   const assessment = React.useMemo(
-    () => assessPropertyCompleteness(listingCompletionArgs(listing)),
-    [listing],
+    () =>
+      subject === null
+        ? null
+        : assessPropertyCompleteness({
+            ...listingCompletionArgs(subject.listing),
+            unanswerableFields: subject.unanswerableFields,
+          }),
+    [subject],
   );
+
+  if (assessment === null) return null;
 
   // ⛔ Η μηχανή κρύβει τον δείκτη μόνο για `draft` — και μια **δημοσιευμένη** αγγελία
   //    δεν είναι πρόχειρο εξ ορισμού (δες `property-completion-stance.ts`). Η γραμμή

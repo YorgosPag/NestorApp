@@ -21,7 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { objectiveValueReturnOf } from '@/lib/objective-value/objective-value-return';
 import { Link } from '@/lib/workspace/navigation';
-import type { PublicListing } from '@/types/public-listing';
+import type { OwnerCompletionSubject } from '@/lib/owner-property/owner-completion-subject';
 
 import { OwnerListingCompletion } from '../OwnerListingCompletion';
 import { BuyerPreviewPending, ImproveSurfaces } from './improve-surfaces';
@@ -32,12 +32,12 @@ const A = `${NS}:improve.aside`;
 
 interface AsideProps {
   readonly ownerPropertyId: string;
-  /** Η προβολή του browser — η ίδια είσοδος πληρότητας με τη σελίδα του ακινήτου (`OwnerPropertyAside`). */
-  readonly completionListing: PublicListing;
+  /** Το υποκείμενο του δείκτη — η ίδια είσοδος πληρότητας με τη σελίδα του ακινήτου (`OwnerPropertyAside`, ADR-842 §7.7). */
+  readonly completionSubject: OwnerCompletionSubject | null;
   readonly objectiveValue: ObjectiveValueImproveState;
 }
 
-function BuyerPreviewBody({ ownerPropertyId, objectiveValue }: Omit<AsideProps, 'completionListing'>) {
+function BuyerPreviewBody({ ownerPropertyId, objectiveValue }: Omit<AsideProps, 'completionSubject'>) {
   const { t } = useTranslation([NS]);
   const { buyerListing, previewKind, zone } = objectiveValue;
   if (buyerListing === null) {
@@ -55,12 +55,12 @@ function BuyerPreviewBody({ ownerPropertyId, objectiveValue }: Omit<AsideProps, 
   );
 }
 
-export function OwnerListingImproveAside({ ownerPropertyId, completionListing, objectiveValue }: AsideProps) {
+export function OwnerListingImproveAside({ ownerPropertyId, completionSubject, objectiveValue }: AsideProps) {
   const { t } = useTranslation([NS]);
   const headingId = useId();
   return (
     <>
-      <OwnerListingCompletion listing={completionListing} improveOfferId={null} />
+      <OwnerListingCompletion subject={completionSubject} improveOfferId={null} />
       <Card asChild className="flex flex-col gap-3 p-4">
         <section aria-labelledby={headingId}>
           <header className="flex flex-col gap-1">

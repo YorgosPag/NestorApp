@@ -16,6 +16,7 @@ import {
   assessPropertyCompleteness,
   type CompletionFormSlice,
   type CompletionMediaCounts,
+  type FieldKey,
 } from '../property-completion';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────
@@ -313,6 +314,45 @@ describe('assessPropertyCompleteness — missing ordering', () => {
     for (let i = 1; i < weights.length; i++) {
       expect(weights[i]).toBeLessThanOrEqual(weights[i - 1]);
     }
+  });
+
+  /**
+   * ADR-842 §7.7 (2026-11-28) — η ισοπαλία λύνεται από το `COMPLETION_SUGGESTION_RANK`,
+   * όχι από τη σειρά δήλωσης του `FIELD_KEYS` (σειρά φόρμας: τα μέσα τελευταία).
+   */
+  it('equal-weight ties resolve by suggestion rank — media first', () => {
+    const r = assessPropertyCompleteness({
+      formData: emptyForm('apartment'),
+      mediaCounts: EMPTY_MEDIA,
+    });
+    expect(r.missingCritical.slice(0, 2)).toEqual(['photos', 'floorplan']);
+  });
+
+  it('weight still outranks suggestion rank — storage photos (1) stay behind floorplan (2)', () => {
+    const r = assessPropertyCompleteness({
+      formData: emptyForm('storage'),
+      mediaCounts: EMPTY_MEDIA,
+    });
+    expect(r.missing[0]).toBe('floorplan');
+    expect(r.missing.indexOf('photos')).toBeGreaterThan(r.missing.indexOf('areaGross'));
+  });
+
+  /**
+   * ADR-842 §7.7 — ό,τι ο καλών δεν μπορεί να απαντήσει βγαίνει από παρονομαστή ΚΑΙ
+   * προτάσεις· χωρίς το όρισμα η βαθμολογία μένει ακριβώς όπως πριν (εταιρική καρτέλα).
+   */
+  it('unanswerable fields are exempt — out of the denominator and out of missing', () => {
+    const args = { formData: emptyForm('apartment'), mediaCounts: EMPTY_MEDIA };
+    const baseline = assessPropertyCompleteness(args);
+    const r = assessPropertyCompleteness({
+      ...args,
+      unanswerableFields: new Set<FieldKey>(['condition', 'photos']),
+    });
+    expect(r.missing).not.toContain('condition');
+    expect(r.missing).not.toContain('photos');
+    expect(r.exemptFields).toEqual(expect.arrayContaining(['condition', 'photos']));
+    expect(r.weightTotal).toBe(baseline.weightTotal - 4);
+    expect(baseline.missing).toContain('condition');
   });
 
   it('missingCritical contains only critical fields', () => {

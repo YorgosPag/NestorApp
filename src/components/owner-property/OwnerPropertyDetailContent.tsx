@@ -33,9 +33,11 @@ import {
   projectableFromOwnerProperty,
 } from '@/lib/owner-property/owner-property-projection';
 import { isOffered, projectListingShape } from '@/services/listings/public-listing-projection';
+import { ownerCompletionSubject } from '@/lib/owner-property/owner-completion-subject';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
+import { usePublicListing } from '@/services/realtime/hooks/usePublicListings';
 import type { OwnerProperty } from '@/types/owner-property';
 import { ownerMandateViews } from '@/lib/mandate/owner-mandate-view';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
@@ -74,6 +76,9 @@ const K = `${NS}:offer`;
  * 📊 ADR-777 §8.72 — **ΕΝΑ** fetch στατιστικών για κάρτα, πίνακα **και** τη σύνοψη της λίστας.
  * 🏆 ADR-842 Φ5 — `projectListingShape` (όχι `buildPublicListing`): το σχήμα **χωρίς την πύλη**, ώστε ο δείκτης
  *    πληρότητας να υπάρχει **και πριν** τη δημοσίευση. ⛔ Εφήμερο — δεν γράφεται πουθενά.
+ * 🖼️ ADR-842 §7.7 — τα **μέσα** του δείκτη έρχονται από τη **δημοσιευμένη** αγγελία: η προβολή γράφει `gallery: []`
+ *    με σημασία «το ράφι δεν ρωτήθηκε», όχι «δεν έχει». Ένας ακροατής, **μόνο** όταν η αγγελία είναι στον χάρτη
+ *    (κενή ταυτότητα ⇒ καμία ανάγνωση). Η ταυτότητα είναι της καταχώρησης (`listingDetailHref(property.id)`).
  * ⚠️ Οι hooks στην **κορυφή**, ποτέ μέσα σε JSX υπό όρους.
  */
 function useOwnerPropertyViewData(property: OwnerProperty, onEdit: () => void) {
@@ -92,8 +97,9 @@ function useOwnerPropertyViewData(property: OwnerProperty, onEdit: () => void) {
     stats,
     onEdit,
   };
+  const published = usePublicListing(visibility === 'published' ? property.id : '');
   const projectedListing = projectListingShape(projectable, placeKnowledgeFromOwnerProperty(property, atISO), atISO);
-  return { data, projectedListing };
+  return { data, completionSubject: ownerCompletionSubject(projectedListing, published) };
 }
 
 /**
@@ -104,7 +110,7 @@ function useOwnerPropertyViewData(property: OwnerProperty, onEdit: () => void) {
 function OwnerPropertyView({ property }: { property: OwnerProperty }): React.ReactElement {
   const { t } = useTranslation([NS]);
   const [editing, setEditing] = React.useState(false);
-  const { data, projectedListing } = useOwnerPropertyViewData(property, () => setEditing(true));
+  const { data, completionSubject } = useOwnerPropertyViewData(property, () => setEditing(true));
   const sections = useOwnerPropertySectionEntries({ mandateViews: data.mandateViews, stats: data.stats });
 
   return (
@@ -118,7 +124,7 @@ function OwnerPropertyView({ property }: { property: OwnerProperty }): React.Rea
         <OwnerPropertyAside
           property={property}
           onMap={data.onMap}
-          projectedListing={projectedListing}
+          completionSubject={completionSubject}
           editing={editing}
           onEdit={() => setEditing(true)}
         />

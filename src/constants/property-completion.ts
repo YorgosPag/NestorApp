@@ -43,6 +43,7 @@ import type { PropertyTypeCanonical } from '@/constants/property-types';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 import {
+  COMPLETION_SUGGESTION_RANK,
   FIELD_KEYS,
   getFieldWeightsForType,
   type FieldKey,
@@ -105,9 +106,9 @@ export interface CompletionAssessment {
   readonly weightEarned: number;
   /** Per-field breakdown, stable order matching FIELD_KEYS. */
   readonly breakdown: readonly CompletionBreakdownEntry[];
-  /** Critical fields currently missing, sorted by weight desc. */
+  /** Critical fields currently missing, sorted by weight desc, ties by suggestion rank. */
   readonly missingCritical: readonly FieldKey[];
-  /** All missing fields (critical + non-critical), sorted by weight desc. */
+  /** All missing fields (critical + non-critical), sorted by weight desc, ties by suggestion rank. */
   readonly missing: readonly FieldKey[];
   /** Fields exempt from denominator for this (type, status) combination. */
   readonly exemptFields: readonly FieldKey[];
@@ -130,6 +131,19 @@ export interface AssessPropertyCompletionArgs {
   readonly mediaCounts: CompletionMediaCounts;
   /** Number of floor levels (ADR-236) — defaults to 1 if omitted. */
   readonly levelCount?: number;
+  /**
+   * **Πεδία που ο ΚΑΛΩΝ δεν μπορεί να απαντήσει** — βγαίνουν από τον παρονομαστή και από
+   * τις προτάσεις (`status: 'exempt'`), όπως κάθε άλλη εξαίρεση (ADR-842 §7.7).
+   *
+   * 🔑 **Δεν είναι «λείπει»· είναι «δεν ρωτήθηκε, και δεν υπάρχει πού να απαντηθεί».**
+   * Βάρος σε κλειδί που κανείς δεν μπορεί να συμπληρώσει είναι μετρητής που δεν φτάνει
+   * ποτέ στο 100% και πρόταση που κανένα πάτημα δεν κλείνει. Ο καλών ξέρει ποια πεδία
+   * έχουν είσοδο στη δική του επιφάνεια· η μηχανή **δεν** το μαντεύει.
+   *
+   * ⚠️ **Απόν = καμία εξαίρεση** — η εταιρική καρτέλα (`usePropertyCompletion`) δεν το
+   * δίνει και βαθμολογείται ακριβώς όπως πριν.
+   */
+  readonly unanswerableFields?: ReadonlySet<FieldKey>;
 }
 
 // =============================================================================
@@ -282,7 +296,7 @@ function binary(
 export function assessPropertyCompleteness(
   args: AssessPropertyCompletionArgs,
 ): CompletionAssessment {
-  const { formData, mediaCounts, levelCount = 1 } = args;
+  const { formData, mediaCounts, levelCount = 1, unanswerableFields } = args;
   const operationalStatus = formData.operationalStatus ?? null;
   const isPreCompletion = isPreCompletionOperationalStatus(operationalStatus);
   const isDraft = operationalStatus === 'draft';
@@ -305,8 +319,9 @@ export function assessPropertyCompleteness(
   for (const fieldKey of FIELD_KEYS) {
     const entry = entryByKey.get(fieldKey);
 
-    // Not in per-type matrix → exempt (not in denominator)
-    if (!entry) {
+    // Not in per-type matrix, ή ο καλών δεν έχει πού να το απαντήσει (ADR-842 §7.7)
+    // → exempt (not in denominator)
+    if (!entry || unanswerableFields?.has(fieldKey) === true) {
       breakdown.push({
         fieldKey,
         weight: 0,
@@ -360,11 +375,17 @@ export function assessPropertyCompleteness(
   const score = weightTotal > 0 ? weightEarned / weightTotal : 0;
   const percentage = Math.round(score * 100);
 
-  // Missing lists — sorted by weight desc, stable tie-break on FIELD_KEYS order
+  // Missing lists — κατά βάρος φθίνον· η **ισοπαλία** λύνεται από τη σειρά πρότασης
+  // (`COMPLETION_SUGGESTION_RANK`), ΟΧΙ από τη σειρά δήλωσης του `FIELD_KEYS`: εκείνη
+  // είναι σειρά φόρμας, και έβαζε τις φωτογραφίες τελευταίες (ADR-842 §7.7).
   const missingEntries = breakdown.filter(
     (b) => b.status === 'missing' || b.status === 'partial',
   );
-  const sortedMissing = [...missingEntries].sort((a, b) => b.weight - a.weight);
+  const sortedMissing = [...missingEntries].sort(
+    (a, b) =>
+      b.weight - a.weight
+      || COMPLETION_SUGGESTION_RANK[a.fieldKey] - COMPLETION_SUGGESTION_RANK[b.fieldKey],
+  );
   const missing = sortedMissing.map((b) => b.fieldKey);
   const missingCritical = sortedMissing
     .filter((b) => b.critical)

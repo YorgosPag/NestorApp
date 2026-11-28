@@ -39,6 +39,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     exchange: null,
     coverImage: null,
     gallery: [],
+    floorplans: [],
     type: 'apartment',
     areaSqm: null,
     areaKind: null,
@@ -116,8 +117,23 @@ describe('🏆 16 από τα 17 FIELD_KEYS τροφοδοτούνται από 
    * (ADR-842 §8 #2). Αν αύριο κάποιος «απλοποιήσει» μια χαρτογράφηση, εδώ θα
    * εμφανιστεί **δεύτερο** όνομα και η άγκυρα θα κοκκινίσει.
    */
-  it('🔴 το ΜΟΝΟ πεδίο που μένει ακάλυπτο είναι η κάτοψη (§8 #2)', () => {
+  it('🔴 το ΜΟΝΟ πεδίο που μένει ακάλυπτο είναι η κάτοψη — όσο ΔΕΝ δημοσιεύτηκε', () => {
     expect(assessment.missing).toEqual(['floorplan']);
+  });
+
+  /**
+   * ✅ **ΤΟ §8 #2 ΕΚΛΕΙΣΕ (2026-11-28, ADR-842 §7.7).** Το `floorplan: 0` *πάντα* ήταν
+   * αλήθεια όσο η αγγελία δεν ξεχώριζε κάτοψη από φωτογραφία· από το ADR-841 Α17 οι
+   * κατόψεις έχουν **δικό τους κουτί**, και ο δείκτης συνέχιζε να τις αγνοεί — ο
+   * κάτοχος δεν μπορούσε να κλείσει την έλλειψη με κανένα πάτημα.
+   */
+  it('✅ με δημοσιευμένη κάτοψη δεν λείπει ΤΙΠΟΤΑ, και ο δείκτης φτάνει στο 100%', () => {
+    const withFloorplan = assessPropertyCompleteness(
+      listingCompletionArgs({ ...fullyDeclared, floorplans: [{ provenance: 'declared', value: { url: 'fp', width: 1, height: 1, altKey: 'k', sources: [] }, at: AT }] }),
+    );
+    expect(withFloorplan.missing).toEqual([]);
+    expect(withFloorplan.weightEarned).toBe(23);
+    expect(withFloorplan.percentage).toBe(100);
   });
 
   it('όλα τα υπόλοιπα βαθμολογούνται ως πλήρη', () => {
@@ -215,7 +231,7 @@ describe('πιστή μετάφραση — «δεν ρωτήθηκε» γίνε
 // 3. ΤΑ ΜΕΣΑ
 // ============================================================================
 
-describe('τα μέσα — φωτογραφίες από τη συλλογή, κάτοψη πάντα μηδέν (§8 #2)', () => {
+describe('τα μέσα — φωτογραφίες από τη συλλογή, κατόψεις από το ΔΙΚΟ τους κουτί', () => {
   it('photos = gallery.length', () => {
     const media = listingCompletionArgs(
       listing({
@@ -228,8 +244,31 @@ describe('τα μέσα — φωτογραφίες από τη συλλογή, �
     expect(media.photos).toBe(2);
   });
 
-  it('⛔ floorplan = 0 πάντα — δηλωμένο κενό, όχι εικασία', () => {
+  it('καμία δημοσιευμένη κάτοψη ⇒ floorplan = 0', () => {
     expect(listingCompletionArgs(listing()).mediaCounts.floorplan).toBe(0);
+  });
+
+  it('🔑 floorplan = floorplans.length — ΟΧΙ πια σταθερό μηδέν (§8 #2)', () => {
+    const media = listingCompletionArgs(
+      listing({ floorplans: [{ provenance: 'declared', value: { url: 'fp', width: 1, height: 1, altKey: 'k', sources: [] }, at: AT }, { provenance: 'declared', value: { url: 'fp', width: 1, height: 1, altKey: 'k', sources: [] }, at: AT }] }),
+    ).mediaCounts;
+    expect(media.floorplan).toBe(2);
+  });
+
+  it('⛔ μια κάτοψη ΔΕΝ μετριέται και ως φωτογραφία — δύο κουτιά, δύο πλήθη', () => {
+    const media = listingCompletionArgs(listing({ floorplans: [{ provenance: 'declared', value: { url: 'fp', width: 1, height: 1, altKey: 'k', sources: [] }, at: AT }] })).mediaCounts;
+    expect(media.photos).toBe(0);
+  });
+
+  /**
+   * 🔴 **ΤΟ ΕΥΡΗΜΑ ΤΗΣ ΟΘΟΝΗΣ (2026-11-28, ADR-842 §7.7).** Αγγελία διαμερίσματος χωρίς
+   * καμία φωτογραφία έλεγε «Υπνοδωμάτια · Κατάσταση · Ενεργειακή κλάση»: η ισοπαλία
+   * των κρίσιμων λυνόταν με τη σειρά της **φόρμας**, όπου τα μέσα είναι τελευταία.
+   */
+  it('🔴 σε άδεια αγγελία, οι φωτογραφίες και η κάτοψη προτείνονται ΠΡΩΤΕΣ', () => {
+    const assessment = assessPropertyCompleteness(listingCompletionArgs(listing()));
+    expect(assessment.missing.slice(0, 2)).toEqual(['photos', 'floorplan']);
+    expect(assessment.missingCritical.slice(0, 2)).toEqual(['photos', 'floorplan']);
   });
 });
 
