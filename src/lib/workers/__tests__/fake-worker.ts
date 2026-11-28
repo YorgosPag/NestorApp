@@ -9,7 +9,7 @@
  *   Χωρίς `structuredClone` (παλιό περιβάλλον test) το μήνυμα περνά ως έχει.
  */
 
-import { serveWorkerRpc } from '../worker-rpc-host';
+import { serveWorkerRpc, type WorkerRpcServeOptions } from '../worker-rpc-host';
 import type { WorkerLike, WorkerRpcScope } from '../worker-rpc-protocol';
 
 type Listener = (event: MessageEvent) => void;
@@ -31,7 +31,7 @@ export class FakeWorker<Q, R> implements WorkerLike {
   private readonly toHost: Listener[] = [];
   private readonly messageErrors: Listener[] = [];
 
-  constructor(handle: (body: Q) => Promise<R> | R) {
+  constructor(handle: (body: Q) => Promise<R> | R, options?: WorkerRpcServeOptions) {
     const scope: WorkerRpcScope = {
       postMessage: (message) => {
         const data = acrossBoundary(message);
@@ -39,7 +39,7 @@ export class FakeWorker<Q, R> implements WorkerLike {
       },
       addEventListener: (_type, listener) => { this.toHost.push(listener); },
     };
-    serveWorkerRpc(scope, handle);
+    serveWorkerRpc(scope, handle, undefined, options);
   }
 
   postMessage(message: unknown, transfer: Transferable[] = []): void {

@@ -5,7 +5,7 @@
  * @module lib/workers/worker-rpc-host
  *
  * 🔑 **Σφάλμα του χειριστή ⇒ απάντηση με σφάλμα**, ποτέ σιωπή: ο πελάτης δεν θα έμενε ποτέ να περιμένει ένα αίτημα που πέθανε.
- * 🔑 **Σειριακά**: ένα αίτημα τη φορά (το `await` μέσα στον ακροατή δεν μπλοκάρει τα επόμενα μηνύματα — γι' αυτό η σειρά
+ * 🔑 **Σειριακά, εκτός αν ζητηθεί αλλιώς** (`WorkerRpcServeOptions.ordering`): ένα αίτημα τη φορά (το `await` μέσα στον ακροατή δεν μπλοκάρει τα επόμενα μηνύματα — γι' αυτό η σειρά
  *   κρατιέται ρητά με αλυσίδα υποσχέσεων· ο χειριστής μπορεί να έχει κρυφή μνήμη χωρίς αγώνες).
  * 🔑 **Η ακύρωση ΔΕΝ μπαίνει στην ουρά (ADR-929 Φ0.4)**: το `{ cancel: id }` εξυπηρετείται αμέσως, στον ακροατή — αλλιώς θα
  *   περίμενε πίσω από το ίδιο το αίτημα που θέλει να σταματήσει. Ενεργοποιεί το `AbortController` του αιτήματος: αν τρέχει,
@@ -35,6 +35,17 @@ export async function answerWorkerRpc<Q, R, P = never>(
   }
 }
 
+export interface WorkerRpcServeOptions {
+  /**
+   * `serial` (προεπιλογή): ένα αίτημα τη φορά, με τη σειρά που ήρθαν. `concurrent` (ADR-920 §14.12 Β4): κάθε αίτημα
+   * ξεκινά αμέσως και τα αιτήματα **μπλέκονται στα `await`** — για χειριστή που περιμένει δίκτυο, ώστε ένα αίτημα που
+   * περιμένει μια λήψη να μην κρατά πίσω του όσα έχουν ήδη τα δεδομένα τους. Ο Worker παραμένει **ένα** νήμα: τα σύγχρονα
+   * τμήματα δεν διακόπτονται ποτέ. ⚠️ Ο χειριστής πρέπει τότε να αντέχει την ταυτόχρονη εκτέλεση (κοινές υποσχέσεις στη
+   * μνήμη του, καμία κατάσταση που ζει πάνω από ένα `await`). Το ίδιο κάνει το `Actor` του maplibre-contour.
+   */
+  readonly ordering?: 'serial' | 'concurrent';
+}
+
 /**
  * **Σύνδεσε τον χειριστή** στο καθολικό πεδίο του Worker (`self`).
  *
@@ -47,7 +58,9 @@ export function serveWorkerRpc<Q, R, P = never>(
   scope: WorkerRpcScope,
   handle: WorkerRpcHandler<Q, R, P>,
   transferOf?: (value: R) => Transferable[],
+  options: WorkerRpcServeOptions = {},
 ): void {
+  const concurrent = options.ordering === 'concurrent';
   let queue: Promise<void> = Promise.resolve();
   const controllers = new Map<number, AbortController>();
   scope.addEventListener('message', (event) => {
@@ -60,11 +73,13 @@ export function serveWorkerRpc<Q, R, P = never>(
       signal: controller.signal,
       progress: (progress) => scope.postMessage({ id: request.id, progress }),
     };
-    queue = queue.then(async () => {
+    const answer = async (): Promise<void> => {
       const reply = await answerWorkerRpc(request, handle, context);
       controllers.delete(request.id);
       scope.postMessage(reply, reply.ok && transferOf !== undefined ? transferOf(reply.value) : []);
-    });
+    };
+    if (concurrent) void answer();
+    else queue = queue.then(answer);
   });
   // Χειραψία ΜΕΤΑ τον ακροατή: φτάνει στον πελάτη μόνο αν ο Worker αξιολογήθηκε ολόκληρος (βλ. `WorkerRpcReady`).
   scope.postMessage(WORKER_RPC_READY);

@@ -180,25 +180,38 @@ export function bandLevelsOf(contours: readonly ListingTerrainContour[], rule: B
   return chosen;
 }
 
+/** One elevation band as a SHAPE: its range, colour, share and its refined triangles — not yet drawn by anyone. */
+export interface TerrainElevationBandShape extends Omit<TerrainMapElevationBand, 'pathData'> {
+  /** Indices into {@link TerrainElevationBandShapes.positions}. */
+  readonly triangles: readonly TriangleIndices[];
+}
+
+export interface TerrainElevationBandShapes {
+  /** Flat `[x, y, z, …]` in the snapshot frame: the mesh vertices first, then the crossings on the band levels. */
+  readonly positions: readonly number[];
+  /** Lowest first; bands without ground omitted. */
+  readonly bands: readonly TerrainElevationBandShape[];
+}
+
 /**
- * Every elevation band of the surface, lowest first. `minM`/`maxM` = the surface's own range (the snapshot stats):
- * they bound the first and last band and normalise the colour ramp.
+ * Every elevation band of the surface as a SHAPE, lowest first — the ONE split of the triangles on the band levels,
+ * read by the 2D sheet ({@link elevationBandsOf}) and by the map (ADR-920 §14.12 Β2). `minM`/`maxM` = the surface's own
+ * range (the snapshot stats): they bound the first and last band and normalise the colour ramp.
  */
-export function elevationBandsOf(
+export function elevationBandShapesOf(
   mesh: ListingTerrainMesh,
   triangles: readonly TriangleIndices[],
   levels: readonly number[],
   minM: number,
   maxM: number,
-): TerrainMapElevationBand[] {
+): TerrainElevationBandShapes {
   const store = new BandVertexStore(mesh.positions);
   const byBand: TriangleIndices[][] = Array.from({ length: levels.length + 1 }, () => []);
   for (const tri of triangles) splitTriangle(tri, levels, store, byBand);
-  const refined = { positions: store.positions };
   const areas = byBand.map((members) => members.reduce((sum, tri) => sum + areaOf(store.positions, tri), 0));
   const total = areas.reduce((sum, area) => sum + area, 0);
   const relief = maxM - minM;
-  return byBand.flatMap((members, band) => {
+  const bands = byBand.flatMap((members, band) => {
     if (members.length === 0 || !(areas[band] > 0)) return [];
     const fromM = band === 0 ? minM : levels[band - 1];
     const toM = band === levels.length ? maxM : levels[band];
@@ -208,7 +221,20 @@ export function elevationBandsOf(
       toM,
       color: terrainElevationHex(t),
       areaShare: total > 0 ? areas[band] / total : 0,
-      pathData: regionPathData(refined, members),
+      triangles: members,
     }];
   });
+  return { positions: store.positions, bands };
+}
+
+/** Every elevation band as the 2D sheet draws it: the shape ({@link elevationBandShapesOf}) + its path. */
+export function elevationBandsOf(
+  mesh: ListingTerrainMesh,
+  triangles: readonly TriangleIndices[],
+  levels: readonly number[],
+  minM: number,
+  maxM: number,
+): TerrainMapElevationBand[] {
+  const { positions, bands } = elevationBandShapesOf(mesh, triangles, levels, minM, maxM);
+  return bands.map(({ triangles: members, ...band }) => ({ ...band, pathData: regionPathData({ positions }, members) }));
 }

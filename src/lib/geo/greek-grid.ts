@@ -14,8 +14,8 @@
  */
 
 import type { GeoPoint } from '@/types/geo/coordinates';
-import { gridToGeographic } from './egsa87-projection';
-import { ggrs87ToWgs84 } from './ggrs87-datum';
+import { geographicToGrid, gridToGeographic } from './egsa87-projection';
+import { ggrs87ToWgs84, wgs84ToGgrs87 } from './ggrs87-datum';
 
 /**
  * Η **ταυτότητα** του καννάβου ΕΓΣΑ'87 όπως τη δημοσιεύει το μητρώο EPSG — ό,τι χρειάζεται ένα ανταλλάξιμο αρχείο
@@ -52,4 +52,22 @@ export function greekGridToGeoPoint(easting: number, northing: number): GeoPoint
   const local = gridToGeographic(easting, northing);
   const wgs84 = ggrs87ToWgs84(local.lat, local.lon);
   return { lat: wgs84.lat, lng: wgs84.lon };
+}
+
+/** Σημείο του εθνικού καννάβου ΕΓΣΑ'87 (EPSG:2100), σε μέτρα. */
+export interface GreekGridPoint {
+  readonly easting: number;
+  readonly northing: number;
+}
+
+/**
+ * WGS84 (μοίρες) → εθνικός κάνναβος ΕΓΣΑ'87, **σε μέτρα** — ο ακριβής αντίστροφος του {@link greekGridToGeoPoint}:
+ * μετάθεση datum **και** προβολή, πάντα μαζί. Ζει δίπλα στον εμπρός δρόμο για τον ίδιο λόγο που το
+ * `wgs84ToGgrs87` ζει δίπλα στο `ggrs87ToWgs84`: δύο κατευθύνσεις σε δύο αρχεία είναι η μέρα που η μία διορθώνεται
+ * και η άλλη όχι. Πρώτος καταναλωτής: η τοποθέτηση του αναγλύφου στον χάρτη (ADR-920 §14.12 Β2).
+ */
+export function geoPointToGreekGrid(point: GeoPoint): GreekGridPoint {
+  const local = wgs84ToGgrs87(point.lat, point.lng);
+  const grid = geographicToGrid(local.lat, local.lon);
+  return { easting: grid.E, northing: grid.N };
 }

@@ -12,10 +12,11 @@
 
 import type { PlanarPoint } from '@/lib/geometry/planar-polygon';
 import { fitDzPlane, type DzPlane } from '@/lib/terrain/dz-plane';
+import { framePointsOf } from '@/lib/terrain/publication/listing-terrain-frame';
 import type { ListingTerrainSnapshot } from '@/lib/terrain/publication/listing-terrain-types';
 import { meshTriangles, sparseTriangleFlags } from '@/lib/terrain/publication/terrain-map-regions';
 import type { TriangleIndices } from '@/lib/terrain/tin-boundary-loops';
-import { createTriangleLocator, type TriangleLocator } from '@/lib/terrain/triangle-locator';
+import { createTriangleHitSink, createTriangleLocator, type TriangleLocator } from '@/lib/terrain/triangle-locator';
 
 import { createContourIndex, type ContourIndex } from './terrain-contour-index';
 
@@ -44,10 +45,7 @@ export interface TerrainInspectIndex {
 
 /** Flat `[x, y, …]` → points; `null` stays `null`. */
 function flatRing(flat: readonly number[] | null | undefined): PlanarPoint[] | null {
-  if (!flat || flat.length < 6) return null;
-  const ring: PlanarPoint[] = [];
-  for (let i = 0; i + 1 < flat.length; i += 2) ring.push({ x: flat[i], y: flat[i + 1] });
-  return ring;
+  return !flat || flat.length < 6 ? null : framePointsOf(flat);
 }
 
 function planesOf(xy: TerrainInspectIndex['xy'], z: readonly number[], triangles: readonly TriangleIndices[]): (DzPlane | null)[] {
@@ -107,10 +105,36 @@ export function terrainInspectIndexOf(snapshot: ListingTerrainSnapshot): Terrain
   return index;
 }
 
+/** The surface at one point: its elevation and the triangle that carries it. */
+export interface SurfaceElevation {
+  readonly z: number;
+  readonly triangle: number;
+}
+
+/** A reusable reading, for a caller that asks many times (one tile of the elevation mosaic: once per pixel). */
+export type SurfaceElevationSink = { -readonly [K in keyof SurfaceElevation]: SurfaceElevation[K] };
+
+export function createSurfaceElevationSink(): SurfaceElevationSink {
+  return { z: 0, triangle: -1 };
+}
+
+/** One hit for every reading: the questions are synchronous and never nest. */
+const HIT = createTriangleHitSink();
+
+/**
+ * Elevation of the surface at (x, y) — barycentric on the published triangle — written into `sink`; `false` (and `sink`
+ * untouched) off the surface. THE reading: {@link elevationAt} is this one with a fresh result.
+ */
+export function elevationInto(sink: SurfaceElevationSink, index: TerrainInspectIndex, x: number, y: number): boolean {
+  if (!index.locator.locateInto(HIT, x, y)) return false;
+  const triangle = index.triangles[HIT.triangle];
+  sink.z = HIT.wa * index.z[triangle[0]] + HIT.wb * index.z[triangle[1]] + HIT.wc * index.z[triangle[2]];
+  sink.triangle = HIT.triangle;
+  return true;
+}
+
 /** Elevation of the surface at (x, y) — barycentric on the published triangle — or `null` off the surface. */
-export function elevationAt(index: TerrainInspectIndex, x: number, y: number): { readonly z: number; readonly triangle: number } | null {
-  const hit = index.locator.locate(x, y);
-  if (hit === null) return null;
-  const [i, j, k] = index.triangles[hit.triangle];
-  return { z: hit.wa * index.z[i] + hit.wb * index.z[j] + hit.wc * index.z[k], triangle: hit.triangle };
+export function elevationAt(index: TerrainInspectIndex, x: number, y: number): SurfaceElevation | null {
+  const sink = createSurfaceElevationSink();
+  return elevationInto(sink, index, x, y) ? sink : null;
 }

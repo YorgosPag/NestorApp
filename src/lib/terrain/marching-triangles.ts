@@ -45,8 +45,13 @@ export function crossEdge(pa: PlanarPoint, za: number, pb: PlanarPoint, zb: numb
   return { x: pa.x + (pb.x - pa.x) * t, y: pa.y + (pb.y - pa.y) * t };
 }
 
-/** March ONE triangle at ONE nudged plane → 0 or 2 crossing points. */
-function marchTriangle(
+/**
+ * March ONE triangle at ONE nudged plane → 0 or 2 crossing points.
+ *
+ * Exported since ADR-920 §14.12 Β3: the elevation mosaic marches a DISTANCE field at one level (the outer edge of its
+ * transition zone) — the same cell question, so it is asked here and not re-derived.
+ */
+export function marchTriangle(
   p0: PlanarPoint, z0: number,
   p1: PlanarPoint, z1: number,
   p2: PlanarPoint, z2: number,

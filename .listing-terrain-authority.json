@@ -10,6 +10,7 @@
   "derivers": ["buildListingTerrainSnapshot", "listingTerrainCardOf"],
   "derivationHome": "src/lib/terrain/",
   "derivationOwners": {
-    "src/services/listings/public-shelf-terrain-bake.ts": "Ο ΨΗΣΤΗΣ του ραφιού: το ΜΟΝΟ σημείο όπου το στιγμιότυπο και η κάρτα του γίνονται δημόσια bytes — από την κανονική πηγή του server, ποτέ από στιγμιότυπο πελάτη."
+    "src/services/listings/public-shelf-terrain-bake.ts": "Ο ΨΗΣΤΗΣ του ραφιού: το ΜΟΝΟ σημείο όπου το στιγμιότυπο και η κάρτα του γίνονται δημόσια bytes — από την κανονική πηγή του server, ποτέ από στιγμιότυπο πελάτη.",
+    "src/app/(bare)/test-harness/terrain-fusion/synthetic-site.ts": "Η σελίδα ΜΕΤΡΗΣΗΣ του πρωτοκόλλου σύντηξης (ADR-920 §14.12 Β4): χτίζει ΣΥΝΘΕΤΙΚΟ οικόπεδο (ύψη από τύπο, όχι τοπογραφικό τρίτου) με τον ίδιο χτίστη, ώστε να μετριέται ο κώδικας της παραγωγής. Το στιγμιότυπο ζει ΜΟΝΟ στη μνήμη του browser: δεν γράφεται σε αγγελία, ράφι ή Storage, και δεν αγγίζει το `PublicListing.terrain`. Η σελίδα κλείνει στις 2026-12-08 — όταν σβηστεί, η πύλη (source-drift) απαιτεί να σβηστεί και αυτή η γραμμή."
   }
 }

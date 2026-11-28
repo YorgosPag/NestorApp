@@ -28,10 +28,19 @@ function nodeKey(p: PlanarPoint): string {
   return `${Math.round(p.x * 1000)}:${Math.round(p.y * 1000)}`;
 }
 
-/** Chain one level's segments: open chains (from degree-1 nodes) first, then cycles. */
-function chainLevel(
-  segments: readonly ContourSegment[], level: number, isMajor: boolean, origin: LocalOrigin,
-): ContourLine[] {
+/** One chained run of segments, in the segments' own frame. When `closed`, the first point is repeated as the last. */
+export interface ChainedSegments {
+  readonly points: readonly PlanarPoint[];
+  readonly closed: boolean;
+}
+
+/**
+ * Chain a bag of loose segments of ONE level into runs: open chains (from degree-1 nodes) first, then cycles.
+ *
+ * Exported since ADR-920 §14.12 Β3: the elevation mosaic outlines its transition zone as the iso-line of a DISTANCE
+ * field — the same stitching question the contours ask of an elevation field, so it asks it through the same function.
+ */
+export function chainSegments(segments: readonly Pick<ContourSegment, 'a' | 'b'>[]): ChainedSegments[] {
   const point = new Map<string, PlanarPoint>();
   const edges: [string, string][] = [];
   for (const s of segments) {
@@ -40,12 +49,18 @@ function chainLevel(
     point.set(ka, s.a); point.set(kb, s.b);
     edges.push([ka, kb]);
   }
+  return chainUndirectedEdges(edges).map(({ nodes, closed }) => ({ closed, points: nodes.map((k) => point.get(k)!) }));
+}
 
-  return chainUndirectedEdges(edges).map(({ nodes, closed }) => ({
+/** One level's contour lines in WORLD coordinates, classified. */
+function chainLevel(
+  segments: readonly ContourSegment[], level: number, isMajor: boolean, origin: LocalOrigin,
+): ContourLine[] {
+  return chainSegments(segments).map(({ points, closed }) => ({
     level,
     isMajor,
     closed,
-    vertices: nodes.map((k) => localToWorld(point.get(k)!, origin)),
+    vertices: points.map((p) => localToWorld(p, origin)),
   }));
 }
 

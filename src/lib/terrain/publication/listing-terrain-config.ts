@@ -75,6 +75,64 @@ export const LISTING_TERRAIN_GEOREFERENCE_CONVERGENCE_DECIMALS = 4;
  */
 export const LISTING_TERRAIN_GEOREFERENCE_MIN_TOLERANCE_M = 250;
 
+// ── §14.12 Β3: the elevation mosaic (`elevation-fusion/`) ─────────────────
+
+/**
+ * ADR-920 §14.12 decision Β-4 — width of the TRANSITION ZONE around the measured ground, in cells of the coarse
+ * elevation model (its `nominal.groundSampleM`; one cell of Copernicus GLO-30 = 30 m). Counted in cells of the coarser
+ * grid because a blend narrower than one of its samples cannot be smooth (Esri «blend width», in pixels of the mosaic).
+ *
+ * ⚠️ OUR value, not a published convention (none was found: Esri, GDAL, WhiteboxTools, Mapterhorn) — and not yet judged
+ * by eye on a real survey (ADR-920 §14.12, open since Β0). Changing it moves heights AND the drawn zone together: both
+ * read it through `terrainFusionTransitionM`.
+ */
+export const LISTING_TERRAIN_FUSION_TRANSITION_COARSE_CELLS = 1;
+
+/**
+ * ADR-920 §14.12 Β3 — the outline of the transition zone is the iso-line «distance = width» of the mosaic's own
+ * distance function, marched on a lattice with this many steps across the width. The lattice step bounds how far a
+ * vertex of the outline may sit from the true line (`terrain-fusion-transition.ts`); the heights there are the coarse
+ * ones to within a hair (the pull has faded to zero), so the picture and the ground cannot visibly disagree.
+ */
+export const LISTING_TERRAIN_FUSION_OUTLINE_STEPS_PER_WIDTH = 16;
+
+/** Cap of that lattice per axis: a survey far larger than a plot gets a coarser outline, never an unbounded grid. */
+export const LISTING_TERRAIN_FUSION_OUTLINE_MAX_CELLS = 1024;
+
+/**
+ * ADR-920 §14.12 Β3.1 — how far, in metres on the ground, the mosaic's cheap reading of «where does this point of the
+ * earth fall in the survey's frame» may sit from the exact projection (`planar-map-lattice.ts` measures it, and refuses
+ * a lattice that does not get there). A hundredth of a millimetre: the height it can move is the gradient of the fused
+ * ground times that — on a 100 % slope a hundredth of a millimetre, 1/390 of the step a Terrarium pixel can express
+ * (1/256 m). The tolerance costs nothing per pixel (a finer lattice reads as fast as a coarse one), only a few more
+ * exact projections when the survey is first seen.
+ *
+ * ⚠️ It bounds the PICTURE only. The elevation shown as a number (Β6) asks the exact projection.
+ */
+export const LISTING_TERRAIN_FUSION_PROJECTION_TOLERANCE_M = 1e-5;
+
+/**
+ * ADR-920 §14.12 Β4 — memory the fusion protocol may hold for DECODED tiles of the coarse elevation archive, bytes. One
+ * tile of 512² is 1 MiB of heights; a view asks for 9–34 output tiles (measured, Β0), most of them of different coarse
+ * tiles at the shallow levels. Counted in bytes, not in tiles (maplibre-contour counts 100 tiles): ours are a megabyte
+ * each, and a count would not say what it costs.
+ */
+export const LISTING_TERRAIN_FUSION_COARSE_CACHE_BYTES = 48 * 1024 * 1024;
+
+/**
+ * ADR-920 §14.12 Β4 — memory for the bytes of mosaics already composed (1 MiB per 512² tile). The map cancels and asks
+ * again as the camera moves; a mosaic that finished after its request was cancelled is answered from here next time.
+ * ⚠️ OUR value: how often a tile is asked twice has not been measured.
+ */
+export const LISTING_TERRAIN_FUSION_TILE_CACHE_BYTES = 32 * 1024 * 1024;
+
+/**
+ * ADR-920 §14.12 Β4 — how long one tile of the coarse archive may take to arrive. It is our own static file server: a
+ * tile arrives in tens to a few hundred milliseconds (Β0 measured 118–231 ms at worst), so ten seconds already means
+ * «something is wrong». The value maplibre-contour ships with.
+ */
+export const LISTING_TERRAIN_FUSION_COARSE_TIMEOUT_MS = 10_000;
+
 /** Below this mean gradient (percent) the ground has no meaningful downslope direction. */
 export const LISTING_TERRAIN_FLAT_GRADIENT_PCT = 0.5;
 

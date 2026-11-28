@@ -25,28 +25,63 @@ import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 
 /** Δακτύλιος → πολύγωνο GeoJSON, έτοιμο για `Source type="geojson"`. */
 export function outlineToGeoJson(outline: GeoOutline): GeoJSON.Feature<GeoJSON.Polygon> {
-  const ring: [number, number][] = outline.map((vertex) => [vertex.lng, vertex.lat]);
-  // Κλείσιμο **μόνο** αν υπάρχει τι να κλείσει: ένας δακτύλιος με μία κορυφή δεν
-  // γίνεται πολύγωνο επειδή του προσθέσαμε αντίγραφό της.
-  if (ring.length >= 3) ring.push(ring[0]);
-
   return {
     type: 'Feature',
     properties: {},
-    geometry: { type: 'Polygon', coordinates: [ring] },
+    geometry: { type: 'Polygon', coordinates: [closedPositions(outline)] },
   };
+}
+
+/** Δακτύλιος → θέσεις GeoJSON `[lng, lat]`, **κλειστός**. */
+function closedPositions(outline: GeoOutline): GeoJSON.Position[] {
+  const ring: GeoJSON.Position[] = outline.map((vertex) => [vertex.lng, vertex.lat]);
+  // Κλείσιμο **μόνο** αν υπάρχει τι να κλείσει: ένας δακτύλιος με μία κορυφή δεν
+  // γίνεται πολύγωνο επειδή του προσθέσαμε αντίγραφό της.
+  if (ring.length >= 3) ring.push(ring[0]);
+  return ring;
+}
+
+/**
+ * Ένα πολύγωνο **με τις τρύπες του**: ο εξωτερικός δακτύλιος και όσοι κόβονται από μέσα του.
+ *
+ * ⚠️ Η ιεραρχία ζει στη **θέση**: στο GeoJSON ο πρώτος δακτύλιος είναι ο εξωτερικός και οι υπόλοιποι τρύπες — και η
+ * MapLibre το **επιβάλλει** (το `geojson-vt` ξαναγυρίζει τον πρώτο ως εξωτερικό και τους άλλους ως τρύπες, όποια φορά
+ * κι αν έχουν). Ένα «νησί» γραμμένο ως δεύτερος δακτύλιος ζωγραφίζεται ως τρύπα· γι' αυτό ο καλών δίνει δομή, όχι λίστα.
+ */
+export interface GeoPolygonRings {
+  readonly outer: GeoOutline;
+  readonly holes: readonly GeoOutline[];
+}
+
+/** Πολύγωνα με τρύπες → **ένα** feature `MultiPolygon` με ιδιότητες — μία περιοχή του χάρτη, ένα στοιχείο. */
+export function polygonsToGeoJson<P extends GeoJSON.GeoJsonProperties>(
+  polygons: readonly GeoPolygonRings[],
+  properties: P,
+): GeoJSON.Feature<GeoJSON.MultiPolygon, P> {
+  return {
+    type: 'Feature',
+    properties,
+    geometry: {
+      type: 'MultiPolygon',
+      coordinates: polygons.map(({ outer, holes }) => [closedPositions(outer), ...holes.map(closedPositions)]),
+    },
+  };
+}
+
+/** Γραμμή με ιδιότητες· `closed` ⇒ επαναλαμβάνεται η πρώτη κορυφή (το GeoJSON δεν έχει «κλειστή γραμμή»). */
+export function lineToGeoJson<P extends GeoJSON.GeoJsonProperties>(
+  points: readonly GeoPoint[],
+  closed: boolean,
+  properties: P,
+): GeoJSON.Feature<GeoJSON.LineString, P> {
+  const coordinates: GeoJSON.Position[] = points.map((point) => [point.lng, point.lat]);
+  if (closed && coordinates.length >= 3) coordinates.push(coordinates[0]);
+  return { type: 'Feature', properties, geometry: { type: 'LineString', coordinates } };
 }
 
 /** Κορυφές → σημεία GeoJSON, για την **υπό σχεδίαση** γραμμή. */
 export function pointsToGeoJson(points: readonly GeoPoint[]): GeoJSON.Feature<GeoJSON.LineString> {
-  return {
-    type: 'Feature',
-    properties: {},
-    geometry: {
-      type: 'LineString',
-      coordinates: points.map((point) => [point.lng, point.lat]),
-    },
-  };
+  return lineToGeoJson(points, false, {});
 }
 
 /**

@@ -177,6 +177,19 @@ function mapBandLevelsOf(
 }
 
 /**
+ * ADR-920 §14.12 Β2 — the band edges of the SHEET at its reference size (paper / PDF / not measured), for a surface
+ * that has no fixed size of its own: the map over the basemap zooms, so it colours the SAME bands the sheet and its
+ * legend show, instead of deriving a third set of levels.
+ */
+export function terrainMapSheetBandLevelsOf(snapshot: ListingTerrainSnapshot): number[] {
+  const viewBox = viewBoxOf(contentPoints(snapshot));
+  return mapBandLevelsOf(snapshot, viewBox, null, {
+    majorContourIntervalM: roundPublished(snapshot.contourIntervalM * snapshot.contourMajorEvery),
+    minorShown: minorContoursOf(snapshot, viewBox, null).shown,
+  });
+}
+
+/**
  * The 2D map of a published terrain snapshot. `marks` = the owner's preview only (never on the public listing);
  * `display` = an on-screen map of known width (§13.8 decision 4) — without it, the drawing's own proportions.
  */

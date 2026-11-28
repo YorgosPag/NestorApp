@@ -1,18 +1,15 @@
 /**
- * ADR-920 §14.12 Β0 — οι πηγές και τα στρώματα της δοκιμής πάνω στον χάρτη. Προστακτικά (όχι `<Source>`): οι
- * μετρήσεις αλλάζουν τη διεύθυνση πλακιδίων της πηγής εδάφους ανάμεσα σε όψεις, και ένα React prop θα την ξανάγραφε.
+ * ADR-920 §14.12 Β4 — οι πηγές και τα στρώματα της δοκιμής πάνω στον χάρτη. Προστακτικά (όχι `<Source>`): οι μετρήσεις
+ * αλλάζουν τη διεύθυνση πλακιδίων της πηγής εδάφους ανάμεσα σε όψεις, και ένα React prop θα την ξανάγραφε.
  *
- * 🔑 **Δύο πηγές `raster-dem`**: έδαφος = σύντηξη · σκίαση γύρω χώρου = το ωμό αρχείο. Η MapLibre προειδοποιεί όταν
- * σκίαση και έδαφος μοιράζονται πηγή.
+ * 🔑 **Δύο πηγές `raster-dem`**: έδαφος = σύντηξη (το πρωτόκολλο της παραγωγής) · σκίαση γύρω χώρου = το ωμό αρχείο.
+ * Η MapLibre προειδοποιεί όταν σκίαση και έδαφος μοιράζονται πηγή.
  */
 
 import type { GeoJSONSourceSpecification, Map as MapLibreMap, RasterDEMTileSource } from 'maplibre-gl';
 
 import { DEFAULT_ELEVATION_SOURCE_ID, attributionHtml, elevationSource } from '@/lib/maps/basemap-catalog';
-
-import { FUSION_TILE_SIZE } from './fusion-math';
-import { fusionTileTemplate } from './fusion-protocol';
-import { lngLatOfLocal, PROBE_RING, type ProbeSurface } from './synthetic-site';
+import type { TerrainFusionSurface } from '@/lib/terrain/elevation-fusion/terrain-fusion-surface';
 
 const FUSED_SOURCE_ID = 'probe-fused-dem';
 const RELIEF_SOURCE_ID = 'probe-relief-dem';
@@ -24,26 +21,26 @@ const HAIRLINES_ID = 'probe-hairlines';
 const HAIRLINE_SPACING_M = 2;
 
 /** (Ξανα)δηλώνει την πηγή εδάφους. Αλλαγή `maxZoom` ⇒ νέα πηγή — η MapLibre δεν το αλλάζει επί τόπου. */
-export function setFusedSource(map: MapLibreMap, revision: number, maxZoom: number, exaggeration: number): void {
+export function setFusedSource(map: MapLibreMap, tileTemplate: string, maxZoom: number, exaggeration: number): void {
   if (map.getSource(FUSED_SOURCE_ID) !== undefined) {
     map.setTerrain(null);
     map.removeSource(FUSED_SOURCE_ID);
   }
+  const source = elevationSource(DEFAULT_ELEVATION_SOURCE_ID);
   map.addSource(FUSED_SOURCE_ID, {
     type: 'raster-dem',
-    tiles: [fusionTileTemplate(revision)],
-    tileSize: FUSION_TILE_SIZE,
+    tiles: [tileTemplate],
+    tileSize: source.tileSizePx,
     maxzoom: maxZoom,
-    encoding: elevationSource(DEFAULT_ELEVATION_SOURCE_ID).encoding,
-    attribution: attributionHtml(elevationSource(DEFAULT_ELEVATION_SOURCE_ID).attribution),
+    encoding: source.encoding,
+    attribution: attributionHtml(source.attribution),
   });
   map.setTerrain({ source: FUSED_SOURCE_ID, exaggeration });
 }
 
 /** Νέα διεύθυνση πλακιδίων ⇒ η MapLibre πετά ό,τι κρατούσε και ξαναρωτά το πρωτόκολλο. */
-export function reloadFusedTiles(map: MapLibreMap, revision: number): void {
-  const source = map.getSource<RasterDEMTileSource>(FUSED_SOURCE_ID);
-  source?.setTiles([fusionTileTemplate(revision)]);
+export function retargetFusedTiles(map: MapLibreMap, tileTemplate: string): void {
+  map.getSource<RasterDEMTileSource>(FUSED_SOURCE_ID)?.setTiles([tileTemplate]);
 }
 
 export function setExaggeration(map: MapLibreMap, exaggeration: number): void {
@@ -73,34 +70,43 @@ export function setRelief(map: MapLibreMap, visible: boolean): void {
   );
 }
 
-function lineFeature(surface: ProbeSurface, points: readonly { readonly x: number; readonly y: number }[]): GeoJSON.Feature {
-  const coordinates = points.map((point) => {
-    const { lng, lat } = lngLatOfLocal(surface, point);
-    return [lng, lat];
-  });
-  return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates } };
+type FramePoint = readonly [number, number];
+
+function lines(surface: TerrainFusionSurface, segments: readonly (readonly [FramePoint, FramePoint])[]): GeoJSON.Feature {
+  const coordinates = segments.map((segment) =>
+    segment.map(([x, y]) => {
+      const { lng, lat } = surface.placement.toGeo(x, y);
+      return [lng, lat];
+    }),
+  );
+  return { type: 'Feature', properties: {}, geometry: { type: 'MultiLineString', coordinates } };
 }
 
-function hairlines(surface: ProbeSurface): GeoJSON.FeatureCollection {
-  const xs = PROBE_RING.map((p) => p.x);
-  const ys = PROBE_RING.map((p) => p.y);
-  const features: GeoJSON.Feature[] = [];
-  for (let y = Math.min(...ys); y <= Math.max(...ys); y += HAIRLINE_SPACING_M) {
-    features.push(lineFeature(surface, [{ x: Math.min(...xs), y }, { x: Math.max(...xs), y }]));
+/** Παράλληλες γραμμές πάνω στο πλαίσιο του πλέγματος (η εμβέλεια χωρίς τη ζώνη μετάβασης). */
+function hairlines(surface: TerrainFusionSurface): GeoJSON.Feature {
+  const { reach, transitionM } = surface;
+  const segments: [FramePoint, FramePoint][] = [];
+  for (let y = reach.minY + transitionM; y <= reach.maxY - transitionM; y += HAIRLINE_SPACING_M) {
+    segments.push([[reach.minX + transitionM, y], [reach.maxX - transitionM, y]]);
   }
-  return { type: 'FeatureCollection', features };
+  return lines(surface, segments);
 }
 
-function geojson(data: GeoJSON.Feature | GeoJSON.FeatureCollection): GeoJSONSourceSpecification {
+/** Το χείλος του μετρημένου εδάφους — οι ίδιες ακμές από τις οποίες μετρά η ζώνη μετάβασης. */
+function rim(surface: TerrainFusionSurface): GeoJSON.Feature {
+  return lines(surface, surface.rim.map(({ a, b }) => [[a.x, a.y], [b.x, b.y]]));
+}
+
+function geojson(data: GeoJSON.Feature): GeoJSONSourceSpecification {
   return { type: 'geojson', data };
 }
 
-/** Το περίγραμμα και οι γραμμές δοκιμής, ντυμένα στο έδαφος. Καλείται μία φορά, αφού υπάρχει επιφάνεια. */
-export function addOverlays(map: MapLibreMap, surface: ProbeSurface): void {
+/** Το χείλος και οι γραμμές δοκιμής, ντυμένα στο έδαφος. Καλείται μία φορά, αφού υπάρχει επιφάνεια. */
+export function addOverlays(map: MapLibreMap, surface: TerrainFusionSurface): void {
   if (map.getSource(OUTLINE_ID) !== undefined) return;
   map.addSource(HAIRLINES_ID, geojson(hairlines(surface)));
   map.addLayer({ id: HAIRLINES_ID, type: 'line', source: HAIRLINES_ID, paint: { 'line-color': '#1d4ed8', 'line-width': 1 } });
-  map.addSource(OUTLINE_ID, geojson(lineFeature(surface, [...PROBE_RING, PROBE_RING[0]])));
+  map.addSource(OUTLINE_ID, geojson(rim(surface)));
   map.addLayer({ id: OUTLINE_ID, type: 'line', source: OUTLINE_ID, paint: { 'line-color': '#b91c1c', 'line-width': 2.5 } });
 }
 

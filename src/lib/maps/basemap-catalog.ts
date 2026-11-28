@@ -575,6 +575,33 @@ export function elevationFusionTileTemplate(surface: string): string {
   return `${ELEVATION_FUSION_URL_SCHEME}${encodeURIComponent(surface)}/{z}/{x}/{y}`;
 }
 
+/** Ό,τι λέει μια διεύθυνση πλακιδίου σύντηξης: ποια επιφάνεια και ποιο πλακίδιο. */
+export interface ElevationFusionTileRequestAddress {
+  readonly surface: string;
+  readonly z: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+const ELEVATION_FUSION_TILE_PATH = /^([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
+
+/**
+ * Η **ανάγνωση** της διεύθυνσης που γράφει το {@link elevationFusionTileTemplate} — η μορφή γράφεται και διαβάζεται στο
+ * ίδιο αρχείο (ADR-920 §14.12 Β4). `null` όταν η διεύθυνση δεν είναι πλακίδιο σύντηξης.
+ */
+export function parseElevationFusionTileUrl(url: string): ElevationFusionTileRequestAddress | null {
+  if (!url.startsWith(ELEVATION_FUSION_URL_SCHEME)) return null;
+  const match = ELEVATION_FUSION_TILE_PATH.exec(url.slice(ELEVATION_FUSION_URL_SCHEME.length));
+  if (match === null) return null;
+  let surface: string;
+  try {
+    surface = decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+  return { surface, z: Number(match[2]), x: Number(match[3]), y: Number(match[4]) };
+}
+
 function hostMatches(hostname: string, pattern: string): boolean {
   return pattern.startsWith('*.') ? hostname.endsWith(pattern.slice(1)) : hostname === pattern;
 }

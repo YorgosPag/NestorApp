@@ -55,6 +55,13 @@ export function ringToFrame(frame: SnapshotFrame, ring: readonly PlanarPoint[]):
   return ring.flatMap((p) => frame.planM(p.x, p.y));
 }
 
+/** A flat `[x, y, x, y, …]` of the snapshot back to points in the frame — the ONE reader of what {@link ringToFrame} writes. */
+export function framePointsOf(flat: readonly number[]): PlanarPoint[] {
+  const points: PlanarPoint[] = [];
+  for (let i = 0; i + 1 < flat.length; i += 2) points.push({ x: flat[i], y: flat[i + 1] });
+  return points;
+}
+
 /** Mesh positions `[x, y, z, …]`: TIN LOCAL mm + origin = WORLD mm → frame. */
 export function meshPositions(tin: TinSurface, frame: SnapshotFrame): number[] {
   const out: number[] = [];

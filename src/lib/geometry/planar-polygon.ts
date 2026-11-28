@@ -120,12 +120,22 @@ export function isPolygonSelfIntersecting(vertices: readonly PlanarPoint[]): boo
  * δίνει το `a`. Η **μία** προβολή — την καλούν η απόσταση και η έλξη (`planar-snap.ts`).
  */
 export function closestPointOnSegment(point: PlanarPoint, a: PlanarPoint, b: PlanarPoint): PlanarPoint {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
+  const t = segmentParameterNearest(point.x, point.y, a.x, a.y, b.x, b.y);
+  return { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
+}
+
+/**
+ * **Πού** πάνω στο τμήμα `a → b` βρίσκεται το πλησιέστερο σημείο του στο `(px, py)`: `0` στο `a`, `1` στο `b`, κομμένο
+ * στο `[0, 1]`· εκφυλισμένο τμήμα δίνει `0`. Η **μία** διατύπωση της προβολής, σε σκέτους αριθμούς: τη ζητά το
+ * {@link closestPointOnSegment} και όποιος κρατά τα τμήματά του σε επίπεδους πίνακες και δεν μπορεί να πληρώσει ένα
+ * αντικείμενο ανά ερώτηση (`segment-nearest-index.ts` — ένα πλακίδιο υψομέτρων ρωτά ένα τέταρτο του εκατομμυρίου φορές).
+ */
+export function segmentParameterNearest(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
   const lengthSq = dx * dx + dy * dy;
-  const rawT = lengthSq === 0 ? 0 : ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq;
-  const t = Math.min(1, Math.max(0, rawT));
-  return { x: a.x + t * dx, y: a.y + t * dy };
+  const rawT = lengthSq === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / lengthSq;
+  return Math.min(1, Math.max(0, rawT));
 }
 
 /**

@@ -160,6 +160,47 @@ describe('latestOnly', () => {
   });
 });
 
+describe('serveWorkerRpc — σειρά εξυπηρέτησης (ADR-920 §14.12 Β4)', () => {
+  /** Το αίτημα 1 περιμένει «δίκτυο»· το 2 έχει ήδη τα δεδομένα του. Γράφει πότε ξεκίνησε και πότε τελείωσε το καθένα. */
+  function slowThenFast(trace: string[]): (n: number) => Promise<number> {
+    return async (n) => {
+      trace.push(`start ${n}`);
+      await delay(n === 1 ? 30 : 0);
+      trace.push(`end ${n}`);
+      return n;
+    };
+  }
+
+  it('σειριακά (προεπιλογή): το δεύτερο ξεκινά αφού τελειώσει το πρώτο', async () => {
+    const trace: string[] = [];
+    const client = createWorkerRpcClient<number, number>({ spawn: () => new FakeWorker<number, number>(slowThenFast(trace)) });
+    await Promise.all([client.call(1), client.call(2)]);
+    expect(trace).toEqual(['start 1', 'end 1', 'start 2', 'end 2']);
+  });
+
+  it('ταυτόχρονα: το αίτημα που περιμένει δεν κρατά πίσω του το επόμενο — και κάθε απάντηση πάει στον καλούντα της', async () => {
+    const trace: string[] = [];
+    const client = createWorkerRpcClient<number, number>({
+      spawn: () => new FakeWorker<number, number>(slowThenFast(trace), { ordering: 'concurrent' }),
+    });
+    await expect(Promise.all([client.call(1), client.call(2)])).resolves.toEqual([ok(1), ok(2)]);
+    expect(trace).toEqual(['start 1', 'start 2', 'end 2', 'end 1']);
+  });
+
+  it('ταυτόχρονα: η ακύρωση φτάνει στο αίτημα που τρέχει, και τα άλλα δεν την βλέπουν', async () => {
+    const seen: boolean[] = [];
+    const worker = new FakeWorker<number, number>(async (n) => { await delay(20); return n; }, { ordering: 'concurrent' });
+    const client = createWorkerRpcClient<number, number>({ spawn: () => worker });
+    const abort = new AbortController();
+    const cancelled = client.run(1, { signal: abort.signal }).then((result) => { seen.push(result.kind === 'cancelled'); return result; });
+    const kept = client.call(2);
+    abort.abort();
+    await expect(cancelled).resolves.toEqual({ kind: 'cancelled' });
+    await expect(kept).resolves.toEqual(ok(2));
+    expect(seen).toEqual([true]);
+  });
+});
+
 describe('absoluteWorkerUrl — ADR-884 Γ3γ-2β (μετρημένο ζωντανά: Worker σε `blob:` ⇒ «Failed to parse URL»)', () => {
   it('σχετικό ⇒ απόλυτο ως προς τη σελίδα · ήδη απόλυτο ⇒ ίδιο · χωρίς βάση (Node) ⇒ ως έχει', () => {
     const page = 'http://localhost:3000/o/pagonis/properties/p1';

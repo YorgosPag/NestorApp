@@ -12,11 +12,11 @@
  * @module lib/terrain/publication/terrain-map-regions
  */
 
-import { polygonArea } from '@/lib/geometry/planar-polygon';
+import { polygonArea, type PlanarPoint } from '@/lib/geometry/planar-polygon';
 import { tinBoundaryLoops, type TriangleIndices } from '../tin-boundary-loops';
 import { LISTING_TERRAIN_MAP_SPARSE_EDGE_FACTOR } from './listing-terrain-config';
 import type { ListingTerrainMesh } from './listing-terrain-types';
-import { joinPathData, meshSvgPoint, polylinePathData } from './terrain-map-svg';
+import { joinPathData, polylinePathData, svgPointOf } from './terrain-map-svg';
 
 /** One slope class on the map — and in its legend / data table. */
 export interface TerrainMapSlopeRegion {
@@ -42,6 +42,20 @@ export function meshTriangles(mesh: ListingTerrainMesh): TriangleIndices[] {
 }
 
 /**
+ * The boundary of a triangle set as rings in the SNAPSHOT FRAME (x east, y north, metres — as stored, not rounded
+ * again). The SHAPE of a region, before any surface decides how to draw it: the 2D sheet turns it into path data
+ * ({@link regionPathData}), the map into GeoJSON (`map-placement/terrain-map-features.ts`, ADR-920 §14.12 Β2).
+ * ⚠️ No hierarchy: the rings cannot tell a hole from an island (`tin-boundary-loops.ts`).
+ */
+export function regionRings(
+  mesh: Pick<ListingTerrainMesh, 'positions'>,
+  triangles: readonly TriangleIndices[],
+): PlanarPoint[][] {
+  const { positions } = mesh;
+  return tinBoundaryLoops(triangles).map((ring) => ring.map((i) => ({ x: positions[3 * i], y: positions[3 * i + 1] })));
+}
+
+/**
  * The boundary of a triangle set as ONE path data string. Only the flat `[x, y, z, …]` positions are read, so the
  * elevation bands (`terrain-map-elevation-bands.ts`) draw their refined triangles through this SAME function.
  */
@@ -50,7 +64,7 @@ export function regionPathData(
   triangles: readonly TriangleIndices[],
 ): string {
   return joinPathData(
-    tinBoundaryLoops(triangles).map((ring) => polylinePathData(ring.map((i) => meshSvgPoint(mesh.positions, i)), true)),
+    regionRings(mesh, triangles).map((ring) => polylinePathData(ring.map((p) => svgPointOf(p.x, p.y)), true)),
   );
 }
 
@@ -60,12 +74,20 @@ export function triangleArea(positions: readonly number[], [i, j, k]: TriangleIn
   return polygonArea([at(i), at(j), at(k)]);
 }
 
-/** Every slope class of the snapshot, empty ones included (the legend lists the full scale). */
-export function slopeRegionsOf(
+/** One slope class as a SHAPE: its range, its share and the triangles in it — not yet drawn by anyone. */
+export interface TerrainSlopeClassShape extends Omit<TerrainMapSlopeRegion, 'pathData'> {
+  readonly triangles: readonly TriangleIndices[];
+}
+
+/**
+ * Every slope class of the snapshot, empty ones included (the legend lists the full scale) — the ONE grouping of the
+ * triangles by class, read by the 2D sheet ({@link slopeRegionsOf}) and by the map (ADR-920 §14.12 Β2).
+ */
+export function slopeClassShapesOf(
   mesh: ListingTerrainMesh,
   triangles: readonly TriangleIndices[],
   bandsPct: readonly number[],
-): TerrainMapSlopeRegion[] {
+): TerrainSlopeClassShape[] {
   const byClass: TriangleIndices[][] = Array.from({ length: bandsPct.length + 1 }, () => []);
   const areaByClass = new Array<number>(bandsPct.length + 1).fill(0);
   let total = 0;
@@ -80,6 +102,18 @@ export function slopeRegionsOf(
     classIndex,
     ...slopeClassRange(bandsPct, classIndex),
     areaShare: total > 0 ? areaByClass[classIndex] / total : 0,
+    triangles: members,
+  }));
+}
+
+/** Every slope class as the 2D sheet draws it: the shape ({@link slopeClassShapesOf}) + its path. */
+export function slopeRegionsOf(
+  mesh: ListingTerrainMesh,
+  triangles: readonly TriangleIndices[],
+  bandsPct: readonly number[],
+): TerrainMapSlopeRegion[] {
+  return slopeClassShapesOf(mesh, triangles, bandsPct).map(({ triangles: members, ...region }) => ({
+    ...region,
     pathData: regionPathData(mesh, members),
   }));
 }

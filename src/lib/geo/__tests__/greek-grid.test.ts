@@ -7,7 +7,7 @@
 
 import { distanceMeters } from '../geo-distance';
 import { geographicToGrid, gridToGeographic } from '../egsa87-projection';
-import { greekGridToGeoPoint } from '../greek-grid';
+import { geoPointToGreekGrid, greekGridToGeoPoint } from '../greek-grid';
 import { wgs84ToGgrs87 } from '../ggrs87-datum';
 
 /** Σύνταγμα — WGS84. */
@@ -33,5 +33,20 @@ describe('greekGridToGeoPoint', () => {
     const offset = distanceMeters({ lat: projectionOnly.lat, lng: projectionOnly.lon }, SYNTAGMA);
     expect(offset).toBeGreaterThan(300);
     expect(offset).toBeLessThan(350);
+  });
+});
+
+describe('geoPointToGreekGrid', () => {
+  it('είναι η ίδια σύνθεση με τα δύο σκαλιά της, μετάθεση datum ΚΑΙ προβολή', () => {
+    const grid = toGrid(SYNTAGMA);
+    expect(geoPointToGreekGrid(SYNTAGMA)).toEqual({ easting: grid.E, northing: grid.N });
+  });
+
+  it('κλείνει τον κύκλο με τον εμπρός δρόμο στα λίγα χιλιοστά, από τη μία άκρη της χώρας ως την άλλη', () => {
+    // Κέρκυρα · Αττική · Ρόδος (μακριά από τον κεντρικό μεσημβρινό, εκεί όπου οι σειρές δουλεύουν περισσότερο).
+    for (const [easting, northing] of [[150_000, 4_390_000], [476_000, 4_202_000], [880_000, 4_010_000]]) {
+      const back = geoPointToGreekGrid(greekGridToGeoPoint(easting, northing));
+      expect(Math.hypot(back.easting - easting, back.northing - northing)).toBeLessThan(0.005);
+    }
   });
 });

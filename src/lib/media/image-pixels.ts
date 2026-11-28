@@ -36,11 +36,25 @@ function context2d(width: number, height: number): Context2D {
   return context;
 }
 
+/**
+ * Οι επιλογές για εικόνα που κουβαλά **δεδομένα**, όχι χρώμα (π.χ. πλακίδιο υψομέτρου Terrarium): καμία μετατροπή
+ * χρωματικού χώρου, κανένας πολλαπλασιασμός με το άλφα (ADR-920 §14.12 Β4).
+ */
+export const RAW_IMAGE_BITMAP_OPTIONS: ImageBitmapOptions = { colorSpaceConversion: 'none', premultiplyAlpha: 'none' };
+
 /** **Κατέβασε και διάβασε** τα pixel μιας εικόνας ίδιας προέλευσης. Πετά με ονομασμένο μήνυμα σε κάθε αποτυχία. */
 export async function fetchImagePixels(url: string, signal?: AbortSignal): Promise<ImagePixels> {
   const response = await fetch(url, { credentials: 'same-origin', signal });
   if (!response.ok) throw new Error(`image-pixels-http-${response.status}`);
-  const bitmap = await createImageBitmap(await response.blob());
+  return decodeImagePixels(await response.blob());
+}
+
+/**
+ * **Αποκωδικοποίησε και διάβασε** τα pixel μιας εικόνας που είναι ήδη στη μνήμη. `options` = οι επιλογές του
+ * `createImageBitmap`· για εικόνα-δεδομένα πέρασε {@link RAW_IMAGE_BITMAP_OPTIONS}.
+ */
+export async function decodeImagePixels(blob: Blob, options?: ImageBitmapOptions): Promise<ImagePixels> {
+  const bitmap = await (options === undefined ? createImageBitmap(blob) : createImageBitmap(blob, options));
   try {
     const { width, height } = bitmap;
     const context = context2d(width, height);
@@ -49,4 +63,36 @@ export async function fetchImagePixels(url: string, signal?: AbortSignal): Promi
   } finally {
     bitmap.close();
   }
+}
+
+/** Πλευρά του δείγματος ελέγχου — όσο της MapLibre (`isOffscreenCanvasDistorted`) και του maplibre-contour. */
+const FIDELITY_PROBE_SIDE_PX = 5;
+
+let faithful: boolean | null = null;
+
+function probeCanvasFidelity(): boolean {
+  const side = FIDELITY_PROBE_SIDE_PX;
+  const written = new Uint8ClampedArray(side * side * 4);
+  for (let i = 0; i < written.length; i++) written[i] = i % 4 === 3 ? 255 : (i * 37 + 11) % 256;
+  const context = context2d(side, side);
+  context.putImageData(new ImageData(written, side, side), 0, 0);
+  const read = context.getImageData(0, 0, side, side).data;
+  return written.every((byte, i) => read[i] === byte);
+}
+
+/**
+ * **Διαβάζει ο καμβάς τα pixel όπως γράφτηκαν;** Ορισμένοι browsers αλλοιώνουν σκόπιμα το `getImageData` ως προστασία από
+ * δακτυλικό αποτύπωμα (Safari με αυξημένη προστασία, Firefox `resistFingerprinting`, Brave). Σε φωτογραφία δεν φαίνεται· σε
+ * εικόνα-**δεδομένα** (ύψη γραμμένα σε bytes) είναι λάθος τιμές. Ο έλεγχος γράφει ένα γνωστό δείγμα και το διαβάζει πίσω —
+ * το ίδιο κάνουν η MapLibre και το maplibre-contour (ADR-920 §14.12 Β4). Μία φορά ανά νήμα· χωρίς καμβά ⇒ `false`.
+ */
+export function canvasReadsPixelsFaithfully(): boolean {
+  if (faithful === null) {
+    try {
+      faithful = probeCanvasFidelity();
+    } catch {
+      faithful = false;
+    }
+  }
+  return faithful;
 }
