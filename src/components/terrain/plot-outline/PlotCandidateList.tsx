@@ -142,7 +142,7 @@ export interface PlotCandidateListProps {
   readonly selectedId: string | null;
   /** Εφήμερο: το υποψήφιο κάτω από τον δείκτη/την εστίαση — εδώ ή στο σχέδιο. */
   readonly peekedId: string | null;
-  /** Το τελευταίο κλικ στο σχέδιο: η κάρτα του έρχεται στο οπτικό πεδίο (όσο λιγότερο γίνεται). */
+  /** Το τελευταίο κλικ στο σχέδιο: η κάρτα του έρχεται μπροστά, ακριβώς κάτω από την κολλημένη όψη. */
   readonly revealRequest: PlotCandidateRevealRequest | null;
   readonly rejectedCount: number;
   readonly disabled?: boolean;
