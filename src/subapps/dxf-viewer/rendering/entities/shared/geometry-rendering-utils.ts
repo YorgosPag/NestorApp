@@ -6,7 +6,7 @@
  */
 
 import type { Point2D } from '../../types/Types';
-import { clamp01 } from '../../../utils/scalar-math';
+import { clamp, clamp01 } from '../../../utils/scalar-math';
 
 // ===== PIXEL-PERFECT RENDERING =====
 // ADR-088: Centralized Pixel-Perfect Alignment
@@ -35,7 +35,8 @@ import type { EntityModel } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
 import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
 import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../../config/text-rendering-config';
-import { degToRad, clamp } from './geometry-utils';
+// ADR-954 §4: από τους ιδιοκτήτες, όχι από το barrel `geometry-utils` — εκείνο επανεξάγει ΑΥΤΟ το module (κύκλος).
+import { degToRad } from '@/lib/geometry/angle';
 
 // ===== RE-EXPORTS from geometry-vector-utils.ts (ADR-065 split) =====
 // Backward compatibility — all vector/math exports available from this module

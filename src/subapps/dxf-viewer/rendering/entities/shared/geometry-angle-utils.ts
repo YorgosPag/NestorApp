@@ -8,7 +8,7 @@ import type { Point2D } from '../../types/Types';
 // 🏢 ADR-070: Centralized Vector Magnitude
 // 🏢 ADR-072: Centralized Dot Product
 // 🏢 ADR-090: Centralized Point Vector Operations
-import { calculateAngle, subtractPoints, dotProduct, vectorMagnitude } from './geometry-rendering-utils';
+import { calculateAngle, subtractPoints, dotProduct, vectorMagnitude } from './geometry-vector-utils';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../../primitives/canvasPaths';
 import { normalizeTextAngle } from '@/lib/geometry/angle';

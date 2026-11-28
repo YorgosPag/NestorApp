@@ -16,7 +16,8 @@ import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_COLORS } from '../config/panel-tokens';
 import { zIndex as globalZIndex } from '../../../styles/design-tokens';
-import { clamp } from '../rendering/entities/shared/geometry-utils';
+// ADR-954 §4: καθαρός ιδιοκτήτης, όχι το barrel `geometry-utils` (φέρνει τη γεωμετρία απόδοσης).
+import { clamp } from '../utils/scalar-math';
 import { CSS_VARS, TYPOGRAPHY_CSS, FONT_WEIGHT_CSS } from './dxf-style-tokens';
 
 export const createBorderTokenHelper = () =>

@@ -7,7 +7,8 @@
  * - DMS, Grads, Radians, Surveyor (angular)
  */
 
-import { degToRad, normalizeAngleDeg } from '../rendering/entities/shared/geometry-utils';
+// ADR-954 §4: καθαρός ιδιοκτήτης, όχι το barrel `geometry-utils` (φέρνει τη γεωμετρία απόδοσης).
+import { degToRad, normalizeAngleDeg } from '@/lib/geometry/angle';
 import type { Precision, FormatTemplate, SupportedLocale } from '../config/number-format-config';
 
 // ── Types ────────────────────────────────────────────────────────────

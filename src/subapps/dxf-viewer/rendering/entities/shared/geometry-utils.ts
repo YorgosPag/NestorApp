@@ -9,7 +9,7 @@ import type { Point2D, BoundingBox } from '../../types/Types';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 // 🏢 ADR-090: Centralized Point Vector Operations
 // 🏢 ADR-164: Added getPerpendicularUnitVector for line direction normalization
-import { calculateDistance, calculateMidpoint, getUnitVector, getPerpendicularUnitVector } from './geometry-rendering-utils';
+import { calculateDistance, calculateMidpoint, getUnitVector, getPerpendicularUnitVector } from './geometry-vector-utils';
 // rotated-rectangle geometry: rotatePoint (radians, leaf module — no cycle) + degToRad.
 import { rotatePoint } from './geometry-vector-utils';
 import { degToRad } from './geometry-angle-utils';

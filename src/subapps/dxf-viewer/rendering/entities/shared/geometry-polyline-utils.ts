@@ -5,7 +5,7 @@
 
 import type { Point2D } from '../../types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation
-import { calculateDistance, translatePoint } from './geometry-rendering-utils';
+import { calculateDistance, translatePoint } from './geometry-vector-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { ZERO_VECTOR } from '../../../config/geometry-constants';
 

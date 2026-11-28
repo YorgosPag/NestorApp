@@ -5,7 +5,7 @@
 
 import type { Point2D } from '../../types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation & Angle Calculation
-import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
+import { calculateDistance, calculateAngle } from './geometry-vector-utils';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../../primitives/canvasPaths';
 // 🏢 ADR-065: Extracted circle construction

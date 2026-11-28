@@ -8,7 +8,7 @@ import type { Point2D } from '../../types/Types';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 // 🏢 ADR-090: Centralized Point Vector Operations
 // 🏢 ADR-164: Centralized Perpendicular Unit Vector
-import { calculateDistance, calculateMidpoint, getUnitVector, getPerpendicularUnitVector } from './geometry-rendering-utils';
+import { calculateDistance, calculateMidpoint, getUnitVector, getPerpendicularUnitVector } from './geometry-vector-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants & Utility Functions
 import {
   GEOMETRY_PRECISION,
