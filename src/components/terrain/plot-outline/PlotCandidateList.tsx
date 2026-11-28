@@ -123,12 +123,17 @@ function CandidateOption({ entry, name, proposed, strength, sameShape, onSelect,
   );
 }
 
-/** Κλικ στο σχέδιο ⇒ η κάρτα του φαίνεται. Σκόπιμη πράξη ⇒ `requested`· `nearest` ⇒ ήδη ορατή κάρτα δεν κουνιέται. */
+/**
+ * Κλικ στο σχέδιο ⇒ η κάρτα του έρχεται ΜΠΡΟΣΤΑ στα μάτια, ακριβώς κάτω από την κολλημένη όψη (`start` + το `scroll-mt` της κάρτας).
+ * Σκόπιμη πράξη ⇒ `requested`. 🔴 Όχι `nearest` (ζωντανό εύρημα Giorgio 2026-11-28): κάρτα που ερχόταν από κάτω σταματούσε στην
+ * κάτω άκρη της οθόνης, με ορατή μόνο την πρώτη γραμμή — «φαίνεται», αλλά ο άνθρωπος έπρεπε να κυλήσει. Η επιλεγμένη κάρτα είναι το
+ * ΘΕΜΑ της οθόνης (ο λόγος που το `reveal-in-scroll` επιτρέπει `start`). Το hover δεν περνά ποτέ από εδώ.
+ */
 function useRevealCard(listRef: RefObject<HTMLUListElement | null>, request: PlotCandidateRevealRequest | null): void {
   useEffect(() => {
     if (request === null || listRef.current === null) return;
     const cards = Array.from(listRef.current.querySelectorAll<HTMLElement>(`[${CANDIDATE_ID_ATTRIBUTE}]`));
-    revealInScroll(cards.find((card) => card.getAttribute(CANDIDATE_ID_ATTRIBUTE) === request.candidateId), { urgency: 'requested' });
+    revealInScroll(cards.find((card) => card.getAttribute(CANDIDATE_ID_ATTRIBUTE) === request.candidateId), { urgency: 'requested', block: 'start' });
   }, [listRef, request]);
 }
 
