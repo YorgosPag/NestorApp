@@ -91,9 +91,9 @@ function DrawingView({ api }: { readonly api: PlotDrawingImportApi }) {
   return (
     <div className="sticky top-0">
       <PlotDxfDrawingView fileKey={`${file.name}:${file.size}:${file.lastModified}`} drawing={read.drawing}
-        scaleToMm={candidates.scaleToMm} ranking={candidates.ranking} selectedId={selectedId} peekedId={api.peekedId}
-        onSelect={api.selectOnDrawing} onPeek={api.peek} />
-      <PlotCandidateStatusLine peeked={candidates.ranking.ranked.find((entry) => entry.candidate.id === api.peekedId)?.candidate ?? null} />
+        scaleToMm={candidates.scaleToMm} ranking={candidates.ranking} selectedId={selectedId} peek={api.peek}
+        onSelect={api.selectOnDrawing} />
+      <PlotCandidateStatusLine ranking={candidates.ranking} peek={api.peek} />
     </div>
   );
 }
@@ -143,9 +143,9 @@ export function PlotDrawingImport({ api }: { readonly api: PlotDrawingImportApi 
       <section className="flex flex-col gap-3">
         <DrawingView api={api} />
         {candidates !== null && (
-          <PlotCandidateList ranking={candidates.ranking} selectedId={api.selectedId} peekedId={api.peekedId}
+          <PlotCandidateList ranking={candidates.ranking} selectedId={api.selectedId} peek={api.peek}
             revealRequest={api.revealRequest} rejectedCount={candidates.rejectedCount} disabled={sending}
-            onSelect={api.select} onPeek={api.peek} />
+            onSelect={api.select} />
         )}
       </section>
       {candidates !== null && candidates.ranking.ranked.length > 0 && <ConfirmControls api={api} />}

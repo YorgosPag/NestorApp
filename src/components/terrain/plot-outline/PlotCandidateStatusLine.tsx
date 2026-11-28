@@ -17,14 +17,21 @@
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { PlotOutlineCandidate } from '@/lib/terrain/plot-outline/plot-outline-types';
+import type { PlotOutlineRanking } from '@/lib/terrain/plot-outline/plot-outline-types';
 
+import { usePlotCandidatePeekedId, type PlotCandidatePeek } from './plot-candidate-peek';
 import { plotCandidateHeadline } from './plot-candidate-text';
 
 const NS = 'terrain-survey:plotOutline';
 
-export function PlotCandidateStatusLine({ peeked }: { readonly peeked: PlotOutlineCandidate | null }) {
+/** Φύλλο (ADR-040): ρωτά ΜΟΝΟ αυτό το εφήμερο — ένα hover ξαναγράφει αυτή τη γραμμή, όχι την όψη που την περιέχει. */
+export function PlotCandidateStatusLine({ ranking, peek }: {
+  readonly ranking: PlotOutlineRanking;
+  readonly peek: PlotCandidatePeek;
+}) {
   const { t } = useTranslation(['terrain-survey']);
+  const peekedId = usePlotCandidatePeekedId(peek);
+  const peeked = peekedId === null ? null : ranking.ranked.find((entry) => entry.candidate.id === peekedId)?.candidate ?? null;
   return (
     <p className="m-0 min-h-5 truncate border-x border-b border-border bg-card px-2 py-0.5 text-xs text-foreground">
       {peeked === null ? '' : t(`${NS}.view.peeked`, { candidate: plotCandidateHeadline(peeked, t) })}

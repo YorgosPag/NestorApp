@@ -33,6 +33,7 @@ import type {
 } from '@/lib/terrain/plot-outline/plot-outline-types';
 import { cn } from '@/lib/utils';
 
+import { usePlotCandidateIsPeeked, type PlotCandidatePeek } from './plot-candidate-peek';
 import {
   plotCandidateArea as area,
   plotCandidateHeadline,
@@ -80,22 +81,25 @@ interface CandidateOptionProps {
   readonly entry: RankedPlotOutline;
   readonly name: string;
   readonly proposed: boolean;
-  readonly strength: ListingFocusStrength;
+  readonly selected: boolean;
   readonly sameShape: readonly PlotOutlineCandidate[];
+  readonly peek: PlotCandidatePeek;
   readonly onSelect: (id: string) => void;
-  readonly onPeek: (id: string | null) => void;
 }
 
-function CandidateOption({ entry, name, proposed, strength, sameShape, onSelect, onPeek }: CandidateOptionProps) {
+/** Φύλλο (ADR-040): ρωτά «εμένα κοιτάζει;» — ένα hover ξαναζωγραφίζει ΜΟΝΟ την κάρτα που άναψε και αυτή που έσβησε. */
+function CandidateOption({ entry, name, proposed, selected, sameShape, peek, onSelect }: CandidateOptionProps) {
   const { t } = useTranslation(['terrain-survey']);
   const { candidate } = entry;
+  const peeked = usePlotCandidateIsPeeked(peek, candidate.id);
+  const strength = listingFocusStrength({ peeked: peeked ? candidate.id : null, selected: selected ? candidate.id : null }, candidate.id);
   return (
     <li className={CARD_CLASS[strength]} {...{ [CANDIDATE_ID_ATTRIBUTE]: candidate.id }}
-      onPointerEnter={(event) => { if (peekable(event)) onPeek(candidate.id); }}
-      onPointerLeave={(event) => { if (peekable(event)) onPeek(null); }}>
+      onPointerEnter={(event) => { if (peekable(event)) peek.set(candidate.id); }}
+      onPointerLeave={(event) => { if (peekable(event)) peek.set(null); }}>
       <label className="flex cursor-pointer items-start gap-2">
         <input type="radio" name={name} value={candidate.id} checked={strength === 'selected'}
-          onChange={() => onSelect(candidate.id)} onFocus={() => onPeek(candidate.id)} onBlur={() => onPeek(null)} className="mt-1" />
+          onChange={() => onSelect(candidate.id)} onFocus={() => peek.set(candidate.id)} onBlur={() => peek.set(null)} className="mt-1" />
         <span className="flex min-w-0 flex-col gap-1">
           <span className="text-sm font-medium text-foreground">
             {plotCandidateHeadline(candidate, t)}
@@ -140,25 +144,23 @@ function useRevealCard(listRef: RefObject<HTMLUListElement | null>, request: Plo
 export interface PlotCandidateListProps {
   readonly ranking: PlotOutlineRanking;
   readonly selectedId: string | null;
-  /** Εφήμερο: το υποψήφιο κάτω από τον δείκτη/την εστίαση — εδώ ή στο σχέδιο. */
-  readonly peekedId: string | null;
+  /** Εφήμερο: το υποψήφιο κάτω από τον δείκτη/την εστίαση — εδώ ή στο σχέδιο. Το ρωτούν οι κάρτες, ΟΧΙ η λίστα. */
+  readonly peek: PlotCandidatePeek;
   /** Το τελευταίο κλικ στο σχέδιο: η κάρτα του έρχεται μπροστά, ακριβώς κάτω από την κολλημένη όψη. */
   readonly revealRequest: PlotCandidateRevealRequest | null;
   readonly rejectedCount: number;
   readonly disabled?: boolean;
   readonly onSelect: (candidateId: string) => void;
-  readonly onPeek: (candidateId: string | null) => void;
 }
 
 export function PlotCandidateList({
-  ranking, selectedId, peekedId, revealRequest, rejectedCount, disabled = false, onSelect, onPeek,
+  ranking, selectedId, peek, revealRequest, rejectedCount, disabled = false, onSelect,
 }: PlotCandidateListProps) {
   const { t } = useTranslation(['terrain-survey']);
   const name = useId();
   const listRef = useRef<HTMLUListElement>(null);
   const sameShape = useMemo(() => coincidentPlotCandidates(ranking.ranked.map(({ candidate }) => candidate)), [ranking]);
   useRevealCard(listRef, revealRequest);
-  const focus = { peeked: peekedId, selected: selectedId };
   const count = ranking.ranked.length;
   return (
     <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0" disabled={disabled}>
@@ -173,8 +175,8 @@ export function PlotCandidateList({
         <ul ref={listRef} className="m-0 flex list-none flex-col gap-2 p-0">
           {ranking.ranked.map((entry) => (
             <CandidateOption key={entry.candidate.id} entry={entry} name={name} proposed={entry.candidate.id === ranking.proposedId}
-              strength={listingFocusStrength(focus, entry.candidate.id)} sameShape={sameShape.get(entry.candidate.id) ?? []}
-              onSelect={onSelect} onPeek={onPeek} />
+              selected={entry.candidate.id === selectedId} sameShape={sameShape.get(entry.candidate.id) ?? []}
+              peek={peek} onSelect={onSelect} />
           ))}
         </ul>
       )}

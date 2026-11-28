@@ -15,10 +15,12 @@
  *
  * ⚠️ **Μηδέν αγώνας δρόμου**: δεύτερο αρχείο πριν διαβαστεί το πρώτο ⇒ μετρά μόνο το τελευταίο (μετρητής, όπως `useSurveyFile`).
  * ⚠️ **Καμία μπαγιάτικη επιβεβαίωση**: αλλάζει αρχείο, μονάδα, επιλογή ή Π9 ⇒ η έκβαση σβήνει (ανήκε σε άλλη πρόθεση).
- * 🔗 **Αμφίδρομη επισήμανση κάρτας ↔ περιγράμματος** (§14.11 «Ζ4 — αμφίδρομη επισήμανση»): το εφήμερο `peekedId` ζει ΕΔΩ,
- *    ώστε σχέδιο και λίστα να διαβάζουν την ΙΔΙΑ απάντηση — το λεξιλόγιο του ADR-777 (`lib/listings/listing-focus`):
- *    εφήμερο ≠ επίμονο, η επιλογή σβήνει το εφήμερο (αφή: δεν υπάρχει «φεύγω»), και μόνο το ΚΛΙΚ στο σχέδιο ζητά να
- *    φανεί η κάρτα — το πέρασμα του δείκτη δεν κυλά ποτέ τη σελίδα.
+ * 🔗 **Αμφίδρομη επισήμανση κάρτας ↔ περιγράμματος** (§14.11 «Ζ4 — αμφίδρομη επισήμανση»): το εφήμερο το ΚΑΤΕΧΕΙ αυτό το hook
+ *    (ένα `peek` store ανά εισαγωγή), ώστε σχέδιο και λίστα να διαβάζουν την ΙΔΙΑ απάντηση — το λεξιλόγιο του ADR-777
+ *    (`lib/listings/listing-focus`): εφήμερο ≠ επίμονο, η επιλογή σβήνει το εφήμερο (αφή: δεν υπάρχει «φεύγω»), και μόνο το
+ *    ΚΛΙΚ στο σχέδιο ζητά να φανεί η κάρτα — το πέρασμα του δείκτη δεν κυλά ποτέ τη σελίδα.
+ * ⚡ **Το εφήμερο ΔΕΝ είναι state του hook** (`plot-candidate-peek`, σχήμα micro-leaf ADR-040): ένα hover δεν ξανα-αποδίδει
+ *    την καρτέλα — μόνο τα φύλλα που ρωτούν (μετρημένα 53–88 ms ανά hover όσο ήταν `useState`).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,6 +29,7 @@ import {
   readPlotDrawingOnDevice,
   type DevicePlotDrawing,
 } from '@/components/terrain/plot-outline/read-plot-drawing-on-device';
+import { createPlotCandidatePeek, type PlotCandidatePeek } from '@/components/terrain/plot-outline/plot-candidate-peek';
 import {
   dxfDeclaresUnit,
   dxfDrawingScaleToMm,
@@ -75,8 +78,11 @@ export interface PlotDrawingImportApi {
   readonly unit: TopoUnit | null;
   readonly candidates: PlotDrawingCandidates | null;
   readonly selectedId: string | null;
-  /** **Εφήμερο** — το υποψήφιο κάτω από τον δείκτη ή την εστίαση, σε σχέδιο Ή λίστα. Ποτέ δεν αγγίζει την επιλογή. */
-  readonly peekedId: string | null;
+  /**
+   * **Εφήμερο** — το υποψήφιο κάτω από τον δείκτη ή την εστίαση, σε σχέδιο Ή λίστα. Ποτέ δεν αγγίζει την επιλογή.
+   * Σταθερό store (ίδιο αντικείμενο σε όλη τη ζωή του hook): το διαβάζουν ΜΟΝΟ τα φύλλα, γράφουν σχέδιο και κάρτες.
+   */
+  readonly peek: PlotCandidatePeek;
   /** Το τελευταίο κλικ πάνω στο σχέδιο — η λίστα φέρνει την κάρτα του στο οπτικό πεδίο. */
   readonly revealRequest: PlotCandidateRevealRequest | null;
   readonly showInListing: boolean;
@@ -87,7 +93,6 @@ export interface PlotDrawingImportApi {
   readonly select: (candidateId: string) => void;
   /** Επιλογή ΑΠΟ ΤΟ ΣΧΕΔΙΟ: η ίδια επιλογή + αίτημα να φανεί η κάρτα (σκόπιμη πράξη ⇒ επιτρέπεται κύλιση). */
   readonly selectOnDrawing: (candidateId: string) => void;
-  readonly peek: (candidateId: string | null) => void;
   readonly setShowInListing: (show: boolean) => void;
   readonly confirm: () => Promise<void>;
   readonly reset: () => void;
@@ -153,17 +158,16 @@ function effectiveSelection(chosen: string | null, candidates: PlotDrawingCandid
  */
 function useCandidateChoice(forget: () => void) {
   const [chosen, setChosen] = useState<string | null>(null);
-  const [peekedId, setPeekedId] = useState<string | null>(null);
+  const [peek] = useState(createPlotCandidatePeek);
   const [revealRequest, setRevealRequest] = useState<PlotCandidateRevealRequest | null>(null);
-  const peek = useCallback((id: string | null) => setPeekedId(id), []);
   // 🔴 Η επιλογή σβήνει το εφήμερο: στην αφή δεν υπάρχει «ο δείκτης έφυγε», θα κολλούσε στο τελευταίο πατημένο.
-  const select = useCallback((id: string) => { setPeekedId(null); setChosen(id); forget(); }, [forget]);
+  const select = useCallback((id: string) => { peek.set(null); setChosen(id); forget(); }, [peek, forget]);
   const selectOnDrawing = useCallback((id: string) => {
     select(id);
     setRevealRequest((previous) => ({ candidateId: id, seq: (previous?.seq ?? 0) + 1 }));
   }, [select]);
-  const clear = useCallback(() => { setChosen(null); setPeekedId(null); setRevealRequest(null); }, []);
-  return { chosen, peekedId, revealRequest, peek, select, selectOnDrawing, clear };
+  const clear = useCallback(() => { setChosen(null); peek.set(null); setRevealRequest(null); }, [peek]);
+  return { chosen, peek, revealRequest, select, selectOnDrawing, clear };
 }
 
 /** Η αποστολή — ένα κλειδί ανά πρόθεση, η έκβαση ανήκει στην πρόθεση που έφυγε. */
@@ -228,8 +232,8 @@ export function usePlotDrawingImport(
 
   return {
     file: drawing.file, reading: drawing.reading, read: drawing.read, asksUnit, needsUnit, unit, candidates, selectedId,
-    peekedId: focus.peekedId, revealRequest: focus.revealRequest, showInListing, submission: confirmation.submission, canConfirm,
-    loadFile: drawing.load, setUnit, select: focus.select, selectOnDrawing: focus.selectOnDrawing, peek: focus.peek,
+    peek: focus.peek, revealRequest: focus.revealRequest, showInListing, submission: confirmation.submission, canConfirm,
+    loadFile: drawing.load, setUnit, select: focus.select, selectOnDrawing: focus.selectOnDrawing,
     setShowInListing, confirm, reset,
   };
 }
