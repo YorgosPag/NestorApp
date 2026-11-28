@@ -27,6 +27,7 @@ import { buildContactDocument } from '@/services/ai-pipeline/shared/contact-docu
 import { resolvePerformer } from '@/server/lib/performer-stamp';
 import type { AuditPerformer } from '@/lib/audit/audit-performer';
 import { findContactByEmail } from '@/services/ai-pipeline/shared/contact-lookup-search';
+import { findContactVatHolders, type ContactVatHolder } from '@/server/lib/contact-vat-holders.server';
 import { generateContactId } from '@/services/enterprise-id-convenience';
 import type { ContactNameReview } from '@/lib/contacts/contact-name-review';
 
@@ -52,6 +53,25 @@ export interface ResolvedAccountContact {
 
 export type AccountContactResolution = ResolvedAccountContact | { readonly kind: 'unavailable' };
 
+/**
+ * **Το φυσικό πρόσωπο του χώρου που έχει ήδη αυτό το ΑΦΜ** (ADR-944 §9.9) — `null` όταν δεν υπάρχει (ή δεν δόθηκε ΑΦΜ).
+ *
+ * 🔑 Ο κανόνας του §9 («δύο φυσικά πρόσωπα με το ίδιο ΑΦΜ ⇒ απαγόρευση») ίσχυε μόνο στη φόρμα· αυτός ο δρόμος
+ * ταύτιζε **μόνο** με email, οπότε δεύτερος λογαριασμός του ίδιου ανθρώπου γεννούσε δεύτερη καρτέλα με το ίδιο ΑΦΜ
+ * (μετρημένο στην παραγωγή: τρεις επαφές με `040817944`). Εταιρεία με το ίδιο ΑΦΜ **δεν** είναι ο άνθρωπος — αγνοείται.
+ * Πρώτη η ζωντανή επαφή· αν υπάρχει **μόνο** αρχειοθετημένη, `'archived-only'`: ούτε σύνδεση (δεν συνδέεται πριν
+ * επανέλθει), ούτε δεύτερη καρτέλα.
+ */
+async function individualVatHolderOf(
+  vatNumber: string | null,
+  companyId: string,
+): Promise<ContactVatHolder | 'archived-only' | null> {
+  if (vatNumber === null) return null;
+  const individuals = (await findContactVatHolders(companyId, vatNumber)).filter((holder) => holder.type === 'individual');
+  if (individuals.length === 0) return null;
+  return individuals.find((holder) => !holder.archived) ?? 'archived-only';
+}
+
 /** **Υπάρχουσα καρτέλα, ή καινούρια** — για το γραφείο `companyId`, με φορέα `performer` (ADR-195). */
 export async function resolveAccountContact(input: {
   readonly identity: AccountContactIdentity;
@@ -62,6 +82,14 @@ export async function resolveAccountContact(input: {
   try {
     const existing = await findContactByEmail(identity.email, companyId);
     if (existing !== null) return { contactId: existing.contactId, doc: null, displayName: existing.name };
+
+    // ADR-944 §9.9 — το email είναι ο λογαριασμός, το ΑΦΜ είναι ο άνθρωπος: ίδιο ΑΦΜ με άλλο email = ίδιος άνθρωπος.
+    const byVat = await individualVatHolderOf(identity.vatNumber, companyId);
+    if (byVat === 'archived-only') {
+      logger.warn('Το ΑΦΜ ανήκει μόνο σε αρχειοθετημένη επαφή — καμία νέα καρτέλα, καμία σύνδεση', { companyId });
+      return { kind: 'unavailable' };
+    }
+    if (byVat !== null) return { contactId: byVat.id, doc: null, displayName: byVat.name };
   } catch (error) {
     logger.error('Ο έλεγχος υπάρχουσας επαφής απέτυχε — άγνωστο, όχι «δεν υπάρχει»', {
       companyId,
