@@ -17,6 +17,7 @@ import type { PublishOutcome } from '@/services/listings/listing-publish-outcome
 import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';
 import type { AdminAreaDeclarationRejection } from '@/lib/geo/admin-area-declaration';
 import type { OwnerProperty } from '@/types/owner-property';
+import type { OwnerListingConflict } from '@/lib/owner-property/owner-property-edit';
 import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
 import type { MandateInvariant } from '@/types/owner-property-mandate';
 import type { MandateConflict } from '@/lib/mandate/mandate-conflict';
@@ -122,4 +123,9 @@ export type OwnerPropertyWriteResult =
    * ανάγνωσης των ζωνών δεν επιτρέπεται να πει στον άνθρωπο ότι ο δρόμος του δεν είναι μέτωπο.
    */
   | { readonly kind: 'zone-unverified' }
+  /**
+   * **ADR-953 — κάποιος άλλαξε στο μεταξύ το ΙΔΙΟ πεδίο σε ΑΛΛΗ τιμή.** Τίποτα δεν γράφτηκε. Αλλαγές σε
+   * διαφορετικά πεδία **δεν** φτάνουν εδώ — συγχωνεύονται σιωπηλά. Τα μέλη: {@link OwnerListingConflict}.
+   */
+  | ({ readonly kind: 'conflict' } & OwnerListingConflict)
   | { readonly kind: 'failed'; readonly message: string };

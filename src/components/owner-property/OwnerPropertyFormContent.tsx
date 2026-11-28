@@ -68,9 +68,10 @@ import {
   createBrokeredOwnerListing,
   createOwnerListing,
   newOwnerPropertyId,
-  updateOwnerListing,
   type BrokeredNotifyOutcome,
+  type OwnerListingUpdateResult,
 } from '@/services/owner-property/owner-property.service';
+import { useOwnerListingEdit } from '@/hooks/owner-property/useOwnerListingEdit';
 import { newPropertyDossierId } from '@/services/property-dossier/property-dossier.service';
 import { useOwnerPropertyDraftMemory } from '@/hooks/owner-property/useOwnerPropertyDraftMemory';
 import { draftIdentityBlockers } from '@/lib/forms/draft-identity';
@@ -83,6 +84,7 @@ import {
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 import type { PropertyOffer } from '@/types/property-offers';
 
+import { OwnerListingConflictDialog } from './form/OwnerListingConflictDialog';
 import { OwnerPropertyDossierField } from './form/OwnerPropertyDossierField';
 import { OwnerPropertyMediaField } from './form/OwnerPropertyMediaField';
 import { RestoredDraftNotice } from './form/RestoredDraftNotice';
@@ -114,6 +116,15 @@ export interface OwnerPropertyFormContentProps
    * αποθηκευμένης αγγελίας από το δίκτυο. Έτσι δεν μεταγλωττίζεται καν.
    */
   readonly existingDossierId?: string | null;
+
+  /**
+   * **Η έκδοση περιεχομένου που φόρτωσε η φόρμα** (ADR-953) — το `contentEdit.at` της αγγελίας, μόνο στην
+   * επεξεργασία. `null` = έγγραφο χωρίς σφραγίδα (γραμμένο πριν το ADR-953).
+   *
+   * 🔴 **Ιδιότητα, ΟΧΙ πεδίο των `initialValues`** — ίδιος λόγος με το `existingDossierId`: δεν είναι κάτι που
+   * πληκτρολόγησε ο άνθρωπος, και μέσα στο σχήμα της φόρμας θα ταξίδευε στο προσχέδιο.
+   */
+  readonly baseContentAt?: string | null;
 
   /**
    * 🔴 **ΕΠΙ ΤΟΠΟΥ: ο φορέας κλείνει τη φόρμα** — μετά την αποθήκευση **και** την ακύρωση.
@@ -163,6 +174,7 @@ export function OwnerPropertyFormContent({
   editingId = null,
   previousOffers = [],
   existingDossierId = null,
+  baseContentAt = null,
   mandate,
   onClose,
 }: OwnerPropertyFormContentProps): React.ReactElement {
@@ -210,6 +222,9 @@ export function OwnerPropertyFormContent({
   const form = useForm<OwnerPropertyFormValues>({
     defaultValues: memory.restored?.values ?? initialValues,
   });
+
+  // ADR-953 — η βάση της επεξεργασίας παγώνει εδώ, στο άνοιγμα· αδρανές στη δημιουργία (καμία κλήση `save`).
+  const edit = useOwnerListingEdit({ initialValues, previousOffers, baseContentAt, form });
 
   // ⚠️ `watch()` χωρίς όνομα επιστρέφει **όλες** τις τιμές και ξαναποδίδει σε κάθε
   // αλλαγή — που είναι **ακριβώς** το ζητούμενο: η λίστα «τι λείπει» οφείλει να είναι
@@ -310,7 +325,8 @@ export function OwnerPropertyFormContent({
     // τον δρόμο απόδειξης αντί να τη δεχτεί από το σώμα.
     const outcome =
       editingId !== null
-        ? await updateOwnerListing(editingId, validation.draft)
+        // 🔑 ADR-953 — στέλνεται **μόνο** ό,τι άλλαξε, πάνω στην έκδοση που φόρτωσε η φόρμα.
+        ? await edit.save(editingId, validation.draft)
         : mandate === undefined
           // 🔑 **Ο φάκελος ταξιδεύει ΜΕ τη γέννηση** (§2.11.2 Δ1): ο διακομιστής τον γεννά **ή** τον συνδέει μέσα
           //    στη **συναλλαγή** της αγγελίας ⇒ καμία στιγμή όπου η αγγελία δείχνει σε φάκελο που δεν υπάρχει.
@@ -322,7 +338,24 @@ export function OwnerPropertyFormContent({
         'notify' in outcome ? (outcome.notify as BrokeredNotifyOutcome | undefined) : undefined,
       );
     }
+    finishSubmit(outcome);
+  }
 
+  /** «Κράτα τις δικές μου» (ADR-953 §3.5) — ξαναστέλνει το ίδιο προσχέδιο και συνεχίζει όπως κάθε αποθήκευση. */
+  async function keepMineAndFinish(): Promise<void> {
+    setSubmitState('saving');
+    const outcome = await edit.keepMine();
+    if (outcome === null) setSubmitState('idle');
+    else finishSubmit(outcome);
+  }
+
+  /** Η συνέχεια **κάθε** απάντησης της πύλης — μία διατύπωση για την αποθήκευση και για το «κράτα τις δικές μου». */
+  function finishSubmit(outcome: OwnerListingUpdateResult): void {
+    // ADR-953 — σύγκρουση δεν είναι αποτυχία: ο διάλογος είναι ήδη ανοιχτός και η φόρμα μένει όπως είναι.
+    if (outcome.kind === 'conflict') {
+      setSubmitState('idle');
+      return;
+    }
     // `invalid` **δεν πρέπει** να φτάσει εδώ — το κουμπί είναι ανενεργό όσο υπάρχουν
     // παραβιάσεις, και ο **ίδιος** κριτής τρέχει και στις δύο πλευρές. Αν φτάσει,
     // είναι πραγματική απόκλιση: λέγεται ως αποτυχία, όχι ως σιωπή.
@@ -411,6 +444,13 @@ export function OwnerPropertyFormContent({
       {memory.noticeVisible && (
         <RestoredDraftNotice onKeep={memory.acknowledge} onDiscard={discardRestoredDraft} />
       )}
+      <OwnerListingConflictDialog
+        conflict={edit.conflict}
+        resolving={submitState === 'saving'}
+        onKeepMine={keepMineAndFinish}
+        onTakeTheirs={edit.takeTheirs}
+        onDismiss={edit.dismiss}
+      />
       {mandate?.section}
       <OwnerIdentityFields />
       <OwnerBasicsFields />

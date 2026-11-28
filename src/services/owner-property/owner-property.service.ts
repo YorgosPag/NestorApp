@@ -26,6 +26,12 @@
 import { API_ROUTES } from '@/config/domain-constants';
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
+import { CONFLICT_CODE } from '@/config/versioning-config';
+import {
+  ownerListingConflictFrom,
+  type OwnerListingConflict,
+  type OwnerPropertyEdit,
+} from '@/lib/owner-property/owner-property-edit';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import type {
   OwnerProperty,
@@ -236,18 +242,42 @@ export async function createBrokeredOwnerListing(
   }
 }
 
-/** **Αλλαγή περιεχομένου** σε υπάρχουσα αγγελία. */
+/**
+ * Τι έγινε σε **αποθήκευση περιεχομένου** — ό,τι και στις άλλες πράξεις, συν τη σύγκρουση (ADR-953).
+ *
+ * 🔑 **Δική της ένωση, όχι νέο μέλος του {@link OwnerListingResult}**: σύγκρουση παράγει **μόνο** αυτή η πράξη.
+ * Στην κοινή ένωση, κάθε οθόνη απόσυρσης/κοινού θα όφειλε να χειριστεί κατάσταση που δεν μπορεί να της φτάσει.
+ */
+export type OwnerListingUpdateResult =
+  | OwnerListingResult
+  | { readonly kind: 'conflict'; readonly conflict: OwnerListingConflict };
+
+/** Το σώμα ενός 409 της πύλης — `null` για οτιδήποτε άλλο (και για 409 άλλου λεξιλογίου). */
+function conflictOf(cause: unknown): OwnerListingConflict | null {
+  const body = apiErrorBodyOf(cause);
+  return body?.error === CONFLICT_CODE ? ownerListingConflictFrom(body.conflict) : null;
+}
+
+/**
+ * **Αλλαγή περιεχομένου** σε υπάρχουσα αγγελία.
+ *
+ * @param edit — τι άλλαξε ο άνθρωπος και πάνω σε ποια έκδοση (ADR-953 §3.2). Ο διακομιστής γράφει **μόνο** αυτά,
+ *   πάνω στο φρέσκο έγγραφο· το πλήρες προσχέδιο ταξιδεύει για τον κριτή σχήματος και τα invariants.
+ */
 export async function updateOwnerListing(
   ownerPropertyId: string,
   draft: OwnerPropertyDraft,
-): Promise<OwnerListingResult> {
+  edit: OwnerPropertyEdit,
+): Promise<OwnerListingUpdateResult> {
   try {
     const payload = await apiClient.patch<WriteResponse>(
       `${API_BASE}/${encodeURIComponent(ownerPropertyId)}`,
-      draft,
+      { ...draft, _edit: edit },
     );
     return { kind: 'saved', ...payload };
   } catch (cause) {
+    const conflict = conflictOf(cause);
+    if (conflict !== null) return { kind: 'conflict', conflict };
     return failureOf('Η αγγελία δεν ενημερώθηκε', ownerPropertyId, cause);
   }
 }

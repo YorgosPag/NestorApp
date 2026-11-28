@@ -20,6 +20,8 @@ import type {
   EnergyCertificateViolation,
   OwnerPropertyWriteResult,
 } from '@/services/owner-property/owner-property-write-result';
+import { CONFLICT_CODE, CONFLICT_STATUS } from '@/config/versioning-config';
+import type { OwnerListingConflict } from '@/lib/owner-property/owner-property-edit';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';
@@ -65,6 +67,8 @@ export interface OwnerPropertyErrorResponse {
   readonly placeAreaRejection?: AdminAreaDeclarationRejection;
   /** ADR-864 Φ3 — γιατί αρνήθηκε η υπηρεσία συναίνεσης· κωδικός = κλειδί i18n (Α21). */
   readonly reason?: PrivateMarketingRefusal;
+  /** ADR-953 — ποια πεδία συγκρούστηκαν, πότε και με ποιον. Μόνο με `error: CONFLICT_CODE`. */
+  readonly conflict?: OwnerListingConflict;
 }
 
 /** ADR-864 Ε-11 — το αίτημα καταγράφηκε· **πώς πήγε** η ειδοποίηση του ιδιοκτήτη. */
@@ -94,6 +98,7 @@ export type OwnerPropertyResponse =
  * | `invalid-declarations` | **422** | ADR-898 Φ3β — οι δηλώσεις της αντικειμενικής δεν στέκουν (άδεια στο μέλλον · δρόμος που δεν είναι μέτωπο). Τέταρτο σφάλμα, άλλη οθόνη |
  * | `invalid-energy-certificate` | **422** | ADR-915 Φ3β-2 — το ΠΕΑ αντιλέγει στο έγγραφο από το οποίο λέει ότι ήρθε. Μόνο μπαγιάτικο/πλαστό σώμα το φτάνει |
  * | `zone-unverified` | **503** | 🔴 **ΠΟΤΕ 422** — «δεν διαβάσαμε τις ζώνες» ≠ «ο δρόμος δεν είναι μέτωπο», ίδιο σκεπτικό με το `place-link-unverified` |
+ * | `conflict` | **409** | ADR-953 — κάποιος άλλαξε στο μεταξύ το **ίδιο** πεδίο. Ο κωδικός είναι του κεντρικού `versioning-config` (κανένα δεύτερο λεξιλόγιο σύγκρουσης)· τα πεδία, το «πότε» και το «ποιος» ταξιδεύουν για τον διάλογο |
  * | `failed` | **500** | Δεν φτάσαμε στη βάση· ο άνθρωπος δεν έχει τι να διορθώσει |
  */
 export function respondToWrite(
@@ -137,6 +142,14 @@ export function respondToWrite(
       );
     case 'zone-unverified':
       return NextResponse.json({ error: 'ZONE_UNVERIFIED' }, { status: 503 });
+    case 'conflict':
+      return NextResponse.json(
+        {
+          error: CONFLICT_CODE,
+          conflict: { fields: result.fields, at: result.at, bySelf: result.bySelf, byName: result.byName },
+        },
+        { status: CONFLICT_STATUS },
+      );
     case 'failed':
       return NextResponse.json({ error: 'WRITE_FAILED' }, { status: 500 });
   }

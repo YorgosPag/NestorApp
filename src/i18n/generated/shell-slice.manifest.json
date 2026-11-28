@@ -55,7 +55,7 @@
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__document-expiry.el.json": "768cc68db26da5c90050a76b3ada7e1001bf1db279b6c0efdee0e451901b7bcf",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
-    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "662d5e0fe2aeea873ef2caa5fb26000f691d3d76630fabc5223741832a887176",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "7b280c70a0024849b9edc00c97e467421e65fc221ee437fdedfa6c924ea0d984",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "e1c5896ab910b7f5515ef0a3991a4daae3ba7fc776c6291815cfeaddb51e2398",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__procurement.el.json": "d5d58fa34feb73a2fdfc6e96648fbdedcaa3359341aa24c30ebbed729f489ef3",
@@ -91,8 +91,8 @@
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "debcbb4f81b54b13b2fd4218a808c207f838bf54216be5fd94a25a0133328d2b",
     "src/i18n/generated/routes/offers.el.json": "9bb55581ec319b22e1ed3f0c129711b788413d1e8ba9a2e0173802e2d5a4e817",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "dc84dd07a782be53464ec354d3118008b440496ef37cecbc4240aff92b68046e",
-    "src/i18n/generated/routes/offers__new.el.json": "c83e97b266a94397190b4933525723d82fa9b8c6a8d47978f04a8dd10a8175be",
-    "src/i18n/generated/routes/offers__offerId.el.json": "4019ff47a9c332e2c3eedff318ce8e37aec36cf9d6ae63ee06d2520973710a7c",
+    "src/i18n/generated/routes/offers__new.el.json": "6346e982a02b7306d3501d5e72491b25ff99cb5401bdde2c706ee091ddb58772",
+    "src/i18n/generated/routes/offers__offerId.el.json": "dd80cf0fe321b80c5c8023421fca7651bfa0d989f641d9592661726d43bc8e84",
     "src/i18n/generated/routes/offers__offerId__calendar.el.json": "9a3202cadc030b777130a2bbada041272f02fbf2d4d38dc66a2ba28ebb793c40",
     "src/i18n/generated/routes/offers__offerId__improve.el.json": "7be238b7d50fa7841cd27afc4b07bd3e114d147bb3b036e76ac6cbde9ef081be",
     "src/i18n/generated/routes/offers__offerId__tour.el.json": "84643b1347f58873468eede91adc022cdbf69f7863d5185d5533355c3e6944d8",
@@ -211,7 +211,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1a898a68a743cecd03bb57def98fccd368f2e116490e349a512b43490ac0ff0e",
+  "inputsSha256": "a16ccf6e395554d09dba6f48433c25ee4262eaa7acfedd52d843e51beadd0e19",
   "languages": [
     "el"
   ],
@@ -14248,6 +14248,10 @@
         },
         "common": {
           "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
             "countries.albania",
             "countries.australia",
             "countries.austria",
@@ -14294,9 +14298,93 @@
           "prefixes": [],
           "whole": false
         },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "common-status": {
           "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
             "status.loading"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -14360,6 +14448,30 @@
             "mandate.office.untilHint",
             "mandate.office.untilLabel",
             "mandate.office.viaLabel",
+            "offer.conflict.at",
+            "offer.conflict.byOther",
+            "offer.conflict.bySelf",
+            "offer.conflict.byUnknown",
+            "offer.conflict.field.areaSqm",
+            "offer.conflict.field.bedrooms",
+            "offer.conflict.field.floor",
+            "offer.conflict.field.floorKind",
+            "offer.conflict.field.media",
+            "offer.conflict.field.offers",
+            "offer.conflict.field.place",
+            "offer.conflict.field.publishedFileCaptions",
+            "offer.conflict.field.publishedFileCaptureSpots",
+            "offer.conflict.field.publishedFileFloorplanNorth",
+            "offer.conflict.field.publishedFileFocalPoints",
+            "offer.conflict.field.publishedFileIds",
+            "offer.conflict.field.title",
+            "offer.conflict.field.type",
+            "offer.conflict.field.unitNumber",
+            "offer.conflict.fieldsHeading",
+            "offer.conflict.keepMine",
+            "offer.conflict.loadTheirs",
+            "offer.conflict.rest",
+            "offer.conflict.title",
             "offer.draftMemory.discard",
             "offer.draftMemory.help",
             "offer.draftMemory.keep",
@@ -36409,6 +36521,10 @@
       "wants": {
         "common": {
           "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash",
             "countries.albania",
             "countries.australia",
             "countries.austria",
@@ -36448,6 +36564,96 @@
             "map.gestures.mac",
             "map.gestures.mobile",
             "map.gestures.windows"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-account": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-actions": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-empty-states": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-navigation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-photos": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-sales": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-shared": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-status": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
+        "common-validation": {
+          "keys": [
+            "buttons.cancel",
+            "buttons.confirm",
+            "buttons.delete",
+            "buttons.moveToTrash"
           ],
           "prefixes": [],
           "whole": false
@@ -36495,6 +36701,30 @@
             "custody.personal.brokered",
             "custody.personal.title",
             "interestCheck.door",
+            "offer.conflict.at",
+            "offer.conflict.byOther",
+            "offer.conflict.bySelf",
+            "offer.conflict.byUnknown",
+            "offer.conflict.field.areaSqm",
+            "offer.conflict.field.bedrooms",
+            "offer.conflict.field.floor",
+            "offer.conflict.field.floorKind",
+            "offer.conflict.field.media",
+            "offer.conflict.field.offers",
+            "offer.conflict.field.place",
+            "offer.conflict.field.publishedFileCaptions",
+            "offer.conflict.field.publishedFileCaptureSpots",
+            "offer.conflict.field.publishedFileFloorplanNorth",
+            "offer.conflict.field.publishedFileFocalPoints",
+            "offer.conflict.field.publishedFileIds",
+            "offer.conflict.field.title",
+            "offer.conflict.field.type",
+            "offer.conflict.field.unitNumber",
+            "offer.conflict.fieldsHeading",
+            "offer.conflict.keepMine",
+            "offer.conflict.loadTheirs",
+            "offer.conflict.rest",
+            "offer.conflict.title",
             "offer.draftMemory.discard",
             "offer.draftMemory.help",
             "offer.draftMemory.keep",
@@ -36962,6 +37192,30 @@
             "offer.card.noPlace",
             "offer.card.typeUnknown",
             "offer.card.unitNumber",
+            "offer.conflict.at",
+            "offer.conflict.byOther",
+            "offer.conflict.bySelf",
+            "offer.conflict.byUnknown",
+            "offer.conflict.field.areaSqm",
+            "offer.conflict.field.bedrooms",
+            "offer.conflict.field.floor",
+            "offer.conflict.field.floorKind",
+            "offer.conflict.field.media",
+            "offer.conflict.field.offers",
+            "offer.conflict.field.place",
+            "offer.conflict.field.publishedFileCaptions",
+            "offer.conflict.field.publishedFileCaptureSpots",
+            "offer.conflict.field.publishedFileFloorplanNorth",
+            "offer.conflict.field.publishedFileFocalPoints",
+            "offer.conflict.field.publishedFileIds",
+            "offer.conflict.field.title",
+            "offer.conflict.field.type",
+            "offer.conflict.field.unitNumber",
+            "offer.conflict.fieldsHeading",
+            "offer.conflict.keepMine",
+            "offer.conflict.loadTheirs",
+            "offer.conflict.rest",
+            "offer.conflict.title",
             "offer.detail.absent",
             "offer.detail.back",
             "offer.detail.edit",
@@ -41265,7 +41519,7 @@
   ],
   "stats": {
     "matchedKeys": 281,
-    "sliceBytes": 1377368
+    "sliceBytes": 1383308
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

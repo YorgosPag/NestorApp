@@ -131,6 +131,8 @@ function OwnerPropertyView({ property }: { property: OwnerProperty }): React.Rea
           editingId={property.id}
           previousOffers={property.offers}
           existingDossierId={property.dossierId ?? null}
+          // ADR-953 — η έκδοση περιεχομένου που βλέπει ο άνθρωπος όταν ανοίγει τη φόρμα.
+          baseContentAt={property.contentEdit?.at ?? null}
           onClose={() => setEditing(false)}
         />
       ) : (

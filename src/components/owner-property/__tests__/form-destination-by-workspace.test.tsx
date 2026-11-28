@@ -299,7 +299,8 @@ describe('🔴 Ε — επεξεργασία ΕΠΙ ΤΟΠΟΥ: την κλεί�
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
-    expect(updateOwnerListing).toHaveBeenCalledWith(PERSONAL.id, expect.anything());
+    // ADR-953 — τρίτο όρισμα το `_edit`: τι άλλαξε, και πάνω σε ποια έκδοση.
+    expect(updateOwnerListing).toHaveBeenCalledWith(PERSONAL.id, expect.anything(), expect.anything());
     expect(pushed).toEqual([]);
   });
 

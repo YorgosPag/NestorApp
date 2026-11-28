@@ -606,6 +606,34 @@
       "declared": "I will state the location",
       "declined": "I would rather not say for now"
     },
+    "conflict": {
+      "title": "Someone changed the listing in the meantime",
+      "bySelf": "You saved changes from another tab or device while this form was open.",
+      "byOther": "{name} saved changes while this form was open.",
+      "byUnknown": "Someone else saved changes while this form was open.",
+      "at": "Last change: {when}.",
+      "fieldsHeading": "{count, plural, one {You both changed the same field:} other {You both changed the same # fields:}}",
+      "rest": "Anything else you changed is unaffected and will be saved as usual.",
+      "keepMine": "Keep mine",
+      "loadTheirs": "Load the new ones",
+      "field": {
+        "title": "Listing title",
+        "type": "Property type",
+        "areaSqm": "Area",
+        "floor": "Floor",
+        "floorKind": "Level type",
+        "unitNumber": "Unit number / door",
+        "bedrooms": "Bedrooms",
+        "offers": "Offer and prices",
+        "place": "Location",
+        "media": "Files",
+        "publishedFileIds": "Photo selection and order",
+        "publishedFileFocalPoints": "Photo focal point",
+        "publishedFileCaptureSpots": "Photo capture spot",
+        "publishedFileFloorplanNorth": "Floor plan north",
+        "publishedFileCaptions": "Photo caption"
+      }
+    },
     "form": {
       "title": "List a property",
       "editTitle": "Edit listing",

@@ -632,6 +632,26 @@ export interface OwnerProperty {
 
   readonly createdAt: string;
   readonly updatedAt: string;
+
+  /**
+   * **Η τελευταία αλλαγή ΠΕΡΙΕΧΟΜΕΝΟΥ** (ADR-953) — πότε και ποιος έγραψε τελευταίος πεδία του {@link OwnerPropertyDraft}.
+   *
+   * 🔴 **ΔΕΝ είναι το `updatedAt`**: εκείνο το ανεβάζει κάθε πράξη (απόσυρση · κοινό · εντολή · δηλώσεις). Αυτό το
+   * γράφει **μόνο** η γέννηση και η αποθήκευση της φόρμας — είναι η **έκδοση** πάνω στην οποία κρίνεται αν δύο
+   * άνθρωποι άλλαξαν το ίδιο πεδίο (`mergeOwnerPropertyEdit`), και απαντά το «ποιος» του διαλόγου σύγκρουσης.
+   *
+   * ⚠️ **Προαιρετικό, και η απουσία είναι τιμή**: έγγραφο γραμμένο πριν το ADR-953 δεν το έχει — η φόρμα στέλνει
+   * `baseContentAt: null` και η πρώτη αποθήκευση το γεννά.
+   */
+  readonly contentEdit?: OwnerPropertyContentEdit;
+}
+
+/** Η σφραγίδα της τελευταίας αλλαγής περιεχομένου — δες {@link OwnerProperty.contentEdit}. */
+export interface OwnerPropertyContentEdit {
+  /** ISO στιγμή της γραφής. */
+  readonly at: string;
+  /** Το uid του ανθρώπου που αποθήκευσε. */
+  readonly by: string;
 }
 
 /**
@@ -932,5 +952,7 @@ export function newOwnerProperty(
     legality: [],
     createdAt: now,
     updatedAt: now,
+    // ADR-953 — η γέννηση είναι η πρώτη αλλαγή περιεχομένου: νέα αγγελία έχει έκδοση από την πρώτη στιγμή.
+    contentEdit: { at: now, by: authorship.authorUserId },
   };
 }

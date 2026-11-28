@@ -70,6 +70,12 @@ import { stayPetPolicySchema } from '@/lib/offers/stay-pet-policy';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import { propertyDossierIdFrom } from '@/lib/property-dossier/property-dossier-request-schema';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
+import {
+  OWNER_PROPERTY_DRAFT_FIELDS,
+  isOwnerPropertyDraftField,
+  pickDraftFields,
+  type OwnerPropertyEdit,
+} from '@/lib/owner-property/owner-property-edit';
 
 /** Αριθμός ή ρητή απουσία. **Ποτέ `0` για το κενό** — δες `owner-property-form-values.ts`. */
 const nullableNumber = z.number().finite().nullable();
@@ -245,8 +251,8 @@ const media = z.object({
   focalPoint: photoFocalPointSchema.optional(),
 });
 
-/** Το προσχέδιο, όπως φτάνει από το δίκτυο. */
-export const ownerPropertyDraftSchema = z.object({
+/** Τα πεδία του προσχεδίου, **πριν** τον κανόνα στάθμης — το `_edit.base` τα χρειάζεται μερικά (`partial()`). */
+const ownerPropertyDraftObject = z.object({
   title: z.string(),
   /**
    * 🔴 **ΗΤΑΝ `z.string()`, ΚΑΙ ΤΟ `as` ΤΟ ΕΚΡΥΒΕ** — δεύτερο δείγμα της ίδιας
@@ -323,7 +329,10 @@ export const ownerPropertyDraftSchema = z.object({
   publishedFileFloorplanNorth: declaredFloorplanNorthSchema(PUBLISHED_MEDIA_LIMIT).optional(),
   /** 🏷️ **Οι λεζάντες των δηλωμένων φωτογραφιών του φακέλου** — ίδιο όριο, ίδιο σκεπτικό με τα σημεία εστίασης. */
   publishedFileCaptions: declaredCaptionsSchema(PUBLISHED_MEDIA_LIMIT).optional(),
-}).superRefine(floorUnitRule);
+});
+
+/** Το προσχέδιο, όπως φτάνει από το δίκτυο. */
+export const ownerPropertyDraftSchema = ownerPropertyDraftObject.superRefine(floorUnitRule);
 
 /**
  * 🏢 Η στάθμη είναι **αριθμός + είδος** (IFC: κάθε storey έχει elevation· η ζήτηση ταιριάζει σε **εύρος
@@ -387,6 +396,50 @@ export function ownerPropertyDraftFromRequest(value: unknown):
   //    ζωντανές αποκλίσεις, και η μία έσβηνε κάθε αγγελία με δηλωμένη διεύθυνση.
   const draft: OwnerPropertyDraft = parsed.data;
   return { ok: true, draft };
+}
+
+const draftField = z.string().refine(isOwnerPropertyDraftField);
+
+/**
+ * Το μέλος `_edit` (ADR-953 §3.2). ⚠️ Το `base` επικυρώνεται με το **ίδιο** σχήμα του προσχεδίου (μερικό): η
+ * βάση συγκρίνεται με αποθηκευμένες τιμές, άρα οφείλει να περάσει την **ίδια** κανονικοποίηση με αυτές.
+ */
+const ownerPropertyEditSchema = z.object({
+  baseContentAt: z.string().min(1).nullable(),
+  changed: z.array(draftField).max(OWNER_PROPERTY_DRAFT_FIELDS.length),
+  base: ownerPropertyDraftObject.partial(),
+  keepMine: z.array(draftField).max(OWNER_PROPERTY_DRAFT_FIELDS.length).default([]),
+});
+
+/**
+ * **Το `_edit` του αιτήματος** — τρεις ρητές καταστάσεις, ποτέ μαντεψιά.
+ *
+ * - απόν ⇒ `{ ok: true, edit: null }` — καρτέλα από πριν το ADR-953 (γράφονται όλα τα πεδία της)·
+ * - έγκυρο ⇒ το `OwnerPropertyEdit`·
+ * - άκυρο ⇒ `{ ok: false }` — **ποτέ** σιωπηλή πτώση σε «χωρίς `_edit`»: θα έγραφε και τα 15 πεδία μιας παλιάς
+ *   φόρμας, δηλαδή ακριβώς τη χαμένη ενημέρωση που το `_edit` υπάρχει για να αποτρέψει.
+ */
+export function ownerPropertyEditFromRequest(
+  value: unknown,
+): { readonly ok: true; readonly edit: OwnerPropertyEdit | null } | { readonly ok: false; readonly malformed: readonly string[] } {
+  if (value === undefined) return { ok: true, edit: null };
+  const parsed = ownerPropertyEditSchema.safeParse(value);
+  if (!parsed.success) {
+    return { ok: false, malformed: [...new Set(parsed.error.issues.map((issue) => ['_edit', ...issue.path].join('.')))] };
+  }
+  const { baseContentAt } = parsed.data;
+  const changed = parsed.data.changed.filter(isOwnerPropertyDraftField);
+  const base: Partial<OwnerPropertyDraft> = parsed.data.base;
+  // ⚠️ Η βάση κρατά **μόνο** ό,τι δηλώθηκε αλλαγμένο — τιμή-βάση για πεδίο εκτός `changed` δεν έχει τι να κρίνει.
+  return {
+    ok: true,
+    edit: {
+      baseContentAt,
+      changed,
+      base: pickDraftFields(base, changed),
+      keepMine: parsed.data.keepMine.filter(isOwnerPropertyDraftField),
+    },
+  };
 }
 
 /**

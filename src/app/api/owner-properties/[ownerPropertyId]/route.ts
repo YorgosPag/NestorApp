@@ -32,7 +32,10 @@ import {
 } from '@/lib/auth/personal-scope-middleware';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { ownerPropertyDraftFromRequest } from '@/lib/owner-property/owner-property-draft-schema';
+import {
+  ownerPropertyDraftFromRequest,
+  ownerPropertyEditFromRequest,
+} from '@/lib/owner-property/owner-property-draft-schema';
 import { isOwnerPropertyLifecycle } from '@/types/owner-property';
 import { isMarketingAudience } from '@/constants/marketing-audiences';
 import {
@@ -122,8 +125,12 @@ async function handler(
   const parsed = ownerPropertyDraftFromRequest(body);
   if (!parsed.ok) return respondToMalformed(parsed.malformed);
 
+  // ADR-953 — τι άλλαξε ο άνθρωπος, και πάνω σε ποια έκδοση. Απόν ⇒ καρτέλα από πριν (όλα τα πεδία)· άκυρο ⇒ 400.
+  const edit = ownerPropertyEditFromRequest((body as { _edit?: unknown } | null)?._edit);
+  if (!edit.ok) return respondToMalformed(edit.malformed);
+
   return respondToWrite(
-    await updateOwnerProperty(adminDb, ownerPropertyId, parsed.draft, listingActorOf(actor)),
+    await updateOwnerProperty(adminDb, ownerPropertyId, parsed.draft, listingActorOf(actor), edit.edit),
   );
 }
 

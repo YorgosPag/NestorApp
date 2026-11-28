@@ -58,6 +58,8 @@ import { republishOwnerProperty } from '@/services/owner-property/owner-property
 import { completeWrite, writeFailure } from '@/services/owner-property/owner-property-write-completion';
 import { placeAreaRefusal, placeLinkRefusal } from '@/services/owner-property/owner-property-place-link';
 import { createOwnerPropertyWithDossier } from '@/services/owner-property/owner-property-dossier-birth';
+import { updateOwnerPropertyContent } from '@/services/owner-property/owner-property-content-update';
+import type { OwnerPropertyEdit } from '@/lib/owner-property/owner-property-edit';
 import { privateMarketingViolationsAdded } from '@/lib/mandate/private-marketing-standing';
 import {
   newOwnerProperty,
@@ -241,12 +243,19 @@ async function loadAdministrable(
  * μια μερική ενημέρωση που άφηνε παλιό πεδίο ζωντανό θα έδινε έγγραφο **μείγμα δύο
  * καταστάσεων**, και κανείς δεν θα μπορούσε να πει ποιων. Εδώ ο πλήρης όρος
  * συντίθεται από **γνωστά** μέρη: το προσχέδιο + τα αμετάβλητα του υπάρχοντος.
+ *
+ * 🔴 **ADR-953 — ΓΡΑΦΕΤΑΙ ΜΟΝΟ Ο,ΤΙ ΑΛΛΑΞΕ Ο ΑΝΘΡΩΠΟΣ, ΣΕ ΣΥΝΑΛΛΑΓΗ.** Η ανάγνωση εδώ κρίνει **μόνο** την
+ * εξουσιοδότηση (ώστε να μη γίνει δουλειά για ξένο αιτούντα)· η συγχώνευση, τα invariants του συγχωνευμένου και η
+ * εγγραφή ζουν στο {@link updateOwnerPropertyContent}, πάνω σε **φρέσκια** ανάγνωση.
+ *
+ * @param edit — το `_edit` της φόρμας· `null` = καρτέλα από πριν το ADR-953 (γράφονται όλα τα πεδία της).
  */
 export async function updateOwnerProperty(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
   draft: OwnerPropertyDraft,
   actor: ListingActor,
+  edit: OwnerPropertyEdit | null = null,
 ): Promise<OwnerPropertyWriteResult> {
   const violations = ownerPropertyInvariantViolations(draft);
   if (violations.length > 0) return { kind: 'invalid', violations };
@@ -256,11 +265,14 @@ export async function updateOwnerProperty(
 
   // ⚠️ **ΜΕΤΑ την εξουσιοδότηση, ποτέ πριν.** Δεν κάνουμε δουλειά —ούτε ανάγνωση—
   //    για αιτούντα που δεν έχει δικαίωμα στον χώρο της αγγελίας.
-  const refusal = (await placeLinkRefusal(adminDb, draft)) ?? (await placeAreaRefusal(draft));
-  if (refusal !== null) return refusal;
+  // 🔑 Η θέση επαληθεύεται **μόνο όταν γράφεται**: θέση που ο άνθρωπος δεν άλλαξε δεν ταξιδεύει στο έγγραφο
+  //    (μένει του διακομιστή, που την έκρινε όταν γράφτηκε).
+  if (edit === null || edit.changed.includes('place')) {
+    const refusal = (await placeLinkRefusal(adminDb, draft)) ?? (await placeAreaRefusal(draft));
+    if (refusal !== null) return refusal;
+  }
 
-  const next = { ...existing, ...draft, updatedAt: nowISO() };
-  return persist(adminDb, next, 'overwrite', { actor, before: existing });
+  return updateOwnerPropertyContent(adminDb, { ownerPropertyId, draft, edit, actor });
 }
 
 /**
