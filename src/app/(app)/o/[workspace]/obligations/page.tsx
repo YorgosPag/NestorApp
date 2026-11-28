@@ -1,8 +1,8 @@
 'use client';
 
-import { LazyRoutes } from '@/utils/lazyRoutes';
+import { ObligationRoutes } from '@/components/obligations/obligation-routes';
 
 export default function ObligationsPage() {
-  const ObligationsHub = LazyRoutes.ObligationsHub;
+  const ObligationsHub = ObligationRoutes.ObligationsHub;
   return <ObligationsHub />;
 }

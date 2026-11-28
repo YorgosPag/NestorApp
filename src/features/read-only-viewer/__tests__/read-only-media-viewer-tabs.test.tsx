@@ -36,8 +36,8 @@ jest.mock('@/hooks/useFloorFloorplans', () => ({
 jest.mock('@/hooks/useFloorOverlays', () => ({ useFloorOverlays: () => ({ overlays: [] }) }));
 jest.mock('@/hooks/useBackgroundScale', () => ({ useBackgroundScale: () => ({ unitsPerMeter: null, backgroundId: null }) }));
 
-jest.mock('@/components/shared/files/media/FloorplanGallery', () => ({
-  FloorplanGallery: ({ floorplanId }: { floorplanId?: string | null }) => (
+jest.mock('@/components/shared/files/media/floorplan-gallery-surfaces', () => ({
+  LazyFloorplanGallery: ({ floorplanId }: { floorplanId?: string | null }) => (
     <div data-testid={floorplanId === undefined ? 'unit-floorplan-stage' : 'floor-floorplan-stage'} />
   ),
 }));

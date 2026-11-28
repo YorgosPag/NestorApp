@@ -19,8 +19,8 @@ jest.mock('../FilePathTree', () => ({ FilePathTree: () => null }));
 jest.mock('../FileUploadZone', () => ({ FileUploadZone: () => null }));
 jest.mock('../TrashView', () => ({ TrashView: () => null }));
 jest.mock('../ArchiveView', () => ({ ArchiveView: () => null }));
-jest.mock('../media', () => ({ MediaGallery: () => null }));
-jest.mock('../media/FloorplanGallery', () => ({ FloorplanGallery: () => null }));
+jest.mock('../media/MediaGallery', () => ({ MediaGallery: () => null }));
+jest.mock('../media/floorplan-gallery-surfaces', () => ({ LazyFloorplanGallery: () => null }));
 jest.mock('../HierarchicalEntryPointSelector', () => ({ HierarchicalEntryPointSelector: () => null }));
 
 import React from 'react';

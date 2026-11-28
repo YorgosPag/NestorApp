@@ -26,7 +26,8 @@ import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 import { useFloorFloorplans } from '@/hooks/useFloorFloorplans';
 import { useFloorOverlays } from '@/hooks/useFloorOverlays';
 import { useBackgroundScale } from '@/hooks/useBackgroundScale';
-import { FloorplanGallery } from '@/components/shared/files/media/FloorplanGallery';
+// ADR-954 §2 — ο θεατής κατόψεων φορτώνει στη χρήση, με τα κείμενά του στο chunk.
+import { LazyFloorplanGallery } from '@/components/shared/files/media/floorplan-gallery-surfaces';
 import { MediaGallery } from '@/components/shared/files/media/MediaGallery';
 import {
   MediaViewerEmptyState,
@@ -108,7 +109,7 @@ function unitFloorplanTabs(levels: readonly ViewerLevel[] | null, floorplans: Me
     count: countOf(floorplans),
     panel: (
       <TabContentWrapper loading={floorplans.loading} error={floorplans.error} onRetry={floorplans.refetch} t={t}>
-        <FloorplanGallery
+        <LazyFloorplanGallery
           files={floorplans.files}
           emptyMessage={t('viewer.media.noFloorplans', { ns: 'properties' })}
           layout="fill"
@@ -254,7 +255,7 @@ export function ReadOnlyMediaViewer({
         icon: Layers,
         panel: (
           <TabContentWrapper loading={floorFloorplansData.loading} error={floorFloorplansData.error} onRetry={floorFloorplansData.refetch} t={t}>
-            <FloorplanGallery
+            <LazyFloorplanGallery
               files={floorFloorplansData.files}
               floorplanId={floorFloorplansData.files[0]?.id ?? null}
               overlays={singleFloorOverlays}

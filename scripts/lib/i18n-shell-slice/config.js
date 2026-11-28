@@ -209,6 +209,17 @@ const DEFAULTS = Object.freeze({
     // Λεζάντα φωτογραφίας αγγελίας — η γραμμή του κοινού (μόνο όταν δηλώθηκε λεζάντα) και ο διάλογος του ανθρώπου (μόνο
     // με κλικ): οι 26 ετικέτες είδους του `listing-detail` στο chunk, όχι στο slice κάθε σελίδας με φωτογραφίες.
     'src/components/shared/media/photo-caption-surfaces.tsx',
+    // ADR-954 — τα μητρώα διαδρομών ΑΝΑ ΤΟΜΕΑ (feature modules): η σελίδα εισάγει μόνο το μητρώο του τομέα της,
+    // ώστε η μεταγλώττισή της να μη φτάνει σε άλλους τομείς (το κοινό `LazyRoutes` έφερνε ΟΛΗ την εφαρμογή).
+    'src/components/building-management/building-routes.tsx',
+    'src/components/contacts/contact-routes.tsx',
+    'src/components/properties/property-routes.tsx',
+    'src/components/crm/crm-routes.tsx',
+    'src/components/obligations/obligation-routes.tsx',
+    'src/utils/routes/dxf-viewer-routes.tsx',
+    // ADR-954 §2 — ο θεατής κατόψεων (DXF/BIM/3Δ μόνο-ανάγνωσης): φορτώνει μόνο όταν ανοίξει καρτέλα κάτοψης, με τα
+    // κείμενά του στο chunk. Στατικά έφερνε 2.540 αρχεία `dxf-viewer` σε κάθε σελίδα ακινήτων/κτιρίων/έργων.
+    'src/components/shared/files/media/floorplan-gallery-surfaces.tsx',
   ],
 
   /**

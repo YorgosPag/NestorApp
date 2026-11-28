@@ -55,9 +55,9 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
     expect(page).not.toMatch(/\bredirect\s*\(/);
     // ADR-280 §11.8 Β4.3 — το περιεχόμενο έρχεται από το ΜΗΤΡΩΟ (το chunk φέρνει τα κείμενά του), και η εγγραφή
     // φορτώνει ακριβώς το `PropertyDetailPageContent`. Στατικό import εδώ = όριο που χάθηκε.
-    expect(page).toContain('LazyRoutes.PropertyDetail');
+    expect(page).toContain('PropertyRoutes.PropertyDetail');
     expect(page).not.toMatch(/from\s+['"]@\/components\/properties\/detail\/PropertyDetailPageContent['"]/);
-    const registry = read('src/utils/lazyRoutes.tsx');
+    const registry = read('src/components/properties/property-routes.tsx');
     expect(registry).toMatch(/PropertyDetail:\s*\{\s*load:\s*\(\)\s*=>\s*import\('@\/components\/properties\/detail\/PropertyDetailPageContent'\)/);
   });
 

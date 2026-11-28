@@ -19,29 +19,30 @@ const logger = createModuleLogger('RoutePreload');
 export type { PreloadableRoute, UserRole };
 
 /**
- * 🔑 ADR-280 §11.8 Β4.3 — **ΤΑΥΤΟΤΗΤΑ, ΟΧΙ ΔΕΥΤΕΡΟ ΑΝΤΙΓΡΑΦΟ ΤΟΥ SPECIFIER.** Ως εδώ ο πίνακας κρατούσε 7 δικά του
- * `import('…')` — τα ΙΔΙΑ specs με το μητρώο, γραμμένα δεύτερη φορά, και κώδικας **χωρίς** τα κείμενά του. Πλέον
- * δείχνει σε **κλειδί** του `LazyRoutes` και καλεί το `preload()` της εγγραφής: ο ΙΔΙΟΣ φορτωτής με το mount
- * (κώδικας + κείμενα), όπως το React Router `route.lazy` / Remix `prefetch="intent"` / Closure `prefetchModule`.
+ * 🔑 ADR-280 §11.8 Β4.3 — **ΤΑΥΤΟΤΗΤΑ, ΟΧΙ ΔΕΥΤΕΡΟ ΑΝΤΙΓΡΑΦΟ ΤΟΥ SPECIFIER.** Κάθε γραμμή καλεί το `preload()` της
+ * εγγραφής του **μητρώου του τομέα** της: ο ΙΔΙΟΣ φορτωτής με το mount (κώδικας + κείμενα), όπως το React Router
+ * `route.lazy` / Remix `prefetch="intent"` / Closure `prefetchModule`. Ποτέ `import()` του στόχου εδώ (κανόνας Ρ).
  *
- * ⚠️ Το μητρώο φορτώνεται **δυναμικά** και ο τύπος διαβάζεται με `typeof import(…)`: αυτό το αρχείο είναι στο κέλυφος
- * (sidebar), και μια στατική ακμή θα έσερνε όλο το μητρώο στην κλειστότητα της εκκίνησης.
+ * 🔴 **ADR-954 — ΜΟΝΟ ΣΤΗΝ ΠΑΡΑΓΩΓΗ, ΚΑΙ Η ΣΥΝΘΗΚΗ ΓΡΑΦΕΤΑΙ ΚΥΡΙΟΛΕΚΤΙΚΑ.** Αυτό το αρχείο είναι στο κέλυφος
+ * (`(app)/layout.tsx` → `useRoutePrefetch`, sidebar)· ο dev bundler μεταγλωττίζει **κάθε** προσβάσιμο `import()`
+ * όταν μεταγλωττίζει τη σελίδα (γι' αυτό η Next 16.4 πρόσθεσε το `turbopackLazyDynamicImports`). Με τις ακμές εδώ,
+ * **κάθε** σελίδα του `(app)` μεταγλώττιζε και τον DXF viewer (~6.400 αρχεία) ⇒ ο dev server έπεφτε από μνήμη.
+ * Ίδια πολιτική με το `<Link prefetch>` της Next: προφόρτωση **μόνο** σε παραγωγή.
+ * ⚠️ **ΜΗΝ** βγάλεις τη συνθήκη σε μεταβλητή ή βοηθητική συνάρτηση: ο bundler κόβει τον νεκρό κλάδο (και τις ακμές
+ * `import()` του) **μόνο** όταν βλέπει το `process.env.NODE_ENV === 'production'` αυτούσιο (webpack ConstPlugin).
  */
-type LazyRouteKey = keyof (typeof import('@/utils/lazyRoutes'))['LazyRoutes'];
-
-const ROUTE_REGISTRY_KEYS: Record<PreloadableRoute, LazyRouteKey> = {
-  'crm-dashboard': 'CRMDashboard',
-  'buildings': 'Buildings',
-  'contacts': 'Contacts',
-  'properties': 'Properties',
-  'dxf-viewer': 'DXFViewer',
-  'obligations-new': 'ObligationsNew',
-  'obligations-edit': 'ObligationsEdit',
-};
-
-function preloadFromRegistry(key: LazyRouteKey): Promise<void> {
-  return import('@/utils/lazyRoutes').then(({ LazyRoutes }) => LazyRoutes[key].preload());
-}
+const ROUTE_PRELOADERS: Readonly<Record<PreloadableRoute, () => Promise<void>>> | null =
+  process.env.NODE_ENV === 'production'
+    ? {
+        'crm-dashboard': () => import('@/components/crm/crm-routes').then(({ CrmRoutes }) => CrmRoutes.CRMDashboard.preload()),
+        'buildings': () => import('@/components/building-management/building-routes').then(({ BuildingRoutes }) => BuildingRoutes.Buildings.preload()),
+        'contacts': () => import('@/components/contacts/contact-routes').then(({ ContactRoutes }) => ContactRoutes.Contacts.preload()),
+        'properties': () => import('@/components/properties/property-routes').then(({ PropertyRoutes }) => PropertyRoutes.Properties.preload()),
+        'dxf-viewer': () => import('@/utils/routes/dxf-viewer-routes').then(({ DxfViewerRoutes }) => DxfViewerRoutes.DXFViewer.preload()),
+        'obligations-new': () => import('@/components/obligations/obligation-routes').then(({ ObligationRoutes }) => ObligationRoutes.ObligationsNew.preload()),
+        'obligations-edit': () => import('@/components/obligations/obligation-routes').then(({ ObligationRoutes }) => ObligationRoutes.ObligationsEdit.preload()),
+      }
+    : null;
 
 // ============================================================================
 // 🏢 ENTERPRISE: HREF TO PRELOADABLE ROUTE MAPPING
@@ -91,9 +92,9 @@ export function getPreloadableRouteFromHref(href: string): PreloadableRoute | un
 // Preload a specific route
 export async function preloadRoute(route: PreloadableRoute): Promise<void> {
   try {
-    const key = ROUTE_REGISTRY_KEYS[route];
-    if (key) {
-      await preloadFromRegistry(key);
+    const preload = ROUTE_PRELOADERS?.[route];
+    if (preload) {
+      await preload();
       logger.debug(`Preloaded route: ${route}`);
     }
   } catch (error) {

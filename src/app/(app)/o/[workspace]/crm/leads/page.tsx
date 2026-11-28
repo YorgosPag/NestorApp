@@ -5,9 +5,9 @@
  * @lazy ADR-294 — Thin wrapper, content loaded via dynamic import
  */
 
-import { LazyRoutes } from '@/utils/lazyRoutes';
+import { CrmRoutes } from '@/components/crm/crm-routes';
 
-const CrmLeads = LazyRoutes.CrmLeads;
+const CrmLeads = CrmRoutes.CrmLeads;
 
 export default function CrmLeadsPage() {
   return <CrmLeads />;

@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { LazyRoutes } from '@/utils/lazyRoutes';
+import { BuildingRoutes } from '@/components/building-management/building-routes';
 import { ProtectedRoute } from '@/auth';
 import '@/lib/design-system';
 
 export default function BuildingManagementPage() {
-  const Buildings = LazyRoutes.Buildings;
+  const Buildings = BuildingRoutes.Buildings;
   return (
     <ProtectedRoute>
       <div className="h-full">

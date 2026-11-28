@@ -1,7 +1,7 @@
 'use client';
 
-import { LazyRoutes } from '@/utils/lazyRoutes';
+import { CrmRoutes } from '@/components/crm/crm-routes';
 
 export default function TaskDetailPage() {
-  return <LazyRoutes.CrmTaskDetail />;
+  return <CrmRoutes.CrmTaskDetail />;
 }

@@ -42,6 +42,7 @@
 const path = require('node:path');
 const ts = require('typescript');
 const { resolveSpecifier, readTsPathAliases, toPosix } = require('../module-graph/resolve-specifier');
+const { runtimeClaims, WHOLE } = require('./dynamic-claims');
 
 /** Το υποσύστημα που φυλάσσεται. Ζει εδώ ώστε να μην υπάρχει δεύτερη λίστα. */
 const GUARDED_PREFIX = 'src/subapps/dxf-viewer/';
@@ -65,10 +66,70 @@ const BLOCKING = Object.freeze([STATES.UNDECLARED, STATES.REASONLESS, STATES.ORP
 const idOf = (file, symbol) => `${file}#${symbol}`;
 
 /**
+ * Μία αξίωση → κάδος. **ΕΝΑΣ** δρόμος για στατικές **και** δυναμικές αξιώσεις: δύο αντίγραφα
+ * αυτής της κρίσης θα ήταν δύο διάλεκτοι πάνω στο ίδιο ερώτημα (ADR-749).
+ *
+ * `names` = τα σύμβολα που ζητούνται (`[]` ⇒ side-effect, δεν ζητά σύμβολο).
+ * `via` ∈ `static` · `dynamic` · `type-query` — μόνο για την αναφορά, **όχι** για την ταυτότητα:
+ * το ίδιο σύμβολο ζητείται το ίδιο είτε φορτώνεται τώρα είτε στη χρήση.
+ */
+function classifyClaim(out, { spec, literal = true, names, via, relFile, ctx }) {
+  // 🔶 Μη κυριολεκτικό specifier (`import(\`…${x}\`)`) δεν λύνεται στατικά. Αν ΜΟΙΑΖΕΙ να δείχνει
+  // στο υποσύστημα, μετριέται ΜΕ ΟΝΟΜΑ — ποτέ σιωπηλό skip.
+  if (!literal) {
+    if (spec.includes('subapps/dxf-viewer')) out.push({ state: STATES.UNRESOLVABLE, file: relFile, symbol: spec, target: null, via });
+    return;
+  }
+  // Μόνο εσωτερικά specifiers μπορούν να δείχνουν στο υποσύστημα.
+  if (!spec.startsWith('.') && !spec.startsWith('@/')) return;
+
+  // 🎨 Φύλλο ύφους: `import '…/x.css'` ΔΕΝ ζητά σύμβολο — είναι side-effect. Δεν είναι
+  // επιφάνεια **API**, άρα δεν κρίνεται εδώ· ταξινομείται **ΡΗΤΑ** ώστε να μη γίνει
+  // «unresolvable» (θόρυβος που μοιάζει με τυφλό σημείο) ούτε σιωπηλό `return`.
+  if (/\.(css|scss|sass|less)$/.test(spec)) {
+    out.push({ state: STATES.STYLESHEET, file: relFile, symbol: spec, target: null, via });
+    return;
+  }
+
+  // ⚠️ Το `resolveSpecifier` (ADR-700) θέλει **ΑΠΟΛΥΤΟ** `fromFile` και επιστρέφει
+  // `{kind, file}` — ΟΧΙ σκέτη συμβολοσειρά. Η σύμβαση αντιγράφεται από τον υπάρχοντα
+  // καταναλωτή (`address-vocabulary/type-index.js:203`), ώστε να μην υπάρξει δεύτερη.
+  const hit = resolveSpecifier(spec, ctx.absOf(relFile), ctx);
+  if (!hit || hit.kind !== 'internal') {
+    // 🔶 fail-closed: αν το specifier ΜΟΙΑΖΕΙ να δείχνει στο υποσύστημα αλλά δεν
+    // λύνεται, το λέμε ΜΕ ΟΝΟΜΑ. Ένα σιωπηλό `return` εδώ θα ήταν «0 = δεν κοίταξα».
+    if (spec.includes('subapps/dxf-viewer')) {
+      out.push({ state: STATES.UNRESOLVABLE, file: relFile, symbol: spec, target: null, via });
+    }
+    return;
+  }
+  const rel = ctx.relOf(hit.file);
+  if (!rel.startsWith(GUARDED_PREFIX)) return;
+  for (const symbol of names) out.push({ state: null, file: relFile, symbol, target: rel, via });
+}
+
+/** Τα σύμβολα μιας στατικής δήλωσης `import … from` / `export … from`. */
+function staticNames(node) {
+  const isImport = ts.isImportDeclaration(node);
+  const clause = isImport ? (node.importClause && node.importClause.namedBindings) : node.exportClause;
+  if (clause && (ts.isNamedImports(clause) || ts.isNamedExports(clause))) {
+    return clause.elements.map((el) => (el.propertyName || el.name).text);
+  }
+  // `import * as X` ζητά **ΤΑ ΠΑΝΤΑ** — η ευρύτερη δυνατή αξίωση, και δηλώνεται ως τέτοια.
+  if (clause && ts.isNamespaceImport(clause)) return [WHOLE];
+  if (isImport && node.importClause && node.importClause.name) return ['default'];
+  // `import './x'` — side-effect only· δεν ζητά σύμβολο, άρα δεν είναι επιφάνεια API.
+  return [];
+}
+
+/**
  * Ποια σύμβολα ζητά ΑΥΤΟ το αρχείο από το φυλασσόμενο υποσύστημα;
  *
  * ⚠️ **AST, ΠΟΤΕ grep**: τα πολυγραμμικά imports λένε ψέματα — μετρημένο στο ADR-794,
  * όπου το grep έδωσε «23 καταναλωτές» ενώ η αλήθεια ήταν **3**.
+ *
+ * 🔑 **ΚΑΙ ΤΑ `import()` / `import('x').T` ΕΙΝΑΙ ΑΞΙΩΣΕΙΣ** (2026-11-28, ADR-954 §2): η επιφάνεια
+ * ρωτά **ποιος** ζητά, όχι **πότε** φορτώνεται. Τα σχήματα ζουν στο `./dynamic-claims`.
  */
 function importsFrom(absFile, relFile, ctx) {
   const src = ctx.input.read(absFile) ?? '';
@@ -76,52 +137,16 @@ function importsFrom(absFile, relFile, ctx) {
   const out = [];
 
   ts.forEachChild(sf, (node) => {
-    const isImport = ts.isImportDeclaration(node);
-    const isExport = ts.isExportDeclaration(node);
-    if (!(isImport || isExport) || !node.moduleSpecifier) return;
-
+    const isDecl = ts.isImportDeclaration(node) || ts.isExportDeclaration(node);
+    if (!isDecl || !node.moduleSpecifier) return;
     const spec = node.moduleSpecifier.getText(sf).replace(/['"]/g, '');
-    // Μόνο εσωτερικά specifiers μπορούν να δείχνουν στο υποσύστημα.
-    if (!spec.startsWith('.') && !spec.startsWith('@/')) return;
-
-    // 🎨 Φύλλο ύφους: `import '…/x.css'` ΔΕΝ ζητά σύμβολο — είναι side-effect. Δεν είναι
-    // επιφάνεια **API**, άρα δεν κρίνεται εδώ· ταξινομείται **ΡΗΤΑ** ώστε να μη γίνει
-    // «unresolvable» (θόρυβος που μοιάζει με τυφλό σημείο) ούτε σιωπηλό `return`.
-    if (/\.(css|scss|sass|less)$/.test(spec)) {
-      out.push({ state: STATES.STYLESHEET, file: relFile, symbol: spec, target: null });
-      return;
-    }
-
-    // ⚠️ Το `resolveSpecifier` (ADR-700) θέλει **ΑΠΟΛΥΤΟ** `fromFile` και επιστρέφει
-    // `{kind, file}` — ΟΧΙ σκέτη συμβολοσειρά. Η σύμβαση αντιγράφεται από τον υπάρχοντα
-    // καταναλωτή (`address-vocabulary/type-index.js:203`), ώστε να μην υπάρξει δεύτερη.
-    const hit = resolveSpecifier(spec, ctx.absOf(relFile), ctx);
-    if (!hit || hit.kind !== 'internal') {
-      // 🔶 fail-closed: αν το specifier ΜΟΙΑΖΕΙ να δείχνει στο υποσύστημα αλλά δεν
-      // λύνεται, το λέμε ΜΕ ΟΝΟΜΑ. Ένα σιωπηλό `return` εδώ θα ήταν «0 = δεν κοίταξα».
-      if (spec.includes('subapps/dxf-viewer')) {
-        out.push({ state: STATES.UNRESOLVABLE, file: relFile, symbol: spec, target: null });
-      }
-      return;
-    }
-    const rel = ctx.relOf(hit.file);
-    if (!rel.startsWith(GUARDED_PREFIX)) return;
-
-    const clause = isImport ? (node.importClause && node.importClause.namedBindings) : node.exportClause;
-    const names = [];
-    if (clause && (ts.isNamedImports(clause) || ts.isNamedExports(clause))) {
-      for (const el of clause.elements) names.push((el.propertyName || el.name).text);
-    } else if (clause && ts.isNamespaceImport(clause)) {
-      // `import * as X` ζητά **ΤΑ ΠΑΝΤΑ** — η ευρύτερη δυνατή αξίωση, και δηλώνεται ως τέτοια.
-      names.push('*');
-    } else if (isImport && node.importClause && node.importClause.name) {
-      names.push('default');
-    } else if (isImport && !node.importClause) {
-      // `import './x'` — side-effect only· δεν ζητά σύμβολο, άρα δεν είναι επιφάνεια API.
-      return;
-    }
-    for (const symbol of names) out.push({ state: null, file: relFile, symbol, target: rel });
+    classifyClaim(out, { spec, names: staticNames(node), via: 'static', relFile, ctx });
   });
+
+  // ⚡ Το πλήρες πέρασμα του δέντρου πληρώνεται ΜΟΝΟ όπου υπάρχει `import(` στο κείμενο.
+  if (src.includes('import(')) {
+    for (const claim of runtimeClaims(sf)) classifyClaim(out, { ...claim, relFile, ctx });
+  }
 
   return out;
 }
@@ -221,7 +246,9 @@ function scanPublicSurface({
           symbol: hit.symbol,
           target: hit.target,
           id,
-          detail: `${hit.file} ζητά «${hit.symbol}» από ${hit.target}, που ΔΕΝ είναι δηλωμένο δημόσιο`,
+          via: hit.via,
+          detail: `${hit.file} ζητά «${hit.symbol}» από ${hit.target}${hit.via === 'static' ? '' : ` (${hit.via})`}, ` +
+            'που ΔΕΝ είναι δηλωμένο δημόσιο',
         });
       }
     }

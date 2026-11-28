@@ -57,8 +57,8 @@ jest.mock('../UploadEntryPointSelector', () => ({ UploadEntryPointSelector: () =
 jest.mock('../HierarchicalEntryPointSelector', () => ({ HierarchicalEntryPointSelector: () => <div data-testid="upload-zone" /> }));
 jest.mock('../TrashView', () => ({ TrashView: () => null }));
 jest.mock('../ArchiveView', () => ({ ArchiveView: () => null }));
-jest.mock('../media', () => ({ MediaGallery: () => null }));
-jest.mock('../media/FloorplanGallery', () => ({ FloorplanGallery: () => null }));
+jest.mock('../media/MediaGallery', () => ({ MediaGallery: () => null }));
+jest.mock('../media/floorplan-gallery-surfaces', () => ({ LazyFloorplanGallery: () => null }));
 jest.mock('../FileTileSummary', () => ({ FileTileSummary: () => null }));
 jest.mock('@/components/file-manager/FilePreviewPanel', () => ({ FilePreviewPanel: () => null }));
 jest.mock('@/components/file-manager/BatchActionsBar', () => ({ BatchActionsBar: () => null }));

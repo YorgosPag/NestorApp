@@ -1039,7 +1039,7 @@
       "symbols": [
         "DxfFirestoreService"
       ],
-      "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή."
+      "reason": "Η ΜΙΑ αποθήκη σκηνών DXF (Storage + Firestore, `saveToStorage` · `loadFileV2` · `fileExists` · `generateFileId`). Δύο καταναλωτές εκτός subapp, ΚΑΙ ΟΙ ΔΥΟ με `await import()` στη χρήση: `src/services/floorplans/BuildingFloorplanService.ts` (κατόψεις κτιρίου — στατικά έφερνε ~360 αρχεία του πυρήνα γεωμετρίας σε κάθε σελίδα ακινήτων, ADR-954 §2) και `src/services/upload/processors/CADProcessor.ts` (μεταφόρτωση CAD). Δεύτερη αποθήκη σκηνών έξω από το subapp θα απέκλινε στη μορφή V2. Μέχρι 2026-11-28 η πύλη ΔΕΝ έβλεπε τα `import()` και θα κατήγγελλε τη γραμμή ως ορφανή — ενώ η υπηρεσία ήταν σε χρήση."
     },
     {
       "file": "src/subapps/dxf-viewer/settings/telemetry/Logger.ts",
@@ -1564,6 +1564,55 @@
         "planReadingKey"
       ],
       "reason": "ADR-929 Δ11 — το κλειδί της ανάγνωσης συντίθεται σε ΕΝΑ σημείο: ο διακομιστής (`src/server/plan-recognition/plan-reading.service.ts`) το χρησιμοποιεί ως σπόρο του `plrd_*`. Δεύτερη σύνθεση θα πλήρωνε κάθε ανάγνωση δύο φορές χωρίς να το δει κανείς."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/DxfViewerApp.tsx",
+      "symbols": [
+        "default"
+      ],
+      "reason": "ADR-954 §1 — η ΣΕΛΙΔΑ του DXF viewer: το μητρώο του τομέα (`src/utils/routes/dxf-viewer-routes.tsx`) τη φορτώνει με `import()` στη χρήση, ώστε καμία άλλη σελίδα να μη μεταγλωττίζει τα ~6.400 αρχεία του viewer. Ήταν σε χρήση και πριν, αλλά ΑΟΡΑΤΗ: η πύλη μετρούσε μόνο στατικές εισαγωγές μέχρι 2026-11-28."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/io/dxf-import.ts",
+      "symbols": [
+        "dxfImportService"
+      ],
+      "reason": "Η ΜΙΑ μηχανή ανάγνωσης DXF → σκηνή, φορτωμένη με `await import()` στη χρήση από δύο καταναλωτές κατόψεων: `src/services/floorplans/FloorplanProcessor.ts` (επεξεργασία μεταφόρτωσης) και `src/components/shared/files/media/floorplan-scene-bytes.ts` (επανανάγνωση για προβολή, ADR-716 Φ5). Δεύτερος parser έξω από το subapp θα ήταν ο διπλασιασμός του N.18. Ορατό στην πύλη από 2026-11-28 (ADR-954 §2)."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/io/encoding-service.ts",
+      "symbols": [
+        "encodingService"
+      ],
+      "reason": "Ο διακομιστής κατόψεων (`src/app/api/floorplans/process/floorplan-process.service.ts`) αποκωδικοποιεί το DXF (ANSI_1253/UTF-8, αυτόματη ανίχνευση) με την ΙΔΙΑ υπηρεσία που χρησιμοποιεί ο viewer, φορτωμένη με `await import()`· δεύτερος ανιχνευτής κωδικοσελίδας θα έδινε άλλο κείμενο στον διακομιστή και άλλο στην οθόνη. Ορατό στην πύλη από 2026-11-28 (ADR-954 §2)."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/utils/dxf-scene-builder.ts",
+      "symbols": [
+        "DxfSceneBuilder"
+      ],
+      "reason": "Ο διακομιστής κατόψεων (`src/app/api/floorplans/process/floorplan-process.service.ts`) χτίζει τη σκηνή με τον ΙΔΙΟ builder του viewer (`await import()`), ώστε η αποθηκευμένη σκηνή να είναι ακριβώς ό,τι θα έδειχνε ο viewer. Ορατό στην πύλη από 2026-11-28 (ADR-954 §2)."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/utils/dxf-import-diagnostics.ts",
+      "symbols": [
+        "summarizeDiagnostics"
+      ],
+      "reason": "ADR-635 Φ3 — ο διακομιστής κατόψεων (`src/app/api/floorplans/process/floorplan-process.service.ts`) συνοψίζει τα διαγνωστικά της ανεκτικής εισαγωγής με την ΙΔΙΑ συνάρτηση που τα παράγει (`await import()`). Ορατό στην πύλη από 2026-11-28 (ADR-954 §2)."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/canvas-v2/overlays/SnapIndicatorOverlay.tsx",
+      "symbols": [
+        "*"
+      ],
+      "reason": "Δοκιμαστικό harness (`src/app/(bare)/test-harness/dxf-canvas/DxfCanvasHarness.tsx`): το `next/dynamic` παίρνει ΟΛΟΚΛΗΡΟ το module (`() => import(…)`), άρα η αξίωση είναι η ευρύτερη (`*`), όπως το `import * as X`. Αν το harness γράψει `.then((m) => m.<όνομα>)`, η αξίωση στενεύει σε ένα σύμβολο. Ορατό στην πύλη από 2026-11-28 (ADR-954 §2)."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/ui/CursorSettingsPanel.tsx",
+      "symbols": [
+        "*"
+      ],
+      "reason": "Δοκιμαστικό harness (`src/utils/lazyHarnessRoutes.tsx`, `defineLazySurfaces`): ο loader επιστρέφει ΟΛΟΚΛΗΡΟ το module, άρα η αξίωση είναι η ευρύτερη (`*`), όπως το `import * as X`. Ορατό στην πύλη από 2026-11-28 (ADR-954 §2)."
     }
   ]
 }

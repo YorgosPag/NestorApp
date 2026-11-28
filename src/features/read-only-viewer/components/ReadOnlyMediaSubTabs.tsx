@@ -15,7 +15,8 @@ import { MediaViewerPanelState } from '@/components/shared/media/viewer/MediaVie
 import { useFloorFloorplans } from '@/hooks/useFloorFloorplans';
 import { useFloorOverlays } from '@/hooks/useFloorOverlays';
 import { useBackgroundScale } from '@/hooks/useBackgroundScale';
-import { FloorplanGallery } from '@/components/shared/files/media/FloorplanGallery';
+// ADR-954 §2 — ο θεατής κατόψεων φορτώνει στη χρήση, με τα κείμενά του στο chunk.
+import { LazyFloorplanGallery } from '@/components/shared/files/media/floorplan-gallery-surfaces';
 import { adaptFloorFloorplanToFileRecord } from './read-only-media-types';
 import type { FileRecord } from '@/types/file-record';
 import { floorplansOfLevel } from '@/lib/files/level-floorplans';
@@ -87,7 +88,7 @@ export function FloorFloorplanTabContent({
       onRetry={refetch}
       t={t}
     >
-      <FloorplanGallery
+      <LazyFloorplanGallery
         files={files}
         floorplanId={files[0]?.id ?? null}
         overlays={overlays}
@@ -133,7 +134,7 @@ export function UnitFloorplanTabContent({
       loading={loading} error={error} onRetry={onRetry}
       t={t}
     >
-      <FloorplanGallery
+      <LazyFloorplanGallery
         files={filteredFiles}
         unitsPerMeter={unitsPerMeter}
         backgroundId={backgroundId}

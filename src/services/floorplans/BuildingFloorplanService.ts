@@ -19,7 +19,6 @@
 
 import { FileRecordService } from '@/services/file-record.service';
 import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
-import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
@@ -58,6 +57,20 @@ const isExpectedError = (error: Error): boolean => {
          message.includes('does not exist') ||
          (message.includes('permission') && message.includes('missing'));
 };
+
+/**
+ * Η αποθήκη σκηνών DXF, **φορτωμένη στη χρήση** (ADR-954 §2 — ίδιο ιδίωμα με το `CADProcessor`).
+ *
+ * 🔴 Με στατική εισαγωγή, το `useBuildingFloorplans` έσερνε **360** αρχεία του `dxf-viewer` (κύκλος του πυρήνα
+ * γεωμετρίας μέσω `dxf-scene-migration`) σε κάθε σελίδα με την καρτέλα κτιρίου — ενώ η υπηρεσία χρειάζεται μόνο
+ * μέσα σε async μεθόδους. Το σύστημα modules κρατά το module μετά την πρώτη φόρτωση: κάθε επόμενη κλήση είναι άμεση.
+ */
+async function loadDxfSceneStorage(): Promise<
+  typeof import('@/subapps/dxf-viewer/services/dxf-firestore.service').DxfFirestoreService
+> {
+  const { DxfFirestoreService } = await import('@/subapps/dxf-viewer/services/dxf-firestore.service');
+  return DxfFirestoreService;
+}
 
 // ============================================================================
 // TYPES
@@ -208,7 +221,7 @@ export class BuildingFloorplanService {
 
       floorplanLogger.debug(`Saving DXF ${type} floorplan via enterprise storage`, { fileId, buildingId });
 
-      const success = await DxfFirestoreService.saveToStorage(fileId, fileName, data.scene);
+      const success = await (await loadDxfSceneStorage()).saveToStorage(fileId, fileName, data.scene);
 
       if (success) {
         floorplanLogger.info(`Enterprise save complete for ${type}`, { buildingId });
@@ -324,7 +337,7 @@ export class BuildingFloorplanService {
       floorplanLogger.debug(`Loading ${type} floorplan`, { fileId, buildingId });
 
       // 1. Try enterprise Storage-based loading for DXF
-      const storageResult = await DxfFirestoreService.loadFileV2(fileId);
+      const storageResult = await (await loadDxfSceneStorage()).loadFileV2(fileId);
       if (storageResult) {
         floorplanLogger.debug(`Loaded DXF from enterprise storage`, { fileId });
         return {
@@ -387,7 +400,7 @@ export class BuildingFloorplanService {
       const fileId = this.generateFileId(buildingId, type);
 
       // 🏢 ADR-292 Phase 4: Check enterprise storage only (legacy eliminated)
-      return await DxfFirestoreService.fileExists(fileId);
+      return await (await loadDxfSceneStorage()).fileExists(fileId);
     } catch (error) {
       // 🏢 ENTERPRISE: Expected errors → silent false, real errors → logged
       if (error instanceof Error && isExpectedError(error)) {

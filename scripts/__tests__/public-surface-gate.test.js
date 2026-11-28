@@ -193,6 +193,81 @@ describe('Μ — μεταλλάξεις ΣΤΙΣ ΕΙΣΟΔΟΥΣ (ο μεταλ
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
+describe('Δ — οι αξιώσεις ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ: `import()` και `import(\'x\').T` (ADR-954 §2)', () => {
+  // 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ (2026-11-28): ο `BuildingFloorplanService` πέρασε το `DxfFirestoreService` από
+  // στατική εισαγωγή σε `await import()` (για να μη φέρνει 360 αρχεία σε κάθε σελίδα ακινήτων). Η πύλη
+  // απάντησε «κανείς δεν ζητά πια το σύμβολο — σβήσε τη γραμμή»: ΨΕΜΑ, και η θεραπεία της θα άφηνε σε
+  // χρήση σύμβολο που κανείς δεν φυλάει. Μετρημένα: 15 `import()` + 3 αναφορές τύπου ήταν αόρατα.
+  const DEEP = '@/subapps/dxf-viewer/internal/deep';
+  const DECLARED_SECRET = [
+    ...DECLARED_ALPHA,
+    { file: `${GUARDED_PREFIX}internal/deep.ts`, symbols: ['SECRET'], reason: 'ο καταναλωτής το φορτώνει στη χρήση' },
+  ];
+
+  /** Γράφει καταναλωτή, τρέχει, σβήνει — ο καταναλωτής ζει μόνο όσο το test. */
+  function withConsumer(body, surface) {
+    put('src/app/dyn.ts', body);
+    try { return run(surface); } finally { fs.rmSync(path.join(ROOT, 'src/app/dyn.ts')); }
+  }
+  const claimsOf = (m) => m.findings.filter((f) => f.file === 'src/app/dyn.ts').map((f) => f.symbol).sort();
+
+  it('Δ1 (ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ). Δηλωμένο σύμβολο σε χρήση ΜΟΝΟ με `await import()` ⇒ ΔΕΝ είναι ορφανό', () => {
+    const m = withConsumer(`export async function f() {\n  const { SECRET } = await import('${DEEP}');\n  return SECRET;\n}\n`,
+      DECLARED_SECRET);
+    expect(m.tally[STATES.ORPHAN]).toBe(0);
+    expect(m.blocking).toHaveLength(0);
+    expect(m.usedIds).toContain(idOf(`${GUARDED_PREFIX}internal/deep.ts`, 'SECRET'));
+  });
+
+  it('Δ1′ (ΠΑΡΟΝΟΜΑΣΤΗΣ του Δ1). ΧΩΡΙΣ τον καταναλωτή, η ίδια δήλωση ΕΙΝΑΙ ορφανή — το Δ1 δεν περνά από τύχη', () => {
+    const m = run(DECLARED_SECRET);
+    expect(m.blocking.map((f) => `${f.state}:${f.symbol}`)).toEqual([`${STATES.ORPHAN}:SECRET`]);
+  });
+
+  it('Δ2. ΑΔΗΛΩΤΟ σύμβολο μέσω `await import()` ⇒ ⛔ ΜΠΛΟΚ, και η αναφορά λέει «dynamic»', () => {
+    const m = withConsumer(`export async function f() {\n  const { SECRET } = await import('${DEEP}');\n  return SECRET;\n}\n`,
+      DECLARED_ALPHA);
+    expect(m.blocking).toHaveLength(1);
+    expect(m.blocking[0]).toMatchObject({ state: STATES.UNDECLARED, symbol: 'SECRET', via: 'dynamic' });
+    expect(m.blocking[0].detail).toMatch(/\(dynamic\)/);
+  });
+
+  it('Δ3. Αναφορά τύπου `import(\'x\').T` είναι αξίωση — όπως το `import type { T }`', () => {
+    const m = withConsumer("export type A = import('@/subapps/dxf-viewer/types/pub').Beta;\n", DECLARED_ALPHA);
+    expect(m.blocking).toHaveLength(1);
+    expect(m.blocking[0]).toMatchObject({ state: STATES.UNDECLARED, symbol: 'Beta', via: 'type-query' });
+  });
+
+  // Ο πίνακας των σχημάτων — ίδια σημασία με το tree-shaking του `import()` στους bundlers.
+  it.each([
+    ['`.then((m) => m.X)`', `export const p = import('${DEEP}').then((m) => m.SECRET);\n`, ['SECRET']],
+    ['`.then(({ X }) => …)`', `export const p = import('${DEEP}').then(({ SECRET }) => SECRET);\n`, ['SECRET']],
+    ['`(await import(x)).X`', `export async function f() { return (await import('${DEEP}')).SECRET; }\n`, ['SECRET']],
+    ['`const m = await import(x); m.X`', `export async function f() {\n  const m = await import('${DEEP}');\n  return m.SECRET;\n}\n`, ['SECRET']],
+    ['ολόκληρο το module διαφεύγει (lazy loader)', `export const load = () => import('${DEEP}');\n`, ['*']],
+    ['το όνομα του module διαφεύγει (`use(m)`)', `declare function use(x: unknown): void;\nexport async function f() {\n  const m = await import('${DEEP}');\n  use(m);\n}\n`, ['*']],
+    ['`...rest` στο destructuring', `export async function f() {\n  const { ...all } = await import('${DEEP}');\n  return all;\n}\n`, ['*']],
+    ['`.then(() => …)` — φορτώνει, δεν διαβάζει', `export const p = import('${DEEP}').then(() => 1);\n`, []],
+  ])('Δ4. %s', (_label, body, expected) => {
+    expect(claimsOf(withConsumer(body, DECLARED_ALPHA))).toEqual(expected);
+  });
+
+  it('Δ5. Μη κυριολεκτικό specifier ΠΡΟΣ ΤΟ SUBAPP ⇒ 🔶 μετριέται ΜΕ ΟΝΟΜΑ (fail-closed, όπως το Μ6)', () => {
+    const m = withConsumer("export const f = (n: string) => import(`@/subapps/dxf-viewer/internal/${n}`);\n", DECLARED_ALPHA);
+    expect(m.tally[STATES.UNRESOLVABLE]).toBe(1);
+    expect(m.blocking).toHaveLength(0);
+  });
+
+  it('Δ6 (ΠΑΡΟΝΟΜΑΣΤΗΣ). `import()` ΕΚΤΟΣ υποσυστήματος ⇒ καμία αξίωση — αλλιώς η πύλη θα ούρλιαζε παντού', () => {
+    put('src/app/other.ts', 'export const Z = 1;\n');
+    try {
+      const m = withConsumer("export const p = import('./other').then((m) => m.Z);\n", DECLARED_ALPHA);
+      expect(m.findings).toHaveLength(0);
+    } finally { fs.rmSync(path.join(ROOT, 'src/app/other.ts')); }
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
 describe('Λ — η λογιστική είναι fail-closed', () => {
   // 🔴 Η ΠΡΩΤΗ ΓΡΑΦΗ ΑΥΤΩΝ ΤΩΝ ΑΓΚΥΡΩΝ ΕΛΕΓΧΕ **ΚΕΙΜΕΝΟ** (`expect(src).toMatch(/ΑΝΟΙΧΤΗ
   // ΛΟΓΙΣΤΙΚΗ/)`) και η μετάλλαξη `throw` → `void` **ΔΙΕΦΥΓΕ** (7/8). Είναι το σφάλμα `Μ6`

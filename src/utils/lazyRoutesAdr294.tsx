@@ -52,31 +52,6 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
     loadingType: 'dashboard', ssr: false,
   },
 
-  CrmCalendar: {
-    load: () => import('@/components/crm/calendar/CalendarPageContent').then(mod => ({ default: mod.CalendarPageContent })),
-    loadingType: 'dashboard', ssr: false,
-  },
-
-  CrmTasks: {
-    load: () => import('@/components/crm/tasks/TasksPageContent').then(mod => ({ default: mod.TasksPageContent })),
-    loadingType: 'dashboard', ssr: false,
-  },
-
-  CrmLeads: {
-    load: () => import('@/components/crm/leads/LeadsPageContent').then(mod => ({ default: mod.LeadsPageContent })),
-    loadingType: 'dashboard', ssr: false,
-  },
-
-  CrmPipeline: {
-    load: () => import('@/components/crm/pipeline/PipelinePageContent').then(mod => ({ default: mod.PipelinePageContent })),
-    loadingType: 'dashboard', ssr: false,
-  },
-
-  CrmCommunications: {
-    load: () => import('@/components/crm/communications/CommunicationsPageContent').then(mod => ({ default: mod.CommunicationsPageContent })),
-    loadingType: 'list', ssr: false,
-  },
-
   // =========================================================================
   // ⚡ BATCH 2: 8 remaining report pages
   // =========================================================================
@@ -220,26 +195,6 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
     loadingType: 'form', ssr: false,
   },
 
-  CrmHub: {
-    load: () => import('@/components/crm/pages/CrmHubPageContent').then(mod => ({ default: mod.CrmHubPageContent })),
-    loadingType: 'dashboard', ssr: false,
-  },
-
-  CrmTeams: {
-    load: () => import('@/components/crm/pages/CrmTeamsPageContent').then(mod => ({ default: mod.CrmTeamsPageContent })),
-    loadingType: 'list', ssr: false,
-  },
-
-  CrmNotifications: {
-    load: () => import('@/components/crm/pages/CrmNotificationsPageContent').then(mod => ({ default: mod.CrmNotificationsPageContent })),
-    loadingType: 'list', ssr: false,
-  },
-
-  ObligationsHub: {
-    load: () => import('@/components/obligations/pages/ObligationsHubPageContent').then(mod => ({ default: mod.ObligationsHubPageContent })),
-    loadingType: 'list', ssr: false,
-  },
-
   // =========================================================================
   // ⚡ BATCH 5: Admin pages
   // Note: ai-inbox + operator-inbox are Server Components — not lazy-loaded
@@ -303,16 +258,6 @@ export const lazyRoutesAdr294 = defineLazyRoutes({
   // =========================================================================
   // ⚡ BATCH 6: CRM Dynamic Routes (detail pages)
   // =========================================================================
-
-  CrmLeadDetail: {
-    load: () => import('@/components/crm/leads/LeadDetailPageContent').then(mod => ({ default: mod.LeadDetailPageContent })),
-    loadingType: 'dashboard', ssr: false,
-  },
-
-  CrmTaskDetail: {
-    load: () => import('@/components/crm/tasks/TaskDetailPageContent').then(mod => ({ default: mod.TaskDetailPageContent })),
-    loadingType: 'form', ssr: false,
-  },
 
   // =========================================================================
   // ⚡ BATCH 7: Settings, Navigation, Storage, Geo-Canvas, Public Share

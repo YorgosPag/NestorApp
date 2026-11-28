@@ -51,8 +51,10 @@ import { UploadEntryPointSelector } from './UploadEntryPointSelector';
 import { HierarchicalEntryPointSelector } from './HierarchicalEntryPointSelector';
 import { TrashView } from './TrashView';
 import { ArchiveView } from './ArchiveView';
-import { MediaGallery } from './media';
-import { FloorplanGallery } from './media/FloorplanGallery';
+// ADR-954 §2 — απευθείας, ΟΧΙ από το barrel `./media`: εκείνο επανεξάγει και το `FloorplanGallery` (όλο τον `dxf-viewer`).
+import { MediaGallery } from './media/MediaGallery';
+// ADR-954 §2 — ο θεατής κατόψεων φορτώνει στη χρήση, με τα κείμενά του στο chunk.
+import { LazyFloorplanGallery } from './media/floorplan-gallery-surfaces';
 import { gridPatterns } from '@/styles/design-tokens';
 import { useRetiredKind } from '@/lib/firestore/retired-record-context';
 import { ClassifyAgainProvider } from './ClassifyAgainProvider';
@@ -432,7 +434,7 @@ function GalleryView(props: EntityFilesContentProps) {
   const { onDelete } = props;
   if (props.displayStyle === 'floorplan-gallery') {
     return (
-      <FloorplanGallery
+      <LazyFloorplanGallery
         files={props.filteredFiles}
         onDelete={onDelete && (async (file) => { await onDelete(file.id); })}
         onDownload={props.onDownload}

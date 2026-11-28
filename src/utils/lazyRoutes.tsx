@@ -29,45 +29,6 @@ import { lazyRoutesAdr294 } from './lazyRoutesAdr294';
 // Pre-configured lazy routes for common patterns
 export const LazyRoutes = {
   ...defineLazyRoutes({
-    // Dashboard routes (heavy with charts and data)
-    CRMDashboard: {
-      load: () => import('@/components/crm/dashboard/CRMDashboardPageContent').then(mod => ({ default: mod.CRMDashboardPageContent })),
-      loadingType: 'dashboard', ssr: false,
-    },
-
-    // Management/List routes
-    Buildings: {
-      load: () => import('@/components/building-management/BuildingsPageContent'),
-      loadingType: 'list', ssr: false,
-    },
-
-    Contacts: {
-      load: () => import('@/components/contacts/ContactsPageContent'),
-      loadingType: 'list', ssr: false,
-    },
-
-
-    Properties: {
-      load: () => import('@/components/properties/PropertiesPageContent').then(mod => ({ default: mod.PropertiesPageContent })),
-      loadingType: 'list', ssr: false,
-    },
-
-    // ADR-280 §11.8 Β4.3 — η καρτέλα ακινήτου (`/properties/[id]`): το chunk φέρνει τα κείμενά του (BIM/κάτοψη).
-    PropertyDetail: {
-      load: () => import('@/components/properties/detail/PropertyDetailPageContent').then(mod => ({ default: mod.PropertyDetailPageContent })),
-      loadingType: 'list', ssr: false,
-    },
-
-    // Form routes (ADR-294 Batch 8 — replaced placeholder components with real implementations)
-    ObligationsNew: {
-      load: () => import('@/components/obligations/pages/NewObligationPageContent').then(mod => ({ default: mod.NewObligationPageContent })),
-      loadingType: 'form', ssr: false,
-    },
-
-    ObligationsEdit: {
-      load: () => import('@/components/obligations/pages/EditObligationPageContent').then(mod => ({ default: mod.EditObligationPageContent })),
-      loadingType: 'form', ssr: false,
-    },
 
     // Landing (SEO important, keep SSR)
     Landing: {
@@ -75,23 +36,11 @@ export const LazyRoutes = {
       loadingType: 'spinner', ssr: true,
     },
 
-    // Heavy DXF Viewer (already optimized, but include for completeness)
-    DXFViewer: {
-      load: () => import('@/subapps/dxf-viewer/DxfViewerApp').then(mod => ({ default: mod.default })),
-      loadingType: 'spinner', ssr: false,
-    },
-
     // ⚡ NEW ADDITIONS: Recently identified heavy components που χρειάζονται lazy loading
 
     // Projects Management (heavy with data tables και reports)
     Projects: {
       load: () => import('@/components/projects/projects-page-content').then(mod => ({ default: mod.ProjectsPageContent })),
-      loadingType: 'dashboard', ssr: false,
-    },
-
-    // Email Analytics Dashboard (heavy με charts και metrics)
-    EmailAnalytics: {
-      load: () => import('@/components/crm/EmailAnalyticsDashboard').then(mod => ({ default: mod.EmailAnalyticsDashboard })),
       loadingType: 'dashboard', ssr: false,
     },
 

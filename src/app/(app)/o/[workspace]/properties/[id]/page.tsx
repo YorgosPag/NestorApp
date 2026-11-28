@@ -42,10 +42,10 @@
  *
  * ⚠️ **ΜΗΝ ξαναπροσθέσεις `searchParams` εδώ** για να «περάσεις καθαρά props».
  *
- * 🔑 **ADR-280 §11.8 Β4.3 — ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ ΕΡΧΕΤΑΙ ΑΠΟ ΤΟ ΜΗΤΡΩΟ** (`LazyRoutes.PropertyDetail` →
+ * 🔑 **ADR-280 §11.8 Β4.3 — ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ ΕΡΧΕΤΑΙ ΑΠΟ ΤΟ ΜΗΤΡΩΟ** (`PropertyRoutes.PropertyDetail` →
  * `PropertyDetailPageContent`), όχι στατικά: η κλειστότητά του ονομάζει την οικογένεια `dxf-viewer` (κάτοψη ·
  * BIM), και μόνο ένα chunk μητρώου **περιμένει** τα κείμενά του. Ένας server component δεν μπορεί να «μπει» με
- * τελεία σε client module (`LazyRoutes.X`), γι' αυτό η σελίδα έγινε `'use client'` και διαβάζει το `params` με
+ * τελεία σε client module (`PropertyRoutes.X`), γι' αυτό η σελίδα έγινε `'use client'` και διαβάζει το `params` με
  * `use(params)` — το ίδιο ιδίωμα με τους 75 καταναλωτές του μητρώου. Παρενέργεια, ευπρόσδεκτη: με `ssr: false` ο
  * διακομιστής στέλνει **μόνο** το skeleton, άρα τα ωμά κλειδιά του SSR (παραπάνω) γίνονται **δομικά** αδύνατα.
  * Το `Suspense` μένει (CHECK 3.55) και η προειδοποίηση για τα `searchParams` ισχύει ακέραιη.
@@ -54,13 +54,13 @@
 import React, { Suspense, use } from 'react';
 
 import { StaticPageLoading } from '@/core/states';
-import { LazyRoutes } from '@/utils/lazyRoutes';
+import { PropertyRoutes } from '@/components/properties/property-routes';
 
 interface PropertyDetailPageProps {
   readonly params: Promise<{ readonly id: string }>;
 }
 
-const PropertyDetail = LazyRoutes.PropertyDetail;
+const PropertyDetail = PropertyRoutes.PropertyDetail;
 
 export default function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const { id } = use(params);

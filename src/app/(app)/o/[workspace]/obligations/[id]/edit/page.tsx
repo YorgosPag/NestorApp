@@ -1,7 +1,7 @@
 'use client';
 
-import { LazyRoutes } from '@/utils/lazyRoutes';
+import { ObligationRoutes } from '@/components/obligations/obligation-routes';
 
 export default function EditObligationPage() {
-  return <LazyRoutes.ObligationsEdit />;
+  return <ObligationRoutes.ObligationsEdit />;
 }

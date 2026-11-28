@@ -1,8 +1,8 @@
 'use client';
 
-import { LazyRoutes } from "@/utils/lazyRoutes";
+import { CrmRoutes } from '@/components/crm/crm-routes';
 
 export default function CrmDashboardPage() {
-  const CRMDashboard = LazyRoutes.CRMDashboard;
+  const CRMDashboard = CrmRoutes.CRMDashboard;
   return <CRMDashboard />;
 }

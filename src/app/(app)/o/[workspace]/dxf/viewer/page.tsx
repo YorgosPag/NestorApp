@@ -4,7 +4,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useUserRole } from '@/auth';
 import { Suspense } from 'react';
-import { LazyRoutes } from '@/utils/lazyRoutes';
+import { DxfViewerRoutes } from '@/utils/routes/dxf-viewer-routes';
 // ?? ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import { cn, getTypographyClass } from '@/lib/design-system';
@@ -16,12 +16,12 @@ import { PageLoadingState, StaticPageLoading } from '@/core/states';
 import { FullBleedSurface } from '@/core/containers';
 
 /**
- * ADR-280 §11.8 Β2 — ο viewer φορτώνεται από το **μητρώο** (`LazyRoutes.DXFViewer`, `ssr: false`), όχι από
+ * ADR-280 §11.8 Β2 — ο viewer φορτώνεται από το **μητρώο** (`DxfViewerRoutes.DXFViewer`, `ssr: false`), όχι από
  * τοπικό `dynamic()`: μόνο έτσι το chunk **περιμένει** τη γραμμή του `lazy-route-namespaces.json` (όλη την
  * οικογένεια `dxf-viewer`) πριν το πρώτο καρέ — προϋπόθεση για να βγει η οικογένεια από το `CRITICAL_NAMESPACES`.
  * Ένα δεύτερο `dynamic()` εδώ ήταν δεύτερος δρόμος προς το ίδιο chunk, αόρατος στον χάρτη.
  */
-const DxfViewerApp = LazyRoutes.DXFViewer;
+const DxfViewerApp = DxfViewerRoutes.DXFViewer;
 
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isAdmin, isLoading } = useUserRole();
